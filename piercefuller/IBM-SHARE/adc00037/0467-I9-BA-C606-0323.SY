@@ -1,0 +1,90 @@
+       ORG 8098                                                         BAC60600
+       FUL                                                              BAC60601
+ START CPY -92,1             UPPER LOADER                               BAC60602
+       TXI -92,1,-1          GO TO SELF LOAD                            BAC60603
+ T0    CPY -92,1             LOAD                                       BAC60604
+       TXI T0,1,-1           ONE CARD                                   BAC60605
+       NOP                   FILLER                                     BAC60606
+       TXL T1,1,-77          TEST FOR 4 CARDS LOADED                    BAC60607
+       RCD                   NO                                         BAC60608
+       TRA T0                READ NEXT CARD                             BAC60609
+ T1    RCD                   CARD TO BE LOADED                          BAC60610
+       PXD 10                CLEAR ACCUMULATOR                          BAC60611
+       CAD CST               READ 9L                                    BAC60612
+       TRA T1+5              SKIP END OF FILE STOP                      BAC60613
+ ERR2  HTR T1                E.O.F./NON OCTAL PUNCH STOP                BAC60614
+       TNZ ABBIN             9L NON ZERO READ CARD AS BINARY            BAC60615
+       LXD T3,2              3 TO IR 2                                  BAC60616
+ T19   CAD CST+3,2           ZERO OUT                                   BAC60617
+       STZ CST+6,2           OCTAL WORD                                 BAC60618
+       TIX T19,2,1           STORAGE REGION                             BAC60619
+       LXA T1+1,1            LOAD IR 1 WITH 10 FOR ROW COUNT            BAC60620
+ T11   CPY HASH              READ LEFT HALF OF ROW                      BAC60621
+       LXA ABBIN+3,2         LOAD IR 2 WITH 6 FOR WORD COUNT            BAC60622
+       CPY HASH+1            READ RIGHT HALF OF ROW                     BAC60623
+ T4    LXA T14,4             12 TO IR 4 FOR SHIFT COUNT                 BAC60624
+ T2    ALS 2                 CONVERT OCTAL                              BAC60625
+       LGL 1                 BIT PATTERN TO                             BAC60626
+       TIX T2,4,1            BINARY BIT PATTERN                         BAC60627
+ T7    SLW T0+6,2            SAVE WORD                                  BAC60628
+       TIX T3,2,1            TO TEST WORD COUNT                         BAC60629
+       LXA ABBIN+3,2         LOAD IR 2 WITH 6 FOR OR CONVERSION         BAC60630
+ T8    CAL T0+6,2            PICK UP WORD                               BAC60631
+       TRA T8+12,1           TRANSFER TO PROPER ROW CONVERSION          BAC60632
+       ORS CST+6,2           ROW 7                                      BAC60633
+       TRA 6ROW              GO TO 6 ROW CONVERSION                     BAC60634
+       ORS CST+6,2           ROW 5                                      BAC60635
+       TRA 4ROW              GO TO 4ROW CONVERSION                      BAC60636
+ T17   ORS CST+6,2           ROW 3                                      BAC60637
+       ALS 1                 ROW 2                                      BAC60638
+ T16   ORS CST+6,2           ROW 1                                      BAC60639
+       TRA T10               IGNORE ZERO ROW                            BAC60640
+       TRA 4ROW              TREAT 11 ROW AS 4 ROW                      BAC60641
+ T10   TIX T8,2,1            IGNORE 12 ROW RETURN FOR NEXT WORD         BAC60642
+       TIX T11,1,1           READ NEXT ROW IF ANY                       BAC60643
+       LDQ CST               CARD READ AND CONVERTED                    BAC60644
+       LXA ABBIN+2,1         ZERO TO IR 1                               BAC60645
+       LGL 18                MOVE LOADING ADDRESS TO ACC.               BAC60646
+       STA T18               AND SET UP STORAGE LOOP                    BAC60647
+ T14   PXD 12                CLEAR ACC.                                 BAC60648
+       LGL 18                MOVE S,1-17 OF WORD INTO ACC.              BAC60649
+       LDQ CST+1,1           LOAD NEXT WORD                             BAC60650
+       LGL 18                COMPLETE MOVE                              BAC60651
+       TZE T1                IF PLUS ZERO CARD FINISHED RETUN           BAC60652
+ T18   SLW *,1               STORE LOADABLE WORD                        BAC60653
+       TXI T14,1,-1          BUILD NEXT WORD                            BAC60654
+ 4ROW  ALS 2                 SHIFT FOR - OR OCTAL 4                     BAC60655
+       TRA T16               NOW TREAT AS ROW 1                         BAC60656
+ T3    TXH T4,2,3            RIGHT HALF OF ROW NOT NEEDED YET           BAC60657
+       TXL T4,2,2            RIGHT HALF OF ROW ALREADY IN USE           BAC60658
+       LDQ HASH+1            LOAD RIGHT HALF OF ROW                     BAC60659
+       TRA T4                RETURN FOR CONVERSION                      BAC60660
+ 6ROW  ALS 1                 SHIFT. THEN                                BAC60661
+       TRA T17               TREAT AS ROW 3                             BAC60662
+ ABBIN STA AB3+1             BINARY CARD SET TRANSITION ADDRESS         BAC60663
+       STA AB1               SET LOADING ADDRESS                        BAC60664
+       PDX 0,1               WORD COUNT TO IR 1                         BAC60665
+       PXD 6                 CLEAR ACC                                  BAC60666
+       LGL 2                 TEST RELOCATABLE BINARY                    BAC60667
+       TNZ ERR1              NON ZERO TO ERROR STOP                     BAC60668
+       CAL CST               SET UP CHECK SUM                           BAC60669
+ AB2   TXL AB3,1,0           IF ZERO CARD IS TRANSITION CARD            BAC60670
+       LXD AB2,2             ZERO TO IR 2                               BAC60671
+       CPY HASH+1            COPY CARD CHECK SUM                        BAC60672
+ AB1   CAD *,2               READ AND STORE                             BAC60673
+       TXI AB4,2,-1          CONTENTS OF CARD                           BAC60674
+ AB4   TIX AB1,1,1           ACCORDING TO WORD COUNT                    BAC60675
+       COM                   COMPARE COMPUTED                           BAC60676
+       ANA HASH+1            AND CARD CHECKSUMS                         BAC60677
+       TZE T1                IF EQUAL READ NEXT CARD                    BAC60678
+       CAL CST               18 NOT TEST                                BAC60679
+       ALS 2                 FOR A PUNCH IN                             BAC60680
+       PBT                   2 OF 9L                                    BAC60681
+ ERR3  HTR T1                NOT THERE STOP                             BAC60682
+       TRA T1                THERE IGNORE CHECK SUM ERROR               BAC60683
+ ERR1  HTR T1                RELOCATABLE BINARY STOP                    BAC60684
+ AB3   TOV AB3+1             TURN OFF OVERFLOW LIGHT                    BAC60685
+       TRA *                 TRANSFER TO LOADED PROGRAM                 BAC60686
+ CST   OCT 0,0,0,0,0,0,0     CONVERTED WORD STORAGE CELLS               BAC60687
+ HASH  OCT 0,0               HALF ROW STORAGE CELLS                     BAC60688
+       END                                                              BAC60689

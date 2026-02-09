@@ -1,0 +1,440 @@
+ARINP3 REM  440 CARDS OF SYMBOLIC PROGRAMMING                           INP30001
+       REM  AVCO, RES. AND ADV. DEV. DIV.     R. L. CUSHMAN             INP30002
+       REM                                                              INP30003
+       REM    FORTRAN II INPUT SUBROUTINE =INPUT2= OR =INPUTL=          INP30004
+       REM                                                              INP30005
+       ABS                                                              INP30006
+       ORG 0                                                            INP30007
+           DONE,,5            LENGTH,,VECTOR                            INP30008
+           TRANS              COMMON                                    INP30009
+       BCD 1INPUT2             CALL 1  =SENSE SWITCH 2 ENTRY            INP30010
+       PZE INPUT2                                                       INP30011
+       BCD 1INPUTL             CALL 2  =SENSE LIGHT 2  ENTRY            INP30012
+       PZE INPUTL                                                       INP30013
+       BCD 1RSETHC             CALL 3  =RESET HEADING CARD COUNT        INP30014
+           RSETHC                                                       INP30015
+       BCD 1HDLINE             CALL 4  =PRINT ON-LINE HEADING CARDS     INP30016
+           HDLINE                                                       INP30017
+       BCD 1HDTAPE             CALL 5  =OFF- AND ON-LINE OUTPUT OF      INP30018
+           HDTAPE                       HEADING CARDS - S.SW. CONTROL   INP30019
+       REM                                                              INP30020
+       REM              POSSIBLE USES                                   INP30021
+       REM                                                              INP30022
+       REM         CALL STATEMENT                                       INP30023
+       REM                                                              INP30024
+       REM      CALL  INPUTL ( LOC, WINPUT )                            INP30025
+       REM      CALL  INPUT2 ( LOC, WINPUT )                            INP30026
+       REM                                                              INP30027
+       REM            BOTH RESULT IN SET-UP                             INP30028
+       REM             L   TSX INPUT2,4  (OR INPUTL )                   INP30029
+       REM             L+1 TSX LOC                                      INP30030
+       REM             L+2 TSX WINPUT                                   INP30031
+       REM             L+3  RETURN TO NEXT STATEMENT                    INP30032
+       REM                                                              INP30033
+       REM         EQUATION STATEMENT                                   INP30034
+       REM                                                              INP30035
+       REM      IN  =    INPUT2 ( LOC, WINPUT )                         INP30036
+       REM      IN  =    INPUTL ( LOC, WINPUT )                         INP30037
+       REM                                                              INP30038
+       REM         BOTH RESULT IN THE FOLLOWING                         INP30039
+       REM                                                              INP30040
+       REM             L   TSX INPUT2,4  (OR INPUTL )                   INP30041
+       REM             L+1 TSX LOC                                      INP30042
+       REM             L+2 TSX WINPUT                                   INP30043
+       REM             L+3 STO IN                                       INP30044
+       REM                NEXT STATEMENT                                INP30045
+       REM                                                              INP30046
+       REM      =IN= MAY BE TESTED AND WILL CONTAIN BCD CHARACTER AS    INP30047
+       REM             INTEGER WITH SPECIAL VALUE  = -1 = IF EOF OCCUREDINP30048
+       REM                                                              INP30049
+       REM                    SENSE LITE 2 WILL BE TURNED OFF WHEN      INP30050
+       REM                        USING =INPUTL= ENTRY.                 INP30051
+       SKP 1                                                            INP30052
+       REM      INPUT PROGRAM  PROPER                                   INP30053
+       REM                                                              INP30054
+INSWT  EQU 2                                                            INP30055
+INLITE EQU 2                                                            INP30056
+INTAPE EQU 2                                                            INP30057
+OUTSWT EQU 3                                                            INP30058
+ N     EQU 1                  MAKE BUFFER OF 1 LINE                     INP30059
+       REM                                                              INP30060
+       REL                                                              INP30061
+       ORG 0                                                            INP30062
+(BDC)  BCD 1(BDC)             OUTPUT TRANSFER VECTOR                    INP30063
+(FIL)  BCD 1(FIL)                                                       INP30064
+(SPH)  BCD 1(SPH)                                                       INP30065
+(STH)  BCD 1(STH)                                                       INP30066
+(LEV)  BCD 1(LEV)                                                       INP30067
+INPUTL CLA SLT                                                          INP30068
+  XR1  TXL *+2,,**            HOLDS XR 1 IN DECREMENT                   INP30069
+INPUT2 CLA SWT                                                          INP30070
+       STO TESTOP             SET TEST OP                               INP30071
+       SXD XR1,1              PRESERVE XR-S.                            INP30072
+       SXD XR2,2                                                        INP30073
+       SXD XR4,4                                                        INP30074
+       CLA 1,4                MOVE =LOC= AND =WINPUT=                   INP30075
+       ADD (1)                                                          INP30076
+       STA LOC                                                          INP30077
+       CLA 2,4                                                          INP30078
+       ADD (1)                                                          INP30079
+       STA WINPUT                                                       INP30080
+       LDQ RCD                                                          INP30081
+       CLA TAPCRD               TAPE,,CARD                              INP30082
+TESTOP SWT - OR SLT -         EITHER =SWT= OR =SLT= DEPENDS UPON ENTRY  INP30083
+       TSX SETAPE,4             SIGNAL  UP      ON                      INP30084
+  RCD  RCD                                                              INP30085
+       STQ NOPCDS             SET =NOP/RCD= AND =TSX TAPE,4/TSX CARDS,4=INP30086
+       STQ NOPCDH               STORE OP FOR HEADING CARDS.             INP30087
+       STA CRDTAP                                                       INP30088
+CRDTAP TSX TAPE,1 OR CARDS,1  READ IN RECORD FROM CARDS OR TAPE.        INP30089
+       LXA (13),1                                                       INP30090
+NXTNMB LDQ BCD+13,1           OBTAIN CODE WORD OF RECORD.               INP30091
+       STZ SIGN                 ZERO OUT REGISTERS                      INP30092
+       STZ COUNT                                                        INP30093
+       STZ COUNTR                                                       INP30094
+       STZ SUM                                                          INP30095
+       SXD TSTXP,0                                                      INP30096
+       SXD INTSIG,0                                                     INP30097
+       TXL EXIT1,1,1                                                    INP30098
+ (13)  PXD 13,-                                                         INP30099
+       LGL 6                                                            INP30100
+ (12)  TXL CALCI,1,12                                                   INP30101
+ (4)   PAX 4,4                PUT CHARACTER INTO XR4 FOR TEST           INP30102
+       TXL *+3,4,47           TEST IF CHARACTER IS BLANK                INP30103
+       TXH *+2,4,48                                                     INP30104
+NOPCDS NOP   RCD                                                        INP30105
+       TXH *+2,4,24     30)8   TEST FOR HEADING CARD ( COL.1 =H= )      INP30106
+       TXH NOPCDH,4,23  27)8                                            INP30107
+CALCI  LXA (2),2                                                        INP30108
+  (2)  PXD 2,-                                                          INP30109
+       LGL 6                                                            INP30110
+       SUB 1BLANK                                                       INP30111
+       TNZ *+2                                                          INP30112
+       TIX NXTNMB,1,3         SKIP WORD                                 INP30113
+       ADD 1BLANK                                                       INP30114
+       TSX ACUM,4                                                       INP30115
+       TIX (2),2,1                                                      INP30116
+       CLA LOC                COMPUTE LIST NUMBER LOCATION              INP30117
+       SUB SUM                                                          INP30118
+       STZ SUM                                                          INP30119
+       STA *+1                                                          INP30120
+       CLA **                                                           INP30121
+       ARS 18                                                           INP30122
+       STO LOCA                                                         INP30123
+       LXA (3),2                                                        INP30124
+ (3)   PXD 3,-                                                          INP30125
+       LGL 6                                                            INP30126
+       TSX ACUM,4                                                       INP30127
+       TIX (3),2,1                                                      INP30128
+       CLA WINPUT                                                       INP30129
+       SUB LOCA                                                         INP30130
+       SUB SUM                                                          INP30131
+       STZ SUM                                                          INP30132
+       STA STOWD                                                        INP30133
+       LXD (12),2                                                       INP30134
+ H3    LDQ BCD+14,1                                                     INP30135
+       LXA (6),4                                                        INP30136
+ H4    SXD HXR4,4                                                       INP30137
+       PXD ,-                                                           INP30138
+ (6)   LGL 6                                                            INP30139
+       PAX ,4                                                           INP30140
+       TXL DIGIT,4,9          FOUND DIGIT  0-9                          INP30141
+       TXL MINUS,4,12               MINUS  8-4                          INP30142
+       TXL EXPNT,4,21               EXPONENT CHARACTER =E=              INP30143
+       TXL POINT,4,27               DECIMAL POINT                       INP30144
+       TXL CLOS),4,28               INTEGER CLOSING CODE =)=            INP30145
+       TXL MINUS,4,32               MINUS SIGN                          INP30146
+       TXL MNOVR,4,42               OVERPUNCHED MINUS                   INP30147
+       TXL BLANK,4,48               BLANK                               INP30148
+       SXD INTSIG,4                 INTEGER OPENING CODE =(=            INP30149
+ CLOS) BSS 0                                                            INP30150
+ BLANK TNX H5,2,1                   TEST FOR LAST CHARACTER             INP30151
+       LXD HXR4,4                                                       INP30152
+       TIX H4,4,1                                                       INP30153
+       TXI H3,1,-1                                                      INP30154
+ H5    LXD INTSIG,4                 TEST FOR INTEGER WORD               INP30155
+       TXL FLO,4,0                    NO. FLOATING POINT                INP30156
+       CLA SUM                  INTEGER. MOVE INTO DECREMENT            INP30157
+       LDQ SIGN                                                         INP30158
+       LLS 18                                                           INP30159
+ HXR4  TXL STOWD,,**            STORE                                   INP30160
+ FLO   LXD TSTXP,4                                                      INP30161
+       TXH EXPCN,4,0            EXPONENT WAS FOUND                      INP30162
+       CLA SUM                ATTACH SIGN                               INP30163
+       LDQ SIGN                                                         INP30164
+       LLS 0                                                            INP30165
+       ORA MGNUM                                                        INP30166
+       FAD MGNUM                                                        INP30167
+       LXA COUNT,2                                                      INP30168
+       TXL STOWD,2,0            EXIT IF COUNT = 0.                      INP30169
+       FDP 10X10+10,2                                                   INP30170
+       STQ SIGN                                                         INP30171
+       CLA SIGN                                                         INP30172
+ STOWD STO **                                                           INP30173
+       TIX NXTNMB,1,2                                                   INP30174
+ EXIT1 LDQ BCD                END OF CARD, TEST COL. 1                  INP30175
+       PXD ,-                                                           INP30176
+       LGL 6                                                            INP30177
+       SUB 1BLANK                                                       INP30178
+       TZE CRDTAP               IT WAS A BLANK, BRING IN NEXT RECORD.   INP30179
+       ADD 1BLANK                                                       INP30180
+ EXIT  ALS 18                   PUT COL 1 CHARACTER INTO DECREMENT      INP30181
+       TOV *+1                TURN OFF OVERFLOW                         INP30182
+       LXD XR1,1                RESET XR-S.                             INP30183
+       LXD XR2,2                                                        INP30184
+       LXD XR4,4                                                        INP30185
+       TRA 3,4                   RETURN TO SUPER-PROGRAM                INP30186
+ EXPCN LXA SUM,4              EXPONENT CONVERSION                       INP30187
+       CLA 1.0                                                          INP30188
+       TXL EX1,4,0              USE 1.0 AS M/D                          INP30189
+       LRS 35                                                           INP30190
+       TXL *+3,4,9              TEST FOR ONE DIGIT EXPONENT             INP30191
+       FMP 10X10                                                        INP30192
+       TXI *-3,4,-10                                                    INP30193
+       FMP 10X10+10,4                                                   INP30194
+ EX1   STO SUM                                                          INP30195
+       CLA TRANS                                                        INP30196
+       ORA MGNUM                                                        INP30197
+       FAD MGNUM                                                        INP30198
+       LXA COUNT,4                                                      INP30199
+       TXL EX3,4,0                                                      INP30200
+       FDP 10X10+10,4                                                   INP30201
+ EX4   CLA SIGN                                                         INP30202
+       TPL EX2                                                          INP30203
+       STQ SIGN                                                         INP30204
+       CLA 1.0                  RECIPROCATE EXPONENT                    INP30205
+       FDP SUM                                                          INP30206
+       STQ SUM                                                          INP30207
+       LDQ SIGN                                                         INP30208
+ EX2   FMP SUM                                                          INP30209
+INTSIG TXL STOWD,,**                                                    INP30210
+ EX3   LRS 35                                                           INP30211
+ XR2   TXL EX4,,**                                                      INP30212
+ MNOVR SSM                                                              INP30213
+       STO SIGN                                                         INP30214
+       SSP                                                              INP30215
+       SUB (42)                                                         INP30216
+       TZE *+2                                                          INP30217
+       ADD (10)                                                         INP30218
+ DIGIT TSX ACUM,4                                                       INP30219
+ XR4   TXL BLANK,,**                                                    INP30220
+ MINUS CLS (1)                MINUS ENCOUNTERED                         INP30221
+       STO SIGN                                                         INP30222
+ TSTXP TXL BLANK,,**                                                    INP30223
+EXPNT  SXD TSTXP,4            EXPONENT REQUESTED,  SET SIGNAL           INP30224
+       CLA SIGN                  MOVE SIGN WITH ACCUMULATED SUM.        INP30225
+       CLM                                                              INP30226
+       ORA SUM                                                          INP30227
+       STO TRANS                                                        INP30228
+       STZ SIGN                                                         INP30229
+       STZ SUM                                                          INP30230
+       STZ COUNTR                                                       INP30231
+       TXL BLANK,,**                                                    INP30232
+POINT  CLA (1)                FOUND DECIMAL POINT                       INP30233
+       STO COUNTR                                                       INP30234
+       TXL BLANK,,**                                                    INP30235
+  EOF  CLS (1)                SET IN ACCUMULATOR  =-1= AS EOF SIGNAL    INP30236
+       TXL EXIT,,-                                                      INP30237
+ CARDS SXD CXR1,1                                                       INP30238
+       LXD (40),1             ZERO OUT =TRANS= AND =BCD= BLOCKS.        INP30239
+       STZ TRANS+40,1                                                   INP30240
+       TIX *-1,1,1                                                      INP30241
+       CLA NOP                 SET UP EXPANSION LOOP                    INP30242
+       STO XPND1                                                        INP30243
+       CLA (9)                 SET ROW COUNTER TO (9)                   INP30244
+ CRD1  STO TRANS+3                                                      INP30245
+       CPY TRANS+33              COPY LEFT ROW                          INP30246
+ (40)  TXL *+3,,40                                                      INP30247
+ CXR1  TXL EOF,,**               EOF STOP                               INP30248
+       TXL EOR,,-                EOR, FINISH OUT RECORD                 INP30249
+       CPY TRANS+34              COPY RIGHT ROW                         INP30250
+       TZE ZROW                  TEST ROW COUNT FOR ZERO, OUT TO SPECIALINP30251
+       CAL TRANS+33               OR LEFT ROW TO      ( PROCESSING.     INP30252
+       ORS TRANS+31                     PUNCH REGISTER                  INP30253
+       CAL TRANS+34               OR RIGHT ROW TO                       INP30254
+ CRD2  ORS TRANS+32                     PUNCH REGISTER                  INP30255
+       TSX EXPND,1                EXPAND ROW                            INP30256
+       CLA TRANS+3               TEST ROW COUNTER                       INP30257
+       SUB (1)                                                          INP30258
+       CAS L(M3)                                                        INP30259
+       TRA CRD1                                                         INP30260
+ EOR   CAL TRANS+31           END OF RECORD                             INP30261
+       COM                       COMPLEMENT PUNCH LEFT                  INP30262
+       SLW TRANS+33                                                     INP30263
+       CAL TRANS+32              COMPLEMENT PUNCH RIGHT                 INP30264
+       COM                                                              INP30265
+       SLW TRANS+34                                                     INP30266
+       CLA TALS4                 SET =TRA ALS4= INTO ROUTINE.           INP30267
+       STO XPND1                                                        INP30268
+       TSX EXPND,1                                                      INP30269
+       LXD CXR1,1             EXIT TO SUPER-PROGRAM                     INP30270
+ TRA11 TRA 1,1                                                          INP30271
+ ZROW  LXD (12),1             ZERO SPECIAL PROCESSING.                  INP30272
+       STZ TRANS+31,1           RE-ZERO HOPPERS                         INP30273
+       TIX *-1,1,1                                                      INP30274
+       CLA ALS4                 SET =ALS 4= OP.                         INP30275
+       STO XPND1                                                        INP30276
+       CAL TRANS+33             LEFT ROW                                INP30277
+       SLW TRANS+4                HOLD                                  INP30278
+       ANA TRANS+31              LEFT PUNCH                             INP30279
+       SLW TRANS+33             LEFT ROW                                INP30280
+       CAL TRANS+4                                                      INP30281
+       ORS TRANS+31              LEFT PUNCH                             INP30282
+       CAL TRANS+34             REPEAT WITH RIGHT ROW                   INP30283
+       SLW TRANS+4                                                      INP30284
+       ANA TRANS+32                                                     INP30285
+       SLW TRANS+34                                                     INP30286
+       CAL TRANS+4                                                      INP30287
+       TXL CRD2,,-                                                      INP30288
+EXPND  LXD (12),4             EXPAND LOOP   XR4 = 12                    INP30289
+       LDQ TRANS+33             DO LEFT HALF ROW.                       INP30290
+       LXA (6),2                                                        INP30291
+       CLM                                                              INP30292
+       LGL 1                                                            INP30293
+       ALS 5                                                            INP30294
+       LGL 1                                                            INP30295
+       ALS 5                                                            INP30296
+       LGL 1                                                            INP30297
+       ALS 5                                                            INP30298
+       LGL 1                                                            INP30299
+       ALS 5                                                            INP30300
+       LGL 1                                                            INP30301
+       ALS 5                                                            INP30302
+       LGL 1                                                            INP30303
+ XPND1 NOP   ALS 4  TRA ALS4    VARIABLE OPERATION                      INP30304
+       ACL TRANS+31,4            ADD HOPPER                             INP30305
+       SLW TRANS+31,4                                                   INP30306
+ XPND2 ACL TRANS+19,4            ADD BIN                                INP30307
+       SLW TRANS+19,4                                                   INP30308
+       TNX TRA11,4,1            EXIT TO SUPER-PROGRAM.                  INP30309
+       TIX EXPND+3,2,1           PROCESS NEXT 6 BITS                    INP30310
+       LDQ TRANS+34            DO RIGHT HALF ROW                        INP30311
+       TXL EXPND+2,,-                                                   INP30312
+ ALS4  ALS 4                  EXTRA BLANK BIT.                          INP30313
+       ORS TRANS+19,4                                                   INP30314
+       ALS 1                                                            INP30315
+       TXL XPND2,,-                                                     INP30316
+SETAPE LDQ NOP                PREPARE FOR TAPE ENTRY                    INP30317
+ (18)  ARS 18                                                           INP30318
+       TRA 2,4                                                          INP30319
+ TAPE  RTD INTAPE             READ A RECORD FROM TAPE                   INP30320
+       LXA (18),2                                                       INP30321
+       CPY BCD+18,2                                                     INP30322
+       TIX *-1,2,1                                                      INP30323
+       TXL EOF,,-               EOF                                     INP30324
+       IOD                                                              INP30325
+       TRA 1,1                  EOR                                     INP30326
+ ACUM  STO TRANS+3            ACCUMULATE DIGITS                         INP30327
+       CLA SUM                                                          INP30328
+       ALS 1                                                            INP30329
+       STO SUM                                                          INP30330
+       ALS 2                                                            INP30331
+       ADD SUM                                                          INP30332
+       ADD TRANS+3                                                      INP30333
+       STO SUM                                                          INP30334
+       CLA COUNT                                                        INP30335
+       ADD COUNTR                                                       INP30336
+       STO COUNT                                                        INP30337
+       TRA 1,4                                                          INP30338
+NOPCDH NOP   RCD              FOUND HEADING CARD                        INP30339
+       LXD HCRDCT,2              TEST IF BUFFER FULL                    INP30340
+ TXL   TXL CRDTAP,2,1             BY-PASS RECORD                        INP30341
+       LXD (12),4                OK TO MOVE                             INP30342
+       CLA (1)                                                          INP30343
+       TXH *+2,2,12*N-1       REPLACE COL.1 WITH BLANK IF NOT FIRST     INP30344
+       CLA 1BLANK                   HEADING CARD                        INP30345
+       LGL 30                                                           INP30346
+       SLW BCD                                                          INP30347
+       CLA BCD+12,4                                                     INP30348
+       STO BUFFER+12*N,2                                                INP30349
+       TXI *+1,2,-1                                                     INP30350
+       TIX *-3,4,1                                                      INP30351
+       SXD HCRDCT,2                                                     INP30352
+DCMTN  TXL CRDTAP,,12*N                                                 INP30353
+       REM                                                              INP30354
+       REM     RESET BUFFER FOR NEW SET OF HEADING CARDS                INP30355
+       REM                                                              INP30356
+RSETHC CAL DCMTN                                                        INP30357
+       STD HCRDCT                                                       INP30358
+       TRA 1,4                                                          INP30359
+       REM                                                              INP30360
+       REM     WRITE HEADING CARDS ON TAPE (Y) AND PRINT IF SENSE       INP30361
+       REM         SWITCH =OUTSWT= IS DOWN.                             INP30362
+       REM                                                              INP30363
+HDTAPE CLA 1,4                OBTAIN TAPE NUMBER                        INP30364
+       STA *+1                                                          INP30365
+       CLA -*-                                                          INP30366
+       STD TAPENO                                                       INP30367
+       TXI HDLN1,4,1                                                    INP30368
+       REM                                                              INP30369
+       REM     PRINT HEADING CARDS ON-LINE ONLY.                        INP30370
+       REM                                                              INP30371
+HDLINE CAL TXL                                                          INP30372
+       TXI *+1,4,2            FIX XR-4 FOR =3= RETURN                   INP30373
+HDLN1  STP SWITCH                                                       INP30374
+       SXD XR1,1                PRESERVE XR-S.                          INP30375
+       SXD XR2,2                                                        INP30376
+       SXD XR4,4                                                        INP30377
+       LXD DCMTN,4                                                      INP30378
+HCRDCT TXL EXIT+1,4,12*N                                                INP30379
+       LXD (12),2                                                       INP30380
+       CLA BUFFER+12*N,4                                                INP30381
+       STO IMAGE+12,2                                                   INP30382
+       TXI *+1,4,-1                                                     INP30383
+       TIX *-3,2,1                                                      INP30384
+SWITCH NOP PRINT                                                        INP30385
+       CAL *                                                            INP30386
+       TTR (LEV)                                                        INP30387
+       ETM                    TAPE OUTPUT                               INP30388
+       CAL (BDC)                                                        INP30389
+       SLW 1                                                            INP30390
+       CAL (STH)                                                        INP30391
+TAPENO TXI IMAGE-1,,-*-                                                 INP30392
+       LTM                                                              INP30393
+       CAL *                                                            INP30394
+       TTR (FIL)                                                        INP30395
+       SWT OUTSWT                                                       INP30396
+       TXL HCRDCT,,-                                                    INP30397
+PRINT  CAL *                                                            INP30398
+       TTR (LEV)                                                        INP30399
+       ETM                                                              INP30400
+       CAL (BDC)                                                        INP30401
+       SLW 1                                                            INP30402
+       CAL (SPH)                                                        INP30403
+       TXI IMAGE-1,,-                                                   INP30404
+       LTM                                                              INP30405
+       CAL *                                                            INP30406
+       TTR (FIL)                                                        INP30407
+       TXL HCRDCT,,-                                                    INP30408
+       BCD 1  (72H            BASIC FORMAT STATEMENT                    INP30409
+IMAGE  BSS 12                                                           INP30410
+       BCD 1  )                                                         INP30411
+       OCT -377777777777                                                INP30412
+TAPCRD     CARDS,,TAPE                                                  INP30413
+  NOP  NOP                                                              INP30414
+ SWT   SWT INSWT                                                        INP30415
+ SLT   SLT INLITE                                                       INP30416
+ TALS4 TRA ALS4                                                         INP30417
+1BLANK OCT 60                                                           INP30418
+MGNUM  OCT 233000000000                                                 INP30419
+ L(M3) DEC -3                                                           INP30420
+ (1)   DEC 1                                                            INP30421
+ (9)   DEC 9                                                            INP30422
+ (10)  DEC 10                                                           INP30423
+ (42)  DEC 42                                                           INP30424
+ 10X10 DEC 1.E10,1.E9,1.E8,1.E7,1.E6,1.E5,1.E4,1.E3,1.E2,1.E1           INP30425
+ 1.0   DEC 1.0                                                          INP30426
+BUFFER BSS 12*N               BUFFER FOR ==N== LINES                    INP30427
+ COUNT BSS 1                                                            INP30428
+DONE   BSS 0                                                            INP30429
+       ORG 32563                                                        INP30430
+ TRANS BSS 7                                                            INP30431
+ BCD   BSS 33                                                           INP30432
+WINPUT BSS 1                                                            INP30433
+ LOC   BSS 1                                                            INP30434
+ LOCA  BSS 1                                                            INP30435
+SUM    BSS 1                                                            INP30436
+SIGN   BSS 1                                                            INP30437
+COUNTR BSS 1                                                            INP30438
+       ABS                                                              INP30439
+       END 0                                                            INP30440

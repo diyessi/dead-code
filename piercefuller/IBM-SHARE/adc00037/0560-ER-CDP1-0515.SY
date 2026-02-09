@@ -1,0 +1,687 @@
+ERCDP1 REM 687   9228                                                   CDP10001
+       REM                705-650 TO 704 DATA CONVERTER                 CDP10002
+       REM INPUT TAPE 1                                                 CDP10003
+       REM OUTPUT TAPE 2                                                CDP10004
+       REM SENSE SWITCH 1 UP FOR ALL POSITIVE NUMBERS                   CDP10005
+       REM SENSE SWITCH 1 DOWN FOR INSERTING ZERO, AND TO CHECK AND     CDP10006
+       REM      HONOR MINUS SIGNS IN CASE OF A NEGATIVE NUMBER          CDP10007
+       REM CONTROL CARD K,L,MM,(IBLANK(I),I=1,K),(ISIGN(I),I=1,K) PER   CDP10008
+       REM      FORMAT (24I3/19I3)                                      CDP10009
+       REM K=NO.OF DOUBLE PUNCHED BITS TO BE CHECKED.CANNOT EXCEED 20.  CDP10010
+       REM L=NO.OF ZEROES TO BE INSERTED.CANNOT EXCEED 20.              CDP10011
+       REM MM = NO. OF CHARACTERS PER RECORD.  CANNOT EXEED 120.        CDP10012
+       REM IBLANK = LOCATION ON THE ORIGINAL FORMAT TO INSERT ZEROS AND CDP10013
+       REM      MINUS SIGNS.                                            CDP10014
+       REM ISIGN = LOCATION ON THE ORIGINAL FORMAT WHERE THE NUMBER IS  CDP10015
+       REM      DOUBLE-PUNCHED.                                         CDP10016
+       REM EXAMPLE                                                      CDP10017
+       REM      0030J2596Q05215B                                        CDP10018
+       REM      WITH K=3, MM=16, IBLANK=1,6,11, ISIGN=5,10,16           CDP10019
+       REM      SENSE SWITCH 1 DOWN WILL GIVE                           CDP10020
+       REM      -00301-259680052152                                     CDP10021
+       REM WITH K=3, MM=16, IBLANK=121,121,121, ISIGN=5,10,16           CDP10022
+       REM      SENSE SWITCH 1 UP WILL GIVE                             CDP10023
+       REM      0030125968052152 + AN ON-LINE PRINTOUT SAYING UNEXPECT- CDP10024
+       REM      ED NEGATIVE NUMBER ENCOUNTERED.                         CDP10025
+       FUL                                                              CDP10026
+           SIZE,,32                                                     CDP10027
+       REL                                                              CDP10028
+       ORG                                                              CDP10029
+ C2A   REW 1                      REWIND INPUT TAPE 1.                  CDP10030
+ C3A   CAL *                      READ C8A, K, L, MM, (IBLANK(I),I=1,K),CDP10031
+       TTR LEV                    (ISIGN(I),I=1,L).                     CDP10032
+       ETM                                                              CDP10033
+       CAL DBC                                                          CDP10034
+       SLW 1                                                            CDP10035
+       CAL CSH                                                          CDP10036
+ C3D1  TXI C8AA,0,81                                                    CDP10037
+ C4A   ETM                                                              CDP10038
+       TXI K                                                            CDP10039
+       TXI L                                                            CDP10040
+       TXI MM                                                           CDP10041
+       LTM                                                              CDP10042
+ C5A   LXD C2,4                                                         CDP10043
+       CLA K                                                            CDP10044
+       STD C6A2                                                         CDP10045
+ C6A   ETM                                                              CDP10046
+       TXI -JJ,4                                                        CDP10047
+       LTM                                                              CDP10048
+ C6A1  TXI *+1,4,1                                                      CDP10049
+ C6A2  TXL C6A,4                                                        CDP10050
+ C8A   LXD C2,2                                                         CDP10051
+       CLA L                                                            CDP10052
+       STD C9A2                                                         CDP10053
+ C9A   ETM                                                              CDP10054
+       TXI ISIGN+1,2                                                    CDP10055
+       LTM                                                              CDP10056
+ C9A1  TXI *+1,2,1                                                      CDP10057
+ C9A2  TXL C9A,2                                                        CDP10058
+ C11A  LTM                                                              CDP10059
+ C12A  CAL *                                                            CDP10060
+       TTR RTN                                                          CDP10061
+ C13A  CLA MM                                                           CDP10062
+       TSX FORMAT,4               TO MODIFY THE FORMAT.                 CDP10063
+       STO FORMAX                                                       CDP10064
+ C14A  PSE 113                    IF (SENSE SWITCH 1) C15A,C31A         CDP10065
+       TRA C31A                                                         CDP10066
+ C15A  LXD C2,4                   DO C23A2 J=1,K                        CDP10067
+       CLA K                                                            CDP10068
+       STD C23A2                                                        CDP10069
+       PXD 0,4                                                          CDP10070
+       STO J                                                            CDP10071
+ C16A  LXD C2,1                   DO C19A2 I=1,L                        CDP10072
+       CLA L                                                            CDP10073
+       STD C19A2                                                        CDP10074
+  C17A CLA ISIGN+1,1              IF (ISIGN(I)-IBLANK(J))C19A1,C18A,C18ACDP10075
+       SUB -JJ,4                                                        CDP10076
+ C17A1 TZE C18A                                                         CDP10077
+       TPL C18A                                                         CDP10078
+       TRA C19A1                                                        CDP10079
+ C18A  CLA ISIGN+1,1              ISIGN(I)=ISIGN(I)+1                   CDP10080
+       ADD C2                                                           CDP10081
+       STO ISIGN+1,1                                                    CDP10082
+ C19A1 TXI *+1,1,1                                                      CDP10083
+ C19A2 TXL C17A,1                 END OF DO.                            CDP10084
+ C20A  CLA J                      KJ=J+1                                CDP10085
+       ADD C2                                                           CDP10086
+       TRA SPACE-8                PATCH TO CHECK (KJ-20)                CDP10087
+ C21A  LXD KJ,2                   DO C22A2 M=KJ,K                       CDP10088
+       CLA K                                                            CDP10089
+       STD C22A2                                                        CDP10090
+  C22A CLA -JJ,2                                                        CDP10091
+       ADD C2                     IBLANK(I) = IBLANK(I)+1               CDP10092
+       STO -JJ,2                                                        CDP10093
+ C22A1 TXI *+1,2,1                                                      CDP10094
+ C22A2 TXL C22A,2                 END OF DO.                            CDP10095
+ C23A1 TXI *+1,4,1                                                      CDP10096
+       SXD J,4                                                          CDP10097
+ C23A2 TXL C16A,4                 END OF DO.                            CDP10098
+ C24A  CLA C2+1                                                         CDP10099
+       STO KONT2                                                        CDP10100
+       LXD KONT2,4                                                      CDP10101
+       SXD CG3,4                                                        CDP10102
+ CD20E LXD CG4,2                                                        CDP10103
+ C25A  LDQ C2+2                   KONT1=K-6*KONT2                       CDP10104
+       MPY KONT2                                                        CDP10105
+       ALS 17                                                           CDP10106
+       CHS                                                              CDP10107
+       ADD K                                                            CDP10108
+       STO KONT1                                                        CDP10109
+ C26A  CLA KONT1                  IF (KONT1-6) C31A,C27A,C27A           CDP10110
+       SUB C2+2                                                         CDP10111
+ C26A1 TZE C27A                                                         CDP10112
+       TPL C27A                                                         CDP10113
+       TRA C31A                                                         CDP10114
+ C27A  CLA KONT2                  KONT2=KONT2+1                         CDP10115
+       ADD C2                                                           CDP10116
+       STO KONT2                                                        CDP10117
+       LXD KONT2,4                                                      CDP10118
+       SXD CG3,4                                                        CDP10119
+ C28A  LDQ C2+2                   KONT3=6*KONT2                         CDP10120
+       MPY KONT2                                                        CDP10121
+       ALS 17                                                           CDP10122
+       STO KONT3                                                        CDP10123
+       LXD KONT3,2                                                      CDP10124
+       SXD CG4,2                                                        CDP10125
+  C29A CLA -JJ,2                  NBYQ(KONT2)=1+(IBLANK(KONT3)+5)/6     CDP10126
+       ADD C2+3                                                         CDP10127
+       LRS 35                                                           CDP10128
+       DVP C2+2                                                         CDP10129
+       CLM                                                              CDP10130
+       LLS 18                                                           CDP10131
+       STQ CG3-1                                                        CDP10132
+       CLA C2                                                           CDP10133
+       ADD CG3-1                                                        CDP10134
+       STO NBYQ+1,4                                                     CDP10135
+ C30A  TRA C25A                   GO TO C25A                            CDP10136
+ C31A  LXD C2,1                   DO C33A2 I=1,K                        CDP10137
+       CLA K                                                            CDP10138
+       STD C33A2                                                        CDP10139
+ C32A  CLA -JJ,1                  NBY(I)=1+(-JJ(I)+5)/6                 CDP10140
+       ADD C2+3                                                         CDP10141
+       LRS 35                                                           CDP10142
+       DVP C2+2                                                         CDP10143
+       CLM                                                              CDP10144
+       LLS 18                                                           CDP10145
+       STQ CG3-1                                                        CDP10146
+       CLA C2                                                           CDP10147
+       ADD CG3-1                                                        CDP10148
+       STO NBY+1,1                                                      CDP10149
+ C33A  CLA NBY+1,1                NNBY(I)=7-(IBLANK(I)-6*(NBY(I)-2))    CDP10150
+       SUB C2+5                                                         CDP10151
+       STO CG3-1                                                        CDP10152
+       LDQ C2+2                                                         CDP10153
+       MPY CG3-1                                                        CDP10154
+       ALS 17                                                           CDP10155
+       CHS                                                              CDP10156
+       ADD -JJ,1                                                        CDP10157
+       CHS                                                              CDP10158
+       ADD C2+4                                                         CDP10159
+       STO NNBY+1,1                                                     CDP10160
+ C33A1 TXI *+1,1,1                                                      CDP10161
+ C33A2 TXL C32A,1                 END OF DO.                            CDP10162
+ C34A  LXD C2,4                   DO C36A2 I=1,L                        CDP10163
+       CLA L                                                            CDP10164
+       STD C36A2                                                        CDP10165
+ C35A  CLA ISIGN+1,4              NSIGN(I)=1+(ISIGN(I)+5)/6             CDP10166
+       ADD C2+3                                                         CDP10167
+       LRS 35                                                           CDP10168
+       DVP C2+2                                                         CDP10169
+       CLM                                                              CDP10170
+       LLS 18                                                           CDP10171
+       STQ CG3-1                                                        CDP10172
+       CLA C2                                                           CDP10173
+       ADD CG3-1                                                        CDP10174
+       STO NSIGN+1,4                                                    CDP10175
+ C36A  CLA NSIGN+1,4              NNSIGN(I)=7-(ISIGN(I)-6*(NSIGN(I)-2)) CDP10176
+       SUB C2+5                                                         CDP10177
+       STO CG3-1                                                        CDP10178
+       LDQ C2+2                                                         CDP10179
+       MPY CG3-1                                                        CDP10180
+       ALS 17                                                           CDP10181
+       CHS                                                              CDP10182
+       ADD ISIGN+1,4                                                    CDP10183
+       CHS                                                              CDP10184
+       ADD C2+4                                                         CDP10185
+       STO NNSIGN+1,4                                                   CDP10186
+ C36A1 TXI *+1,4,1                                                      CDP10187
+ C36A2 TXL C35A,4                 END OF DO.                            CDP10188
+ C37A  CLA KONT2                  IF (KONT2) C38A,C38A,CD40M            CDP10189
+ C37A1 TZE C38A                                                         CDP10190
+       TPL CD40M                                                        CDP10191
+ C38A  CLA C2+2                   NK=6.                                 CDP10192
+       STO NK                                                           CDP10193
+ C39A  TRA C43A                   GO TO C43A.                           CDP10194
+ CD40M LXD CG3,4                  NK=NBYQ(KONT2)+6                      CDP10195
+ C40A  CLA NBYQ+1,4                                                     CDP10196
+       ADD C2+2                                                         CDP10197
+       STO NK                                                           CDP10198
+ C41A  CLA NK                     IF (NK-20) C43A,C42A,C43A             CDP10199
+       SUB C2+6                                                         CDP10200
+ C41A1 TZE C43A                                                         CDP10201
+       TPL C42A                                                         CDP10202
+       TRA C43A                                                         CDP10203
+ C42A  CLA C2+6                   NK=20                                 CDP10204
+       STO NK                                                           CDP10205
+ C43A  CAL *                      READ INPUT TAPE 1,20                  CDP10206
+       TTR LEV                                                          CDP10207
+       ETM                                                              CDP10208
+       CAL DBC                                                          CDP10209
+       SLW 1                                                            CDP10210
+       CAL TSH                                                          CDP10211
+ C43D1 TXI C8K,0,1                                                      CDP10212
+ C44A  CAL *                                                            CDP10213
+       TTR RTN                                                          CDP10214
+ C45A  PSE 113                    IF (SENSE SWITCH 1) C46A,C60A         CDP10215
+       TRA C60A                                                         CDP10216
+ C46A  CLA KONT2                  IF (KONT2) C57A,C57A,C47A             CDP10217
+ C46A1 TZE C57A                                                         CDP10218
+       TPL C47A                                                         CDP10219
+       TRA C57A                                                         CDP10220
+ C47A  CLA C2                     KQ=1                                  CDP10221
+       STO KQ                                                           CDP10222
+ C48A  CLA C2+2                   KR=6                                  CDP10223
+       STO KR                                                           CDP10224
+ C49A  LXD C2,4                   DO C55A2 J=1,KONT2                    CDP10225
+       CLA KONT2                                                        CDP10226
+       STD C55A2                                                        CDP10227
+ C50A  CLA NBYQ+1,4                                                     CDP10228
+       SXD C6+4,4                                                       CDP10229
+       TSX SPACE,4                TRANSFER TO INSERT ONE LINE OF ZEROES.CDP10230
+       LXD C6+4,4                                                       CDP10231
+       STO SPACEQ                                                       CDP10232
+ C51A  LXD KQ,2                   DO C52A2 JJ=KQ,KR                     CDP10233
+       CLA KR                                                           CDP10234
+       STD C52A2                                                        CDP10235
+ C52A  CLA NBY+1,2                                                      CDP10236
+       LDQ NBYQ+1,4                                                     CDP10237
+       STQ C4-2                                                         CDP10238
+       LDQ NNBY+1,2                                                     CDP10239
+       SXD C6+4,4                                                       CDP10240
+       TSX BLANK,4                LOOP TO INSERT SIX ZEROES.            CDP10241
+       LXD C6+4,4                                                       CDP10242
+       STO BLANKQ                                                       CDP10243
+ C52A1 TXI *+1,2,1                                                      CDP10244
+ C52A2 TXL C52A,2                 END OF DO.                            CDP10245
+ C53A  CLA KQ                     KQ=KQ+6                               CDP10246
+       ADD C2+2                                                         CDP10247
+       STO KQ                                                           CDP10248
+ C54A  CLA KR                     KR=KR+6                               CDP10249
+       ADD C2+2                                                         CDP10250
+       STO KR                                                           CDP10251
+ C55A1 TXI *+1,4,1                                                      CDP10252
+ C55A2 TXL C50A,4                 END OF DO.                            CDP10253
+ C56A  TRA C58A                   GO TO C58A                            CDP10254
+ C57A  CLA C2                                                           CDP10255
+       STO KQ                     KQ=1                                  CDP10256
+ C58A  LXD KQ,4                   DO C59A2 I=KQ,K                       CDP10257
+       CLA K                                                            CDP10258
+       STD C59A2                                                        CDP10259
+ C59A  CLA NBY+1,4                                                      CDP10260
+       LDQ NK                                                           CDP10261
+       STQ C4-2                                                         CDP10262
+       LDQ NNBY+1,4                                                     CDP10263
+       SXD C6+4,4                                                       CDP10264
+       TSX BLANK,4                TRANSFER TO INSERT REMAINING ZEROES.  CDP10265
+       LXD C6+4,4                                                       CDP10266
+       STO BLANKQ                                                       CDP10267
+ C59A1 TXI *+1,4,1                                                      CDP10268
+ C59A2 TXL C59A,4                 END OF DO.                            CDP10269
+ C60A  LXD C2,4                   DO C61A2 I=1,L                        CDP10270
+       CLA L                                                            CDP10271
+       STD C61A2                                                        CDP10272
+ C61A  CLA NSIGN+1,4                                                    CDP10273
+       LDQ NBY+1,4                                                      CDP10274
+       STQ C4-2                                                         CDP10275
+       LDQ NNBY+1,4                                                     CDP10276
+       STQ C4-3                                                         CDP10277
+       LDQ NNSIGN+1,4                                                   CDP10278
+       SXD C6+4,4                                                       CDP10279
+       TSX SIGN,4                 TRANSFER TO CHECK DOUBLE PUNCHES.     CDP10280
+       LXD C6+4,4                                                       CDP10281
+       STO SIGNQ                                                        CDP10282
+ C61A1 TXI *+1,4,1                                                      CDP10283
+ C61A2 TXL C61A,4                 END OF DO.                            CDP10284
+ C62A  PSE 113                    IF (SENSE SWITCH 1) C63A,C64A         CDP10285
+       TRA C64A                                                         CDP10286
+ C63A  CLA SPACE-11               CHANGE THE HOLLERITH COUNT IN FORMAT. CDP10287
+       STO C8K                                                          CDP10288
+ C64A  CAL *                      WRITE OUTPUT TAPE 2, C8K              CDP10289
+       TTR LEV                                                          CDP10290
+       ETM                                                              CDP10291
+       CAL BDC                                                          CDP10292
+       SLW 1                                                            CDP10293
+       CAL STH                                                          CDP10294
+ C64D1 TXI C8K,0,2                                                      CDP10295
+ C65A  CAL *                                                            CDP10296
+       TTR FIL                                                          CDP10297
+ C66A  PSE 113                    IF (SENSE SWITCH 1) C67A(C68A         CDP10298
+       TRA C68A                                                         CDP10299
+ C67A  TRA SIGN+512               PATCH                                 CDP10300
+       STO C8K                                                          CDP10301
+ C68A  TRA C43A                   GO TO C43A                            CDP10302
+ C69A  MSE 100                    IF (SENSE LIGHT 4) C70A,C73A          CDP10303
+       TRA C73A                                                         CDP10304
+ C70A  PSE 113                    IF (SENSE SWITCH 1) C73A,C71A         CDP10305
+       TRA C71A                                                         CDP10306
+       TRA C73A                                                         CDP10307
+ C71A  CAL *                                                            CDP10308
+       TTR LEV                    PRINT C8U.                            CDP10309
+       ETM                                                              CDP10310
+       CAL BDC                                                          CDP10311
+       SLW 1                                                            CDP10312
+       CAL SPH                                                          CDP10313
+ C71D1 TXI C8U                                                          CDP10314
+ C72A  CAL *                                                            CDP10315
+       TTR FIL                                                          CDP10316
+ C73A  WEF 2                      END FILE 2.                           CDP10317
+ C74A  HPR 32767                  STOP 77777                            CDP10318
+       TRA C74A                                                         CDP10319
+ C2    OCT +000001000000                                                CDP10320
+       OCT +000000000000                                                CDP10321
+       OCT +000006000000                                                CDP10322
+       OCT +000005000000                                                CDP10323
+       OCT +000007000000                                                CDP10324
+       OCT +000002000000                                                CDP10325
+       OCT +000024000000                                                CDP10326
+ C6    OCT +233000000000                                                CDP10327
+       OCT +000000077777                                                CDP10328
+       OCT +000000000000                                                CDP10329
+       OCT +000001000000                                                CDP10330
+       OCT +000000000000                                                CDP10331
+ C8AA  BCD 1 (3I4,                                                      CDP10332
+       BCD 1 20I3/                                                      CDP10333
+       BCD 120I3)                                                       CDP10334
+       OCT -377777777777                                                CDP10335
+ C8K   BCD 1 (120H                                                      CDP10336
+       BCD 1                                                            CDP10337
+       BCD 1                                                            CDP10338
+       BCD 1                                                            CDP10339
+       BCD 1                                                            CDP10340
+       BCD 1                                                            CDP10341
+       BCD 1                                                            CDP10342
+       BCD 1                                                            CDP10343
+       BCD 1                                                            CDP10344
+       BCD 1                                                            CDP10345
+       BCD 1                                                            CDP10346
+       BCD 1                                                            CDP10347
+       BCD 1                                                            CDP10348
+       BCD 1                                                            CDP10349
+       BCD 1                                                            CDP10350
+       BCD 1                                                            CDP10351
+       BCD 1                                                            CDP10352
+       BCD 1                                                            CDP10353
+       BCD 1                                                            CDP10354
+       BCD 1                                                            CDP10355
+       BCD 1                                                            CDP10356
+       BCD 1 )                                                          CDP10357
+       OCT -377777777777                                                CDP10358
+ C8U   BCD 1 (49H                                                       CDP10359
+       BCD 1UNEXPE                                                      CDP10360
+       BCD 1CTED N                                                      CDP10361
+       BCD 1EGATIV                                                      CDP10362
+       BCD 1E NUMB                                                      CDP10363
+       BCD 1ER.MIN                                                      CDP10364
+       BCD 1US SIG                                                      CDP10365
+       BCD 1N IGNO                                                      CDP10366
+       BCD 1RED.                                                        CDP10367
+       BCD 1 )                                                          CDP10368
+       OCT -377777777777                                                CDP10369
+FORMAT SYN 1728                                                         CDP10370
+ SPACE SYN 1792                                                         CDP10371
+ BLANK SYN 1920                                                         CDP10372
+  SIGN SYN 2048                                                         CDP10373
+    JJ SYN 0                                                            CDP10374
+   DBC BSS 517                                                          CDP10375
+   CSH BSS 83                                                           CDP10376
+   TSH BSS 19                                                           CDP10377
+   BDC BSS 30                                                           CDP10378
+   FIL BSS 13                                                           CDP10379
+   LEV BSS 27                                                           CDP10380
+   RTN BSS 480                                                          CDP10381
+   SPH BSS 96                                                           CDP10382
+   STH BSS 8                                                            CDP10383
+       PZE                                                              CDP10384
+  SIZE SYN *                                                            CDP10385
+       FUL                                                              CDP10386
+           -1274,,32                                                    CDP10387
+       FUL                                                              CDP10388
+           461,,32                                                      CDP10389
+           32610                                                        CDP10390
+       REM DBC ENTER HERE.                                              CDP10391
+       FUL                                                              CDP10392
+           137,,32                                                      CDP10393
+           32610                                                        CDP10394
+       REM CSH ENTER HERE.                                              CDP10395
+       FUL                                                              CDP10396
+           21,,32                                                       CDP10397
+           32610                                                        CDP10398
+       REM TSH ENTER HERE.                                              CDP10399
+       FUL                                                              CDP10400
+           484,,32                                                      CDP10401
+           32610                                                        CDP10402
+       REM BDC ENTER HERE.                                              CDP10403
+       FUL                                                              CDP10404
+           158,,32                                                      CDP10405
+           32610                                                        CDP10406
+       REM SPH ENTER HERE.                                              CDP10407
+       FUL                                                              CDP10408
+           12,,32                                                       CDP10409
+           32610                                                        CDP10410
+       REM STH ENTER HERE.                                              CDP10411
+       ABS                                                              CDP10412
+       ORG SPACE-8                                                      CDP10413
+     H STO KJ                                                           CDP10414
+       SUB *+3                                                          CDP10415
+       TMI C21A+96                                                      CDP10416
+       TRA C23A1+96                                                     CDP10417
+       PZE 0,,21                                                        CDP10418
+       ABS                                                              CDP10419
+       ORG SIGN+512                                                     CDP10420
+       CLA H-1                                                          CDP10421
+       STO C8K+96                                                       CDP10422
+       CLA *+5                                                          CDP10423
+       LXA *+5,1                                                        CDP10424
+       STO C8K+15+96,1                                                  CDP10425
+       TIX *-1,1,1                                                      CDP10426
+       TRA C67A+2+96                                                    CDP10427
+       OCT -206060606060                                                CDP10428
+       OCT 16                                                           CDP10429
+       ORG 32613                                                        CDP10430
+SPACEQ                                                                  CDP10431
+ SIGNQ                                                                  CDP10432
+    NK                                                                  CDP10433
+    MM                                                                  CDP10434
+     L                                                                  CDP10435
+     K                                                                  CDP10436
+    KR                                                                  CDP10437
+    KQ                                                                  CDP10438
+ KONT3                                                                  CDP10439
+ KONT2                                                                  CDP10440
+ KONT1                                                                  CDP10441
+    KJ                                                                  CDP10442
+     J                                                                  CDP10443
+BLANKQ                                                                  CDP10444
+FORMAX                                                                  CDP10445
+  NBYQ BES 19                                                           CDP10446
+NNSIGN BES 20                                                           CDP10447
+ NSIGN BES 20                                                           CDP10448
+  NNBY BES 20                                                           CDP10449
+   NBY BES 20                                                           CDP10450
+ ISIGN BES 20                                                           CDP10451
+IBLANK BES 20                                                           CDP10452
+   CG3 SYN 32610                                                        CDP10453
+   CG4 SYN 32611                                                        CDP10454
+    C4 SYN 32607                                                        CDP10455
+       END                                                              CDP10456
+       REM INSTRUCTIONS TO MODIFY THE FORMAT.                           CDP10457
+       FUL                                                              CDP10458
+           SIZE,,32                                                     CDP10459
+       ABS                                                              CDP10460
+       ORG 1728                                                         CDP10461
+       ARS 18                                                           CDP10462
+FORMAT STO HOLER                                                        CDP10463
+       SUB D120                                                         CDP10464
+       TZE 1,4                                                          CDP10465
+       CLA HOLER                                                        CDP10466
+       SUB D100                                                         CDP10467
+       TMI THIRD                                                        CDP10468
+       STO HOLER                                                        CDP10469
+  SECD PXD 0                                                            CDP10470
+       LDQ HOLER                                                        CDP10471
+       DVP D10                                                          CDP10472
+       STO HOLER                                                        CDP10473
+       STQ COM                                                          CDP10474
+       CAL MASK2                                                        CDP10475
+       ANS 402                                                          CDP10476
+       CLA COM                                                          CDP10477
+       ALS 12                                                           CDP10478
+       ORS 402                                                          CDP10479
+  SSET CAL MASK8                                                        CDP10480
+       ANS 402                                                          CDP10481
+ EIGHT CLA HOLER                                                        CDP10482
+       ALS 6                                                            CDP10483
+       ORS 402                                                          CDP10484
+       TRA 1766                                                         CDP10485
+ THIRD CAL MASK1                                                        CDP10486
+       ANS 402                                                          CDP10487
+       CLA BLANK                                                        CDP10488
+       ORS 402                                                          CDP10489
+       TRA SECD                                                         CDP10490
+   D10 DEC 10                                                           CDP10491
+  D100 DEC 100                                                          CDP10492
+  D120 HTR 0,0,120                                                      CDP10493
+   COM PZE                                                              CDP10494
+ BLANK OCT 60000000                                                     CDP10495
+ MASK1 OCT -377700777777                                                CDP10496
+ MASK2 OCT -377777007777                                                CDP10497
+ MASK8 OCT -377777770077                                                CDP10498
+ HOLER PZE                                                              CDP10499
+       CLA 1780                                                         CDP10500
+       STO 1751                                                         CDP10501
+       CLA 1782                                                         CDP10502
+       STA 1742                                                         CDP10503
+       STA 1745                                                         CDP10504
+       STA 1747                                                         CDP10505
+       STA 1750                                                         CDP10506
+       STA 1753                                                         CDP10507
+       STA 1755                                                         CDP10508
+       CLA 402                                                          CDP10509
+       STO 1783                                                         CDP10510
+       CLA 32616                                                        CDP10511
+       ADD 32618                                                        CDP10512
+       TRA 1728                                                         CDP10513
+       OCT 2000400001                                                   CDP10514
+       OCT -207401020030                                                CDP10515
+       OCT 3365                                                         CDP10516
+       PZE                                                              CDP10517
+  SIZE SYN 61                                                           CDP10518
+       END                                                              CDP10519
+       REM INSTRUCTIONS TO INSERT ZEROES.                               CDP10520
+       FUL                                                              CDP10521
+           SIZE,,32                                                     CDP10522
+       ABS                                                              CDP10523
+       ORG 1792                                                         CDP10524
+ SPACE STO NBYQ                                                         CDP10525
+       SXD XR4,4                                                        CDP10526
+       COM                                                              CDP10527
+       ADD TWO                                                          CDP10528
+       PDX 0,4                                                          CDP10529
+       CLA 402,4                                                        CDP10530
+       STO COM                                                          CDP10531
+       STZ 402,4                                                        CDP10532
+       TIX *+1,4,1                                                      CDP10533
+   XX  TXH *+5,4,32747                                                  CDP10534
+       CLA COM                                                          CDP10535
+       STO 402,4                                                        CDP10536
+       LXD XR4,4                                                        CDP10537
+       TRA 1,4                                                          CDP10538
+       CLA COM                                                          CDP10539
+       LDQ 402,4                                                        CDP10540
+       STO 402,4                                                        CDP10541
+       STQ COM                                                          CDP10542
+       TIX XX,4,1                                                       CDP10543
+   XR4 PZE                                                              CDP10544
+   COM PZE                                                              CDP10545
+   TWO HTR 0,0,2                                                        CDP10546
+  NBYQ PZE                                                              CDP10547
+  SIZE SYN 23                                                           CDP10548
+       END                                                              CDP10549
+       REM INSTRUCTIONS TO CHECK THE DOUBLE PUNCHED DIGITS.             CDP10550
+       FUL                                                              CDP10551
+           SIZE,,32                                                     CDP10552
+       ABS                                                              CDP10553
+       ORG 1920                                                         CDP10554
+ BLANK SXD XR,4                                                         CDP10555
+       STO NBY                                                          CDP10556
+       STQ NNBY                                                         CDP10557
+       CLA NBYQ                                                         CDP10558
+       COM                                                              CDP10559
+       ADD ONE                                                          CDP10560
+       STD SST                                                          CDP10561
+       CLA NBY                                                          CDP10562
+       COM                                                              CDP10563
+       ADD TWO                                                          CDP10564
+       PDX 0,4                                                          CDP10565
+       CLA 402,4                                                        CDP10566
+       STO COM                                                          CDP10567
+       LDQ NNBY                                                         CDP10568
+       MPY SIX                                                          CDP10569
+       ARS 1                                                            CDP10570
+       STA LS                                                           CDP10571
+       STA *+3                                                          CDP10572
+       CAL MASK1                                                        CDP10573
+       LDQ MASK2                                                        CDP10574
+       LGL                                                              CDP10575
+       ANS 402,4                                                        CDP10576
+       PXD 0                                                            CDP10577
+       LDQ MASK1                                                        CDP10578
+    LS LGL                                                              CDP10579
+       ANS COM                                                          CDP10580
+       CAL COM                                                          CDP10581
+       ARS 6                                                            CDP10582
+       ORS 402,4                                                        CDP10583
+       CAL MASK4                                                        CDP10584
+       ANS COM                                                          CDP10585
+       TIX *+1,4,1                                                      CDP10586
+   SST TXH *+3,4,0                                                      CDP10587
+       LXD XR,4                                                         CDP10588
+       TRA 1,4                                                          CDP10589
+       CAL 402,4                                                        CDP10590
+       SLW COMMON                                                       CDP10591
+       STZ 402,4                                                        CDP10592
+       ARS 6                                                            CDP10593
+       SLW 402,4                                                        CDP10594
+       CAL COM                                                          CDP10595
+       LDQ MASK2                                                        CDP10596
+       LGL 30                                                           CDP10597
+       ORS 402,4                                                        CDP10598
+       CAL COMMON                                                       CDP10599
+       ANA MASK4                                                        CDP10600
+       SLW COM                                                          CDP10601
+       TIX SST,4,1                                                      CDP10602
+ MASK1 OCT -377777777777                                                CDP10603
+ MASK2 OCT 0                                                            CDP10604
+ MASK3 OCT -300000000000                                                CDP10605
+ MASK4 OCT 77                                                           CDP10606
+COMMON                                                                  CDP10607
+   COM                                                                  CDP10608
+    XR                                                                  CDP10609
+   NBY                                                                  CDP10610
+  NNBY                                                                  CDP10611
+  NBYQ SYN 32605                                                        CDP10612
+   ONE OCT 2000000000001                                                CDP10613
+   TWO HTR 0,0,2                                                        CDP10614
+   SIX HTR 0,0,6                                                        CDP10615
+  SIZE SYN 65                                                           CDP10616
+       END                                                              CDP10617
+       REM INSTRUCTIONS TO INSERT THE MINUS SIGN.                       CDP10618
+       FUL                                                              CDP10619
+           SIZE,,32                                                     CDP10620
+       ABS                                                              CDP10621
+       ORG 2048                                                         CDP10622
+  SIGN SXD XR,4                                                         CDP10623
+       STO NBY                                                          CDP10624
+       STQ NNBY                                                         CDP10625
+       COM                                                              CDP10626
+       ADD TWO                                                          CDP10627
+       PDX 0,4                                                          CDP10628
+       CLA 402,4                                                        CDP10629
+       STO COM                                                          CDP10630
+       LDQ NNBY                                                         CDP10631
+       MPY SIX                                                          CDP10632
+       ARS 1                                                            CDP10633
+       STA LL                                                           CDP10634
+       STA LM                                                           CDP10635
+       SUB D2                                                           CDP10636
+       STA LM+2                                                         CDP10637
+       CAL MASK1                                                        CDP10638
+       LDQ MASK2                                                        CDP10639
+    LL LGL                                                              CDP10640
+       ANS 402,4                                                        CDP10641
+       PXD                                                              CDP10642
+       LDQ MASK3                                                        CDP10643
+    LM LGL                                                              CDP10644
+       ANA COM                                                          CDP10645
+       ARS                                                              CDP10646
+       LBT                                                              CDP10647
+       TRA ZERO                                                         CDP10648
+       TRA END                                                          CDP10649
+  ZERO ARS 1                                                            CDP10650
+       LBT                                                              CDP10651
+       TRA END                                                          CDP10652
+       PSE 100                                                          CDP10653
+       SWT 1                                                            CDP10654
+       TRA END                                                          CDP10655
+       CLA NBNY                                                         CDP10656
+       COM                                                              CDP10657
+       ADD TWO                                                          CDP10658
+       PDX 0,4                                                          CDP10659
+       LDQ NNBNY                                                        CDP10660
+       MPY SIX                                                          CDP10661
+       ARS 1                                                            CDP10662
+       STA LN                                                           CDP10663
+       PXD                                                              CDP10664
+       LDQ MASK5                                                        CDP10665
+    LN LGL                                                              CDP10666
+       ORS 402,4                                                        CDP10667
+   END LXD XR,4                                                         CDP10668
+       TRA 1,4                                                          CDP10669
+   TWO HTR 0,0,2                                                        CDP10670
+    D2 DEC 2                                                            CDP10671
+ MASK1 OCT -377777777777                                                CDP10672
+ MASK2 OCT 177777777777                                                 CDP10673
+ MASK3 OCT -200000000000                                                CDP10674
+ MASK4 OCT 7777777777                                                   CDP10675
+ MASK5 OCT -0                                                           CDP10676
+   NBY                                                                  CDP10677
+  NBNY SYN 32605                                                        CDP10678
+ NNBNY SYN 32604                                                        CDP10679
+  NNBY                                                                  CDP10680
+    XR                                                                  CDP10681
+   COM                                                                  CDP10682
+   SIX HTR 0,0,6                                                        CDP10683
+  SIZE SYN 70                                                           CDP10684
+       ORG 625                                                          CDP10685
+       TRA 369                                                          CDP10686
+       END 96                                                           CDP10687

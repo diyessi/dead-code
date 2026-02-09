@@ -34,4 +34,141 @@
 101040020020 040000001000 100000200000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
-000000000000 000000000000 000000000000 000000000000 000000000000 0000c181a0a6 f0a092928581 a0a0a0a0a0a0*
+J1 WH 0051          0552         SY                                             
+ WH51  REM  136 10238                                                   WH51 000
+       REM MODIFICATION OF WH41 FOR FORTRAN II. WH42,43 NO LONGER NEEDEDWH51 001
+       REM TO WRITE A PROGRAM DECK ON TAPE, CODE D=WRTAPEF(N).          WH51 002
+       REM D SIGNIFIES DUMMY VARIABLE WHICH MAY BE CHANGED IN VALUE.    WH51 003
+       REM N IS A FIXED OR FLOATING VARIABLE OR CONSTANT SUCH THAT      WH51 004
+       REM THE INTEGRAL PART OF THE ABSOLUTE VALUE OF N IS THE NUMBER OFWH51 005
+       REM THE DECK IN QUESTION ON THE TAPE. IF THE DECK IS THE LAST TO WH51 006
+       REM BE PLACED ON TAPE, N MUST BE ZERO.                           WH51 007
+       REM SECONDARY ENTRY POINTS FOR TAPE AND LDTAPE (SEE WH41 PAR. 5, WH51 008
+       REM SUBPARAGRAPHS 1,3,4)                                         WH51 009
+       FUL                                                              WH51 010
+       REM THE FIRST CARD OF THIS ASSEMBLY SHOULD BE CHECKSUM CORRECTED.WH51 011
+       MZE 0,,8                                                         WH51 012
+       PZE                                                              WH51 013
+       PZE LAST,,0                                                      WH51 014
+       PZE -1                                                           WH51 015
+       BCD 1WRTAPE                                                      WH51 016
+       PZE WRTAPE                                                       WH51 017
+       BCD 1LDTAPE                                                      WH51 018
+       PZE LDTAPE                                                       WH51 019
+       BCD 1TAPE                                                        WH51 020
+       PZE TAPE                                                         WH51 021
+       ORG 0                                                            WH51 022
+       FUL                                                              WH51 023
+       CPY -9                                                           WH51 024
+       TSX -9,1                                                         WH51 025
+       LOC -9                                                           WH51 026
+       CPY *,1                                                          WH51 027
+       TXI *-1,1,-1                                                     WH51 028
+       PZE                                                              WH51 029
+       REW X                                                            WH51 030
+       LXA *+3,1                                                        WH51 031
+       RTB X                                                            WH51 032
+       PXD ,0                                                           WH51 033
+       CAD 23,1                                                         WH51 034
+       TIX *-1,1,1                                                      WH51 035
+       REL                                                              WH51 036
+       ORG 0                                                            WH51 037
+WRTAPE WTB X                                                            WH51 038
+       SXD LDER+14,1    SAVE REGISTERS                                  WH51 039
+       SXD LDER+20,2                                                    WH51 040
+       SXD LDER+21,4                                                    WH51 041
+       TSX FIX,4        OBTAIN N                                        WH51 042
+       STO LDER+22                                                      WH51 043
+       TZE *+3                                                          WH51 044
+       CLA X5           SET UP IOD FOR LOADER                           WH51 045
+       TRA *+2                                                          WH51 046
+       CLA X3           SET UP REWIND FOR LOADER                        WH51 047
+       STO LDER+18                                                      WH51 048
+       CAL 22           LOADING ADDRESS                                 WH51 049
+       STA X1                                                           WH51 050
+       STA LDER+1                                                       WH51 051
+       SUB L24                                                          WH51 052
+       STA LDER+11      RECORD LENGTH                                   WH51 053
+       PAX ,1                                                           WH51 054
+       LXA LDER+12,2    LOADER LENGTH                                   WH51 055
+       PXD ,0                                                           WH51 056
+       CAD LDER+23,2                                                    WH51 057
+       TIX *-1,2,1                                                      WH51 058
+ X1    CAD ,1                                                           WH51 059
+       TIX *-1,1,1                                                      WH51 060
+       COM                                                              WH51 061
+       SLW COMMON                                                       WH51 062
+       CPY COMMON                                                       WH51 063
+       CLA LDER+22                                                      WH51 064
+ X5    IOD                                                              WH51 065
+       TNZ X2                                                           WH51 066
+       WEF X                                                            WH51 067
+ X3    REW X                                                            WH51 068
+LDTAPE LXA LDER+12,4                                                    WH51 069
+       RTB X                                                            WH51 070
+       PXD ,0                                                           WH51 071
+       CAD 23,4                                                         WH51 072
+       TRA *+2                                                          WH51 073
+       HPR 7,7          RECORD REQUESTED IS NOT AVAILABLE               WH51 074
+       TIX *-3,4,1                                                      WH51 075
+       TRA 0                                                            WH51 076
+ X2    RCD                                                              WH51 077
+       CPY 0                                                            WH51 078
+       CPY 1                                                            WH51 079
+       TRA 0                                                            WH51 080
+ LDER  LXA 11,1         0 RECORD LENGTH                                 WH51 081
+       CAD ,1           1 LOADING ADDRESS SUPPLIED                      WH51 082
+       TIX 1,1,1        2                                               WH51 083
+       CAD COMMON       3                                               WH51 084
+       COM              4                                               WH51 085
+       ALS 1            5 REMOVE Q                                      WH51 086
+       TZE 15           6                                               WH51 087
+       HPR 63,7         7 CK SUM ERROR. TRA TO 17)8 TO ACCEPT           WH51 088
+       BST X            8 PRESS START TO TRY AGAIN                      WH51 089
+       LXA 12,1         9                                               WH51 090
+       RTB X            10                                              WH51 091
+       PXD ,0           11 RECORD LENGTH IN ADDRESS                     WH51 092
+       CAD 23,1         12                                              WH51 093
+       TIX 12,1,1       13                                              WH51 094
+       TXL 0,,**        14 DEC STO IR1                                  WH51 095
+       LXD 14,1         15 RESTORE REGISTERS                            WH51 096
+       LXD 20,2         16                                              WH51 097
+       LXD 21,4         17                                              WH51 098
+       PZE              18 IOD OR REW X SUPPLIED                        WH51 099
+       TRA 1,4          19                                              WH51 100
+       PZE              20 DEC STO IR2                                  WH51 101
+       PZE              21 DEC STO IR4                                  WH51 102
+       PZE              22 LOCATION FOR RECORD COUNT                    WH51 103
+ TAPE  TSX FIX,4                                                        WH51 104
+       TZE X4-3                                                         WH51 105
+       SUB 1A                                                           WH51 106
+       TZE X3                                                           WH51 107
+       SUB 22                                                           WH51 108
+       TZE X3+1                                                         WH51 109
+       PAX ,1                                                           WH51 110
+       TMI X4                                                           WH51 111
+       RTB X                                                            WH51 112
+       CPY COMMON                                                       WH51 113
+       TRA *+2                                                          WH51 114
+       HPR 7,7          RECORD REQUESTED IS NOT AVAILABLE               WH51 115
+       TIX *-4,1,1                                                      WH51 116
+       TRA X3+1                                                         WH51 117
+ X4    BST X                                                            WH51 118
+       TIX *-1,1,1                                                      WH51 119
+       TRA X3+1                                                         WH51 120
+ FIX   SSP                                                              WH51 121
+       LDQ B17                                                          WH51 122
+       TLQ *+3                                                          WH51 123
+       ARS 18                                                           WH51 124
+       TRA *+2                                                          WH51 125
+       UFA 155B8                                                        WH51 126
+       ANA MASK                                                         WH51 127
+       TRA 1,4                                                          WH51 128
+ MASK  DEC 32767                                                        WH51 129
+ B17   DEC 32767B17                                                     WH51 130
+ 155B8 DEC 155B8                                                        WH51 131
+ L24   DEC 24                                                           WH51 132
+ 1A    DEC 1                                                            WH51 133
+ LAST  BSS 0                                                            WH51 134
+ X     EQU 9                                                            WH51 135
+COMMON SYN 32767                                                        WH51 136

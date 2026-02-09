@@ -1,0 +1,442 @@
+       REM READS UA SAP STYLE SYMBOLIC DATA CARDS AND STORES            CEI4G000
+       REM AS INSTRUCTED. AN ELABORATION OF UA BCD1 ALLOWING            CEI4G000
+       REM SYMBOLIC LOCATIONS.                                          CEI4G000
+RSC2L0 CLA 1,4               A,O,B TO ACC A=A+N                         CEI4G001
+       STA RSC1L1            A TO STORAGE                               CEI4G002
+       STO RSC1L2            A,O,B TO STORAGE                           CEI4G003
+       ARS 18                B IN ADDRESS                               CEI4G004
+       TZE RSC2L1            IS B=O                                     CEI4G005
+       STD RSC1L2            CLEAR B FROM STORAGE                       CEI4G006
+       SUB RSC1L2            B-A+1                                      CEI4G007
+       ADD RSC3L1            B+1                                        CEI4G008
+       TPL RSC2L1            IS BLOCK COMPLETE                          CEI4G009
+       HTR 2,4               YES - EXIT                                 CEI4G010
+RSC2L1 SLW RSC1L2            SAVE WORD COUNT                            CEI4G011
+       SXD RSC2L8,1          SAVE XR                                    CEI4G012
+       SXD RSC2L9,2                                                     CEI4G013
+       SXD RSC2LX,4                                                     CEI4G014
+RSC2L2 RCD                   SELECT CARD READER                         CEI4G015
+       TSX H2BCD0,4          READ CONTROL CARD                          CEI4G016
+       CAL BCDPAC+1          RETURN-ADD COLS. 7-12                      CEI4G017
+       ARS 12                CLEAR COL 11,12                            CEI4G018
+       SUB RSC3L0            BCD 1006 RTD                               CEI4G019
+       TZE RSC5L1            SET SWITCH FOR RTD-                        CEI4G020
+       CLS RSC3L9            SET SWITCH FOR RCD+                        CEI4G021
+       STO RSC1L8            LOC. OF SWITCH +                           CEI4G022
+       TRA RSC2L3                                                       CEI4G023
+RSC5LG LXD RSC2L8,1          RESTORE XR 1,2 AT EOF                      CEI4G024
+       LXD RSC2L9,2                                                     CEI4G025
+       LXD RSC2LX,4          RETURN                                     CEI4G026
+       TRA 2,4                                                          CEI4G027
+RSC5L7 CLA BCDPAC+2          TAPE UNIT 0 = 10                           CEI4G028
+       STO RSC5LX                                                       CEI4G029
+       SUB RSC3L2                                                       CEI4G030
+       TZE RSC5LD                                                       CEI4G031
+       CLA RSC3L7            L(10) DEC                                  CEI4G032
+       TRA RSC5LE                                                       CEI4G033
+RSC5LD CLA BCDPAC+1                                                     CEI4G034
+       ANA RSC5LF            L(000000000077) OCT MASK                   CEI4G035
+RSC5LE ADD RSC5L8            ADD SPECIFIED TAPE UNIT                    CEI4G036
+       STO RSC5L9            TO DUMMY RTD                               CEI4G037
+RSC5L9                       L (0762000002XX) OCT                       CEI4G038
+       TSX RDT2L0,4                                                     CEI4G039
+       HTR RDT2L6            ERROR RETURN                               CEI4G040
+       TRA RSC5LG            EOF RETURN                                 CEI4G041
+       TRA RSC2L3            NORMAL RETURN                              CEI4G042
+RSC5L8 OCT 076200000200                                                 CEI4G043
+RSC5LF OCT 000000000077                                                 CEI4G044
+RSC5L1 CLA RSC3L9                                                       CEI4G045
+       STO RSC1L8            LOC. OF SWITCH -                           CEI4G046
+RSC5L4 TMI RSC5L7            READ SWITCH                                CEI4G047
+RSC5LB CLA RSC1L8            READ SWITCH                                CEI4G048
+       TMI RSC5L9            GO TO TAPE                                 CEI4G049
+       RCD                   SELECT FOR NEXT CARD                       CEI4G050
+       TSX H2BCD0,4          GO TO CARD                                 CEI4G051
+       TZE RSC5LG            CHECK FOR EOF ON LAST CARD                 CEI4G052
+RSC2L3 CLA RSC3L2            SET EN4 OF VARIBLE FIELD-BCD1              CEI4G053
+       STO BCDPAC+12                                                    CEI4G054
+       SUB BCDPAC            TEST FOR LOCATION 1-6 BLANK                CEI4G055
+       TZE RSC2L4            GO TO SET BEGINNING OF VARIBLE FIELD       CEI4G056
+       CLA BCDPAC            TEST FOR ABSOLUTE BCD DEC LOCATION         CEI4G057
+       ANA RSC3L2                                                       CEI4G058
+       TZE RSC5LH            PREPARE TO CONVERT BCD DEC TO BIN          CEI4G059
+RSC4L1 CLA MNEMON            ENTER MNEMON TABLE AND                     CEI4G060
+       TZE RSC4L4+1          NO MNEMON TABLE ENTRIES                    CEI4G061
+       ADD MNEMON            SEARCH FOR SYMBOLIC LOCATION               CEI4G062
+       PAX ,2                2M IN XR2                                  CEI4G063
+       ADD RSC3L1            2M+1 IN ACC                                CEI4G064
+       ADD RSC4L1            NMEMON+2M+1                                CEI4G065
+       STA RSC4L2                                                       CEI4G066
+       ADD RSC3L1            NMEMON+2M+2                                CEI4G067
+       STA RSC4L3                                                       CEI4G068
+RSC4L2 CLA 0,2               GET BCD SYMBOL                             CEI4G069
+       SUB BCDPAC            COMPARE TO COL 1-6                         CEI4G070
+       TNZ RSC4L4                                                       CEI4G071
+RSC4L3 CLA 0,2               HIT-ABSOLUTE BINARY LOCATION               CEI4G072
+       TRA RSC2L4-1          GO TO SET BEGINNING OF VARIBLE FIELD       CEI4G073
+RSC4L4 TIX RSC4L2,2,2        GET NEXT SYMBOL                            CEI4G074
+       TRA RSC2L4            GO TO SET BEGINNING OF VARIBLE FIELD       CEI4G075
+RSC5LH LDQ BCDPAC            COL 1-6 IN MQ                              CEI4G076
+RSC4L5 PXD                   CLEAR ACC                                  CEI4G077
+       SLW RSC1L3            CLEAR LOCATION FOR STORAGE OF              CEI4G078
+       TSX RSC2LG-1,2        ABSOLUTE CONVERSION RESULT                 CEI4G079
+       STA RSC1L1            LOCATION FOR STORAGE OF FIRST WORD         CEI4G080
+RSC2L4 LXD RSC1LA,2          7777 TO XR2                                CEI4G081
+       LXA RSC2LH,1          2 TO XR1                                   CEI4G082
+       LDQ BCDPAC,2          SET BEGINNING OF VARIBLE FIELD             CEI4G083
+       LGL 30                COL 12 IN LEFT SIX BITS OF MQ              CEI4G084
+       STQ RSC1L4            SAVE                                       CEI4G085
+       CAL RSC1L4            COL 12 IN LEFT SIX BITS OF ACC             CEI4G086
+       ARS 30                COL 12 IN RIGHT SIX BITS OF ACC            CEI4G087
+       SLW RSC1L5            SAVE                                       CEI4G088
+       CAL BCDPAC+1          COL 7-12 IN ACC                            CEI4G089
+       ALS 7                 CLEAR OUT COL 7                            CEI4G090
+       ARS 19                COL 8,9,10 IN ACC 18-35                    CEI4G091
+       LXD RSC2L6,4          4 TO XR4                                   CEI4G092
+RSC2L5 CAS RSC3L6+1,4        TEST OPERATION                             CEI4G093
+RSC2L6 TXL RSC2L7,0,4        STORAGE(ACC..GO TO TEST FOR RTD            CEI4G094
+       TRA RSC2LB+1,4        STORAGE = ACC..HIT                         CEI4G095
+       TIX RSC2L5,4,1        STORAGE)ACC..COMPARE AGAIN                 CEI4G096
+RSC2L7 TRA RSC5L6            GO TO TEST FOR RTD                         CEI4G097
+RSC2L8 TXL RSC2LD,0          TRA CARD                                   CEI4G098
+RSC2L9 TXL RSC2LM,0          OCT CARD                                   CEI4G099
+RSC2LX TXL RSC2LA,0          DEC CARD                                   CEI4G100
+RSC2LB CLA RSC1L5            BCD CARD..COL 12-WORD COUNT TO ACC         CEI4G101
+       CAS RSC3L7            L (10)                                     CEI4G102
+       CLA RSC3L7            WORD COUNT)10..10 TO ACC                   CEI4G103
+       TXH                   WORD COUNT = 10                            CEI4G104
+       PAX ,1                WORD COUNT(10..WORD COUNT TO XR1           CEI4G105
+RSC2LC CLA BCDPAC+1,2        BCDPAC+2 TO ACC-COL 13-18                  CEI4G106
+       TSX RSC1L1,4          STORE BCDPAC TO LOCATION                   CEI4G107
+       TNX RSC5LB,1,1        CARD COMPLETE--YES - GET NEXT CARD         CEI4G108
+RSC1LA TXI RSC2LC,2,-1       GET NEXT WORD                              CEI4G109
+RSC5L6 SUB RSC3LR            L(000RTD)                                  CEI4G110
+       TZE RSC5L1            SET SWITCH FOR RTD                         CEI4G111
+       HTR RSC5LB            ILLEGAL OPERATION                          CEI4G112
+RSC2LD CAL RSC1L5            TRA CARD..COL 12 IS TAG OR FIRST           CEI4G113
+       STO RSC1L3            INTERGER OF ADDRESS IN DECIMAL             CEI4G114
+       LDQ BCDPAC+2          COL 13-18                                  CEI4G115
+       PXD                   CLEAR ACC                                  CEI4G116
+       TSX RSC2LG-1,2        COMPUTE ABSOLUTE LOCATION                  CEI4G117
+       STO RSC2LE            TRA X,X..TRAXXXX,X..TRA XXX                CEI4G118
+       LXD RSC2L8,1          RESTORE XRS                                CEI4G119
+       LXD RSC2L9,2                                                     CEI4G120
+       LXD RSC2LX,4                                                     CEI4G121
+RSC2LE TRA                   EXIT                                       CEI4G122
+RSC2LF LGL 3                 TAG                                        CEI4G123
+       PXD                   CLEAR FIRST THREE BITS OF COL 14           CEI4G124
+       LGL 3                 LAST THREE BITS OF COL 14 TO ACC           CEI4G125
+       ALS 15                LAST THREE BITH OF COL 14 TO ACC 18,19,20  CEI4G126
+       ORA RSC1L3            TAG TO LOCATION                            CEI4G127
+       TXL RSC2LL                                                       CEI4G128
+       LXA RSC2LG,4          SIX TO XR4                                 CEI4G129
+RSC2LG LGL 6                 BCD CHAR TO ACC                            CEI4G130
+       CAS RSC3LC            COMPARE TO COMMA                           CEI4G131
+       TRA 2,2               STORAGE(ACC..SET BEGINNING OF VAR. FIELD   CEI4G132
+       TXL RSC2LF            STORAGE=ACC..GET TAG                       CEI4G133
+       CAS RSC3LB            STORAGE)ACC..COMPARE TO BLANK              CEI4G134
+       TRA 2,2               SET BEGINNING OF VAR. FIELD OR EXIT        CEI4G135
+       TXL RSC2LK            GO TO BCD CHAR. COUNTER                    CEI4G136
+       CAS RSC3L7            COMPARE TO TEN                             CEI4G137
+       TRA 2,2               SET BEGINNING OF                           CEI4G138
+       TRA 2,2               VARIBLE FIELD                              CEI4G139
+       STO RSC1L6            CONVERT BCD NUMBER TO DEC                  CEI4G140
+       CLA RSC1L3            X, FROM LOCATION                           CEI4G141
+RSC2LH ALS 2                 4X,                                        CEI4G142
+       ADD RSC1L3            4X,+X,                                     CEI4G143
+       ALS 1                 2(4X,+X,)                                  CEI4G144
+       ADD RSC1L6            2(4X,+X,)+X2                               CEI4G145
+       STO RSC1L3            SAVE IN LOCATION                           CEI4G146
+       PXD                   CLEAR                                      CEI4G147
+       TIX RSC2LG,4,1        GET NEXT BCD CHAR                          CEI4G148
+RSC2LK CLA RSC1L3            LOCATION TO ACC IN ABSOLUTE BINARY         CEI4G149
+RSC2LL ORA RSC3L8            PREPARE TO EXIT                            CEI4G150
+       TRA 1,2               EXIT FROM TRANSFER CARD                    CEI4G151
+RSC2LA TSX SCNCD0,4          BEGIN DECIMAL SCAN AND CONVERT             CEI4G152
+       TSX DECNV0,4                                                     CEI4G153
+       TRA RSC5L5            BLOCK COMPLETED, LOAD REG AND RETURN       CEI4G154
+RSC2LM LDQ RSC1L4            COL 12 TO MQ LEFT SIX BITS                 CEI4G155
+       CLA RSC2LY            ADD EXIT SWITCH                            CEI4G156
+       STP RSC2LY            SET EXIT SWITCH                            CEI4G157
+       PXD                   CLEAR ACC                                  CEI4G158
+       TXL RSC2LP                                                       CEI4G159
+RSC2LN PXD                   CLEAR ACC                                  CEI4G160
+       LGL 3                 PUT FIRST THREE BITS OF BCD CHAR           CEI4G161
+       TNZ RSC2LT            IN ACC                                     CEI4G162
+       CLA RSC1L7            FORMATION OF OCTAL WORD                    CEI4G163
+       LGL 3                 PUT NEXT THREE BITS OF BCD CHAR            CEI4G164
+RSC2LP STO RSC1L7            IN ACC WITH OCTAL WORD                     CEI4G165
+       ORS RSC1L7            FORM OCTAL WORD                            CEI4G166
+RSC2LR TIX RSC2LN,1,1        XR1 = 2..GET NEXT WORD                     CEI4G167
+       TXI RSC2LS,2,-1       XR2=7777 - 1=7776=-2                       CEI4G168
+RSC2LS LDQ BCDPAC,2          LOAD NEXT WORD                             CEI4G169
+       TXI RSC2LN,1,5        RENEW XR1 FOR CHAR COUNT                   CEI4G170
+RSC2LT LGL 3                 COMPLETE BCD CHAR                          CEI4G171
+       STQ RSC1L4            SAVE MQ                                    CEI4G172
+       CAS RSC3LC            COMPARE TO COMMA=73                        CEI4G173
+       TXL RSC2LV            BCD CHAR 7 73..INVERT SWITCH               CEI4G174
+       TXL RSC2LW            BCD CHAR = 73..OCTAL WORD COMPLETE         CEI4G175
+       CAS RSC3LM            COMPARE TO MINUS = 40                      CEI4G176
+       TXL RSC2LV            40(BCD(73..INVERT SWITCH                   CEI4G177
+       TXL RSC2LZ            BCD = 40..                                 CEI4G178
+       CAS RSC3LP            COMPARE TO PLUS = 20                       CEI4G179
+       TXL RSC2LV            20(BCD(40..INVERT SWITCH                   CEI4G180
+       TXL RSC2LR            IS BCD WORD COMPLETE                       CEI4G181
+RSC2LV CLS RSC2LY            INVERT SWITCH FROM TXH TO TXL              CEI4G182
+       STO RSC2LY            SWITCH LOCATION                            CEI4G183
+RSC2LW CLA RSC1L7            OCTAL WORD COMPLETE                        CEI4G184
+       TSX RSC1L1,4          STORE IN LOCATION                          CEI4G185
+RSC2LY TXH RSC5LB            EXIT SWITCH..IF TXL READ NEXT CARD         CEI4G186
+       TXL RSC2LM            GET NEXT OCTAL WORD                        CEI4G187
+RSC2LZ CLA RSC3L9            MINUS ZERO TO ACC                          CEI4G188
+       TXL RSC2LP            STORE OCTAL WORD LOCATION                  CEI4G189
+RSC1L1 STO                   LOCATION                                   CEI4G190
+       CLA RSC1L1            PREPARE LOCATION FOR NEXT WORD             CEI4G191
+       ADD RSC3L1            L(1)                                       CEI4G192
+       STA RSC1L1            LOCATION OF NEXT WORD                      CEI4G193
+       CLA RSC1L2            BLOCK COUNT B-A+1=0                        CEI4G194
+       TZE 1,4               GET NEXT CARD OR WORD                      CEI4G195
+       SUB RSC3L1            L(1)                                       CEI4G196
+       STO RSC1L2            PUT BLOCK COUNT BACK                       CEI4G197
+       TNZ 1,4               GET NEXT CARD OR WORD                      CEI4G198
+RSC5L5 LXD RSC2LX,4          BLOCK COMPLETE                             CEI4G199
+       LXD RSC2L9,2          RESTORE INDEX REGISTERS                    CEI4G200
+       LXD RSC2L8,1                                                     CEI4G201
+       TRA 2,4               RETURN                                     CEI4G202
+RSC3L0 BCD 100 RTD           FOR TEST TAPE OPERATION                    CEI4G203
+RSC3L1 DEC 1                                                            CEI4G204
+RSC3L2 BCD 1                 BLANKS-FOR ZONE MASK                       CEI4G205
+RSC3L3 BCD 1000TRA           FOR TEST TRA OP T=63 OCT                   CEI4G206
+RSC3L4 BCD 1000OCT           FOR TEST OCT OF O=46 OCT                   CEI4G207
+RSC3L5 BCD 1000DEC           FOR TEST DEC OP D=24 OCT                   CEI4G208
+RSC3L6 BCD 1000BCD           FOR TEST BCD OP B=22 OCT                   CEI4G209
+RSC3L7 DEC 10                                                           CEI4G210
+RSC3L8 TRA                   FOR TRA CARD EXIT                          CEI4G211
+RSC3L9 MZE                   P BIT                                      CEI4G212
+RSC3LB BCD 100000            BLANK                                      CEI4G213
+RSC3LC BCD 100000,           COMMA                                      CEI4G214
+RSC3LM BCD 100000-           MINUS                                      CEI4G215
+RSC3LP BCD 100000+           PLUS                                       CEI4G216
+RSC3LR BCD 1000RTD                                                      CEI4G217
+RSC3LS DEC 2                 INITIAL ERROR REPEAT                       CEI4G218
+RSC1L2 BSS 1                 B ADDR WORD COUNT                          CEI4G219
+RSC1L3 BSS 1                 SYMBOL                                     CEI4G220
+RSC1L4 BSS 1                 MQ                                         CEI4G221
+RSC1L5 BSS 1                 BEGINNING OF VARIBLE FIELD                 CEI4G222
+RSC1L6 BSS 1                 STORAGE FOR BCD-DEC CONV.                  CEI4G223
+RSC1L7 BSS 1                 FORM OCT WORD                              CEI4G224
+RSC1L8 BSS 1                 SWITCH                                     CEI4G228
+RSC1L9 BSS 1                                                            CEI4G225
+RSC5LX BSS 1                 STORE TAPE UNIT NUMBER                     CEI4G226
+SCNCD0 SXD SCNCDY,4                                                     CEI4G229
+SCNCDT PXD                   CLEAN CONVERSION REGISTERS                 CEI4G227
+SCNCD1 SLW SCNSD1            BN SCALE                                   CEI4G230
+SCNCD2 SLW SCNSD2            EXPN                                       CEI4G231
+SCNCD3 SLW SCNSD3            N FRACTION                                 CEI4G232
+       LXD SCNTD1,4                                                     CEI4G233
+       CAL SCNCD4            RESET SWITCHES FOR                         CEI4G234
+       STP DECNV3            FIXED POINT                                CEI4G235
+       STP DECNVD            X                                          CEI4G236
+       STP DECNV1            EXP                                        CEI4G237
+       STP DECNV4            POINT                                      CEI4G238
+       STP DECNVH            EXIT FROM ROUTINE                          CEI4G239
+       CAL SCNCD3            INITIALIZE CONVERSION                      CEI4G240
+SCNCD4 TXL SCNCD8                                                       CEI4G241
+SCNCD5 CLS DECNV4            INVERT SWITCH TO SIGNAL DEC POINT          CEI4G242
+       STO DECNV4                                                       CEI4G243
+       CAL SCNCDE                                                       CEI4G244
+       STA SCNCDK            ROUTINE TO COUNT                           CEI4G245
+       STA SCNCDM            DECIMAL PLACES                             CEI4G246
+       TXI SCNCDK,4,1                                                   CEI4G247
+SCNCD6 TXI SCNCDE,4,-1       COUNT DECIMAL PLACES                       CEI4G248
+SCNCD7 CLS DECNV1            INVERT SWITCH TO SIGNAL EXPONENT           CEI4G249
+       STO DECNV1                                                       CEI4G250
+       CAL SCNCD2            SET UP EXPONENT CONVERSION                 CEI4G251
+SCNCD8 STA SCNCDF            STORE CONVERSION                           CEI4G252
+       STA SCNCDG            ADDRESS                                    CEI4G253
+       STA SCNCDJ                                                       CEI4G254
+       CAL SCNCD6            INITIAL CONVERSION                         CEI4G255
+       STA SCNCDK            WITHOUT DECIMAL COUNT                      CEI4G256
+       STA SCNCDM                                                       CEI4G257
+SCNCD9 CAL SCNCDG                                                       CEI4G258
+SCNCDA STD SCNCDH                                                       CEI4G259
+       TOV SCNCDK                                                       CEI4G260
+SCNCDW TXL SCNCDK                                                       CEI4G261
+SCNCDB CLA DECNV3            INVERT SWITCHES TO                         CEI4G262
+       STP DECNV3            SIGNAL FIXED POINT                         CEI4G263
+       STP DECNVD                                                       CEI4G264
+       CAL SCNCD1                                                       CEI4G265
+SCNCDY TXL SCNCD8                                                       CEI4G266
+       CAL SCNCD1            SET UP B CONVERSION                        CEI4G267
+SCNCDC CAL SCNCDD                                                       CEI4G268
+SCNCDD TXL SCNCDA,0,258*64                                              CEI4G269
+SCNCDE PXD SCNCD6                                                       CEI4G270
+       LGL 6                                                            CEI4G271
+       CAS SCNTD3            CAS TEN TEST FOR DIGIT                     CEI4G272
+       TXL SCNCDP                                                       CEI4G273
+       TXL SCNCDR                                                       CEI4G274
+       SLW SCNSD8            PERFORM CODED                              CEI4G275
+SCNCDF CLA SCNSD3            MULTIPLICATION                             CEI4G276
+       ALS 2                 BY TEN AND ADD                             CEI4G277
+SCNCDG ADD SCNSD3            CURREN DIGIT                               CEI4G278
+       ALS 1                                                            CEI4G279
+SCNCDH ADD SCNSD8                                                       CEI4G280
+       TOV SCNCDN            TEST FOR OVERFLOW                          CEI4G281
+SCNCDJ STO SCNSD3                                                       CEI4G282
+SCNCDK TIX SCNCDE,1,1        COUNT CHARACTERS                           CEI4G283
+       TXI SCNCDL,2,-1       OBTAIN NEXT BCD                            CEI4G284
+SCNCDL LDQ BCDPAC,2          WORD RESTORE                               CEI4G285
+SCNCDM TXI SCNCDE,1,5        CHARACTER COUNT                            CEI4G286
+SCNCDN TXI SCNCDK,4,1        COUNT DECIMAL OVERFLOWS                    CEI4G287
+SCNCDP CAS SCNTDC            CAS COMMA                                  CEI4G288
+       TXL SCNCDR                                                       CEI4G289
+       TXL SCNCDS                                                       CEI4G290
+       CAS SCNTDM            CAS MINUS                                  CEI4G291
+       TXL SCNCDR                                                       CEI4G292
+       TXL SCNCDC                                                       CEI4G293
+       CAS SCNTDP            CASPOINT                                   CEI4G294
+       TXL SCNCDR                                                       CEI4G295
+       TXL SCNCD5                                                       CEI4G296
+       CAS SCNTDE            CAS E                                      CEI4G297
+       TXL SCNCDR                                                       CEI4G298
+       TXL SCNCD7                                                       CEI4G299
+       CAS SCNTDB            CAS B                                      CEI4G300
+       TXL SCNCDR                                                       CEI4G301
+       TXL SCNCDB                                                       CEI4G302
+       CAS SCNTDS            CAS PLUS                                   CEI4G303
+       TXL SCNCDR                                                       CEI4G304
+       TXL SCNCD9                                                       CEI4G305
+SCNCDR CLS DECNVH            INVERT SWITCH TO SIGNAL                    CEI4G306
+       STO DECNVH            END OF VARIABLE FIELD                      CEI4G307
+SCNCDS STQ SCNSD4            STORE MQ                                   CEI4G308
+       SXD SCNSD7,4          SAVE IRC FOR DECNV                         CEI4G309
+       LXD SCNCDY,4                                                     CEI4G310
+       TRA 1,4                                                          CEI4G311
+SCNTD1     1                                                            CEI4G312
+SCNTD2     2                                                            CEI4G313
+SCNTD3     10                                                           CEI4G314
+SCNTDC BCD 100000,           COMMA                                      CEI4G315
+SCNTDM BCD 100000-           MINUS                                      CEI4G316
+SCNTDP BCD 100000.           POINT                                      CEI4G317
+SCNTDE BCD 100000E           E                                          CEI4G318
+SCNTDB BCD 100000B           B                                          CEI4G319
+SCNTDS BCD 100000+           PLUS                                       CEI4G320
+SCNSD1 BSS 1                 BN BINARY SCALE                            CEI4G321
+SCNSD2 BSS 1                 EXPN EXPONENT                              CEI4G322
+SCNSD3 BSS 1                 N FRACTION                                 CEI4G323
+SCNSD4 BSS 1                 MQ                                         CEI4G324
+SCNSD7 BSS 1                 SAVE IRC                                   CEI4G325
+SCNSD8 SYN RSC1L5            CH                                         CEI4G326
+DECNV0 SXD DECNVX,4          SAVE REGISTERS                             CEI4G327
+       LXD SCNSD7,4          RESTORE IRC FROM SCNCDX DEC COUNT          CEI4G328
+       CLA SCNSD3                                                       CEI4G329
+       TZE DECNVG                                                       CEI4G330
+DECNV1 TXL DECNV3            SWITCH INVERTED TO TXH INDICATES EXPONENT  CEI4G331
+       CAL DECNVM            PREPARE TRUE                               CEI4G332
+       ADD SCNSD2            DECIMAL EXPONENT                           CEI4G333
+       ALS 18                                                           CEI4G334
+       STD DECNV2                                                       CEI4G335
+       CLA SCNSD3                                                       CEI4G336
+DECNV2 TXI DECNV5,4          FLOAT CONVERTED                            CEI4G337
+DECNV3 TXL DECNV4            SWITCH INVERTED TO TXH INDICATES FIXED POINCEI4G338
+       TXL DECNV5                                                       CEI4G339
+DECNV4 TXL DECNVG            SWITCH INVERTED TO TXH INDICATES POINT     CEI4G340
+DECNV5 STA DECNVR            35 BIT INTEGER                             CEI4G341
+       ARS 15                                                           CEI4G342
+       ORA DECNVS            FL2                                        CEI4G343
+       FAD DECNVS                                                       CEI4G344
+       TPL DECNV6                                                       CEI4G345
+       FSB DECNVR                                                       CEI4G346
+       TXL DECNV7                                                       CEI4G347
+DECNV6 FAD DECNVR                                                       CEI4G348
+DECNV7 STQ DECNS1                                                       CEI4G349
+       TXL DECNVD,4                                                     CEI4G350
+       TXH DECNVC,4,38       TEST FOR NEGATIVE EXPONENT                 CEI4G351
+DECNV8 TXI DECNV9,4,-1       COMPUTE ABSOLUTE                           CEI4G352
+DECNV9 SXD DECNVA,4          VALUE OF EXPONENT                          CEI4G353
+       LXD DECNV8,4                                                     CEI4G354
+DECNVA TNX DECNVB,4                                                     CEI4G355
+       STO DECNS2                                                       CEI4G356
+       LDQ DECNVT,4          COMPUTE FLOATING                           CEI4G357
+       FMP DECNS2            BINARY REPRESENTATION                      CEI4G358
+       STO DECNS3            OF INTEGER TIMES THE                       CEI4G359
+       STQ DECNS5            POWER OF TEN GIVEN                         CEI4G360
+       LDQ DECNVT,4          BY THE TRUE EXPONENT                       CEI4G361
+       FMP DECNS1                                                       CEI4G362
+       FAD DECNS5                                                       CEI4G363
+       FAD DECNS3                                                       CEI4G364
+       ACL DECNVN                                                       CEI4G365
+       PBT                                                              CEI4G366
+       TXL DECNVD                                                       CEI4G367
+DECNVB PXD                                                              CEI4G368
+       HTR DECNVG                                                       CEI4G369
+DECNVC TXL DECNVB,4,-49      TEST FOR ILLEGAL EXPONENT                  CEI4G370
+       FDP DECNVT,4          COMPUTE FLOATING                           CEI4G371
+       STQ DECNS3            BINARY EQUIVALENT                          CEI4G372
+       FAD DECNS1            OF INTEGER TIMES POWER OF TEN GIVEN        CEI4G373
+       FDP DECNVT,4          BY TRUE EXPONENT                           CEI4G374
+       STQ DECNS5                                                       CEI4G375
+       CLA DECNS5                                                       CEI4G376
+       FAD DECNS3                                                       CEI4G377
+       ACL DECNVP                                                       CEI4G378
+       PBT                                                              CEI4G379
+       TXL DECNVB                                                       CEI4G380
+DECNVD TXL DECNVG            SWITCH INVERTED TO TXH INDICATES FIXED POINCEI4G381
+       STO DECNS3                                                       CEI4G382
+       ALS 2                                                            CEI4G383
+       SSM                   DETERMINE SHIFT                            CEI4G384
+       ARS 29                NECESSARY TO POSITION                      CEI4G385
+       ADD DECNVK            NUMBER AS INDECATED                        CEI4G386
+       ADD SCNSD1            BY B                                       CEI4G387
+       TPL DECNVE                                                       CEI4G388
+       TNZ DECNVB                                                       CEI4G389
+DECNVE STA DECNVF                                                       CEI4G390
+       CLA DECNS3                                                       CEI4G391
+       LLS 8                 REMOVE CHARACTERISTICS                     CEI4G392
+       ALS 2                 FROM FLOATING NUMBER                       CEI4G393
+       ARS 10                                                           CEI4G394
+       LLS 8                                                            CEI4G395
+DECNVF LRS                   POSITION FIXED                             CEI4G396
+DECNVG LDQ RSC1L1                                                       CEI4G397
+       STQ DECNS6                                                       CEI4G398
+       TSX DECNS6,4          STORE                                      CEI4G399
+       LDQ SCNSD4                                                       CEI4G400
+DECNVH TXL SCNCDT            SWITCH INVERTED TO TXH INDICATES END OF CARCEI4G401
+DECNVJ TXL RSC5LB            READ ANOTHER CARD                          CEI4G402
+DECNS6 STO                                                              CEI4G403
+       CLA DECNS6                                                       CEI4G404
+       ADD DECNW1                                                       CEI4G405
+       STA RSC1L1                                                       CEI4G406
+       CLA RSC1L2                                                       CEI4G407
+       TZE 1,4                                                          CEI4G408
+       SUB DECNW1                                                       CEI4G409
+       STO RSC1L2                                                       CEI4G410
+       TNZ 1,4                                                          CEI4G411
+       LXD DECNVX,4                                                     CEI4G412
+       TRA 1,4                                                          CEI4G413
+DECNVM MZE                   P BIT                                      CEI4G414
+DECNVR DEC 155B8             FL1                                        CEI4G415
+DECNVS DEC 170B8             FL2                                        CEI4G416
+       OCT 141500000000,144620000000,147764000000,153470400000          CEI4G417
+       OCT 156606500000,161750220000,165461132000,170575360400          CEI4G418
+       OCT 173734654500,177452013710,202564416672,205721522451          CEI4G419
+       OCT 211443023471,214553630410,217706576512,223434157116          CEI4G420
+       OCT 226543212741,231674055532,235425434430,240532743536          CEI4G421
+       OCT 243661534466,247417031702,252522640262,255647410336          CEI4G422
+       OCT 261410545213,264512676456,267635456171,273402374714          CEI4G423
+       OCT 276503074077,301623713116,304770675742,310473426555          CEI4G424
+       OCT 313612334311,316755023373,322464114135,325601137164          CEI4G425
+       OCT 330741367021,334454732313,337570120775,342726145174          CEI4G426
+       OCT 346445677216,351557257061,354713132676,360436770626          CEI4G427
+       OCT 363546566774,366700324573,372430204755,375536246150          CEI4G428
+DECNVT SYN DECNVS            ONE                                        CEI4G429
+DECNVN DEC 35B8              CHAR 35 EXC1                               CEI4G430
+DECNVP DEC 221B8             CHAR COMPL 35 EXC2                         CEI4G431
+DECNVK DEC 128               Q128                                       CEI4G432
+DECNW1     1                                                            CEI4G433
+DECNS1 BSS 1                 RESID                                      CEI4G434
+DECNS2 BSS 1                 DATUM                                      CEI4G435
+DECNS4 SYN RSC1L6            CHD                                        CEI4G436
+DECNS3 SYN DECNS4            T                                          CEI4G437
+DECNS5 SYN RSC1L3            SYMB                                       CEI4G438
+DECNVX BSS 1                                                            CEI4G439

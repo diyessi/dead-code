@@ -101,3 +101,592 @@
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
+   PK CIMX          0628         SY                                             
+       REM COMPLEX ELEMENT MATRIX INVERSION                           PKCIMX0001
+ CIMX  SXD X4,4             INITIAL                                     CIMX0002
+       SXD COMMON,1                                                     CIMX0003
+       SXD COMMON+1,2                                                   CIMX0004
+       STQ N                                                            CIMX0005
+       SUB ONE                                                          CIMX0006
+       STO A                                                            CIMX0007
+       COM                                                              CIMX0008
+       PAX 0,1                                                          CIMX0009
+       STZ CELL2                                                        CIMX0010
+       STZ CELL3                                                        CIMX0011
+       CLA ONE                                                          CIMX0012
+       STO K1                                                           CIMX0013
+       STO K2                                                           CIMX0014
+       CLA PC1                                                          CIMX0015
+       STO M30                                                          CIMX0016
+       CLA PC2                                                          CIMX0017
+       STO M31                                                          CIMX0018
+       CLA PC3                                                          CIMX0019
+       STO M32                                                          CIMX0020
+       CLA N                                                            CIMX0021
+       ALS 1                                                            CIMX0022
+       STO 2N                                                           CIMX0023
+       ADD TWO                                                          CIMX0024
+       STO 2NPL2                                                        CIMX0025
+       LDQ N                                                            CIMX0026
+       MPY 2N                                                           CIMX0027
+       STQ 2NSQ                                                         CIMX0028
+       CLA 2NSQ                                                         CIMX0029
+       ADD A                                                            CIMX0030
+       COM                                                              CIMX0031
+       STO AUX1                                                         CIMX0032
+       STO AUX2                                                         CIMX0033
+       CLA 2NSQ                                                         CIMX0034
+       SUB 2N                                                           CIMX0035
+       STO 2NSQ1                                                        CIMX0036
+       CLA N                                                            CIMX0037
+       SUB ONE                                                          CIMX0038
+       STO NL1                                                          CIMX0039
+       STO IND1                                                         CIMX0040
+       STO IND2                                                         CIMX0041
+       SUB ONE                                                          CIMX0042
+       STO IND3                                                         CIMX0043
+       STO IND4                                                         CIMX0044
+       CLA 2N                                                           CIMX0045
+       ALS 18                                                           CIMX0046
+       STD M01                                                          CIMX0047
+       STD M02                                                          CIMX0048
+       STD M03                                                          CIMX0049
+       STD M04                                                          CIMX0050
+       STD M05                                                          CIMX0051
+       STD M06                                                          CIMX0052
+       STD M07                                                          CIMX0053
+       STD M08                                                          CIMX0054
+       CLA 2N                                                           CIMX0055
+       ADD A                                                            CIMX0056
+       COM                                                              CIMX0057
+       PAX 0,2                                                          CIMX0058
+       LDQ 0,1                                                          CIMX0059
+       FMP 0,1                                                          CIMX0060
+       STO CELL1                                                        CIMX0061
+       LDQ 1,1                                                          CIMX0062
+       FMP 1,1                                                          CIMX0063
+       FAD CELL1                                                        CIMX0064
+       STO CELL1                                                        CIMX0065
+       CLA 0,1                                                          CIMX0066
+       FDH CELL1                                                        CIMX0067
+       STQ 0,1                                                          CIMX0068
+       CLS 1,1                                                          CIMX0069
+       FDH CELL1                                                        CIMX0070
+       STQ 1,1                                                          CIMX0071
+       LXA NL1,4                                                        CIMX0072
+ M10   LDQ 1,2                                                          CIMX0073
+       FMP 1,1                                                          CIMX0074
+       STO CELL1                                                        CIMX0075
+       LDQ 0,2                                                          CIMX0076
+       FMP 0,1                                                          CIMX0077
+       FSB CELL1                                                        CIMX0078
+       STO CELL4                                                        CIMX0079
+       LDQ 1,2                                                          CIMX0080
+       FMP 0,1                                                          CIMX0081
+       STO CELL1                                                        CIMX0082
+       LDQ 0,2                                                          CIMX0083
+       FMP 1,1                                                          CIMX0084
+       FAD CELL1                                                        CIMX0085
+       STO 1,2                                                          CIMX0086
+       CLA CELL4                                                        CIMX0087
+       STO 0,2                                                          CIMX0088
+ M01   TIX M09,2                                                        CIMX0089
+ M09   TIX M10,4,1                                                      CIMX0090
+       CLA 2N             TYPE 1                                        CIMX0091
+       ADD A                                                            CIMX0092
+       COM                                                              CIMX0093
+       STO S30                                                          CIMX0094
+       STO S31                                                          CIMX0095
+       STO S10                                                          CIMX0096
+       STO S11                                                          CIMX0097
+       CLA A                                                            CIMX0098
+       COM                                                              CIMX0099
+       STO S20                                                          CIMX0100
+       STO S21                                                          CIMX0101
+ M33   LXA S31,2                                                        CIMX0102
+       LXA S21,1                                                        CIMX0103
+       LXA K1,4                                                         CIMX0104
+ M13   LDQ 3,1                                                          CIMX0105
+       FMP 1,2                                                          CIMX0106
+       STO CELL1                                                        CIMX0107
+       LDQ 2,1                                                          CIMX0108
+       FMP 0,2                                                          CIMX0109
+       FSB CELL1                                                        CIMX0110
+       FAD CELL2                                                        CIMX0111
+       STO CELL2                                                        CIMX0112
+       LDQ 2,1                                                          CIMX0113
+       FMP 1,2                                                          CIMX0114
+       STO CELL1                                                        CIMX0115
+       LDQ 3,1                                                          CIMX0116
+       FMP 0,2                                                          CIMX0117
+       FAD CELL1                                                        CIMX0118
+       FAD CELL3                                                        CIMX0119
+       STO CELL3                                                        CIMX0120
+ M02   TIX M11,1                                                        CIMX0121
+ M11   TIX M12,2,2                                                      CIMX0122
+ M12   TIX M13,4,1                                                      CIMX0123
+       LXA S11,1                                                        CIMX0124
+       CLA 2,1                                                          CIMX0125
+       FSB CELL2                                                        CIMX0126
+       STO 2,1                                                          CIMX0127
+       CLA 3,1                                                          CIMX0128
+       FSB CELL3                                                        CIMX0129
+       STO 3,1                                                          CIMX0130
+       CLA S11                                                          CIMX0131
+       SUB TWO                                                          CIMX0132
+       STO S11                                                          CIMX0133
+       CLA S21                                                          CIMX0134
+       SUB TWO                                                          CIMX0135
+       STO S21                                                          CIMX0136
+       STZ CELL2                                                        CIMX0137
+       STZ CELL3                                                        CIMX0138
+       CLA IND2                                                         CIMX0139
+       SUB ONE                                                          CIMX0140
+       STO IND2                                                         CIMX0141
+       TNZ M33                                                          CIMX0142
+ M30   CLA S30            TYPE 2A                                       CIMX0143
+       STO DIV                                                          CIMX0144
+       SUB 2N                                                           CIMX0145
+       STO T10                                                          CIMX0146
+       STO T11                                                          CIMX0147
+       STO T30                                                          CIMX0148
+       STO T31                                                          CIMX0149
+       CLA S20                                                          CIMX0150
+       STO T20                                                          CIMX0151
+       STO T21                                                          CIMX0152
+ M17A  LXA DIV,2                                                        CIMX0153
+       LDQ 2,2                                                          CIMX0154
+       FMP 2,2                                                          CIMX0155
+       STO CELL1                                                        CIMX0156
+       LDQ 3,2                                                          CIMX0157
+       FMP 3,2                                                          CIMX0158
+       FAD CELL1                                                        CIMX0159
+       STO CELL1                                                        CIMX0160
+       CLA 2,2                                                          CIMX0161
+       FDH CELL1                                                        CIMX0162
+       STQ DR                                                           CIMX0163
+       CLS 3,2                                                          CIMX0164
+       FDH CELL1                                                        CIMX0165
+       STQ DJ                                                           CIMX0166
+       CLA N                                                            CIMX0167
+       SUB TWO                                                          CIMX0168
+       TZE M31                                                          CIMX0169
+       CLA IND3                                                         CIMX0170
+       TZE M22                                                          CIMX0171
+ M17   LXA T31,2                                                        CIMX0172
+       LXA T21,1                                                        CIMX0173
+       LXA K1,4                                                         CIMX0174
+ M16   LDQ 3,1                                                          CIMX0175
+       FMP 1,2                                                          CIMX0176
+       STO CELL1                                                        CIMX0177
+       LDQ 2,1                                                          CIMX0178
+       FMP 0,2                                                          CIMX0179
+       FSB CELL1                                                        CIMX0180
+       FAD CELL2                                                        CIMX0181
+       STO CELL2                                                        CIMX0182
+       LDQ 2,1                                                          CIMX0183
+       FMP 1,2                                                          CIMX0184
+       STO CELL1                                                        CIMX0185
+       LDQ 3,1                                                          CIMX0186
+       FMP 0,2                                                          CIMX0187
+       FAD CELL1                                                        CIMX0188
+       FAD CELL3                                                        CIMX0189
+       STO CELL3                                                        CIMX0190
+ M03   TIX M14,1                                                        CIMX0191
+ M14   TIX M15,2,2                                                      CIMX0192
+ M15   TIX M16,4,1                                                      CIMX0193
+       LXA T11,1                                                        CIMX0194
+       CLA 2,1                                                          CIMX0195
+       FSB CELL2                                                        CIMX0196
+       STO 2,1                                                          CIMX0197
+       CLA 3,1                                                          CIMX0198
+       FSB CELL3                                                        CIMX0199
+       STO 3,1                                                          CIMX0200
+       LDQ 3,1                                                          CIMX0201
+       FMP DJ                                                           CIMX0202
+       STO CELL1                                                        CIMX0203
+       LDQ 2,1                                                          CIMX0204
+       FMP DR                                                           CIMX0205
+       FSB CELL1                                                        CIMX0206
+       STO CELL4                                                        CIMX0207
+       LDQ 2,1                                                          CIMX0208
+       FMP DJ                                                           CIMX0209
+       STO CELL1                                                        CIMX0210
+       LDQ 3,1                                                          CIMX0211
+       FMP DR                                                           CIMX0212
+       FAD CELL1                                                        CIMX0213
+       STO 3,1                                                          CIMX0214
+       CLA CELL4                                                        CIMX0215
+       STO 2,1                                                          CIMX0216
+       CLA T11                                                          CIMX0217
+       SUB 2N                                                           CIMX0218
+       STO T11                                                          CIMX0219
+       CLA T31                                                          CIMX0220
+       SUB 2N                                                           CIMX0221
+       STO T31                                                          CIMX0222
+       STZ CELL2                                                        CIMX0223
+       STZ CELL3                                                        CIMX0224
+       CLA IND4                                                         CIMX0225
+       SUB ONE                                                          CIMX0226
+       STO IND4                                                         CIMX0227
+       TNZ M17                                                          CIMX0228
+ M31   CLA S20            TYPE 2B,C                                     CIMX0229
+       STO V20                                                          CIMX0230
+       STO V21                                                          CIMX0231
+       CLA A                                                            CIMX0232
+       COM                                                              CIMX0233
+       STO V30                                                          CIMX0234
+       STO V31                                                          CIMX0235
+ M22   LXA V21,1                                                        CIMX0236
+       LXA V31,2                                                        CIMX0237
+       LXA K2,4                                                         CIMX0238
+ M20   LDQ 3,1                                                          CIMX0239
+       FMP 1,2                                                          CIMX0240
+       STO CELL1                                                        CIMX0241
+       LDQ 2,1                                                          CIMX0242
+       FMP 0,2                                                          CIMX0243
+       FSB CELL1                                                        CIMX0244
+       FAD CELL2                                                        CIMX0245
+       STO CELL2                                                        CIMX0246
+       LDQ 2,1                                                          CIMX0247
+       FMP 1,2                                                          CIMX0248
+       STO CELL1                                                        CIMX0249
+       LDQ 3,1                                                          CIMX0250
+       FMP 0,2                                                          CIMX0251
+       FAD CELL1                                                        CIMX0252
+       FAD CELL3                                                        CIMX0253
+       STO CELL3                                                        CIMX0254
+ M04   TIX M18,1                                                        CIMX0255
+ M18   TIX M19,2,2                                                      CIMX0256
+ M19   TIX M20,4,1                                                      CIMX0257
+       LXA AUX2,4                                                       CIMX0258
+       CLS CELL2                                                        CIMX0259
+       STO 0,4                                                          CIMX0260
+       CLS CELL3                                                        CIMX0261
+       STO 1,4                                                          CIMX0262
+       CLA AUX2                                                         CIMX0263
+       SUB TWO                                                          CIMX0264
+       STO AUX2                                                         CIMX0265
+       CLA K2                                                           CIMX0266
+       SUB ONE                                                          CIMX0267
+       STO K2                                                           CIMX0268
+       TZE M21                                                          CIMX0269
+       CLA V21                                                          CIMX0270
+       SUB 2N                                                           CIMX0271
+       STO V21                                                          CIMX0272
+       CLA V31                                                          CIMX0273
+       SUB 2NPL2                                                        CIMX0274
+       STO V31                                                          CIMX0275
+       STZ CELL2                                                        CIMX0276
+       STZ CELL3                                                        CIMX0277
+       TRA M22                                                          CIMX0278
+ M21   LXA K1,4                                                         CIMX0279
+       LXA AUX1,2                                                       CIMX0280
+       LXA V20,1                                                        CIMX0281
+ M25   LDQ DJ                                                           CIMX0282
+       FMP 1,2                                                          CIMX0283
+       STO CELL1                                                        CIMX0284
+       LDQ DR                                                           CIMX0285
+       FMP 0,2                                                          CIMX0286
+       FSB CELL1                                                        CIMX0287
+       STO 2,1                                                          CIMX0288
+       LDQ DR                                                           CIMX0289
+       FMP 1,2                                                          CIMX0290
+       STO CELL1                                                        CIMX0291
+       LDQ DJ                                                           CIMX0292
+       FMP 0,2                                                          CIMX0293
+       FAD CELL1                                                        CIMX0294
+       STO 3,1                                                          CIMX0295
+ M05   TIX M23,1                                                        CIMX0296
+ M23   TIX M24,2,2                                                      CIMX0297
+ M24   TIX M25,4,1                                                      CIMX0298
+       LXA DIV,2                                                        CIMX0299
+       CLA DR                                                           CIMX0300
+       STO 2,2                                                          CIMX0301
+       CLA DJ                                                           CIMX0302
+       STO 3,2                                                          CIMX0303
+       CLA K1                                                           CIMX0304
+       CAS NL1                                                          CIMX0305
+       HTR                                                              CIMX0306
+       TRA M26                                                          CIMX0307
+       CLA K1                                                           CIMX0308
+       ADD ONE                                                          CIMX0309
+       STO K1                                                           CIMX0310
+       STO K2                                                           CIMX0311
+       STZ CELL2                                                        CIMX0312
+       STZ CELL3                                                        CIMX0313
+       CLA AUX1                                                         CIMX0314
+       STO AUX2                                                         CIMX0315
+       CLA S10                                                          CIMX0316
+       SUB 2NPL2                                                        CIMX0317
+       STO S10                                                          CIMX0318
+       STO S11                                                          CIMX0319
+       CLA S20                                                          CIMX0320
+       SUB TWO                                                          CIMX0321
+       STO S20                                                          CIMX0322
+       STO S21                                                          CIMX0323
+       CLA S30                                                          CIMX0324
+       SUB 2N                                                           CIMX0325
+       STO S30                                                          CIMX0326
+       STO S31                                                          CIMX0327
+       CLA T10                                                          CIMX0328
+       SUB 2NPL2                                                        CIMX0329
+       STO T10                                                          CIMX0330
+       STO T11                                                          CIMX0331
+       CLA T20                                                          CIMX0332
+       SUB TWO                                                          CIMX0333
+       STO T20                                                          CIMX0334
+       STO T21                                                          CIMX0335
+       CLA T30                                                          CIMX0336
+       SUB 2N                                                           CIMX0337
+       STO T30                                                          CIMX0338
+       STO T31                                                          CIMX0339
+       CLA V20                                                          CIMX0340
+       SUB TWO                                                          CIMX0341
+       STO V20                                                          CIMX0342
+       STO V21                                                          CIMX0343
+       CLA V30                                                          CIMX0344
+       STO V31                                                          CIMX0345
+       CLA DIV                                                          CIMX0346
+       SUB 2NPL2                                                        CIMX0347
+       STO DIV                                                          CIMX0348
+       CLA IND1                                                         CIMX0349
+       SUB ONE                                                          CIMX0350
+       STO IND1                                                         CIMX0351
+       STO IND2                                                         CIMX0352
+       CLA IND3                                                         CIMX0353
+       SUB ONE                                                          CIMX0354
+       STO IND3                                                         CIMX0355
+       STO IND4                                                         CIMX0356
+ M32   CLA M27                                                          CIMX0357
+       STO M30                                                          CIMX0358
+       CLA M28                                                          CIMX0359
+       STO M31                                                          CIMX0360
+       CLA M29                                                          CIMX0361
+       STO M32                                                          CIMX0362
+       TRA M33                                                          CIMX0363
+M27    TRA M17A                                                         CIMX0364
+ M28   TRA M22                                                          CIMX0365
+ M29   TRA M33                                                          CIMX0366
+ M26   STZ CELL2                                                        CIMX0367
+       STZ CELL3                                                        CIMX0368
+       CLA NL1                                                          CIMX0369
+       STO IND1                                                         CIMX0370
+       STO IND2                                                         CIMX0371
+       CLA ONE                                                          CIMX0372
+       STO K1                                                           CIMX0373
+       STO K2                                                           CIMX0374
+       CLA 2NPL2                                                        CIMX0375
+       SUB FIVE                                                         CIMX0376
+       ADD A                                                            CIMX0377
+       COM                                                              CIMX0378
+       ADD ONE                                                          CIMX0379
+       STO S10                                                          CIMX0380
+       STO S11                                                          CIMX0381
+       SUB TWO                                                          CIMX0382
+       STO S30                                                          CIMX0383
+       STO S31                                                          CIMX0384
+       CLA S10                                                          CIMX0385
+       SUB 2NSQ1                                                        CIMX0386
+       STO S20                                                          CIMX0387
+       STO S21                                                          CIMX0388
+ M37   LXA S31,2                                                        CIMX0389
+       LXA S21,1                                                        CIMX0390
+       LXA K2,4                                                         CIMX0391
+ M36   LDQ 1,1                                                          CIMX0392
+       FMP 1,2                                                          CIMX0393
+       STO CELL1                                                        CIMX0394
+       LDQ 0,1                                                          CIMX0395
+       FMP 0,2                                                          CIMX0396
+       FSB CELL1                                                        CIMX0397
+       FAD CELL2                                                        CIMX0398
+       STO CELL2                                                        CIMX0399
+       LDQ 0,1                                                          CIMX0400
+       FMP 1,2                                                          CIMX0401
+       STO CELL1                                                        CIMX0402
+       LDQ 1,1                                                          CIMX0403
+       FMP 0,2                                                          CIMX0404
+       FAD CELL1                                                        CIMX0405
+       FAD CELL3                                                        CIMX0406
+       STO CELL3                                                        CIMX0407
+ M06   TIX M34,1                                                        CIMX0408
+ M34   TIX M35,2,2                                                      CIMX0409
+ M35   TIX M36,4,1                                                      CIMX0410
+       LXA S11,1                                                        CIMX0411
+       CLA 0,1                                                          CIMX0412
+       FSB CELL2                                                        CIMX0413
+       STO 0,1                                                          CIMX0414
+       CLA 1,1                                                          CIMX0415
+       FSB CELL3                                                        CIMX0416
+       STO 1,1                                                          CIMX0417
+       CLA S11                                                          CIMX0418
+       ADD TWO                                                          CIMX0419
+       STO S11                                                          CIMX0420
+       CLA S21                                                          CIMX0421
+       ADD 2NPL2                                                        CIMX0422
+       STO S21                                                          CIMX0423
+       CLA S31                                                          CIMX0424
+       ADD TWO                                                          CIMX0425
+       STO S31                                                          CIMX0426
+       CLA K2                                                           CIMX0427
+       ADD ONE                                                          CIMX0428
+       STO K2                                                           CIMX0429
+       STZ CELL2                                                        CIMX0430
+       STZ CELL3                                                        CIMX0431
+       CLA IND2                                                         CIMX0432
+       SUB ONE                                                          CIMX0433
+       STO IND2                                                         CIMX0434
+       TNZ M37                                                          CIMX0435
+       CLA IND1                                                         CIMX0436
+       SUB ONE                                                          CIMX0437
+       STO IND1                                                         CIMX0438
+       STO IND2                                                         CIMX0439
+       CLA S10                                                          CIMX0440
+       SUB 2N                                                           CIMX0441
+       STO S10                                                          CIMX0442
+       STO S11                                                          CIMX0443
+       CLA S20                                                          CIMX0444
+       STO S21                                                          CIMX0445
+       CLA S30                                                          CIMX0446
+       SUB 2N                                                           CIMX0447
+       STO S30                                                          CIMX0448
+       STO S31                                                          CIMX0449
+       CLA K1                                                           CIMX0450
+       CAS NL1                                                          CIMX0451
+       HTR                                                              CIMX0452
+       TRA M38                                                          CIMX0453
+       ADD ONE                                                          CIMX0454
+       STO K1                                                           CIMX0455
+       CLA ONE                                                          CIMX0456
+       STO K2                                                           CIMX0457
+       TRA M37                                                          CIMX0458
+ M38   CLA AUX1           TYPE 4                                        CIMX0459
+       STO AUX2                                                         CIMX0460
+       CLA ONE                                                          CIMX0461
+       STO K2                                                           CIMX0462
+       STO CELL4                                                        CIMX0463
+       CLA S20                                                          CIMX0464
+       STO S10                                                          CIMX0465
+       STO S11                                                          CIMX0466
+       SUB TWO                                                          CIMX0467
+       STO S30                                                          CIMX0468
+       STO S31                                                          CIMX0469
+ M43   LXA S21,1                                                        CIMX0470
+       LXA S31,2                                                        CIMX0471
+       LXA K2,4                                                         CIMX0472
+ M41   LDQ 1,1                                                          CIMX0473
+       FMP 1,2                                                          CIMX0474
+       STO CELL1                                                        CIMX0475
+       LDQ 0,1                                                          CIMX0476
+       FMP 0,2                                                          CIMX0477
+       FSB CELL1                                                        CIMX0478
+       FAD CELL2                                                        CIMX0479
+       STO CELL2                                                        CIMX0480
+       LDQ 0,1                                                          CIMX0481
+       FMP 1,2                                                          CIMX0482
+       STO CELL1                                                        CIMX0483
+       LDQ 1,1                                                          CIMX0484
+       FMP 0,2                                                          CIMX0485
+       FAD CELL1                                                        CIMX0486
+       FAD CELL3                                                        CIMX0487
+       STO CELL3                                                        CIMX0488
+ M07   TIX M39,1                                                        CIMX0489
+ M39   TIX M40,2,2                                                      CIMX0490
+ M40   TIX M41,4,1                                                      CIMX0491
+       LXA AUX2,4                                                       CIMX0492
+       CLS CELL2                                                        CIMX0493
+       STO 0,4                                                          CIMX0494
+       CLS CELL3                                                        CIMX0495
+       STO 1,4                                                          CIMX0496
+       CLA AUX2                                                         CIMX0497
+       SUB TWO                                                          CIMX0498
+       STO AUX2                                                         CIMX0499
+       STZ CELL2                                                        CIMX0500
+       STZ CELL3                                                        CIMX0501
+       CLA CELL4                                                        CIMX0502
+       SUB ONE                                                          CIMX0503
+       STO CELL4                                                        CIMX0504
+       TZE M42                                                          CIMX0505
+       CLA S31                                                          CIMX0506
+       SUB 2N                                                           CIMX0507
+       STO S31                                                          CIMX0508
+       TRA M43                                                          CIMX0509
+ M42   CLA K2                                                           CIMX0510
+       ADD ONE                                                          CIMX0511
+       STO K2                                                           CIMX0512
+       STO CELL4                                                        CIMX0513
+       LXA S20,1                                                        CIMX0514
+       LXA AUX1,2                                                       CIMX0515
+       CLA K2                                                           CIMX0516
+       SUB ONE                                                          CIMX0517
+       PAX 0,4                                                          CIMX0518
+ M46   CLA 0,2                                                          CIMX0519
+       STO 0,1                                                          CIMX0520
+       CLA 1,2                                                          CIMX0521
+       STO 1,1                                                          CIMX0522
+ M08   TIX M44,1                                                        CIMX0523
+ M44   TIX M45,2,2                                                      CIMX0524
+ M45   TIX M46,4,1                                                      CIMX0525
+       CLA S20                                                          CIMX0526
+       ADD 2NPL2                                                        CIMX0527
+       STO S20                                                          CIMX0528
+       STO S21                                                          CIMX0529
+       CLA S30                                                          CIMX0530
+       ADD 2NPL2                                                        CIMX0531
+       STO S30                                                          CIMX0532
+       STO S31                                                          CIMX0533
+       CLA AUX1                                                         CIMX0534
+       STO AUX2                                                         CIMX0535
+       CLA K1                                                           CIMX0536
+       SUB ONE                                                          CIMX0537
+       STO K1                                                           CIMX0538
+       TNZ M43                                                          CIMX0539
+       LXD X4,4                                                         CIMX0540
+       LXD COMMON,1                                                     CIMX0541
+       LXD COMMON+1,2                                                   CIMX0542
+       TRA 1,4                                                          CIMX0543
+ ONE   DEC 1                                                            CIMX0544
+ TWO   DEC 2                                                            CIMX0545
+ FIVE  DEC 5                                                            CIMX0546
+ ZERO                                                                   CIMX0547
+ X4                                                                     CIMX0548
+ N                                                                      CIMX0549
+ A                                                                      CIMX0550
+ 2N                                                                     CIMX0551
+ 2NPL2                                                                  CIMX0552
+ 2NSQ                                                                   CIMX0553
+ AUX1                                                                   CIMX0554
+ AUX2                                                                   CIMX0555
+ 2NSQ1                                                                  CIMX0556
+ NL1                                                                    CIMX0557
+ IND1                                                                   CIMX0558
+ IND2                                                                   CIMX0559
+ IND3                                                                   CIMX0560
+ IND4                                                                   CIMX0561
+ CELL1                                                                  CIMX0562
+ CELL2                                                                  CIMX0563
+ CELL3                                                                  CIMX0564
+ CELL4                                                                  CIMX0565
+ S10                                                                    CIMX0566
+ S11                                                                    CIMX0567
+ S20                                                                    CIMX0568
+ S21                                                                    CIMX0569
+ S30                                                                    CIMX0570
+ S31                                                                    CIMX0571
+ T10                                                                    CIMX0572
+ T11                                                                    CIMX0573
+ T20                                                                    CIMX0574
+ T21                                                                    CIMX0575
+ T30                                                                    CIMX0576
+ T31                                                                    CIMX0577
+ V20                                                                    CIMX0578
+ V21                                                                    CIMX0579
+ V30                                                                    CIMX0580
+ V31                                                                    CIMX0581
+K1     DEC 1                                                            CIMX0582
+K2     DEC 1                                                            CIMX0583
+ DIV                                                                    CIMX0584
+ DR                                                                     CIMX0585
+ DJ                                                                     CIMX0586
+ PC1   CLA S30                                                          CIMX0587
+ PC3   CLA M27                                                          CIMX0589

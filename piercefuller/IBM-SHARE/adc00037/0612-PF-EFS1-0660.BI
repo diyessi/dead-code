@@ -71,3 +71,72 @@
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
+D1 CL GAU3          0662         SY                                             
+ GAUSS STQ GAUSS+69                                                     GLGAU301
+       FSB GAUSS+69                                                     GLGAU302
+       TZE 2,4                                                          GLGAU303
+       STO GAUSS+70                                                     GLGAU304
+       SXA GAUSS+49,1                                                   GLGAU305
+       SXA GAUSS+50,2                                                   GLGAU306
+       SXA GAUSS+51,4                                                   GLGAU307
+       CLA 1,4                                                          GLGAU308
+       STA GAUSS+25                                                     GLGAU309
+       ARS 18                                                           GLGAU310
+       STA GAUSS+18                                                     GLGAU311
+       ORA GAUSS+53                                                     GLGAU312
+       FAD GAUSS+53                                                     GLGAU313
+       FDH GAUSS+70                                                     GLGAU314
+       STQ GAUSS+70                                                     GLGAU315
+       CLA GAUSS+1                                                      GLGAU316
+       STD GAUSS+20                                                     GLGAU317
+       AXT 5,2                                                          GLGAU318
+       AXT ,1                                                           GLGAU319
+       CLA GAUSS+71                                                     GLGAU320
+       FSB GAUSS+59,2                                                   GLGAU321
+       FAD GAUSS+38                                                     GLGAU322
+       FDH GAUSS+70                                                     GLGAU323
+       XCA                                                              GLGAU324
+       FAD GAUSS+69                                                     GLGAU325
+       TSX ,4                                                           GLGAU326
+       HTR                                                              GLGAU327
+       FAD GAUSS+69,2                                                   GLGAU328
+       STO GAUSS+69,2                                                   GLGAU329
+       CLA GAUSS+71                                                     GLGAU330
+       FAD GAUSS+38                                                     GLGAU331
+       STO GAUSS+38                                                     GLGAU332
+       TIX GAUSS+19,1,1                                                 GLGAU333
+       STZ GAUSS+38                                                     GLGAU334
+       TIX GAUSS+18,2,1                                                 GLGAU335
+       CLA GAUSS+15                                                     GLGAU336
+       CAS GAUSS+20                                                     GLGAU337
+       TRA GAUSS+16                                                     GLGAU338
+       PZE                                                              GLGAU339
+       STZ GAUSS+69                                                     GLGAU340
+       AXT 5,2                                                          GLGAU341
+       LDQ GAUSS+69,2                                                   GLGAU342
+       FMP GAUSS+64,2                                                   GLGAU343
+       FAD GAUSS+69                                                     GLGAU344
+       STO GAUSS+69                                                     GLGAU345
+       STZ GAUSS+69,2                                                   GLGAU346
+       TIX GAUSS+41,2,1                                                 GLGAU347
+       FDH GAUSS+70                                                     GLGAU348
+       XCA                                                              GLGAU349
+       AXT ,1                LOAD INDEX REGISTERS.                      GLGAU350
+       AXT ,2                                                           GLGAU351
+       AXT ,4                                                           GLGAU352
+       TRA 2,4               RETURN TO MAIN PROGRAM.                    GLGAU353
+       OCT 233000000000      CONSTANT FOR FLOATING N.                   GLGAU354
+       DEC .0130467357       GAUSS CONSTANT                             GLGAU355
+       DEC .0674683167       GAUSS CONSTANT                             GLGAU356
+       DEC .1602952159       GAUSS CONSTANT                             GLGAU357
+       DEC .2833023029       GAUSS CONSTANT                             GLGAU358
+       DEC .4255628305       GAUSS CONSTANT                             GLGAU359
+       DEC .03333567215      GAUSS CONSTANT                             GLGAU360
+       DEC .07472567458      GAUSS CONSTANT                             GLGAU361
+       DEC .1095431813       GAUSS CONSTANT                             GLGAU362
+       DEC .1346333597       GAUSS CONSTANT                             GLGAU363
+       DEC .1477621124       GAUSS CONSTANT                             GLGAU364
+       BSS 5                                                            GLGAU365
+       PZE                                                              GLGAU366
+       PZE                                                              GLGAU367
+       DEC 1.                  LAST CARD                                GLGAU368

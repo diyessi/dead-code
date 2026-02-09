@@ -1,0 +1,283 @@
+       REM MU RAT 1  0283 CARDS  RELOCATABLE TO ABSOLUTE TRANSLATOR     MURAT101
+       ORG 3000                                                         RAT10002
+ ENTRY RCD                 READ CARD READER                             RAT10003
+       SLF                 SENSE LIGHTS OFF                             RAT10004
+ TWFR  PXD 24,0            CLEAR AC (ADDRESS USED)                      RAT10005
+       LXA ZERO,1          SET IR1 TO ZERO                              RAT10006
+ INCPY CPY IMIN,1          COPY CARD INTO IMIN-(-1,-2,...)              RAT10007
+       TRA A               NEXT ROW, OK                                 RAT10008
+       TRA EXTRA           END OF FILE, STOP FOR NEW DECK               RAT10009
+       TRA B               END OF CARD                                  RAT10010
+ A     ACL IMIN,1          SUM CARD LOGICALLY                           RAT10011
+       TXI INCPY,1,-1      MAKE IR1=-1,-2,...                           RAT10012
+ B     TRA EXTR2           GO FORM LOGICAL SUM                          RAT10013
+       CAL IMIN            9L IN AC                                     RAT10014
+       ANA MASKW           EXTRACT WORD COUNT AND 9L3                   RAT10015
+       TNZ C               IF NOT ZERO, NOT A TRANSFER CARD             RAT10016
+ H     LXA TWFR,2          IF 0, HAVE TRANSFER CARD, SET IR2=24         RAT10017
+       WPU                 SELECT PUNCH                                 RAT10018
+ TRCPY CPY IMIN+24,2       COPY CARD                                    RAT10019
+       TIX TRCPY,2,1       REPEAT                                       RAT10020
+       TRA ENTRY           NEXT CARD                                    RAT10021
+ C     LDQ IMIN            9L IN MQ                                     RAT10022
+       RQL 1               9LI IN MQ SIGN                               RAT10023
+       TQP C+4             ABSOLUTE OR ORIGIN CARD (9LI=0)              RAT10024
+       TRA D               RELOCATABLE CARD (9LI=1)                     RAT10025
+       RQL 2               9L3 IN MQ SIGN                               RAT10026
+       TQP F               ABSOLUTE CARD (9L3=0)                        RAT10027
+       TRA E               ORIGIN CARD (9L3=1)                          RAT10028
+ F     CLA IMIN+1          CKS IN AC (ABSOLUTE CARD)                    RAT10029
+       SUB SUM             CKS-SUM IN AC                                RAT10030
+       TZE G               CHECKS OK                                    RAT10031
+       SWT 1               FAIL, TEST SWITCH 1                          RAT10032
+       TRA EXTRA+2 1UP-STOP, REJECT CARD, PROCEED START (SL1 ON)        RAT10033
+       TRA EXTRA+4 1DOWN-STOP, REPLACE CKS BY SUM (SL1 ON)              RAT10034
+       CLA SUM             X                                            RAT10035
+       STO IMIN+1          X                                            RAT10036
+ G     CAL IMIN            9L IN AC                                     RAT10037
+       ANA MASKM           EXTRACT MURA DIGITS                          RAT10038
+       TNZ H               MURA CARD, REPRODUCE                         RAT10039
+       CAL IMIN            NOT MURA CARD                                RAT10040
+       ACL NINES           ADD NINE PUNCHES TO 9L                       RAT10041
+       SLW IMIN            X                                            RAT10042
+       CAL IMIN+1          ADD ALSO TO CKS                              RAT10043
+       ACL NINES           X                                            RAT10044
+       SLW IMIN+1          X                                            RAT10045
+       TRA H               PUNCH CARD                                   RAT10046
+ E     CLA IMIN            9L IN AC (ORIGIN CARD)                       RAT10047
+       TMI E1              9LS=1, CONTINUE OLD TABLE                    RAT10048
+ TOT   PXD 202,0           9LS=D, START NEW TABLE, CLEAR AC             RAT10049
+       LXA TOT,4           SET IR4 TO 202                               RAT10050
+ STO   STO TAB+202,4       CLEAR TABLE                                  RAT10051
+       TIX STO,4,1         X                                            RAT10052
+ TT    PAX 22,4            SET IR4 TO 0                                 RAT10053
+ E1    LXA TT,2            SET IR2 TO 22                                RAT10054
+ E2    TXI E3,4,-2         ADVANCE TO NEXT TABLE ADDRESS                RAT10055
+ E3    CAL IMIN+25,2       8R, 7R, ETC. IN AC                           RAT10056
+       ANA MASKL           EXTRACT LOAD ADDRESS                         RAT10057
+       TNZ E4              IF NOT 0, LEAVE ALONE                        RAT10058
+       CAL IMIN+25,2       IF 0, GET EXECUTION ADDRESS                  RAT10059
+       ANA MASKA           X                                            RAT10060
+       ALS 18              SHIFT RA TO RD                               RAT10061
+       ORS IMIN+25,2       INSERT EXECUTION ADDRESS AS LOAD ADDR        RAT10062
+ E4    CLA IMIN+25,2       STORE R IN TAB                               RAT10063
+       STO TAB-1,4         X                                            RAT10064
+       CLA IMIN+24,2       STORE L IN TAB                               RAT10065
+       STA TAB-2,4         X                                            RAT10066
+       TPL E5              LS=0, NOT LAST ENTRY ON CARD                 RAT10067
+ E6    TXI E6+1,4,-2       LS=1 LAST ENTRY, ADV TABLE ADDR 1MORE        RAT10068
+       CLA SEVS            SET FINAL TABLE ENTRY TO 100000              RAT10069
+       STO TAB-2,4         X                                            RAT10070
+       TRA ENTRY           NEXT CARD                                    RAT10071
+ E5    TIX E2,2,2          TEST FOR LAST LINE ON CARD                   RAT10072
+       TRA ENTRY           X                                            RAT10073
+ D     CAL IMIN+1          CKS IN AC (RELOCATABLE CARD)                 RAT10074
+       TZE J               IF 0, TO CONVERSION                          RAT10075
+       CLA IMIN+1          CKS IN AC                                    RAT10076
+       SUB SUM             CKS-SUM IN AC                                RAT10077
+       TZE J               PASS CHECK - TO CONVERSION                   RAT10078
+       LDQ IMIN            FAIL                                         RAT10079
+       RQL 2               GET 9L2 IN MQ SIGN                           RAT10080
+       TQP SW2             0, SHOULD MAKE CHECK                         RAT10081
+       TRA J               TO CONVERSION, OMIT CHECK                    RAT10082
+ SW2   SWT 2               TEST SWITCH 2                                RAT10083
+       TRA EXTRA+6 2UP-STOP, REJECT CARD PROCEED ON START SL2 ON        RAT10084
+       TRA EXTRA+8 2DOWN-STOP, THEN PROCEED (SL2 ON)                    RAT10085
+ J     CAL IMIN            9L IN AC                                     RAT10086
+       ANA MASKA           EXTRACT CARD LOAD ADDRESS                    RAT10087
+       SLW TEMP1           CARD LOAD ADDRESS IN TEMP 1                  RAT10088
+       LXA ZERO,1          SET IR1 TO 0                                 RAT10089
+       LDQ TEMP1           LOAD ADDRESS (=LA IN MQ)                     RAT10090
+ CLA   CLA TAB,1           NOM ADD FROM TABLE IN                        RAT10091
+       TLQ SLA             IF LA LESS THAN NA                           RAT10092
+       TXI CLA,1,-2        ADVANCE                                      RAT10093
+ SLA   CAL TAB-1,1         LOAD ADDRESS AND EXECUTION ADD IN            RAT10094
+       ARS 18              LOAD ADD IN ADDRESS POSITION                 RAT10095
+       ADD IMIN            ADD LOAD BASE                                RAT10096
+       ANA MASKA           EXTRACT ADDRESS                              RAT10097
+       SUB TAB-2,1         SUBTRACT NOMINAL BASE                        RAT10098
+       SLW IMOUT           LOAD ADDRESS INTO IMOUT                      RAT10099
+       CAL IMIN            9L IN AC                                     RAT10100
+       ANA MASKW           EXTRACT WC                                   RAT10101
+       ADD NINES           ADD MURA NINE PUNCHES                        RAT10102
+       ADD IMOUT           ADD ADDRESS OF LOAD                          RAT10103
+       SLW IMOUT           9L OUT DONE                                  RAT10104
+       PXD 0,0             CLEAR AC                                     RAT10105
+       LXA TT,1            SET IR1 TO 22                                RAT10106
+ CLOUT STO IMOUT+24,1      CLEAR IMOUT+2,+3,...                         RAT10107
+       TIX CLOUT,1,1       X                                            RAT10108
+       TOV CLOUT+3         TURN OFF OVERFLOW                            RAT10109
+       CLA IMIN            9L IN AC                                     RAT10110
+       ANA MASKW           EXTRACT WORD COUNT                           RAT10111
+       PDX 0,1             SET IR1 TO WC                                RAT10112
+       LXD ZERO,2          SET IR2=0                                    RAT10113
+ WORD  CAL IMIN+2          INDICATOR BITS IN AC AND MQ                  RAT10114
+       LDQ IMIN+3          X                                            RAT10115
+       PBT                 TEST P                                       RAT10116
+       TRA J1              P=0, ABSOLUTE DECREMENT                      RAT10117
+       LGL 1  P=1, RELOCATABLE DECREMENT, SHIFT BITS 1 LEFT             RAT10118
+       PBT                 TEST P                                       RAT10119
+       TRA J2              P=0, DIRECT DECREMENT                        RAT10120
+       LGL 1               P=1, COMPLIMENT DECREMENT                    RAT10121
+       SLW IMIN+2          RESTORE BITS                                 RAT10122
+       STQ IMIN+3          X                                            RAT10123
+       CAL IMIN+4,2        WORD IN                                      RAT10124
+       ANA MASKD           EXTRACT DECREMENT                            RAT10125
+       COM                 COMPLIMENT DECREMENT                         RAT10126
+       ADD CAR2            X                                            RAT10127
+       ANA MASKD           2 COMP OF DECREMENT                          RAT10128
+       SLW TEMP1           STORE IT                                     RAT10129
+       LXA ZERO,4          SET IR4 TO 0                                 RAT10130
+       LDQ TEMP1           DECREMENT IN MQ                              RAT10131
+       RQL 18              DECREMENT IN POSITION                        RAT10132
+ CDEC  CLA TAB,4           NOMINAL ADD FROM TAB IN AC                   RAT10133
+       TLQ CDEND           DECREMENT LESS THAN NOM ADD                  RAT10134
+       TXI CDEC,4,-2       REPEAT                                       RAT10135
+ CDEND CAL TAB-1,4         GET EXECUTION ADDRESS                        RAT10136
+       ANA MASKA           X                                            RAT10137
+       SUB TAB-2,4         SUBTRACT NOMINAL ADDRESS                     RAT10138
+       ALS 18              MOVE TO DECREMENT                            RAT10139
+       ADD TEMP1           ADD DECREMENT                                RAT10140
+       COM                 COMPLEMENT IT                                RAT10141
+       ADD CAR2            X                                            RAT10142
+       ANA MASKD           X                                            RAT10143
+       SLW TEMP1           X                                            RAT10144
+       CAL IMIN+4,2        WORD IN                                      RAT10145
+       ANA IASKD           RUB OUT DECREMENT                            RAT10146
+       ORA TEMP1           SUPPLY NEW DECREMENT                         RAT10147
+       SLW IMOUT+2,2       STORE IN IMOUT                               RAT10148
+       TRA J3              WORK ON ADDRESS                              RAT10149
+ J2    LGL 1               RESTORE BITS                                 RAT10150
+       SLW IMIN+2          X                                            RAT10151
+       STQ IMIN+3          X                                            RAT10152
+       CAL IMIN+4,2        WORD IN                                      RAT10153
+       ANA MASKD           GET DECREMENT                                RAT10154
+       SLW TEMP1           STORE IT                                     RAT10155
+       LXA ZERO,4          SET IR4=0                                    RAT10156
+       LDQ TEMP1           DECREMENT IN MQ                              RAT10157
+       RQL 18              SHIFT TO POSITION                            RAT10158
+ DDEC  CLA TAB,4           NOM ADD IN AC                                RAT10159
+       TLQ DDEND           DEC LESS THAN NOM ADD                        RAT10160
+       TXI DDEC,4,-2       REPEAT                                       RAT10161
+ DDEND CAL TAB-1,4         X                                            RAT10162
+       ANA MASKA           GET EXECUTION ADDRESS                        RAT10163
+       SUB TAB-2,4         SUBTRACT NOMINAL ADDRESS                     RAT10164
+       ALS 18              SHIFT TO DECREMENT                           RAT10165
+       ADD TEMP1           X                                            RAT10166
+       SLW TEMP1           NEW DEC IN TEMP1                             RAT10167
+       CAL IMIN+4,2        WORD IN                                      RAT10168
+       ANA IASKD           RUB OUT DEC                                  RAT10169
+       ORA TEMP1           SUPPLY NEW DEC                               RAT10170
+       SLW IMOUT+2,2       STORE IN IMOUT                               RAT10171
+       TRA J3              TO ADDRESS TREATMENT                         RAT10172
+ J1    LGL 1               REPLACE INDICATOR BITS                       RAT10173
+       SLW IMIN+2          X                                            RAT10174
+       STQ IMIN+3          X                                            RAT10175
+       CLA IMIN+4,2        SET WORD IN IMOUT                            RAT10176
+       STO IMOUT+2,2       X                                            RAT10177
+ J3    CAL IMIN+2          INDICATOR BITS IN                            RAT10178
+       LDQ IMIN+3          X                                            RAT10179
+       PBT                 TEST P                                       RAT10180
+       TRA J4              0=ABS ADD                                    RAT10181
+       LGL 1               1=REL ADD, SHIFT BITS 1                      RAT10182
+       PBT                 TEST P                                       RAT10183
+       TRA J5              0, DIRECT ADDRESS                            RAT10184
+       LGL 1               1, COMP ADDRESS                              RAT10185
+       SLW IMIN+2          STORE INDICATOR BITS                         RAT10186
+       STQ IMIN+3          X                                            RAT10187
+       CAL IMOUT+2,2       GET WORD                                     RAT10188
+       ANA MASKA           EXTRACT ADDRESS                              RAT10189
+       COM                 X                                            RAT10190
+       ADD ACAR2           X                                            RAT10191
+       ANA MASKA           X                                            RAT10192
+       SLW TEMP1           COMP OF ADDRESS IN TEMP1                     RAT10193
+       LXA ZERO,4          SET IR4 TO 0                                 RAT10194
+       LDQ TEMP1           NOM ADD IN MQ                                RAT10195
+ CADD  CLA TAB,4           NOM ADD ORIGIN IN AC                         RAT10196
+       TLQ CAEND           A LESS THAN NA                               RAT10197
+       TXI CADD,4,-2       GO TO NEXT                                   RAT10198
+ CAEND CAL TAB-1,4         X                                            RAT10199
+       ANA MASKA           GET EXECUTION ADDRESS                        RAT10200
+       ADD TEMP1           ADD ADDRESS                                  RAT10201
+       SUB TAB-2,4         SUBTRACT NOMINAL ADDRESS                     RAT10202
+       COM                 X                                            RAT10203
+       ADD ACAR2           X                                            RAT10204
+       ANA MASKA           X                                            RAT10205
+       SLW TEMP1           COMP ADDRESS IN TEMP1                        RAT10206
+       CAL IMOUT+2,2       WORD IN AC                                   RAT10207
+       ANA IASKA           RUB OUT ADD                                  RAT10208
+       ORA TEMP1           SUPPLY NEW ADD                               RAT10209
+       SLW IMOUT+2,2       RESTORE                                      RAT10210
+       TRA J6              X                                            RAT10211
+ J5    LGL 1               STORE INDICATOR BITS                         RAT10212
+       SLW IMIN+2          X                                            RAT10213
+       STQ IMIN+3          X                                            RAT10214
+       CAL IMOUT+2,2       ADDRESS IN TEMP1                             RAT10215
+       ANA MASKA           X                                            RAT10216
+       SLW TEMP1           X                                            RAT10217
+       LXA ZERO,4          SET IR4 TO 0                                 RAT10218
+       LDQ TEMP1           ADD IN MQ                                    RAT10219
+ DADD  CLA TAB,4           NOM ADD ORIGIN IN AC                         RAT10220
+       TLQ DAEND           A LESS THAN NA                               RAT10221
+       TXI DADD,4,-2       GO TO NEXT                                   RAT10222
+ DAEND CAL TAB-1,4         X                                            RAT10223
+       ANA MASKA           EXECUTION ADDRESS                            RAT10224
+       ADD TEMP1           X                                            RAT10225
+       SUB TAB-2,4         X                                            RAT10226
+       SLW TEMP1           GET NEW ADDRESS IN TEMP1                     RAT10227
+       CAL IMOUT+2,2       WORD IN AC                                   RAT10228
+       ANA IASKA           RUB OUT ADDRESS                              RAT10229
+       ORA TEMP1           SUPPLY NEW ADD                               RAT10230
+       SLW IMOUT+2,2       RESTORE                                      RAT10231
+       TRA J6              X                                            RAT10232
+ J4    LGL 1               REPLACE INDICATOR BITS                       RAT10233
+       SLW IMIN+2          X                                            RAT10234
+       STQ IMIN+3          X                                            RAT10235
+ J6    TXI J6+1,2,-1       MOVE TO NEXT WORD IN IMIN AND IMOUT          RAT10236
+       TIX WORD,1,1        COUNT FOR LAST WORD                          RAT10237
+       LXA TT,4            SET IR4 TO 22                                RAT10238
+       CAL IMOUT           FORM LOGICAL SUM                             RAT10239
+ ACL   ACL IMOUT+24,4      X                                            RAT10240
+       TIX ACL,4,1         X                                            RAT10241
+       SLW IMOUT+1         STORE CKS                                    RAT10242
+       WPU                 SELECT PUNCH                                 RAT10243
+       LXA TWFR,4          SET IR4=24                                   RAT10244
+ OCPY  CPY IMOUT+24,4      PUNCH CARD                                   RAT10245
+       TIX OCPY,4,1        X                                            RAT10246
+       TRA ENTRY           X                                            RAT10247
+ MASKW OCT 040037000000    EXTRACTION OF WORD COUNT                     RAT10248
+ MASKM HTR 0               EXTRACTION OF MURA DIGITS                    RAT10249
+ MASKL OCT 077777000000    EXTRACTION OF LOAD ADDRESS                   RAT10250
+ MASKA OCT 000000077777    EXTRACTION OF ADDRESS                        RAT10251
+ MASKD OCT 077777000000    EXTRACTION OF DECREMENT                      RAT10252
+ ZERO  HTR 0               ZERO                                         RAT10253
+ SEVS  OCT 000000100000    SEVENS                                       RAT10254
+ NINES HTR 0               MURA DIGITS                                  RAT10255
+ CAR2  OCT 000001000000    2-CARRY FOR DECREMENT                        RAT10256
+ IASKD OCT 700000777777    EXTRACT ALL BUT DECREMENT                    RAT10257
+ IASKA OCT 777777700000    EXTRACT ALL BUT ADDRESS                      RAT10258
+ ACAR2 OCT 000000000001    2-CARRY FOR ADDRESS                          RAT10259
+ IMIN  SYN 3300                                                         RAT10260
+ IMOUT SYN 3350                                                         RAT10261
+ TAB   SYN 3400                                                         RAT10262
+ TEMP1 SYN 3299                                                         RAT10263
+ SUM   SYN 3298                                                         RAT10264
+       ORG 3280                                                         RAT10265
+ EXTRA SLN 3               END OF FILE, SL3 ON                          RAT10266
+       HTR ENTRY           X                                            RAT10267
+       SLN 1        1 UP STOP, REJECT CARD, PROCEED ON START            RAT10268
+       HTR ENTRY           X                                            RAT10269
+       SLN 1               1 DOWN, STOP THEN REPLACE CKS BY SUM         RAT10270
+       HTR F+6             X                                            RAT10271
+       SLN 2               2UP, STOP REJECT CARD PROCEED ON STRT        RAT10272
+       HTR ENTRY           X                                            RAT10273
+       SLN 2               2 DOWN, STOP THEN PROCEED                    RAT10274
+       HTR J               X                                            RAT10275
+       ORG 3270                                                         RAT10276
+ EXTR2 CAL IMIN            PREPARE FOR SUM                              RAT10277
+       LXA TT,1            SET IR1=22                                   RAT10278
+       ACL IMIN+24,1       FORM LOGICAL SUM                             RAT10279
+       TIX EXTR2+2,1,1     X                                            RAT10280
+       SLW SUM             STORE LOGICAL SUM                            RAT10281
+       TRA B+1             RETURN                                       RAT10282
+       END 3000            BEGIN PROGRAM                                RAT10283

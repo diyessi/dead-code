@@ -41,3 +41,63 @@
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
+B3 GE EXP2          0020         SY                                             
+   GE EXP20EXPONENTIAL SUBROUTINE                                    020NUDEK03!
+ EXP   STO COMMON              STORE X                                  EXP20001
+       SSM                                                              EXP20002
+       ADD EXP+51              TEST FOR SIZE                            EXP20003
+       TPL EXP+6                                                        EXP20004
+       CLA COMMON              /X/ TOO BIG---ERROR RETURN               EXP20005
+       TRA 1,4                                                          EXP20006
+       SXD COMMON+1,2          SAVE REGISTER 2                          EXP20007
+       LXA EXP+5,2             1 INTO 2                                 EXP20008
+       SUB EXP+51              RESTORE -/X/                             EXP20009
+       LRS 27                                                           EXP20010
+       CAS EXP+52              SEPARATE AND TEST EXPONENT               EXP20011
+       TRA EXP+17                                                       EXP20012
+       TRA EXP+17                                                       EXP20013
+       SUB EXP+52              E GR. THAN -3                            EXP20014
+       SBM EXP+5               SET UP REG. 2 FOR SQUARING               EXP20015
+       PAX 0,2                                                          EXP20016
+       CLA EXP+52              SET EXPONENT TO -3                       EXP20017
+       LRS 8                                                            EXP20018
+       STQ COMMON+2            NEW X                                    EXP20019
+       FMP COMMON+2                                                     EXP20020
+       STO COMMON+3            NEW X SQUARED                            EXP20021
+       FAD EXP+56              COMPUTE F                                EXP20022
+       STO COMMON+4                                                     EXP20023
+       FAD EXP+57                                                       EXP20024
+       FDH COMMON+4                                                     EXP20025
+       FMP COMMON+3                                                     EXP20026
+       FDH EXP+55                                                       EXP20027
+       STQ COMMON+3            F                                        EXP20028
+       CLS COMMON+2                                                     EXP20029
+       SUB EXP+53              -X/2                                     EXP20030
+       FAD COMMON+3                                                     EXP20031
+       FAD EXP+54                                                       EXP20032
+       STO COMMON+3            STORE DENOMINATOR                        EXP20033
+       FAD COMMON+2                                                     EXP20034
+       FDH COMMON+3                                                     EXP20035
+       STQ COMMON+2                                                     EXP20036
+       CLA COMMON+2            EXPONENTIAL BEFORE SQUARING              EXP20037
+       TNX EXP+42,2,1          CHECK FOR SQUARING                       EXP20038
+       FMP COMMON+2            SQUARE PROPER NUMBER OF TIMES            EXP20039
+       STO COMMON+2                                                     EXP20040
+       LDQ COMMON+2                                                     EXP20041
+       TIX EXP+38,2,1                                                   EXP20042
+       LXD COMMON+1,2          RESTORE REGISTER 2                       EXP20043
+       LDQ COMMON                                                       EXP20044
+       TQP EXP+46                                                       EXP20045
+       TRA 2,4                 OUT IF X IS NEGATIVE                     EXP20046
+       CLA EXP+54                                                       EXP20047
+       FDH COMMON+2            INVERT IF X IS POSITIVE                  EXP20048
+       STQ COMMON                                                       EXP20049
+       CLA COMMON                                                       EXP20050
+       TRA 2,4                                                          EXP20051
+       OCT 207540000000        FLO. 88                                  EXP20052
+       OCT -175                                                         EXP20053
+       OCT 1000000000                                                   EXP20054
+       OCT 201400000000        FLO. 1                                   EXP20055
+       OCT 206500000000        FLO. 40                                  EXP20056
+       OCT 206520000000        FLO. 42                                  EXP20057
+       OCT 207610000000        FLO. 98                                  EXP20058

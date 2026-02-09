@@ -1,0 +1,365 @@
+       REM NA 180.1    0365 CARDS                                       NA180101
+ CPC1  CLA 1,4                     SET UP LOCATION OF IMAGE            N18010002
+       STA CP35                                                        N18010003
+       STA B7                                                          N18010004
+       STA C49                                                         N18010005
+       STD CP14                    SET UP CARD EXTENT                  N18010006
+       TRA 2,4                                                         N18010007
+ CPC2  CLA 2,4                                                         N18010008
+       STA CP8          STORE ADDRESS TO FIND LOCATION                 N18010009
+       SXD X1,1         SAVE INDEX REGISTERS 1 AND 4                   N18010010
+       SXD X2,2                                                        N18010011
+       SXD X4,4                                                        N18010012
+       PDX 0,2          PLACE CONVERSION TUPE CODE IN IR2              N18010013
+       CLA TABLE,2      SET UP TRANSFER ADDR AT FORK                   N18010014
+       STA FORK                                                        N18010015
+ CP8   CLA *                                                           N18010016
+       STA CP45         SET UP ADDRESS TO STORE INFORMATION            N18010017
+       CLA 1,4          TEST FOR END OF CARD                           N18010018
+       SUB ONE                                                         N18010019
+       PAX 0,2          COL. NO. IN IR 2                               N18010020
+       STD CP13         NO. OF COL. IN DECR OF CP13                    N18010021
+ CP13  TXI CP14,2,*     ADD NO. OF COL. TO ORIGIN                      N18010022
+ CP14  TXL CP16,2,*     IF WORD IS NOT WITHIN CARD LIMITS,             N18010023
+       LXD X2,2                                                        N18010024
+       TRA 5,4          GO TO END OF CARD EXIT                         N18010025
+ CP16  PDX 0,4          NO. OF COL. IN IR4                             N18010026
+       STA NUM          FIND NUMBER OF WORDS IN IMAGE TO SKIP          N18010027
+       LDQ NUM                                                         N18010028
+       CLM                                                             N18010029
+       SLW CODE         CLEAR ERROR CODE INDICATOR                     N18010030
+       DVP SIX                                                         N18010031
+       STQ TEMP         NO. WORDS TO SKIP                              N18010032
+       STO TEMP+1       NO. CHARACTERS IN NEXT WORD TO SKIP            N18010033
+       SUB SIX                                                         N18010034
+       PAX 0,1          NO CHAR TO USE IN IR 1                         N18010035
+       CLA TEMP         2S COMPLEMENT OF WORDS TO SKIP                 N18010036
+       COM              IN IR 2 TO LOCATE WORD IN IMAGE                N18010037
+       ADD ONE                                                         N18010038
+       PAX 0,2                                                         N18010039
+       LDQ TEMP+1       COMPUTE NO. OF PLACES TO SHIFT TO OMIT         N18010040
+       MPY SIX          UNWANTED CHARACTERS FROM WORD                  N18010041
+       LLS 35                                                          N18010042
+       STA CP36                                                        N18010043
+ CP35  LDQ *,2                                                         N18010044
+ CP36  LGL *            1 TO 6 BCD CHARACTERS IN MQ                    N18010045
+       TOV FORK         TURN OFF ACC OV LIGHT                          N18010046
+ FORK  TRA *                                                           N18010047
+       TRA CP48         BLANK                                          N18010048
+       LXD X1,1         RESTORE IR 1 AND IR 4                          N18010049
+       LXD X2,2                                                        N18010050
+       LXD X4,4                                                        N18010051
+       CLA CODE                                                        N18010052
+       LDQ WORD                                                        N18010053
+       TNZ 4,4          GO TO ERROR EXIT                               N18010054
+ CP45  STQ *,1          STORE INFORMATION CONTIGUOUSLY                 N18010055
+       TXI CP47,1,-1    INCREMENT INDEX 1                              N18010056
+ CP47  TRA 7,4          GO TO NORMAL EXIT                              N18010057
+ CP48  LXD X1,1                                                        N18010058
+       LXD X2,2                                                        N18010059
+       LXD X4,4                                                        N18010060
+       TXI CP51,1,-1    EVENT OF BLANK FIELD, INCREMENT INDEX 1        N18010061
+ CP51  TRA 6,4          RETURN TO BLANK EXIT                           N18010062
+       REM  DECIMAL CONVERSION ROUTINE                                 N18010063
+ DEC   CLA D15          SET UP TRANSFER ADDR                           N18010064
+       TRA CONV                                                        N18010065
+ D4    CLA WORD         PSEUDO-MULTIPLY LEADING DIGITS BY 10           N18010066
+       ALS 2            4X                                             N18010067
+       ACL WORD         5X                                             N18010068
+       ALS 1            10X                                            N18010069
+       STO WORD                                                        N18010070
+       CLM                                                             N18010071
+       LGL 4                                                           N18010072
+       CAS NINE                                                        N18010073
+       TRA D63          NON-DECIMAL DIGIT                              N18010074
+ D15   NOP D4                                                          N18010075
+ D16   ACL WORD         10X PLUS Y                                     N18010076
+       TIX C47,4,1      TEST COMPLETION OF WORD                        N18010077
+       LDQ SIGN         ATTACH SIGN TO CONVERTED WORD                  N18010078
+       LLS 0                                                           N18010079
+       STO WORD                                                        N18010080
+       CLA SAM                                                         N18010081
+       SLT 1                                                           N18010082
+       TRA D61                                                         N18010083
+       TZE D25          TO NORMAL EXIT                                 N18010084
+       CLA COD2         INDICATE EMBEDDED BLANK                        N18010085
+       STO CODE                                                        N18010086
+ D25   TNO D28                                                         N18010087
+       CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED            N18010088
+       STO CODE                                                        N18010089
+ D28   LXD X4,4         RESTORE IR 4                                   N18010090
+       CLA 2,4                                                         N18010091
+       PDX 0,2          CONVERSION TYPE IN IR 2                        N18010092
+       TXH FORK+2,2,2   IF INTEGER CONVERSION, EXIT                    N18010093
+       CLA TYP+1,2                                                     N18010094
+       STA D52                                                         N18010095
+       CLA 3,4                                                         N18010096
+       STA D46                                                         N18010097
+       ARS 18                                                          N18010098
+       STA D42                                                         N18010099
+       CLA 1,4                                                         N18010100
+       ARS 18                                                          N18010101
+       STA NUM          NUMBER OF COLUMNS                              N18010102
+ D42   CLA *            DECIMAL SCALE MINUS SIZE OF FIELD              N18010103
+       SUB NUM                                                         N18010104
+       STO D53                                                         N18010105
+       TXH D52,2,1                 AVOID BIN SCALE SET-UP IF FLOATI    N18010106
+ D46   CLA *            BINARY SCALE                                   N18010107
+       SUB THFV         MINUS 35                                       N18010108
+       STO D54                                                         N18010109
+       ACL D53                                                         N18010110
+       TZE FORK+2       INTEGER CONVERSION ONLY                        N18010111
+ D52   TSX *,4          TO SCALING ROUTINE                             N18010112
+ D53   PZE *            DEC SCALE MINUS SIZE OF FIELD                  N18010113
+ D54   PZE *            BIN SCALE MINUS 35                             N18010114
+       TRA D58          ERROR EXIT                                     N18010115
+       TRA FORK+2                                                      N18010116
+ D58   LDQ COD4         INDICATE SCALING ERROR                         N18010117
+       STQ CODE                                                        N18010118
+       TRA FORK+2                                                      N18010119
+ D61   TZE FORK+1       BLANK FIELD                                    N18010120
+       TRA D25                                                         N18010121
+ D63   STO TEMP         SAVE CHARACTER                                 N18010122
+       CLA COD3         INDICATE ILLEGAL CHARACTER                     N18010123
+       STO CODE                                                        N18010124
+       CLA TEMP         CONTINUE USING GUESS                           N18010125
+       TRA D16                                                         N18010126
+       REM FIXED SCALING ROUTINE                                       N18010127
+ FXIN  DCT              TURN OFF DIVIDE CHECK INDICTOR                 N18010128
+ FX2   TXI FX5                                                         N18010129
+ FX5   CLA 1,4          DECIMAL SCALE                                  N18010130
+       STO TEMP+5                                                      N18010131
+       LDQ 2,4          BINARY SCALE                                   N18010132
+       STQ TEMP+2                                                      N18010133
+ FX9   CLA FX65         33 IN ACC                                      N18010134
+       TQP FX58         ALTER MAXIMUM SHIFT                            N18010135
+ FX11  STO TEMP         MAXIMUM SHIFT                                  N18010136
+ FX12  LLS 0            WITH SIGN OF B                                 N18010137
+       TPL FX60                                                        N18010138
+       TLQ FX16         MAXIMUM SHIFT IS WORKING B                     N18010139
+ FX15  LLS 35           B IS WORKING B                                 N18010140
+ FX16  STO TEMP+3                                                      N18010141
+       TMI FX19         AVOID SHIFT ALTERATION                         N18010142
+       ADD FX66         ALTER SHIFT                                    N18010143
+ FX19  SSP              POSITIVE INSTRUCTION                           N18010144
+       ADD FX12         LLS 0                                          N18010145
+       STO FX33         STORE SHIFT COMMANDS                           N18010146
+       STO FX39                                                        N18010147
+       CLA TEMP+5       DECIMAL SCALE                                  N18010148
+       LDQ FXTA-1       TEN IN MQ                                      N18010149
+       LRS 0            WITH SIGN OF D                                 N18010150
+       TLQ FX62                                                        N18010151
+       TMI FX63                                                        N18010152
+ FX28  STO TEMP+4       WORKING D                                      N18010153
+ FX29  LXA TEMP+4,1     D IN IRA                                       N18010154
+       LDQ TEMP+1       ARGUMENT IN MQ                                 N18010155
+       TMI FX37         TO NEGATIVE SCALING                            N18010156
+       MPY FXTA,1       MPY BY POWER OF TEN                            N18010157
+ FX33  NOP              SHIFT                                          N18010158
+       TZE FX43         COMPATIBLE MAGNITUDES                          N18010159
+       LXD X2,2                                                        N18010160
+       TRA 3,4          ERROR EXIT                                     N18010161
+ FX37  CLM              NEGATIVE SCALING                               N18010162
+       LLS 0            SIGN OF ARGUMENT IN ACC                        N18010163
+ FX39  NOP              SHIFT                                          N18010164
+       DVP FXTA,1       DIVIDE BY POWER OF TEN                         N18010165
+       DCT                                                             N18010166
+       TRA 3,4          TO ERROR EXIT                                  N18010167
+ FX43  CLA TEMP+5       D MINUS                                        N18010168
+       SUB TEMP+4       WORKING D                                      N18010169
+       STO TEMP+5       REPLACES D                                     N18010170
+       CLA TEMP+2       B MINUS                                        N18010171
+       SUB TEMP+3       WORKING B                                      N18010172
+       STO TEMP+2       REPLACES B                                     N18010173
+       STQ TEMP+1       RESULTS REPLACES ARGUMENT                      N18010174
+       TZE FX53         TEST NEW B                                     N18010175
+ FX51  LDQ TEMP+2                                                      N18010176
+       TRA FX9          REPEAT SCALING LOOP                            N18010177
+ FX53  CLA TEMP+5       TEST NEW D                                     N18010178
+       TNZ FX51         REPEAT SCALING LOOP                            N18010179
+       TRA 4,4          SUCCESSFUL EXIT                                N18010180
+ FX58  ADD FXTA         ONE                                            N18010181
+       TRA FX11                                                        N18010182
+ FX60  TLQ FX15                                                        N18010183
+       TRA FX16                                                        N18010184
+ FX62  TMI FX28                                                        N18010185
+ FX63  STQ TEMP+4                                                      N18010186
+       TRA FX29                                                        N18010187
+ FX65  PZE 33                                                          N18010188
+ FX66  OCT 000200000000                                                N18010189
+       DEC 10000000000,1000000000,100000000,10000000                   N18010190
+       DEC 1000000,100000,10000,1000,100,10                            N18010191
+ FXTA  DEC 1                                                           N18010192
+       REM FLOATING SCALING ROUTINE                                    N18010193
+ FLIN  LDQ TEMP+1       ARGUMENT IN MQ                                 N18010194
+       CLA FL47         163                                            N18010195
+       LLS 27                                                          N18010196
+       STO TEMP         MOST SIGNIFICANT PART                          N18010197
+       CLA FL48         136                                            N18010198
+       LLS 27                                                          N18010199
+       STO TEMP+1       LEAST SIGNIFICANT PART                         N18010200
+       ANA FL49         ZERO IN ACCUMULATOR WITH CHARACTERISTIC        N18010201
+       FAD TEMP         OF LEAST SIGNIFICANT PART                      N18010202
+       FAD TEMP+1       PLUS FLOATING NUMBERS                          N18010203
+       STO TEMP+1       INTEGER FLOATED AND NORMALIZED                 N18010204
+       TZE 4,4          EXIT ON ZERO ARGUMENT                          N18010205
+       TOV FL13         TURN OFF OVERFLOW INDICATORS                   N18010206
+ FL13  TQO FL14                                                        N18010207
+ FL14  CLA 1,4          DECIMAL SCALE MINUS SIZE OF FIELD              N18010208
+ FL16  STO TEMP         IS D                                           N18010209
+       LDQ TEN          TEN IN MQ                                      N18010210
+       LRS 0            WITH SIGN OF D                                 N18010211
+       TLQ FL41                                                        N18010212
+       TMI FL42                                                        N18010213
+ FL21  STO TEMP+3       WORKING D                                      N18010214
+ FL22  LXA TEMP+3,1     D IN IRA                                       N18010215
+       TMI FL31         TO NEGATIVE SCALING                            N18010216
+       LDQ TEMP+1       ARGUMENT                                       N18010217
+       FMP FLTA,1       TIMES POWER OF TEN                             N18010218
+       STO TEMP+1       RESULT REPLACES ARGUMENT                       N18010219
+       TNO FL35         IF NO EXPONENT OVERFLOW                        N18010220
+       ORA FL50         ALL ONES INDICATE OVERFLOW                     N18010221
+       TRA FL45         ERROR EXIT                                     N18010222
+ FL31  CLA TEMP+1       ARGUMENT                                       N18010223
+       FDP FLTA,1       DIVIDED BY POWER OF TEN                        N18010224
+       STQ TEMP+1       REPLACES ARGUMENT                              N18010225
+       TQO FL44                                                        N18010226
+ FL35  CLA TEMP         D MINUS                                        N18010227
+       SUB TEMP+3       WORKING D                                      N18010228
+       TNZ FL16         REPEAT LOOP                                    N18010229
+       TRA 4,4          SUCCESSFUL EXIT                                N18010230
+ FL41  TMI FL21                                                        N18010231
+ FL42  STQ TEMP+3                                                      N18010232
+       TRA FL22                                                        N18010233
+ FL44  CLM              ZEROS INDICATE UNDERFLOW                       N18010234
+ FL45  STO TEMP+1                                                      N18010235
+       TRA 3,4          ERROR EXIT                                     N18010236
+ FL47  DEC 163                                                         N18010237
+ FL48  DEC 136                                                         N18010238
+ FL49  OCT 377000000000                                                N18010239
+       DEC 1E10,1E9,1E8,1E7,1E6,1E5,1E4,1E3,1E2,1E1                    N18010240
+ FLTA  DEC 1E0                                                         N18010241
+ FL50  OCT 377777777777                                                N18010242
+       REM  OCTAL CONVERSION ROUTINE                                   N18010243
+ OCT   CLA O3           SET UP TRANSFER ADDRESS                        N18010244
+       TRA CONV                                                        N18010245
+ O3    TRA O4                                                          N18010246
+ O4    LGL 1                                                           N18010247
+       TZE O11                                                         N18010248
+       CLA COD3         INDICATE NON-OCTAL DIGIT                       N18010249
+       STO CODE                                                        N18010250
+       CLA ONE          CONVERT NON-OCTAL DIGIT TO OCTAL               N18010251
+ O11   ACL WORD                                                        N18010252
+       LGL 3                                                           N18010253
+       TIX C47,4,1      IF WORD IS NOT FINISHED                        N18010254
+       LDQ SIGN         ATTACH SIGN                                    N18010255
+       LLS 0                                                           N18010256
+       STO WORD         STORE CONVERTED WORD                           N18010257
+       CLA SAM                                                         N18010258
+       TPL O21          NO BLANK COLUMNS IN FIELD                      N18010259
+       SLT 1                                                           N18010260
+       TZE FORK+1       BLANK FIELD                                    N18010261
+ O19   CLA COD2         STORE EMBEDDED BLANK INDICATION                N18010262
+       STO CODE                                                        N18010263
+ O21   TNO FORK+2       IF WORD LENGTH DOES NOT EXCEED 35 BITS         N18010264
+       CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED            N18010265
+       STO CODE                                                        N18010266
+       TRA FORK+2                                                      N18010267
+       REM  BCD CARD READ                                              N18010268
+ BCD   TXH B9,4,6       IF MORE THAN 6 CHARACTERS REQUESTED            N18010269
+       CLM              CLEAR ACC                                      N18010270
+ B3    LGL 6            SHIFT ONE CHARACTER INTO ACC                   N18010271
+       TNX B12,4,1      TRA IF WORD IS COMPLETE                        N18010272
+       TIX B3,1,1       REPEAT IF MQ CONTAINS ANOTHER CHARACTER        N18010273
+       TXI B7,2,-1      LOAD MQ WITH NEXT WORD IN IMAGE                N18010274
+ B7    LDQ *,2                                                         N18010275
+       TXI B3,1,5       INCREASE CHARACTER COUNT TO 6                  N18010276
+ B9    CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED            N18010277
+       STO CODE                                                        N18010278
+       TRA B3           GIVE LAST 6 CHARACTERS                         N18010279
+ B12   SLW WORD         STORE COMPLETED WORD                           N18010280
+       TRA FORK+2       RETURN TO MAIN PROGRAM                         N18010281
+       REM  PRE-CONVERSION SET-UP COMMON TO DECIMAL AND OCTAL          N18010282
+ CONV  STA C11          SET UP ADDRESS                                 N18010283
+       CLM                                                             N18010284
+       SLW SIGN                                                        N18010285
+       SLW SAM                                                         N18010286
+       SLF                                                             N18010287
+ C8    SLW WORD                                                        N18010288
+       CLA ZERO         CLEAR ACC                                      N18010289
+       LGL 2            SHIFT ZONE PUNCH INTO ACC                      N18010290
+       TNZ C12                                                         N18010291
+ C10   SLN 1            TO OCTAL OR DECIMAL ROUTINES                   N18010292
+ C11   TRA *                                                           N18010293
+       REM  BLANK AND ERROR ROUTINE COMMON TO DECIMAL AND OCTAL        N18010294
+ C12   STQ MQ           SAVE MQ                                        N18010295
+       CAS TWO          TEST TYPE OF ZONE PUNCH                        N18010296
+       TRA C29          TEST FOR BLANK                                 N18010297
+       SSM              STORE MINUS TWO                                N18010298
+       STO TEMP         OR PLUS ONE                                    N18010299
+       CLA SIGN         TEST FOR PREVIOUS X OR Y PUNCH                 N18010300
+       TNZ C44                                                         N18010301
+       CLA TEMP         STORE SIGN INDICATION                          N18010302
+       STO SIGN                                                        N18010303
+       CLA ZERO         TEST FOR PSEUDO ZERO                           N18010304
+       LGL 4                                                           N18010305
+       SUB TEN                                                         N18010306
+       TNZ C26                                                         N18010307
+       STP MQ           REPLACE TEN BY ZERO                            N18010308
+ C26   LDQ MQ                                                          N18010309
+       CLM                                                             N18010310
+       TRA C10                                                         N18010311
+ C29   CLM                         TEST FOR BLANK                      N18010312
+       LGL 4                                                           N18010313
+       TNZ C44          ILLEGAL CHARACTER                              N18010314
+       CLA SAM                                                         N18010315
+       SLT 1                                                           N18010316
+       TRA C36          PREVIOUS COL. WAS NOT A DIGIT                  N18010317
+       TNZ C41          EMBEDDED BLANK                                 N18010318
+       CLA ONE                                                         N18010319
+ C36   SSM              BLANK FOLLOWS DIGIT, RECORD MINUS ONE          N18010320
+       STO SAM                                                         N18010321
+ C38   LDQ MQ           RELOAD MQ, CONVERT BLANK AS ZERO               N18010322
+       CLM                                                             N18010323
+ C40   TRA C11                                                         N18010324
+ C41   CLA COD2         STORE IMBEDDED BLANK INDICATION                N18010325
+ C42   STO CODE                                                        N18010326
+       TRA C38                                                         N18010327
+ C44   CLA COD3         STORE NON-NUMERIC DIGIT INDICATION             N18010328
+       STO CODE         CONVERT DIGIT WITHOUT ZONE PUNCH               N18010329
+       TRA C26                                                         N18010330
+ C47   TIX C8,1,1       CONVERT NEXT DIGIT IF IT IS IN MQ              N18010331
+       TXI C49,2,-1     INCREASE INDEX TO PICK UP NEXT                 N18010332
+ C49   LDQ *,2                     BCD WORD IN IMAGE                   N18010333
+       TXI C8,1,5       INCREASE CHARACTER COUNT TO SIX                N18010334
+ TEMP  BSS 6                                                           N18010335
+ WORD  SYN TEMP+1                                                      N18010336
+ SAM   SYN TEMP+2                                                      N18010337
+ SIGN  SYN TEMP+3                                                      N18010338
+ MQ    SYN TEMP+4                                                      N18010339
+       PZE FLIN                                                        N18010340
+ TYP   PZE FXIN                                                        N18010341
+ CODE  PZE                                                             N18010342
+ NUM   PZE                                                             N18010343
+ X1    PZE                                                             N18010344
+ X4    PZE                                                             N18010345
+ COD1  PZE 1  WORD IN SPECIFIED FIELD EXCEEDS REGISTER CAPACITY        N18010346
+ COD2  PZE 2  EMBEDDED BLANK IN SPECIFIED FIELD                        N18010347
+ COD3  PZE 3  ILLEGAL CHARACTER FOR THIS TYPE OF CONVERSION            N18010348
+ COD4  PZE 4  INCORRECT SCALE FACTORS SPECIFIED                        N18010349
+ ZERO  PZE                                                             N18010350
+ ONE   SYN FXTA                                                        N18010351
+ TWO   PZE 2                                                           N18010352
+ SIX   PZE 6                                                           N18010353
+ NINE  PZE 9                                                           N18010354
+ TEN   SYN FXTA-1                                                      N18010355
+ THFV  PZE 35                                                          N18010356
+ X2    PZE                                                             N18010357
+       REM THIS TABLE MAY BE EXPANDED TO INCLUDE ANY ROUTINES          N18010358
+       PZE OCT                     5 OCTAL CONVERSION                  N18010359
+       PZE BCD                     4 BCD CARD READ                     N18010360
+       PZE DEC                     3 INTEGER                           N18010361
+       PZE DEC                     2 FLOATING DECIMAL                  N18010362
+       PZE DEC                     1 FIXED DECIMAL                     N18010363
+ TABLE PZE                         0                                   N18010364
+       END 0                                                           N18010365

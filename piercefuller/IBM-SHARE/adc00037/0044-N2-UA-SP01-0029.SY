@@ -1,0 +1,473 @@
+   UA SPO10CONTROL PANEL PRINT + OCTAL MEM. PRINT (SCOOP)            029NUDEK03P
+       ORG 512                                                          SPO10001
+ RCDBN RCD                READ NEXT CARD AND                            SPO10002
+       PXD                 SEPARATE INFORMATION                         SPO10003
+       CPY COMMON+2        AND CORRECTION/TRANSFER                      SPO10004
+       RQL 1               CARDS                                        SPO10005
+       LGL 1               X                                            SPO10006
+       TNZ RCDBN+53        XQUIT,IF RELOCATABLE                         SPO10007
+       STQ COMMON+1        X                                            SPO10008
+       RQL 11              X                                            SPO10009
+       LGL 5               X                                            SPO10010
+       CPY COMMON          X                                            SPO10011
+       TZE RCDBN+40        XGO TO PROCESS C/T CARD                      SPO10012
+       PAX 0,4            PROCESS INFORMATION CARD                      SPO10013
+       ADD COMMON+2        X V+R                                        SPO10014
+       STA RCDBN+15        X SET CAD LOOP                               SPO10015
+       CAL COMMON+2        X                                            SPO10016
+       CAD 0,4             X COPY CARD AND                              SPO10017
+       TIX RCDBN+15,4,1    X COMPUTE CHECKSUM                           SPO10018
+       LDQ COMMON+1        X                                            SPO10019
+       SLW COMMON+1        X                                            SPO10020
+       CLA COMMON          X VERIFICATION TESTS                         SPO10021
+       TZE RCDBN           X SUPPRESS IF CKS ZERO                       SPO10022
+       SUB COMMON+1        X REDUCE CKS                                 SPO10023
+       TQP RCDBN+24        X TEST FOR SUPPRESSOR BIT                    SPO10024
+       TXL RCDBN           X SUPPRESS VERIFICATION                      SPO10025
+       TZE RCDBN           X TEST REDUCTION                             SPO10026
+       HTR RCDBN           X INFO CARD CKS ERROR                        SPO10027
+       RQL 19             PROCESS C/T CARD                              SPO10028
+       LLS 15              X                                            SPO10029
+       TPL RCDBN+30        X TEST FOR CASCADED CORRECTION               SPO10030
+       TXI RCDBN+35,4,-1   X YES, AUGMENT INDEX REGISTER                SPO10031
+       STA RCDBN+38        X NO, SET NEW ORIGIN                         SPO10032
+       LXD RCDBN+25,4      X     RESET INDEX REGISTER                   SPO10033
+       TNZ RCDBN+35        X TEST FOR ZERO ORIGIN                       SPO10034
+       CAL COMMON          X YES, TEST FOR BLANK ROW                    SPO10035
+       TZE RCDBN+40        X X YES, GO TO NEXT ROW                      SPO10036
+       LLS 3               X TEST FOR STORAGE                           SPO10037
+       LDQ COMMON          X  SUPPRESSION                               SPO10038
+       LBT                 X X SKIP TO SUPPRESS STORAGE                 SPO10039
+       STQ 0,4             X X STORE CORRECTION                         SPO10040
+       PXD                 X CLEAR ACCUMULATOR                          SPO10041
+       CPY COMMON+2        X COPY NEXT ROW                              SPO10042
+       CPY COMMON          X X                                          SPO10043
+       TRA RCDBN+50        X TR OVER TRA ANALYSIS                       SPO10044
+       CLA COMMON+1        X TEST FOR TRANSFER                          SPO10045
+       ALS 19              X X                                          SPO10046
+       ARS 21              X X                                          SPO10047
+       TZE RCDBN           X NO, ZERO                                   SPO10048
+       TMI RCDBN           X NO, SUPPRESSOR BIT                         SPO10049
+       STA RCDBN+49        X YES, SET TRANSFER                          SPO10050
+       TRA                 X  AND EXIT                                  SPO10051
+       LDQ COMMON+2        X TEST FOR RELOCATABLE                       SPO10052
+       RQL 1               X  CORRECTION                                SPO10053
+       TQP RCDBN+26        X NO, PROCEED                                SPO10054
+       HTR RCDBN+53        X YES, QUIT                                  SPO10055
+COMMON                                                                  SPO10056
+       ORG 3                                                            SPO10057
+ SC1   CPY 1                   COPY TTR SC3                             SPO10058
+ SC2   TRA SC4                 TEST TRAPPING MODE                       SPO10059
+ SC3   SXD SD+1,1              STORE TM INDICATOR                       SPO10060
+       LTM                     LEAVE TRAPPING MODE                      SPO10061
+ SC4   LXD A,1                 NO. OF WORDS IN CHECK SUM                SPO10062
+       PXD 0,0                 CLEAR ACC                                SPO10063
+ SC5   ACL SC2+462,1           COMPUTE CHECK SUM                        SPO10064
+       TIX SC5,1,1                                                      SPO10065
+       SLW SD                  STORE CHECK SUM                          SPO10066
+       CLA SD                  COMPUTED CHECK SUM                       SPO10067
+       SUB J                   CORRECT CHECK SUM                        SPO10068
+       TZE SC10                TEST CHECK SUM                           SPO10069
+       HTR SC6                                                          SPO10070
+ SC6   CLA C                                                            SPO10071
+       STO 1                   STORE COPY 4+N,1                         SPO10072
+       CLA D1                                                           SPO10073
+       STO SC1                 STORE TRA SC4                            SPO10074
+       LXD E,1                 NO. OF WORDS ON DRUM                     SPO10075
+       RDR 8                   SELECT DRUM                              SPO10076
+       LDA E                   LOCATION OF 1ST WORD                     SPO10077
+       TRA 1                   RESTART                                  SPO10078
+ SC10  SWT 5                   TEST FOR OUTPUT TAPE                     SPO10079
+       REW 2                   REWIND TAPE                              SPO10080
+       RCD                     SELECT CARD READER                       SPO10081
+       LXD F,1                 SET A EQUAL TO 12                        SPO10082
+ SC11  CPY 12,1                COPY LOCATIONS FOR                       SPO10083
+       CLA 12,1                MEMORY PRINT                             SPO10084
+       TZE SC12                END OF COPY LOOP                         SPO10085
+       CPY 24,1                                                         SPO10086
+       TIX SC11,1,1                                                     SPO10087
+ SC12  TNO SC20                TEST ACC OVERFLOW                        SPO10088
+       SXD SD+2,1              STORE ACC OV INDICATOR                   SPO10089
+ SC20  CLA SD+4                S,P,Q OF ACC                             SPO10090
+       ALS 20                                                           SPO10091
+       ARS 20                  CLEAR DECREMENT                          SPO10092
+       TPL SC21                TEST SIGN                                SPO10093
+       ACL PF+21               -                                        SPO10094
+       TRA SC22                                                         SPO10095
+ SC21  ACL PF+20               +                                        SPO10096
+ SC22  ACL PF                  ACC                                      SPO10097
+       SLW PR                  STORE IN PRINT BLOCK                     SPO10098
+       LDQ SD+7                CONTENTS OF ACC                          SPO10099
+       LXA G,1                 SET A EQUAL TO 2                         SPO10100
+ SC23  LXD G,2                 SET B EQUAL TO 6                         SPO10101
+ SC24  ALS 3                   CONVERT CONTENTS OF                      SPO10102
+       LGL 3                   ACC TO BCD                               SPO10103
+       TIX SC24,2,1                                                     SPO10104
+       SLW PR+3,1              STORE BCD DIGITS                         SPO10105
+       TIX SC23,1,1                                                     SPO10106
+       PXD 0,0                 CLEAR ACC                                SPO10107
+       LDQ PR+1                1ST HALF ACC                             SPO10108
+       LGL 30                                                           SPO10109
+       ACL PF+1                ADD BLANK                                SPO10110
+       SLW PR+1                STORE IN PRINT BLOCK                     SPO10111
+       LGL 12                                                           SPO10112
+       LDQ PR+2                2ND HALF ACC                             SPO10113
+       LGL 24                                                           SPO10114
+       ACL PF+2                ADD BLANK                                SPO10115
+       SLW PR+2                STORE IN PRINT BLOCK                     SPO10116
+       LGL 36                                                           SPO10117
+       ACL PF+3                ADD BLANKS                               SPO10118
+       SLW PR+3                STORE IN PRINT BLOCK                     SPO10119
+       LXA H,1                 SET A EQUAL TO 3                         SPO10120
+ SC30  LDQ SD+7,1              CONTENTS OF IR A                         SPO10121
+       LXD G,2                 SET B EQUAL TO 6                         SPO10122
+ SC31  LGL 3                                                            SPO10123
+       ALS 3                   CONVERT CONTENTS OF                      SPO10124
+       TIX SC31,2,1            INDEX REG. TO BCD                        SPO10125
+       ALS 3                                                            SPO10126
+       SLW SD+7,1              STORE BCD DIGITS                         SPO10127
+       TIX SC30,1,1                                                     SPO10128
+       LGL 36                  CLEAR MQ                                 SPO10129
+       CAL SD+4                XA                                       SPO10130
+       LRS 12                                                           SPO10131
+       ACL PF+4                A                                        SPO10132
+       SLW PR+4                STORE IN PRINT BLOCK                     SPO10133
+       LLS 30                                                           SPO10134
+       LDQ SD+5                XB                                       SPO10135
+       LGL 6                                                            SPO10136
+       ACL PF+5                B                                        SPO10137
+       SLW PR+5                STORE IN PRINT BLOCK                     SPO10138
+       LGL 36                                                           SPO10139
+       ACL PF+6                BLANKS                                   SPO10140
+       SLW PR+6                STORE IN PRINT BLOCK                     SPO10141
+       CAL SD+6                XC                                       SPO10142
+       LRS 12                                                           SPO10143
+       ACL PF+7                C                                        SPO10144
+       SLW PR+7                STORE IN PRINT BLOCK                     SPO10145
+       LLS 36                                                           SPO10146
+       ACL PF+8                BLANKS                                   SPO10147
+       SLW PR+8                STORE IN PRINT BLOCK                     SPO10148
+       SLT 1                   TEST SENSE LIGHT 1                       SPO10149
+       TRA SC40                SL OFF                                   SPO10150
+       CAL PF+23               SL ON , ADD1                             SPO10151
+       TRA SC41                                                         SPO10152
+ SC40  CAL PF+22               BLANKS                                   SPO10153
+ SC41  ACL PF+9                SLT                                      SPO10154
+       SLW PR+9                STORE IN PRINT BLOCK                     SPO10155
+       PXD 0,0                 CLEAR ACC                                SPO10156
+       LXA H,1                 SET A EQUAL TO 3                         SPO10157
+ SC42  SLT 5,1                 TEST SENSE LIGHT                         SPO10158
+       TRA SC43                SL OFF                                   SPO10159
+       ACL PF+27,1             DIGIT                                    SPO10160
+       TRA SC44                                                         SPO10161
+ SC43  ACL PF+22               BLANKS                                   SPO10162
+ SC44  TXL SC45,1,1                                                     SPO10163
+       ALS 12                                                           SPO10164
+       TIX SC42,1,1                                                     SPO10165
+ SC45  SLW PR+10               STORE IN PRINT BLOCK                     SPO10166
+       TSX WOT,4               TR TO PRINT ROUTINE                      SPO10167
+       HTR PR,0,PR+10                                                   SPO10168
+       TSX WOT,4               PRINT BLANKS FOR                         SPO10169
+ SC46  HTR PF+37,0,PF+37       EXTRA SPACE                              SPO10170
+       CAL PF+10               ACC OV                                   SPO10171
+       SLW PR                                                           SPO10172
+       CAL SD+2                ACC OV INDICATOR                         SPO10173
+       TZE SC50                TEST                                     SPO10174
+       CAL PF+18               *                                        SPO10175
+       TRA SC51                                                         SPO10176
+ SC50  CAL PF+19               BLANK                                    SPO10177
+ SC51  ALS 18                                                           SPO10178
+       ACL PF+11               MQ O                                     SPO10179
+       SLW PR+1                                                         SPO10180
+       TQO SC52                TEST MQ OVERFLOW                         SPO10181
+       CAL PF+19               BLANK                                    SPO10182
+       TRA SC53                                                         SPO10183
+ SC52  CAL PF+18               *                                        SPO10184
+ SC53  ALS 12                                                           SPO10185
+       ACL PF+12               V DIV                                    SPO10186
+       SLW PR+2                                                         SPO10187
+       DCT                     DIVIDE CHECK TEST                        SPO10188
+       TRA SC54                                                         SPO10189
+       CAL PF+19               BLANK                                    SPO10190
+       TRA SC55                                                         SPO10191
+ SC54  CAL PF+18               *                                        SPO10192
+ SC55  ACL PF+13               CK T                                     SPO10193
+       SLW PR+3                                                         SPO10194
+       RTT                     TAPE CHECK TEST                          SPO10195
+       TRA SC56                                                         SPO10196
+       CAL PF+19               BLANK                                    SPO10197
+       TRA SC57                                                         SPO10198
+ SC56  CAL PF+18               *                                        SPO10199
+ SC57  ARS 6                                                            SPO10200
+       ACL PF+14               PCK                                      SPO10201
+       SLW PR+4                                                         SPO10202
+       CAL PF+15               TRAP M                                   SPO10203
+       SLW PR+5                                                         SPO10204
+       LXD SD+1,1              TM INDICATOR                             SPO10205
+       TXH SC58,1,0            TEST TRAPPING MODE                       SPO10206
+       CAL PF+19               BLANK                                    SPO10207
+       TRA SC59                                                         SPO10208
+ SC58  CAL PF+18               *                                        SPO10209
+ SC59  ACL PF+16               ODE                                      SPO10210
+       SLW PR+6                                                         SPO10211
+       LXD G,4                 C EQUAL TO 6                             SPO10212
+ SC60  PSE 119,4               TEST SENSE SWITCHES 1-6                  SPO10213
+       TRA SC61                                                         SPO10214
+       CAL PF+29,4             ADD DIGIT                                SPO10215
+       TRA SC62                                                         SPO10216
+ SC61  CAL PF+22               ADD BLANKS                               SPO10217
+ SC62  SLW PF+6,4                                                       SPO10218
+       SWT 13,4                TEST SENSE SWITCHES 7-12                 SPO10219
+       TRA SC63                                                         SPO10220
+       CAL PF+35,4             ADD DIGIT                                SPO10221
+       TRA SC64                                                         SPO10222
+ SC63  CAL PF+22               ADD BLANKS                               SPO10223
+       TXH SC64,4,2                                                     SPO10224
+       CAL PF+37,4                                                      SPO10225
+ SC64  SLW PF+12,4                                                      SPO10226
+       TIX SC60,4,1                                                     SPO10227
+       ACL PF+10                                                        SPO10228
+       SLW PR+11               11 12                                    SPO10229
+       CAL PF+17               SWT                                      SPO10230
+       ACL PF                                                           SPO10231
+       SLW PR+7                SWT 1                                    SPO10232
+       LXA B,1                 A EQUAL TO 9                             SPO10233
+       LXA H,4                 C EQUAL TO 3                             SPO10234
+ SC65  LXA H,2                 B EQUAL TO 3                             SPO10235
+       PXD 0,0                 CLEAR ACC                                SPO10236
+ SC66  ACL PF+10,1             ADD DIGIT                                SPO10237
+       TIX SC68,2,1                                                     SPO10238
+       SLW PR+11,4             STORE IN PRINT BLOCK                     SPO10239
+       TIX SC67,4,1                                                     SPO10240
+ SC67  TIX SC65,1,1                                                     SPO10241
+ SC68  ALS 12                                                           SPO10242
+       TIX SC66,1,1                                                     SPO10243
+       TSX WOT,4               TR TO PRINT ROUTINE                      SPO10244
+       HTR PR,0,PR+11                                                   SPO10245
+       TSX WOT,4               PRINT BLANKS FOR                         SPO10246
+       HTR PF+37,0,PF+37       EXTRA SPACE                              SPO10247
+       LXA I,3                 A,B EQUAL 23                             SPO10248
+ SC80  CLA 23,1                IA AND FA OF BLOCK                       SPO10249
+       TPL SC81                SKIP NEGATIVE ONES                       SPO10250
+       TIX SC80,1,1                                                     SPO10251
+ SC81  STO 23,2                STORE IN CONSECUTIVE LOCATIONS           SPO10252
+       TZE SC82                                                         SPO10253
+       TIX SC81+3,2,1                                                   SPO10254
+       TIX SC80,1,1                                                     SPO10255
+ SC82  CLA 0                   IA AND FA OF BLOCK                       SPO10256
+       TZE SC104               END OF PROGRAM                           SPO10257
+       STD SC86                STORE FA                                 SPO10258
+       LXD I,2                 SET B EQUAL TO 8                         SPO10259
+ SC83  STA SC11+7,2            LOCATION OF FIRST WORD X                 SPO10260
+ SC84  STA SC85                                                         SPO10261
+       ADD F                   INCREASE ADDRESS BY 1                    SPO10262
+       STA SC87                                                         SPO10263
+       PAX 0,1                 SET A EQUAL TO X+1                       SPO10264
+ SC85  CLA 0                   CONTENTS OF X                            SPO10265
+       STO SC11+8,2                                                     SPO10266
+       SXD SC98,2                                                       SPO10267
+ SC86  TXH SC90,1,0            IS X+1 GREATER THAN FA                   SPO10268
+ SC87  CAS 0                   COMPARE CONTENTS OF X AND X+1            SPO10269
+       TRA SC88                NOT EQUAL                                SPO10270
+       TRA SC89                EQUAL                                    SPO10271
+ SC88  CLA SC87                NOT EQUAL, X+1                           SPO10272
+       TIX SC83,2,2                                                     SPO10273
+       TRA SC91                4TH WORD IN LINE                         SPO10274
+ SC89  CLA SC87                X+1                                      SPO10275
+       TRA SC84                                                         SPO10276
+ SC90  SLN 2                   TURN ON SENSE LIGHT 2                    SPO10277
+ SC91  LXD F,4                 SET C EQUAL TO 12                        SPO10278
+       LXD I,2                 SET B EQUAL TO 8                         SPO10279
+ SC92  LXD G,1                 SET A EQUAL TO 6                         SPO10280
+       LDQ SC11+7,2            FIRST LOCATION X                         SPO10281
+       LGL 21                  CLEAR DECREMENT                          SPO10282
+ SC93  ALS 3                   CONVERT TO BCD                           SPO10283
+       LGL 3                                                            SPO10284
+       TIX SC93,1,1                                                     SPO10285
+       SLW PR+12,4             STORE FOR PRINTING                       SPO10286
+       SLN 1                   TURN ON SENSE LIGHT 1                    SPO10287
+       LDQ SC11+8,2            CONTENTS OF X                            SPO10288
+       TQP SC94                TEST SIGN                                SPO10289
+       CLA PF+21               -                                        SPO10290
+       TRA SC95                                                         SPO10291
+ SC94  CLA PF+20               +                                        SPO10292
+ SC95  LRS 0                   SET MQ +                                 SPO10293
+       ARS 6                                                            SPO10294
+       ACL PR+12,4             ADD SIGN AND LOCATION                    SPO10295
+       SLW PR+12,4             STORE FOR PRINTING                       SPO10296
+       TIX SC96,4,1            DECREASE C                               SPO10297
+ SC96  LXD G,1                 SET A EQUAL TO 6                         SPO10298
+ SC97  ALS 3                   CONVERT TO BCD                           SPO10299
+       LGL 3                                                            SPO10300
+       TIX SC97,1,1                                                     SPO10301
+       SLW PR+12,4                                                      SPO10302
+       SLT 1                   TEST SENSE LIGHT 1                       SPO10303
+       TRA SC98                OFF                                      SPO10304
+       TIX SC96,4,1            ON                                       SPO10305
+ SC98  TXL SC102,2,0           TR IF NO. OF WORDS IS LESS THAN 4        SPO10306
+       TIX SC99,4,1            DECREASE C                               SPO10307
+ SC99  TIX SC92,2,2            DECREASE B                               SPO10308
+ SC100 CAL PF+35                                                        SPO10309
+       STP PR+3                                                         SPO10310
+       STP PR+6                                                         SPO10311
+       STP PR+9                                                         SPO10312
+       TSX WOT,4               TR TO PRINT ROUTINE                      SPO10313
+       HTR PR,0,PR+11                                                   SPO10314
+       SLT 2                   TEST SENSE LIGHT 2                       SPO10315
+       TRA SC101               OFF                                      SPO10316
+       TSX WOT,4               EXTRA SPACE                              SPO10317
+       HTR PF+37,0,PF+37                                                SPO10318
+       CAL SC82                MODIFY ADDRESS FOR                       SPO10319
+       ADD F                   NEXT BLOCK                               SPO10320
+       STA SC82                                                         SPO10321
+       TRA SC82                                                         SPO10322
+ SC101 LXA A,2                 SET B EQUAL TO 8                         SPO10323
+       TRA SC88                                                         SPO10324
+ SC102 CAL PF+37               ALL BLANKS                               SPO10325
+ SC103 SLW PR+13,4                                                      SPO10326
+       TIX SC103,4,1                                                    SPO10327
+       TRA SC100                                                        SPO10328
+ SC104 SWT 5                   TEST FOR OUTPUT TAPE                     SPO10329
+       TRA SC105                                                        SPO10330
+       TRA SC105+2             END                                      SPO10331
+ SC105 WEF 2                   WRITE END OF FILE                        SPO10332
+       REW 2                   REWIND TAPE                              SPO10333
+       HTR                     END                                      SPO10334
+ WOT   SWT 5              TEST FOR OUTPUT TAPE                          SPO10335
+       WTD 2              SELECT OUTPUT TAPE                            SPO10336
+       SXD X1,1                                                         SPO10337
+       SXD X2,2                                                         SPO10338
+       SXD X4,4                                                         SPO10339
+       CLA 1,4             PRINT ROUTINE                                SPO10340
+       STD B24             CORRECTIONS                                  SPO10341
+       ARS 18              X                                            SPO10342
+       ADD B24             B,B+1 IN AC                                  SPO10343
+       STA WT1             X                                            SPO10344
+       STA PR2             X                                            SPO10345
+       STA CI9             X                                            SPO10346
+       SUB 1,4             B-A+1 IN AC                                  SPO10347
+       PAX 0,4             X                                            SPO10348
+       SXD PR6,4           X                                            SPO10349
+       SWT 5                                                            SPO10350
+WT1    CPY 0,4            COPY RECORD TO OUTPUT TAPE                    SPO10351
+       SWT 5                                                            SPO10352
+       TIX WT1,4,1                                                      SPO10353
+       SWT 3                                                            SPO10354
+ PR6   TXL WT2                                                          SPO10355
+       WPR                SELECT PRINTER                                SPO10356
+       CLA BLANKS         FIND LAST NON-BLANK                           SPO10357
+       LXD CI4,4          GROUP                                         SPO10358
+ PR2   CAS 0,4            X                                             SPO10359
+       TXI PR1,4,-1                                                     SPO10360
+       TXI PR2,4,1        X                                             SPO10361
+       TXI PR1,4,-1                                                     SPO10362
+ PR1   SXD CI6,4          STORE END TEST                                SPO10363
+       SXD CI8,4          X                                             SPO10364
+       SXD PR8,4                                                        SPO10365
+       SXD WP4,4                                                        SPO10366
+       LXD PR6,4                                                        SPO10367
+ PR8   TNX PR5,4                                                        SPO10368
+       TXL PR3,4,12                                                     SPO10369
+       SPR 8                                                            SPO10370
+ PR3   LXD PR6,4          INITIALIZE GROUP COUNT                        SPO10371
+ PR5   LXA PR7,2          INITIALIZE LEFT SETUP                         SPO10372
+       LXD YZ1,1          CLEAR CARD IMAGE                              SPO10373
+       SWT 4              TEST FOR DOUBLE SPACE                         SPO10374
+ OZ2   TXL PR7                                                          SPO10375
+       SPR 4                                                            SPO10376
+ PR7   PXD                                                              SPO10377
+ PR4   SLW LT,1                                                         SPO10378
+       SLW RT,1                                                         SPO10379
+       TIX PR4,1,1        X                                             SPO10380
+ CIR   CAL COL1           INITIALIZE COLUMN INDICATOR                   SPO10381
+ CI2   SLW COL            X                                             SPO10382
+ CI9   LDQ 0,4            OBTAIN GROUP                                  SPO10383
+       SXD OZ2,4          STORE GROUP COUNT                             SPO10384
+       LXA Q6,4           SET CHARACTER COUNT                           SPO10385
+ CI1   PXD                                                              SPO10386
+ Q6    LGL 6                                                            SPO10387
+       PAX 0,1            X                                             SPO10388
+       CAL COL            POSITION COLUMN INDICATOR                     SPO10389
+       ARS 6,4            X                                             SPO10390
+       TIX YZ1,1,16       TEST FOR DIGIT                                SPO10391
+       TXH YZ2,1,15       TEST FOR Y-ZONE                               SPO10392
+ CI5   ORS D,3            STORE DIGIT                                   SPO10393
+ CI4   TIX CI1,4,1        COUNT CHARACTERS                              SPO10394
+ CI3   ARS 1              SHIFT AND TEST COLUMN                         SPO10395
+       LXD OZ2,4          RESTORE GROUP COUNT                           SPO10396
+       TXI CI6,4,-1       COUNT GROUPS                                  SPO10397
+ CI6   TXL CI7,4          TEST FOR LAST NON-BLANK GR.                   SPO10398
+       TNZ CI2            TEST FOR END OF ROW                           SPO10399
+ CI7   CAL 8.3,2          FORM TRUE 8,4                                 SPO10400
+       ORS D-8,2          AND 3 ROWS AND                                SPO10401
+       ORS D-3,2          MOVE8.4 AND 8.3                               SPO10402
+       SLW 8.2,2          ROWS                                          SPO10403
+       CAL 8.4,2          FORM TRUE8.4                                  SPO10404
+       ORS D-8,2                                                        SPO10405
+       ORS D-4,2                                                        SPO10406
+       SLW 8.3,2          X                                             SPO10407
+ CI8   TXL WP,4           TEST FOR END                                  SPO10408
+       TXH WP,2,15        TEST FOR RIGHT HALF                           SPO10409
+       TXI CIR,2,16       INITIALIZE RIGHT HALF                         SPO10410
+ YZ1   TIX XZ1,1,16       TEST FOR 16/CH/32                             SPO10411
+       TXH XZ2,1,15       TEST FOR X-ZONE                               SPO10412
+       ORS D,3            STORE DIGIT                                   SPO10413
+ YZ2   ORS Y,2            STORE Y-ZONE                                  SPO10414
+       TIX CI1,4,1        COUNT CHARACTERS                              SPO10415
+ X1    TXL CI3            OBTAIN NEXT GROUP                             SPO10416
+ XZ1   TIX OZ1,1,16       TEST FOR 32/CH/48                             SPO10417
+       TXH CI4,1,15       TEST FOR BLANK                                SPO10418
+       ORS D,3            STORE DIGIT                                   SPO10419
+ XZ2   ORS X,2            STORE X-ZONE                                  SPO10420
+       TIX CI1,4,1        COUNT CHARACTERS                              SPO10421
+ X2    TXL CI3            OBTAIN NEXT GROUP                             SPO10422
+ OZ1   ORS Z,2            STORE 0-ZONE                                  SPO10423
+       ORS D,3                                                          SPO10424
+       TIX CI1,4,1        COUNT CHARACTERS                              SPO10425
+ X4    TXL CI3                                                          SPO10426
+ WP    LXD WP2,1                                                        SPO10427
+ WP3   CPY LT,1           COPY CARD IMAGE                               SPO10428
+       CPY RT,1                                                         SPO10429
+       TIX WP3,1,1                                                      SPO10430
+ WP4   TXH WP5,4                                                        SPO10431
+       LXD X1,1                                                         SPO10432
+       LXD X2,2                                                         SPO10433
+WT2    LXD X4,4                                                         SPO10434
+       TRA 2,4                                                          SPO10435
+ WP5   WPR                SELECT PRINTER AGAIN                          SPO10436
+       SPR 9                                                            SPO10437
+WP2    TXL PR5,0,12       REENTER BCD TO CARD IMAGE                     SPO10438
+BLANKS BCD 1                                                            SPO10439
+ COL                                                                    SPO10440
+ COL1  MZE                                                              SPO10441
+ RT    BES 16                                                           SPO10442
+ 8.5                                                                    SPO10443
+ 8.4                                                                    SPO10444
+ 8.3                                                                    SPO10445
+ 8.2                                                                    SPO10446
+ D     BES 9                                                            SPO10447
+ Z                                                                      SPO10448
+ X                                                                      SPO10449
+ Y                                                                      SPO10450
+ LT    SYN Y+1                                                          SPO10451
+ PR    SYN SC20                                                         SPO10452
+       ORG Y+2                                                          SPO10453
+ PF    BCD  ACC 00 000000 000000    A 00000  B 00000  C 00000     SLT 00SPO10454
+       BCD  ACC OV0 MQ OV0 DIV CK0 TP CK0 TRAP MODE0  SWT 00000*00000 00SPO10455
+       BCD  0000+00000-00000  00001 00002 00003 00004 00005 00006 00007 SPO10456
+       BCD 800008 00009 000010 11000000 12   000000                     SPO10457
+ A     HTR 10,0,462                                                     SPO10458
+ B     HTR 9                                                            SPO10459
+ C     CPY 471,1                                                        SPO10460
+ D1    TRA SC4                                                          SPO10461
+ E     HTR 1537,0,467                                                   SPO10462
+ F     HTR 1,0,12                                                       SPO10463
+ G     HTR 2,0,6                                                        SPO10464
+ H     HTR 3,0,11                                                       SPO10465
+ I     HTR 23,0,8                                                       SPO10466
+ J     OCT -330760350570                                                SPO10467
+ B24   HTR 1                                                            SPO10468
+ SD    HTR                     TEMPORARY STORAGE                        SPO10469
+       HTR                                                              SPO10470
+       TTR SC3                                                          SPO10471
+       END RCDBN                                                        SPO10472

@@ -1,0 +1,182 @@
+       REM BINARY READ-WRITE TAPE SUBROUTINE - 182 CARDS - 181 LOCATIONSWBRWT401
+ RTAPE CAL W6                SET CKS AND RTT GATE TO TXH                RWT40002
+       STO R20                                                          RWT40003
+       MZE 9,0,31744         ETT, TURN OFF END OF TAPE INDICATOR        RWT40004
+ R     NOP W1                ADDR USED BY W                             RWT40005
+       CLA R24               EXIT LOCATION FOR NEXT SECTION TO AC ADDR. RWT40006
+ R1    STA R3                SET EXIT FOR THIS SECTION                  RWT40007
+       TOV R1.1              RESET AC OVERFLOW                          RWT40008
+ R1.1  CLA -1,4              LOCATE TAPE NUMBER FROM L-1, BINARY MODE   RWT40009
+       STA W12               SET BST                                    RWT40010
+       STA W13               SET WTB                                    RWT40011
+       STA W14               SET RTB                                    RWT40012
+       SXD ID3,2             SAVE INDEX 2                               RWT40013
+       CLA ID1.5             SET GATE FOR TESTING END OF TAPE RECORD    RWT40014
+       SLW ID1.5             SET GATE TO TXH                            RWT40015
+       STP ID3               SET FORMAT CHECK FOR RECORD REREAD TO TXH  RWT40016
+       STP R14               SET READ RECORD GATE TO TXH IN CAD COOPXH  RWT40017
+       CLA 2,4               PZE A,0,N FROM L+2                         RWT40018
+       ARS 18                N TO ADDR OF AC                            RWT40019
+       ADD 2,4               PZE A+N,0,N IN AC                          RWT40020
+       STO COMMON+2          SAVE FOR REFERENCE                         RWT40021
+       STA R15               A+N TO COPY LOOP CAD ADDR                  RWT40022
+       STD R14               N TO DECR FOR REFERENCE                    RWT40023
+       CLA 1,4               PZE OR MZE R,0,F FROM L+1                  RWT40024
+       SSP                                                              RWT40025
+ R2    STO COMMON            PZE R,0,F REQUESTED                        RWT40026
+ R3    TRA *                 * IS SET BY R1, *=R4 OR W1                 RWT40027
+ R4    RTT                   RESET RTT                                  RWT40028
+ R4.1  NOP W3                ADDR USED BY W2.5                          RWT40029
+       CPY COMMON+1          WD1 OF FORMAT FROM TAPE                    RWT40030
+       TRA R6                NORMAL                                     RWT40031
+       TRA R5                EOF SKIP. TEST FILE REQUEST FOR ZERO       RWT40032
+       TRA ID2               FALSE EOR. GO TO FORMAT REREAD GATE AND PXDRWT40033
+ R5    PDX 0,2               DECR OF AC TO INDEX, FILE REQUEST NO.      RWT40034
+       TXH R23,2,0           PICK UP RTB ON TRANSFER                    RWT40035
+       LXD ID3,2             REPLACE INDEX 2                            RWT40036
+       TRA 3,4               L+3 END OF FILE EXIT                       RWT40037
+ R6    TZE R9                R=F=0, REQUEST TO READ NEXT RECORD         RWT40038
+       PDX 0,2               FILE REQUEST TO INDEX                      RWT40039
+       TXH R6.9,2,0          F IS NONZERO ON TRANSFER                   RWT40040
+       LXD COMMON+1,2        DECR OF FORMAT WD1 TO INDEX                RWT40041
+       PXD 0,2               TO AC                                      RWT40042
+       ADD COMMON            AC IS PZE R,0,F. REQUESTED FILE WAS ZERO   RWT40043
+ R6.9  STO COMMON+4          SAVE PZE R,0,F TEMPORARILY                 RWT40044
+       TSX ID1,2             CHECK WD1 AND WD2 FORMAT IDENTIFICATION    RWT40045
+       CLA COMMON+4          PZE R,0,F                                  RWT40046
+ R7    CAS COMMON+1          CHECK R,0,F REQUEST WITH TAPE FORMAT       RWT40047
+       TRA R23               SEARCH FORWARD, PICK UP RTB                RWT40048
+       TRA R10               CORRECT FILE AND RECORD                    RWT40049
+ R7.9  SSM                   TAPE POSITIONED WRONG. SET AC - NONZERO    RWT40050
+ R8    TSX W12,2             BST                                        RWT40051
+       LXD ID3,2             REPLACE INDEX 2                            RWT40052
+       TRA 4,4               RETURN TO ERROR RETURN AT L+4              RWT40053
+ R9    TSX ID1,2             CHECK TAPE FORMAT WD1 AND WD2              RWT40054
+ R10   CPY COMMON+1          WD3 OF TAPE FORMAT. ASSUME NO FALSE EOF-EORRWT40055
+       LXD COMMON+2,2        N OF REQUEST TO INDEX 2                    RWT40056
+       TXH R11,2,0           IF N IS ZERO, MODIFY CAD                   RWT40057
+       CLA COMMON+1          N FROM FORMAT WD3                          RWT40058
+       STD R14               N TO DECR STORAGE                          RWT40059
+       ARS 18                N TO ADDR.                                 RWT40060
+       ACL 2,4               MODIFY COPY TO READ CONPLETE RECORD        RWT40061
+       STA R15                                                          RWT40062
+ R11   TSX ID1,2             CHECK TAPE FORMAT WD3 AND WD4              RWT40063
+       CLA R14               SET READ COPY LOOP EXIT                    RWT40064
+ R12   STA R16               SET EXIT                                   RWT40065
+ R13   PXD                   CLEAR THE AC FOR CHECK SUM                 RWT40066
+       LXD R14,2             N TO INDEX 2                               RWT40067
+ R13.9 MZE 9,0,31744         ETT, TEST END OF TAPE INDICATOR            RWT40068
+       TRA W15                                                          RWT40069
+ R14   TXH R18,0,*           TXL IF CHECKING WRITTEN RECORD, *=N        RWT40070
+ R15   CAD *,2               *=A+N                                      RWT40071
+       TIX R13.9,2,1         REPEAT ETT AND CAD                         RWT40072
+ R16   TRA *                 ASSUME NO FALSE EOF SKIP, * SET BY R12     RWT40073
+ R17   ADD C3                TURN ON AC OVERFLOW OR FILL AC 1 THRU 35   RWT40074
+       ALS 37                ASSURE AC OVERFLOW ON AND CLEAR AC    35   RWT40075
+       TRA R7.9              ATTEMPT TO READ MORE THAN RECORD CONTAINED RWT40076
+ R18   CAD COMMON+1          COPY CHECK SUM OR EXCESS                   RWT40077
+ R19   CAD COMMON+1          DITTO                                      RWT40078
+       TRA R19               ASSUME NO FALSE EOF FROM R18               RWT40079
+       TRA R17               EOR SKIP FROM R18, NOT AN EOF FROM R19     RWT40080
+       LRS 1                 REDUCE CHECK SUM BY A FACTOR OF 2          RWT40081
+       RQL 253               253=36*7+1, ROTATE MQ LEFT 1 AND RTT DELAY RWT40082
+       LLS 0                 SIGN MQ TO AC                              RWT40083
+       STO COMMON+3          CHECK SUM                                  RWT40084
+       CAL ID3               RESTORE FORMAT CHECK GATE                  RWT40085
+       STO ID3                                                          RWT40086
+       CAL COMMON+3          COMPUTED CHECK SUM                         RWT40087
+       COM                                                              RWT40088
+       ANA COMMON+1          TAPE CHECK SUM                             RWT40089
+       TZE R25               ZERO IF CHECK SUMS AGREE                   RWT40090
+ R20   TXH *                 RTT-CKS GATE,*=R8 OR W6,RTAPE+1,R20.9,W4-2 RWT40091
+       CLS R20               INVERT RTT-CKS GATE                        RWT40092
+ R20.9 STO R20                                                          RWT40093
+ R21   TSX W12,2             BST                                        RWT40094
+ R23   TSX W14,2             RTB                                        RWT40095
+       CLA COMMON            CALLING SEQUENCE SPECS TO AC PZE R,0,F     RWT40096
+ R24   TRA R4                                                           RWT40097
+ R25   RTT                                                              RWT40098
+       TRA R20               TRY ONCE MORE                              RWT40099
+       CLA 1,4               TEST L+1 OF C.S. AND INCREASE RECORD       RWT40100
+       TPL R27                NUMBER BY ONE IF MINUS                    RWT40101
+       SUB C1                 X                                         RWT40102
+       STA 1,4                X                                         RWT40103
+ R27   LXD ID3,2             RESTORE INDEX 2                            RWT40104
+       TRA 5,4               NORMAL EXIT, (AC)=(L+1)                    RWT40105
+ R28   LXD ID3,2             RESTORE INDEX 2, END OF TAPE EXIT          RWT40106
+ R29   IOD                                                              RWT40107
+       MZE 9,0,31744         RESET END OF TAPE INDICATOR                RWT40108
+       NOP                                                              RWT40109
+       TRA ENDTAP            SYMBOL SHOULD BE DEFINED BY PROGRAMMER     RWT40110
+ ID1   CAL COMMON+1          CHECK TAPE RECORD FORMAT, WD1 OR WD3       RWT40111
+       CAD COMMON+3          WD2 OR WD4                                 RWT40112
+       TZE R28               END OF TAPE, WD1=WD2=0 OR WD3=WD4=0        RWT40113
+ ID1.5 TXH W19               END OF TAPE GATE, TXL ON END OF TAPE TEST  RWT40114
+       ACL C1                ADD 1 TO 35TH BIT, ASSUME NO EOF FROM ID1+1RWT40115
+       ARS 1                                    ASSUME NO EOR FROM ID1+1RWT40116
+       TZE 1,2               FORMAT CHECKS                              RWT40117
+       SUB C3                NOW CHECK FOR HASH RECORD                  RWT40118
+       TZE R23               TRANSFER IF HASH TO RTB                    RWT40119
+ ID2   PXD 0,0               CLEAR AC                                   RWT40120
+ ID3   TXH R7.9,0,*          FORMAT REREAD GATE, *=INDEX 2 STORAGE      RWT40121
+       CLS ID3               CHANGE ID3 TO TXL                          RWT40122
+       STO ID3                                                          RWT40123
+       TRA R21               PICK UP BST AND RTB                        RWT40124
+ WTAPE CAL W6                SET WRITE GATE TO TXH                      RWT40125
+       STO W6                                                           RWT40126
+ W     CLA R                 EXIT LOC. FOR NEXT SECTION TO AC           RWT40127
+       TRA R1                                                           RWT40128
+ W1    COM                                                              RWT40129
+       SLW COMMON+1          COM OF WD1                                 RWT40130
+       CLA COMMON+2          PZE A+N,0,N                                RWT40131
+       COM                                                              RWT40132
+       SLW COMMON+3          COM OF PZE A+N,0,N                         RWT40133
+       LXD W4,2              4 TO INDEX 2                               RWT40134
+ W2    CPY COMMON+4,2        COPY FORMAT IDENTIFICATION                 RWT40135
+       TIX W2,2,1                                                       RWT40136
+ W2.5  CLA R4.1              SET WRITE COPY LOOP EXIT TO W3             RWT40137
+       TRA R12               TO CAD LOOP                                RWT40138
+ W3    SLW COMMON+1          CHECK SUM                                  RWT40139
+       CPY COMMON+1                                                     RWT40140
+       CLS R14               INVERT READ CHECK GATE TO TXL              RWT40141
+       STO R14                                                          RWT40142
+       TRA R20.9                                                        RWT40144
+       CAL W4                CHANGE RTT-CKS GATE FOR READ CHECK         RWT40143
+ W4    TXH W6,0,4            REPLACES R20 FOR CHECKING WRITTEN RECORD   RWT40145
+ W6    TXH R8                TXL ON SECOND WRITE PASS, ALSO FOR R20     RWT40146
+       CLS W6                INVERT WRITE HASH GATE                     RWT40147
+       STO W6                                                           RWT40148
+ W7    TSX W12,2             BST                                        RWT40149
+ W8    TSX W13,2             WTB                                        RWT40150
+       LXD COMMON+2,2                                                   RWT40151
+       TXI W9,2,5            COPY N+5 WORDS OF HASH                     RWT40152
+ W9    CPY C3                                                           RWT40153
+       TIX W9,2,1                                                       RWT40154
+ W11   TSX W13,2             WTB                                        RWT40155
+       CAL R20               RESET RTT-CKS GATE TO TXH                  RWT40156
+       STO R20                                                          RWT40157
+       LXD ID3,2             REPLACE IR2 BEFORE REWRITING RECORD        RWT40158
+       TRA W                                                            RWT40159
+ W12   BST *                                                            RWT40160
+       TRA 1,2                                                          RWT40161
+ W13   WTB *                                                            RWT40162
+       TRA 1,2                                                          RWT40163
+ W14   RTB *                                                            RWT40164
+       TRA 1,2                                                          RWT40165
+ W15   TSX W12,2             BST                                        RWT40166
+       CLS ID1.5                                                        RWT40167
+       STO ID1.5                                                        RWT40168
+ W16   TSX W13,2             WTB                                        RWT40169
+       LXD W18,2             6 TO INDEX                                 RWT40170
+       PZE COMMON+4,0,24576  STZ                                        RWT40171
+ W17   CPY COMMON+4                                                     RWT40172
+       TIX W17,2,1                                                      RWT40173
+ W18   TXL R21,0,6                                                      RWT40174
+ W19   TSX W12,2             BST                                        RWT40175
+       TSX W13,2             WTB                                        RWT40176
+       LXD W18,2             6 TO INDEX                                 RWT40177
+ W20   CPY C3                HASH                                       RWT40178
+       TIX W20,2,1                                                      RWT40179
+       TRA W16                                                          RWT40180
+ C1    PZE 1                 CONSTANT ONE                               RWT40181
+ C3    OCT 377777777777      HASH                                       RWT40182

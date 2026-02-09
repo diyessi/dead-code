@@ -1,0 +1,364 @@
+       COM              IN IR 2 TO LOCATE WORD IN IMAGE                 A1800001
+ CPC1  CLA 1,4                     SET UP LOCATION OF IMAGE             NA180000
+       STA CP35                                                         NA180001
+       STA B7                                                           NA180002
+       STA C49                                                          NA180003
+       STD CP14                    SET UP CARD EXTENT                   NA180004
+       TRA 2,4                                                          NA180005
+ CPC2  CLA 2,4                                                          NA180006
+       STA CP8          STORE ADDRESS TO FIND LOCATION                  NA180007
+       SXD X1,1         SAVE INDEX REGISTERS 1 AND 4                    NA180008
+       SXD X2,2                                                         NA180009
+       SXD X4,4                                                         NA180010
+       PDX 0,2          PLACE CONVERSION TUPE CODE IN IR2               NA180011
+       CLA TABLE,2      SET UP TRANSFER ADDR AT FORK                    NA180012
+       STA FORK                                                         NA180013
+ CP8   CLA *                                                            NA180014
+       STA CP45         SET UP ADDRESS TO STORE INFORMATION             NA180015
+       CLA 1,4          TEST FOR END OF CARD                            NA180016
+       SUB ONE                                                          NA180017
+       PAX 0,2          COL. NO. IN IR 2                                NA180018
+       STD CP13         NO. OF COL. IN DECR OF CP13                     NA180019
+ CP13  TXI CP14,2,*     ADD NO. OF COL. TO ORIGIN                       NA180020
+ CP14  TXL CP16,2,*     IF WORD IS NOT WITHIN CARD LIMITS,              NA180021
+       LXD X2,2                                                         NA180022
+       TRA 5,4          GO TO END OF CARD EXIT                          NA180023
+ CP16  PDX 0,4          NO. OF COL. IN IR4                              NA180024
+       STA NUM          FIND NUMBER OF WORDS IN IMAGE TO SKIP           NA180025
+       LDQ NUM                                                          NA180026
+       CLM                                                              NA180027
+       SLW CODE         CLEAR ERROR CODE INDICATOR                      NA180028
+       DVP SIX                                                          NA180029
+       STQ TEMP         NO. WORDS TO SKIP                               NA180030
+       STO TEMP+1       NO. CHARACTERS IN NEXT WORD TO SKIP             NA180031
+       SUB SIX                                                          NA180032
+       PAX 0,1          NO CHAR TO USE IN IR 1                          NA180033
+       CLA TEMP         2S COMPLEMENT OF WORDS TO SKIP                  NA180034
+       COM              IN IR 2 TO LOCATE WORD IN IMAGE                 NA180035
+       ADD ONE                                                          NA180036
+       PAX 0,2                                                          NA180037
+       LDQ TEMP+1       COMPUTE NO. OF PLACES TO SHIFT TO OMIT          NA180038
+       MPY SIX          UNWANTED CHARACTERS FROM WORD                   NA180039
+       LLS 35                                                           NA180040
+       STA CP36                                                         NA180041
+ CP35  LDQ *,2                                                          NA180042
+ CP36  LGL *            1 TO 6 BCD CHARACTERS IN MQ                     NA180043
+       TOV FORK         TURN OFF ACC OV LIGHT                           NA180044
+ FORK  TRA *                                                            NA180045
+       TRA CP48         BLANK                                           NA180046
+       LXD X1,1         RESTORE IR 1 AND IR 4                           NA180047
+       LXD X2,2                                                         NA180048
+       LXD X4,4                                                         NA180049
+       CLA CODE                                                         NA180050
+       LDQ WORD                                                         NA180051
+       TNZ 4,4          GO TO ERROR EXIT                                NA180052
+ CP45  STQ *,1          STORE INFORMATION CONTIGUOUSLY                  NA180053
+       TXI CP47,1,-1    INCREMENT INDEX 1                               NA180054
+ CP47  TRA 7,4          GO TO NORMAL EXIT                               NA180055
+ CP48  LXD X1,1                                                         NA180056
+       LXD X4,4                                                         NA180057
+       TXI CP51,1,-1    EVENT OF BLANK FIELD, INCREMENT INDEX 1         NA180058
+ CP51  TRA 6,4          RETURN TO BLANK EXIT                            NA180059
+       REM  DECIMAL CONVERSION ROUTINE                                  NA180060
+ DEC   CLA D15          SET UP TRANSFER ADDR                            NA180061
+       TRA CONV                                                         NA180062
+ D4    CLA WORD         PSEUDO-MULTIPLY LEADING DIGITS BY 10            NA180063
+       ALS 2            4X                                              NA180064
+       ACL WORD         5X                                              NA180065
+       ALS 1            10X                                             NA180066
+       STO WORD                                                         NA180067
+       CLM                                                              NA180068
+       LGL 4                                                            NA180069
+       CAS NINE                                                         NA180070
+       TRA D63          NON-DECIMAL DIGIT                               NA180071
+ D15   NOP D4                                                           NA180072
+ D16   ACL WORD         10X PLUS Y                                      NA180073
+       TIX C47,4,1      TEST COMPLETION OF WORD                         NA180074
+       LDQ SIGN         ATTACH SIGN TO CONVERTED WORD                   NA180075
+       LLS 0                                                            NA180076
+       STO WORD                                                         NA180077
+       CLA SAM                                                          NA180078
+       SLT 1                                                            NA180079
+       TRA D61                                                          NA180080
+       TZE D25          TO NORMAL EXIT                                  NA180081
+       CLA COD2         INDICATE EMBEDDED BLANK                         NA180082
+       STO CODE                                                         NA180083
+ D25   TNO D28                                                          NA180084
+       CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED             NA180085
+       STO CODE                                                         NA180086
+ D28   LXD X4,4         RESTORE IR 4                                    NA180087
+       CLA 2,4                                                          NA180088
+       PDX 0,2          CONVERSION TYPE IN IR 2                         NA180089
+       TXH FORK+2,2,2   IF INTEGER CONVERSION, EXIT                     NA180090
+       CLA TYP+1,2                                                      NA180091
+       STA D52                                                          NA180092
+       CLA 3,4                                                          NA180093
+       STA D46                                                          NA180094
+       ARS 18                                                           NA180095
+       STA D42                                                          NA180096
+       CLA 1,4                                                          NA180097
+       ARS 18                                                           NA180098
+       STA NUM          NUMBER OF COLUMNS                               NA180099
+ D42   CLA *            DECIMAL SCALE MINUS SIZE OF FIELD               NA180100
+       SUB NUM                                                          NA180101
+       STO D53                                                          NA180102
+       TXH D52,2,1                 AVOID BIN SCALE SET-UP IF FLOATI     NA180103
+ D46   CLA *            BINARY SCALE                                    NA180104
+       SUB THFV         MINUS 35                                        NA180105
+       STO D54                                                          NA180106
+       ACL D53                                                          NA180107
+       TZE FORK+2       INTEGER CONVERSION ONLY                         NA180108
+ D52   TSX *,4          TO SCALING ROUTINE                              NA180109
+ D53   PZE *            DEC SCALE MINUS SIZE OF FIELD                   NA180110
+ D54   PZE *            BIN SCALE MINUS 35                              NA180111
+       TRA D58          ERROR EXIT                                      NA180112
+       TRA FORK+2                                                       NA180113
+ D58   LDQ COD4         INDICATE SCALING ERROR                          NA180114
+       STQ CODE                                                         NA180115
+       TRA FORK+2                                                       NA180116
+ D61   TZE FORK+1       BLANK FIELD                                     NA180117
+       TRA D25                                                          NA180118
+ D63   STO TEMP         SAVE CHARACTER                                  NA180119
+       CLA COD3         INDICATE ILLEGAL CHARACTER                      NA180120
+       STO CODE                                                         NA180121
+       CLA TEMP         CONTINUE USING GUESS                            NA180122
+       TRA D16                                                          NA180123
+       REM FIXED SCALING ROUTINE                                        NA180124
+ FXIN  DCT              TURN OFF DIVIDE CHECK INDICTOR                  NA180125
+ FX2   TXI FX5                                                          NA180126
+ FX5   CLA 1,4          DECIMAL SCALE                                   NA180127
+       STO TEMP+5                                                       NA180128
+       LDQ 2,4          BINARY SCALE                                    NA180129
+       STQ TEMP+2                                                       NA180130
+ FX9   CLA FX65         33 IN ACC                                       NA180131
+       TQP FX58         ALTER MAXIMUM SHIFT                             NA180132
+ FX11  STO TEMP         MAXIMUM SHIFT                                   NA180133
+ FX12  LLS 0            WITH SIGN OF B                                  NA180134
+       TPL FX60                                                         NA180135
+       TLQ FX16         MAXIMUM SHIFT IS WORKING B                      NA180136
+ FX15  LLS 35           B IS WORKING B                                  NA180137
+ FX16  STO TEMP+3                                                       NA180138
+       TMI FX19         AVOID SHIFT ALTERATION                          NA180139
+       ADD FX66         ALTER SHIFT                                     NA180140
+ FX19  SSP              POSITIVE INSTRUCTION                            NA180141
+       ADD FX12         LLS 0                                           NA180142
+       STO FX33         STORE SHIFT COMMANDS                            NA180143
+       STO FX39                                                         NA180144
+       CLA TEMP+5       DECIMAL SCALE                                   NA180145
+       LDQ FXTA-1       TEN IN MQ                                       NA180146
+       LRS 0            WITH SIGN OF D                                  NA180147
+       TLQ FX62                                                         NA180148
+       TMI FX63                                                         NA180149
+ FX28  STO TEMP+4       WORKING D                                       NA180150
+ FX29  LXA TEMP+4,1     D IN IRA                                        NA180151
+       LDQ TEMP+1       ARGUMENT IN MQ                                  NA180152
+       TMI FX37         TO NEGATIVE SCALING                             NA180153
+       MPY FXTA,1       MPY BY POWER OF TEN                             NA180154
+ FX33  NOP              SHIFT                                           NA180155
+       TZE FX43         COMPATIBLE MAGNITUDES                           NA180156
+       LXD X2,2                                                              157
+       TRA 3,4          ERROR EXIT                                      NA180158
+ FX37  CLM              NEGATIVE SCALING                                NA180159
+       LLS 0            SIGN OF ARGUMENT IN ACC                         NA180160
+ FX39  NOP              SHIFT                                           NA180161
+       DVP FXTA,1       DIVIDE BY POWER OF TEN                          NA180162
+       DCT                                                              NA180163
+       TRA 3,4          TO ERROR EXIT                                   NA180164
+ FX43  CLA TEMP+5       D MINUS                                         NA180165
+       SUB TEMP+4       WORKING D                                       NA180166
+       STO TEMP+5       REPLACES D                                      NA180167
+       CLA TEMP+2       B MINUS                                         NA180168
+       SUB TEMP+3       WORKING B                                       NA180169
+       STO TEMP+2       REPLACES B                                      NA180170
+       STQ TEMP+1       RESULTS REPLACES ARGUMENT                       NA180171
+       TZE FX53         TEST NEW B                                      NA180172
+ FX51  LDQ TEMP+2                                                       NA180173
+       TRA FX9          REPEAT SCALING LOOP                             NA180174
+ FX53  CLA TEMP+5       TEST NEW D                                      NA180175
+       TNZ FX51         REPEAT SCALING LOOP                             NA180176
+       TRA 4,4          SUCCESSFUL EXIT                                 NA180177
+ FX58  ADD FXTA         ONE                                             NA180178
+       TRA FX11                                                         NA180179
+ FX60  TLQ FX15                                                         NA180180
+       TRA FX16                                                         NA180181
+ FX62  TMI FX28                                                         NA180182
+ FX63  STQ TEMP+4                                                       NA180183
+       TRA FX29                                                         NA180184
+ FX65  PZE 33                                                           NA180185
+ FX66  OCT 000200000000                                                 NA180186
+       DEC 10000000000,1000000000,100000000,10000000                    NA180187
+       DEC 1000000,100000,10000,1000,100,10                             NA180188
+ FXTA  DEC 1                                                            NA180189
+       REM FLOATING SCALING ROUTINE                                     NA180190
+ FLIN  LDQ TEMP+1       ARGUMENT IN MQ                                  NA180191
+       CLA FL47         163                                             NA180192
+       LLS 27                                                           NA180193
+       STO TEMP         MOST SIGNIFICANT PART                           NA180194
+       CLA FL48         136                                             NA180195
+       LLS 27                                                           NA180196
+       STO TEMP+1       LEAST SIGNIFICANT PART                          NA180197
+       ANA FL49         ZERO IN ACCUMULATOR WITH CHARACTERISTIC         NA180198
+       FAD TEMP         OF LEAST SIGNIFICANT PART                       NA180199
+       FAD TEMP+1       PLUS FLOATING NUMBERS                           NA180200
+       STO TEMP+1       INTEGER FLOATED AND NORMALIZED                  NA180201
+       TZE 4,4          EXIT ON ZERO ARGUMENT                           NA180202
+       TOV FL13         TURN OFF OVERFLOW INDICATORS                    NA180203
+ FL13  TQO FL14                                                         NA180204
+ FL14  CLA 1,4          DECIMAL SCALE MINUS SIZE OF FIELD               NA180205
+ FL16  STO TEMP         IS D                                            NA180206
+       LDQ TEN          TEN IN MQ                                       NA180207
+       LRS 0            WITH SIGN OF D                                  NA180208
+       TLQ FL41                                                         NA180209
+       TMI FL42                                                         NA180210
+ FL21  STO TEMP+3       WORKING D                                       NA180211
+ FL22  LXA TEMP+3,1     D IN IRA                                        NA180212
+       TMI FL31         TO NEGATIVE SCALING                             NA180213
+       LDQ TEMP+1       ARGUMENT                                        NA180214
+       FMP FLTA,1       TIMES POWER OF TEN                              NA180215
+       STO TEMP+1       RESULT REPLACES ARGUMENT                        NA180216
+       TNO FL35         IF NO EXPONENT OVERFLOW                         NA180217
+       ORA FL50         ALL ONES INDICATE OVERFLOW                      NA180218
+       TRA FL45         ERROR EXIT                                      NA180219
+ FL31  CLA TEMP+1       ARGUMENT                                        NA180220
+       FDP FLTA,1       DIVIDED BY POWER OF TEN                         NA180221
+       STQ TEMP+1       REPLACES ARGUMENT                               NA180222
+       TQO FL44                                                         NA180223
+ FL35  CLA TEMP         D MINUS                                         NA180224
+       SUB TEMP+3       WORKING D                                       NA180225
+       TNZ FL16         REPEAT LOOP                                     NA180226
+       TRA 4,4          SUCCESSFUL EXIT                                 NA180227
+ FL41  TMI FL21                                                         NA180228
+ FL42  STQ TEMP+3                                                       NA180229
+       TRA FL22                                                         NA180230
+ FL44  CLM              ZEROS INDICATE UNDERFLOW                        NA180231
+ FL45  STO TEMP+1                                                       NA180232
+       TRA 3,4          ERROR EXIT                                      NA180233
+ FL47  DEC 163                                                          NA180234
+ FL48  DEC 136                                                          NA180235
+ FL49  OCT 377000000000                                                 NA180236
+       DEC 1E10,1E9,1E8,1E7,1E6,1E5,1E4,1E3,1E2,1E1                     NA180237
+ FLTA  DEC 1E0                                                          NA180238
+ FL50  OCT 377777777777                                                 NA180239
+       REM  OCTAL CONVERSION ROUTINE                                    NA180240
+ OCT   CLA O3           SET UP TRANSFER ADDRESS                         NA180241
+       TRA CONV                                                         NA180242
+ O3    TRA O4                                                           NA180243
+ O4    LGL 1                                                            NA180244
+       TZE O11                                                          NA180245
+       CLA COD3         INDICATE NON-OCTAL DIGIT                        NA180246
+       STO CODE                                                         NA180247
+       CLA ONE          CONVERT NON-OCTAL DIGIT TO OCTAL                NA180248
+ O11   ACL WORD                                                         NA180249
+       LGL 3                                                            NA180250
+       TIX C47,4,1      IF WORD IS NOT FINISHED                         NA180251
+       LDQ SIGN         ATTACH SIGN                                     NA180252
+       LLS 0                                                            NA180253
+       STO WORD         STORE CONVERTED WORD                            NA180254
+       CLA SAM                                                          NA180255
+       TPL O21          NO BLANK COLUMNS IN FIELD                       NA180256
+       SLT 1                                                            NA180257
+       TZE FORK+1       BLANK FIELD                                     NA180258
+ O19   CLA COD2         STORE EMBEDDED BLANK INDICATION                 NA180259
+       STO CODE                                                         NA180260
+ O21   TNO FORK+2       IF WORD LENGTH DOES NOT EXCEED 35 BITS          NA180261
+       CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED             NA180262
+       STO CODE                                                         NA180263
+       TRA FORK+2                                                       NA180264
+       REM  BCD CARD READ                                               NA180265
+ BCD   TXH B9,4,6       IF MORE THAN 6 CHARACTERS REQUESTED             NA180266
+       CLM              CLEAR ACC                                       NA180267
+ B3    LGL 6            SHIFT ONE CHARACTER INTO ACC                    NA180268
+       TNX B12,4,1      TRA IF WORD IS COMPLETE                         NA180269
+       TIX B3,1,1       REPEAT IF MQ CONTAINS ANOTHER CHARACTER         NA180270
+       TXI B7,2,-1      LOAD MQ WITH NEXT WORD IN IMAGE                 NA180271
+ B7    LDQ *,2                                                          NA180272
+       TXI B3,1,5       INCREASE CHARACTER COUNT TO 6                   NA180273
+ B9    CLA COD1         INDICATE REGISTER CAPACITY EXCEEDED             NA180274
+       STO CODE                                                         NA180275
+       TRA B3           GIVE LAST 6 CHARACTERS                          NA180276
+ B12   SLW WORD         STORE COMPLETED WORD                            NA180277
+       TRA FORK+2       RETURN TO MAIN PROGRAM                          NA180278
+       REM  PRE-CONVERSION SET-UP COMMON TO DECIMAL AND OCTAL           NA180279
+ CONV  STA C11          SET UP ADDRESS                                  NA180280
+       CLM                                                              NA180281
+       SLW SIGN                                                         NA180282
+       SLW SAM                                                          NA180283
+       SLF                                                              NA180284
+ C8    SLW WORD                                                         NA180285
+       CLA ZERO         CLEAR ACC                                       NA180286
+       LGL 2            SHIFT ZONE PUNCH INTO ACC                       NA180287
+       TNZ C12                                                          NA180288
+ C10   SLN 1            TO OCTAL OR DECIMAL ROUTINES                    NA180289
+ C11   TRA *                                                            NA180290
+       REM  BLANK AND ERROR ROUTINE COMMON TO DECIMAL AND OCTAL         NA180291
+ C12   STQ MQ           SAVE MQ                                         NA180292
+       CAS TWO          TEST TYPE OF ZONE PUNCH                         NA180293
+       TRA C29          TEST FOR BLANK                                  NA180294
+       SSM              STORE MINUS TWO                                 NA180295
+       STO TEMP         OR PLUS ONE                                     NA180296
+       CLA SIGN         TEST FOR PREVIOUS X OR Y PUNCH                  NA180297
+       TNZ C44                                                          NA180298
+       CLA TEMP         STORE SIGN INDICATION                           NA180299
+       STO SIGN                                                         NA180300
+       CLA ZERO         TEST FOR PSEUDO ZERO                            NA180301
+       LGL 4                                                            NA180302
+       SUB TEN                                                          NA180303
+       TNZ C26                                                          NA180304
+       STP MQ           REPLACE TEN BY ZERO                             NA180305
+ C26   LDQ MQ                                                           NA180306
+       CLM                                                              NA180307
+       TRA C10                                                          NA180308
+ C29   CLM                         TEST FOR BLANK                       NA180309
+       LGL 4                                                            NA180310
+       TNZ C44          ILLEGAL CHARACTER                               NA180311
+       CLA SAM                                                          NA180312
+       SLT 1                                                            NA180313
+       TRA C36          PREVIOUS COL. WAS NOT A DIGIT                   NA180314
+       TNZ C41          EMBEDDED BLANK                                  NA180315
+       CLA ONE                                                          NA180316
+ C36   SSM              BLANK FOLLOWS DIGIT, RECORD MINUS ONE           NA180317
+       STO SAM                                                          NA180318
+ C38   LDQ MQ           RELOAD MQ, CONVERT BLANK AS ZERO                NA180319
+       CLM                                                              NA180320
+ C40   TRA C11                                                          NA180321
+ C41   CLA COD2         STORE IMBEDDED BLANK INDICATION                 NA180322
+ C42   STO CODE                                                         NA180323
+       TRA C38                                                          NA180324
+ C44   CLA COD3         STORE NON-NUMERIC DIGIT INDICATION              NA180325
+       STO CODE         CONVERT DIGIT WITHOUT ZONE PUNCH                NA180326
+       TRA C26                                                          NA180327
+ C47   TIX C8,1,1       CONVERT NEXT DIGIT IF IT IS IN MQ               NA180328
+       TXI C49,2,-1     INCREASE INDEX TO PICK UP NEXT                  NA180329
+ C49   LDQ *,2                     BCD WORD IN IMAGE                    NA180330
+       TXI C8,1,5       INCREASE CHARACTER COUNT TO SIX                 NA180331
+ TEMP  BSS 6                                                            NA180332
+ WORD  SYN TEMP+1                                                       NA180333
+ SAM   SYN TEMP+2                                                       NA180334
+ SIGN  SYN TEMP+3                                                       NA180335
+ MQ    SYN TEMP+4                                                       NA180336
+       PZE FLIN                                                         NA180337
+ TYP   PZE FXIN                                                         NA180338
+ CODE  PZE                                                              NA180339
+ NUM   PZE                                                              NA180340
+ X1    PZE                                                              NA180341
+ X4    PZE                                                              NA180342
+ COD1  PZE 1  WORD IN SPECIFIED FIELD EXCEEDS REGISTER CAPACITY         NA180343
+ COD2  PZE 2  EMBEDDED BLANK IN SPECIFIED FIELD                         NA180344
+ COD3  PZE 3  ILLEGAL CHARACTER FOR THIS TYPE OF CONVERSION             NA180345
+ COD4  PZE 4  INCORRECT SCALE FACTORS SPECIFIED                         NA180346
+ ZERO  PZE                                                              NA180347
+ ONE   SYN FXTA                                                         NA180348
+ TWO   PZE 2                                                            NA180349
+ SIX   PZE 6                                                            NA180350
+ NINE  PZE 9                                                            NA180351
+ TEN   SYN FXTA-1                                                       NA180352
+ THFV  PZE 35                                                           NA180353
+ X2    PZE                                                              NA180354
+       REM THIS TABLE MAY BE EXPANDED TO INCLUDE ANY ROUTINES           NA180355
+       PZE OCT                     5 OCTAL CONVERSION                   NA180356
+       PZE BCD                     4 BCD CARD READ                      NA180357
+       PZE DEC                     3 INTEGER                            NA180358
+       PZE DEC                     2 FLOATING DECIMAL                   NA180359
+       PZE DEC                     1 FIXED DECIMAL                      NA180360
+ TABLE PZE                         0                                    NA180361
+       END 0                                                            NA180362

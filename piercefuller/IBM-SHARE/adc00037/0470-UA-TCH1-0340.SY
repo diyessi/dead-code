@@ -1,0 +1,151 @@
+       REM UA TCH 1   OFF-LINE PUNCH SIMULATOR                          TCH10000
+COMMON BSS 35                                                           TCH10001
+       ORG 72                                                           TCH10002
+ START LXD TCH1,2         RESET LOCATION COUNTER INDEX                  TCH10003
+       CAL BLNKS                                                        TCH10004
+       RTT                RESET TAPE CHECK INDICATOR                    TCH10005
+       TXH                X                                             TCH10006
+       SLF                RESET SENSE LIGHTS                            TCH10007
+ TCH1  TXI TCH11,,0                                                     TCH10008
+ TCH6  IOD                I/O DELAY                                     TCH10009
+       RTT                TEST FOR TAPE CHECK                           TCH10010
+ TCH5  TXI TCH3,,13       YES                                           TCH10011
+ TCH13 SLN 1              NO, SENSE LIGHT 1 ON FOR TWO ATTEMPTS         TCH10012
+       TXL TCH4,2,-N*12   EXIT AFTER N RECORDS READ FROM TAPE           TCH10013
+ TCH11 RTD 4              READ TAPE 4 (BCD)                             TCH10014
+       LXD TCH5,1         SET RECORD WORD COUNT (12 WORDS1CARD)         TCH10015
+ TCH7  TNX TCH6,1,1       TEST FOR 12 WORDS FROM THIS RECORD            TCH10016
+       CPY BCD,2          COPY WORD                                     TCH10017
+       TXI TCH7,2,-1      STEP LOCATION COUNTER                         TCH10018
+       TXI TCH8           E0F, SET EOF SWITCH AND PUNCH CARDS IN CORE   TCH10019
+ TCH9  SLW BCD,2          FILL RECORD TO 12 WORDS WITH BLANKS IF LESS   TCH10020
+ TCH2  TXI TCH2+1,2,-1                                                  TCH10021
+       TIX TCH9,1,1        THAN 12 WORDS READ FROM TAPE                 TCH10022
+ TCH14 TXI TCH6,,BCD-1    GO TEST FOR REDUNDANCY ERROR                  TCH10023
+ TCH3  SLT 1              REDUNDANCY ERROR, TEST TWO ATTEMPT SWITCH     TCH10024
+       HTR TCH10          OFF, TWO FAILURES. STOP                       TCH10025
+ TCH12 BST 4              BACKSPACE TAPE                                TCH10026
+       TXI TCH11,2,12      AND TRY AGAIN                                TCH10027
+ TCH10 SWT 1              TEST SWITCH FOR GO AHEAD OR TRY AGAIN         TCH10028
+ PR6   TXI TCH13           SWITCH DOWN, GO ON                           TCH10029
+ OZ2   TXI TCH12           SWITCH UP, TRY AGAIN                         TCH10030
+ TCH8  SLN 2              TURN ON EOF INDICATOR                         TCH10031
+       TXL TCH16,2,0      EXIT IF ONLY END-OF-FILE READ                 TCH10032
+ TCH4  PXD ,2             COMPUTE LAST LOCATION OF                      TCH10033
+       SUB TCH14           THIS BATCH                                   TCH10034
+       PDX ,1             X                                             TCH10035
+       SXD TCH15,1        X                                             TCH10036
+       TSX WOTT,4         PUNCH                                         TCH10037
+ TCH15     BCD,,**        X                                             TCH10038
+       SLT 2              TEST FOR EOF                                  TCH10039
+       TXI START          NO, CALLIN NEXT SERIES                        TCH10040
+ TCH16 WPU                YES, EMIT                                     TCH10041
+       WPU                TWO BLANKS                                    TCH10042
+       HTR START            AND HALT ,PREPARED TO DO NEXT FILE          TCH10043
+ WOTT  CLA 1,4            SUBSTITUTE CODING                             TCH10044
+       STD X4             TO MAKE UASPH 1                               TCH10045
+       ARS 18             PUNCH UNCONDITIONALLY                         TCH10046
+       ADD X4             X                                             TCH10047
+       STA PR2            X                                             TCH10048
+       STA CI9            X                                             TCH10049
+       SUB 1,4            X                                             TCH10050
+       TZE 2,4            X                                             TCH10051
+       TMI 2,4            X                                             TCH10052
+       SXD X4,4           X                                             TCH10053
+       PAX 0,4            X                                             TCH10054
+       SXD PR6,4          X                                             TCH10055
+       WPU                X                                             TCH10056
+       CLA BLNKS          FIND LAST NON-BLANK                           TCH10057
+       LXD CI4,4          GROUP                                         TCH10058
+ PR2   CAS 0,4            X                                             TCH10059
+       TXI PR1,4,-1                                                     TCH10060
+       TXI PR2,4,1        X                                             TCH10061
+       TXI PR1,4,-1                                                     TCH10062
+ PR1   SXD CI6,4          STORE END TEST                                TCH10063
+       SXD CI8,4          X                                             TCH10064
+       SXD PR8,4                                                        TCH10065
+       SXD WP4,4                                                        TCH10066
+       LXD PR6,4                                                        TCH10067
+ PR8   TNX PR5,4                                                        TCH10068
+ PR3   LXD PR6,4          INITIALIZE GROUP COUNT                        TCH10069
+ PR5   LXA PR7,2          INITIALIZE LEFT SETUP                         TCH10070
+       LXD YZ1,1          CLEAR CARD IMAGE                              TCH10071
+ PR7   PXD                                                              TCH10072
+ PR4   SLW LT,1                                                         TCH10073
+       SLW RT,1                                                         TCH10074
+       TIX PR4,1,1        X                                             TCH10075
+ CIR   CAL COL1           INITIALIZE COLUMN INDICATOR                   TCH10076
+ CI2   SLW COL            X                                             TCH10077
+ CI9   LDQ 0,4            OBTAIN GROUP                                  TCH10078
+       SXD OZ2,4          STORE GROUP COUNT                             TCH10079
+       LXA Q6,4           SET CHARACTER COUNT                           TCH10080
+ CI1   PXD                                                              TCH10081
+ Q6    LGL 6                                                            TCH10082
+       PAX 0,1            X                                             TCH10083
+       CAL COL            POSITION COLUMN INDICATOR                     TCH10084
+       ARS 6,4            X                                             TCH10085
+       TIX YZ1,1,16       TEST FOR DIGIT                                TCH10086
+       TXH YZ2,1,15       TEST FOR Y-ZONE                               TCH10087
+ CI5   ORS D,3            STORE DIGIT                                   TCH10088
+ CI4   TIX CI1,4,1        COUNT CHARACTERS                              TCH10089
+ CI3   ARS 1              SHIFT AND TEST COLUMN                         TCH10090
+       LXD OZ2,4          RESTORE GROUP COUNT                           TCH10091
+       TXI CI6,4,-1       COUNT GROUPS                                  TCH10092
+ CI6   TXL CI7,4          TEST FOR LAST NON-BLANK GR.                   TCH10093
+       TNZ CI2            TEST FOR END OF ROW                           TCH10094
+ CI7   CAL 8.3,2          FORM TRUE 8,4                                 TCH10095
+       ORS D-8,2          AND 3 ROWS AND                                TCH10096
+       ORS D-3,2          MOVE8.4 AND 8.3                               TCH10097
+       SLW 8.2,2          ROWS                                          TCH10098
+       CAL 8.4,2          FORM TRUE8.4                                  TCH10099
+       ORS D-8,2                                                        TCH10100
+       ORS D-4,2                                                        TCH10101
+       SLW 8.3,2          X                                             TCH10102
+ CI8   TXL WP,4           TEST FOR END                                  TCH10103
+       TXH WP,2,15        TEST FOR RIGHT HALF                           TCH10104
+       TXI CIR,2,16       INITIALIZE RIGHT HALF                         TCH10105
+ YZ1   TIX XZ1,1,16       TEST FOR 16/CH/32                             TCH10106
+       TXH XZ2,1,15       TEST FOR X-ZONE                               TCH10107
+       ORS D,3            STORE DIGIT                                   TCH10108
+ YZ2   ORS Y,2            STORE Y-ZONE                                  TCH10109
+       TIX CI1,4,1        COUNT CHARACTERS                              TCH10110
+ X1    TXL CI3            OBTAIN NEXT GROUP                             TCH10111
+ XZ1   TIX OZ1,1,16       TEST FOR 32/CH/48                             TCH10112
+       TXH CI4,1,15       TEST FOR BLANK                                TCH10113
+       ORS D,3            STORE DIGIT                                   TCH10114
+ XZ2   ORS X,2            STORE X-ZONE                                  TCH10115
+       TIX CI1,4,1        COUNT CHARACTERS                              TCH10116
+ X2    TXL CI3            OBTAIN NEXT GROUP                             TCH10117
+ OZ1   ORS Z,2            STORE 0-ZONE                                  TCH10118
+       ORS D,3                                                          TCH10119
+       TIX CI1,4,1        COUNT CHARACTERS                              TCH10120
+       TXL CI3                                                          TCH10121
+ WP    LXD WP2,1                                                        TCH10122
+ WP3   CPY LT,1           COPY CARD IMAGE                               TCH10123
+       CPY RT,1                                                         TCH10124
+       TIX WP3,1,1                                                      TCH10125
+ WP4   TXH WP5,4                                                        TCH10126
+       LXD X1,1                                                         TCH10127
+       LXD X2,2                                                         TCH10128
+WT2    LXD X4,4                                                         TCH10129
+       TRA 2,4                                                          TCH10130
+ WP5   WPU                                                              TCH10131
+WP2    TXL PR5,0,12       REENTER BCD TO CARD IMAGE                     TCH10132
+ BLNKS BCD 1                                                            TCH10133
+ X4    HTR 1                                                            TCH10134
+ COL1  MZE                                                              TCH10135
+ BCD   BSS 1                                                            TCH10136
+       ORG COMMON                                                       TCH10137
+ COL   BSS 1                                                            TCH10138
+ RT    BES 16                                                           TCH10139
+ 8.5   BSS 1                                                            TCH10140
+ 8.4   BSS 1                                                            TCH10141
+ 8.3   BSS 1                                                            TCH10142
+ 8.2   BSS 1                                                            TCH10143
+ D     BES 9                                                            TCH10144
+ Z     BSS 1                                                            TCH10145
+ X     BSS 1                                                            TCH10146
+ Y     BSS 1                                                            TCH10147
+ LT    SYN Y+1                                                          TCH10148
+ N     EQU 250                                                          TCH10149
+       END START                                                        TCH10150

@@ -1,0 +1,134 @@
+       REM NY TFD 1   0134 CARDS  TAPE FILE DUPLICATOR                  NYTFD101
+       ORG 24                                                           TFD10002
+ START RCD                        X                                     TFD10003
+       PXD 0,0                    SET AC TO ZERO AND                    TFD10004
+       STO EOFS                   INITIALIZE EOFS, FLCKS,               TFD10005
+       STO FLCKS                  AND RCCKS.                            TFD10006
+       STO RCCKS                  X                                     TFD10007
+       CPY 9L                     X                                     TFD10008
+ NFLSK TXL LGL,0,0                X                                     TFD10009
+       TRA OUT                    EOF FROM CARD READER.                 TFD10010
+ LGL   LGL 1                      SHIFT BIN BIT INTO AC.                TFD10011
+       ALS 4                      POSITION BIN BIT IN AC.               TFD10012
+       STO BINM                   X                                     TFD10013
+       ALS 18                     PLACE BIN BIT IN DECR.                TFD10014
+       ADD BINM                   FIELD, ADD BIN BIT INTO               TFD10015
+       STO BINM                   ADDRESS FIELD AND STORE.              TFD10016
+       TQP A                      TEST FOR EOF STOP BIT.                TFD10017
+       CLA LEN                    IF YES PUT TEST NUMBER                TFD10018
+       STO EOFS                   INTO STORAGE.                         TFD10019
+ A     CLA 9L                     X                                     TFD10020
+       TZE OUT                    TEST FOR BLANK CONTROL CARD.          TFD10021
+       STD NFLSK                  OBTAIN NO. OF FILES TO BE SKIPPED.    TFD10022
+       ALS 18                     X                                     TFD10023
+       STD NFIL                   OBTAIN NO. OF FILES.                  TFD10024
+       CPY 9R                     X                                     TFD10025
+       CLA LEN                    X                                     TFD10026
+       TQP B                      TEST FOR FILE CKS.                    TFD10027
+       STO FLCKS                  STORE INDICATOR.                      TFD10028
+ B     RQL 1                      X                                     TFD10029
+       TQP C                      TEST FOR RECORD CKS.                  TFD10030
+       STO RCCKS                  STORE INDICATOR.                      TFD10031
+ C     CLA 9R                     X                                     TFD10032
+       SSP                        X                                     TFD10033
+       ADD BINM                   COMPUTE READ TAPE ADDRESS AND         TFD10034
+       COM                        WRITE TAPE ADDRESS. FORM              TFD10035
+       ADD L1DA                   THE COMPLEMENT OF EACH                TFD10036
+       STD TPRD                   ADDRESS AND STORE.                    TFD10037
+       LXD TPRD,4                 X                                     TFD10038
+       ALS 18                     X                                     TFD10039
+       STD TPWT                   X                                     TFD10040
+       LXD NFLSK,2                TEST FOR FILE SKIP.                   TFD10041
+       TXL GON,2,0                X                                     TFD10042
+ RDS   RDS 128,4                  IF YES SKIP N FILES.                  TFD10043
+       CPY 9L                     X                                     TFD10044
+ NFIL  TXL RDS,0,0                X                                     TFD10045
+       TIX RDS,2,1                X                                     TFD10046
+ GON   PXD 0,0                    INITIALIZE FILE CKS CELL.             TFD10047
+       STO CKSB                   X                                     TFD10048
+       CLA L2D                    INITIALIZE COUNT CELLS.               TFD10049
+       STD L2A                    X                                     TFD10050
+       STD L2B                    X                                     TFD10051
+       LXD TPRD,4                 PREPARE TO READ TAPE.                 TFD10052
+ R     RDS 128,4                  SELECT READ TAPE.                     TFD10053
+       PXD 0,0                    X                                     TFD10054
+       PAX 0,1                    PUT ZERO INTO IR 1.                   TFD10055
+ RCPY  CPY REC,1                  READ IN RECORD.                       TFD10056
+ TPRD  TXL CCKS,0,0               NORMAL RETURN.                        TFD10057
+ TPWT  TXL EOF,0,0                EOF RETURN.                           TFD10058
+ L2D   TXL EOR,0,2                EOR RETURN.                           TFD10059
+ CCKS  ACL REC-1,1                COMPUTE CKS.                          TFD10060
+       TXI RCPY,1,-1              X                                     TFD10061
+ EOR   SLW CKSA                   STORE CKS.                            TFD10062
+       ACL REC-1,1                X                                     TFD10063
+       SLW CKSC                   PARTIAL FILE CKS.                     TFD10064
+       RQL 255                    X                                     TFD10065
+       RTT                        X                                     TFD10066
+ L2A   TXL ON,0,0                 TAPE CHECK ON.                        TFD10067
+       CLA RCCKS                  CHECK FOR RECORD CKS BIT.             TFD10068
+       TPL CFLCK                  IF NO RECORD TRANSFER.                TFD10069
+       CLA REC-1,1                TEST RECORD CKS.                      TFD10070
+       SUB CKSA                   X                                     TFD10071
+       TZE OK                     IF GOOD CKS TRANSFER.                 TFD10072
+       LXD L2A,2                  IF BAD CKS PREPARE TO                 TFD10073
+       TNX NBS,2,1                REREAD RECORD.                        TFD10074
+       SXD L2A,2                  X                                     TFD10075
+       BST 128,4                  X                                     TFD10076
+ L2B   TXL R,0,0                  X                                     TFD10077
+ NBS   HPR                        IF BAD CKS TWICE STOP HERE.           TFD10078
+       CLA CKSA                   STORE COMPUTED CKS IN PLACE           TFD10079
+       STO REC-1,1                OF INCORRECT ONE.                     TFD10080
+ CFLCK CAL CKSB                   COMPUTE FILE CKS.                     TFD10081
+       SLW CKSD                   X                                     TFD10082
+       ACL CKSC                   X                                     TFD10083
+       SLW CKSB                   STORE FILE CKS.                       TFD10084
+ OK    LXD TPWT,2                 PREPARE TO WRITE RECORD.              TFD10085
+       WRS 128,2                  SELECT WRITE TAPE.                    TFD10086
+       SXD NEXT,1                 X                                     TFD10087
+       PXD 0,0                    X                                     TFD10088
+       PAX 0,4                    X                                     TFD10089
+ WCPY  CPY REC,4                  WRITE RECORD.                         TFD10090
+       TXI NEXT,4,-1              X                                     TFD10091
+ NEXT  TXH WCPY,4,0               X                                     TFD10092
+       TRA GON+2                  READY TO READ NEXT RECORD.            TFD10093
+ EOF   CLA FLCKS                  EOF. CHECK FOR FILE CKS BIT.          TFD10094
+       TPL WEF                    IF NONE TRANSFER.                     TFD10095
+       CLA REC                    TEST FILE CKS.                        TFD10096
+       SUB CKSD                   X                                     TFD10097
+       TZE WEF                    IF GOOD TRANSFER.                     TFD10098
+       HPR                        IF BAD STOP.                          TFD10099
+       LXD TPWT,2                 X                                     TFD10100
+       BST 128,2                  WRITE GOOD CKS.                       TFD10101
+       WRS 128,2                  X                                     TFD10102
+       CPY CKSD                   X                                     TFD10103
+ WEF   LXD TPWT,2                 PREPARE TO WRITE EOF.                 TFD10104
+       WEF 128,2                  WRITE EOF.                            TFD10105
+       CLA EOFS                   X                                     TFD10106
+       TPL LXDS                   X                                     TFD10107
+       HPR                        EOF STOP.                             TFD10108
+ LXDS  LXD NFIL,4                 PREPARE TO READ NEXT FILE.            TFD10109
+       TNX START,4,1              X                                     TFD10110
+       SXD NFIL,4                 X                                     TFD10111
+       TRA GON                    READY TO READ NEXT FILE.              TFD10112
+ ON    LXD L2B,2                  IF TAPE CHECK IS ON                   TFD10113
+       TNX NBSRT,2,1              PREPARE TO REREAD RECORD.             TFD10114
+       SXD L2B,2                  X                                     TFD10115
+       BST 128,4                  X                                     TFD10116
+       TRA R                      READY TO REREAD RECORD.               TFD10117
+ NBSRT HTR CFLCK                  IF RTT TWICE STOP. THEN GO ON.        TFD10118
+ OUT   HTR START                  BLANK CONTROL CARD STOP.              TFD10119
+ 9L                                                                     TFD10120
+ 9R                                                                     TFD10121
+ CKSA                                                                   TFD10122
+ CKSB                                                                   TFD10123
+ CKSC                                                                   TFD10124
+ CKSD                                                                   TFD10125
+ BINM                                                                   TFD10126
+ EOFS                                                                   TFD10127
+ RCCKS                                                                  TFD10128
+ FLCKS                                                                  TFD10129
+ L1DA  HTR 1,0,1                                                        TFD10130
+ LEN   OCT 777777777777                                                 TFD10131
+           0                                                            TFD10132
+ REC                                                                    TFD10133
+       END 24                                                           TFD10134
