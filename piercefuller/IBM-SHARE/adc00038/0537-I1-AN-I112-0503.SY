@@ -1,0 +1,73 @@
+       REM ARGONNE CARD TO BINARY TAPE LOADER I112                      ANI11200
+       ORG 24                       PRECEDE WITH MULBL3,LOWER BINARY LDRI1120001
+ I112  REW 1                        REWIND TAPE 1                       I1120002
+       RCD                          SELECT CARD READER                  I1120003
+       CPY CARD                     9L IN CARD AND MQ                   I1120004
+       TRA A-1                                                          I1120005
+ EOF   WEF 1                        WRITE END OF FILE                   I1120006
+       HTR I112+1                   HIT START FOR NEXT FILE             I1120007
+       LLS 17                       WORD COUNT V IN AC ADDRESS          I1120008
+ A     ANA MASK                     EXTRACT V                           I1120009
+       CPY CARD+1                                                       I1120010
+ C     PAX CARD+2,7                 SET IR1,2,4 TO V                    I1120011
+       ACL C                                                            I1120012
+       STA D                        SET ADDRESS AT D,E                  I1120013
+       STA E                        TO CARD+V+2                         I1120014
+       ACL L                        SET ADDRESS AT F TO CARD+V+26       I1120015
+       STA F                        OR TAPE+V+2                         I1120016
+       TXL Q,4,0                    PROCESS TRF CARD,SELF-LOADER        I1120017
+       CAL CARD                     START LOGICAL SUM                   I1120018
+ D     CAD **,4                     READ NEXT WORD, ADD TO LOG. SUM     I1120019
+       TRA R                                                            I1120020
+ H     HPR 7                        FALSE END OF RECORD                 I1120021
+       TRA H                                                            I1120022
+ G     ANA MASK                     EXTRACT V                           I1120023
+       TZE B                        BYPASS SUM CHECK FOR SELF-LOADER    I1120024
+       CLA CKSUM                    FORM COMPUTED SUM                   I1120025
+       SUB CARD+1                   MINUS CHECK SUM                     I1120026
+       TZE B                        IF OK, PROCESS CARD                 I1120027
+ J     HPR 63                       CHECK SUM ERROR. FIX                I1120028
+       TRA J                        AND RESTART                         I1120029
+ B     TXI B+1,3,2                  SET IR1,2 TO V+2                    I1120030
+       SXD K,2                      SAVE V+2                            I1120031
+       WTB 1                        SELECT BINARY TAPE 1                I1120032
+       MSE 9                        TURN OFF TAPE INDICATOR, LIGHT      I1120033
+ K     TXL E,0,**                   V+2 IN DECREMENT                    I1120034
+ E     CPY **,2                     WRITE BINARY RECORD ON TAPE 1       I1120035
+       TIX E,2,1                    LOOP, V+2 PASSES                    I1120036
+       MSE 9                        TEST FOR END OF TAPE                I1120037
+       TRA M                                                            I1120038
+       TRA N                        CONTINUE IF NOT END                 I1120039
+ M     HPR 511                      END OF TAPE                         I1120040
+       TRA M                        TAPE TOO SHORT                      I1120041
+ N     BST 1                        BACKSPACE TAPE TO READ              I1120042
+       RTB 1                        SELECT TAPE                         I1120043
+       CLM                                                              I1120044
+ L     PDX 24,2                     SET IR2 TO ZERO                     I1120045
+ F     CPY **,1                     COPY TAPE TO CORE                   I1120046
+       CLA CARD,2                   COMPARE CARD WORD                   I1120047
+       SUB TAPE,2                   WITH TAPE WORD                      I1120048
+       TZE P                        IF OK GO TO NEXT WORD               I1120049
+       HPR 4095                     IF NOT, HIT START TO                I1120050
+       BST 1                        RE-WRITE                            I1120051
+       LXD K,3                      BINARY TAPE                         I1120052
+       TRA B+2                      RECORD                              I1120053
+ P     TXI P+1,2,-1                                                     I1120054
+       TIX F,1,1                    LOOP, V+2 PASSES                    I1120055
+       TRA I112+1                   TAPE RECORD OK, GO TO NEXT CARD     I1120056
+ Q     CLA CARD+1                   TEST 9R                             I1120057
+       TZE B                        PROCESS IF TRF CARD                 I1120058
+       TXI Q+3,7,22                 SET IR1,2,4 TO 22 FOR SELF-LOADER   I1120059
+       PXD 0,4                                                          I1120060
+       ARS 18                       AC ADDRESS IS 22                    I1120061
+       TRA C+1                      SET ADDRESSES FOR SELF-LOADER       I1120062
+ R     TIX D,4,1                    CARD LOOP, V OR 22 PASSES           I1120063
+       SLW CKSUM                    SAVE CHECK SUM                      I1120064
+       CLA CARD                                                         I1120065
+       ARS 18                       V IN AC ADDRESS                     I1120066
+       TRA G                                                            I1120067
+ MASK  HTR 31                                                           I1120068
+ CKSUM                                                                  I1120069
+ CARD  BSS 24                                                           I1120070
+ TAPE  BSS 24                                                           I1120071
+       END 24                                                           I1120072

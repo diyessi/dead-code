@@ -1,0 +1,396 @@
+DITPC1 REM 0398 08018                                                   TPC10001
+       REM                    TAPE CORRECTOR                            TPC10002
+       REM                                                              TPC10003
+       REM LT. F.T.BAKER, DIRECTORATE OF STATISTICAL SERVICES, HQ USAF, TPC10004
+       REM             PENTAGON, WASHINGTON 25, D.C.                    TPC10005
+       REM                                                              TPC10006
+       REM                                                              TPC10007
+       REM PROGRAM                                                      TPC10008
+A      HED                                                              TPC10009
+       ORG 500                                                          TPC10010
+ TPC1  CLA 6A                          SET SIZE=6 TEMPORARILY.          TPC10011
+       STO SIZE                                                         TPC10012
+       SLF                                                              TPC10013
+       STZ TEMP1                       SET RECORD COUNTER TO ZERO.      TPC10014
+ 0.00  TSX RCD,4                       READ ID CARD.                    TPC10015
+       PZE COMP                                                         TPC10016
+       TRA 0.10                                                         TPC10017
+       CLA COMP                        TEST ID CARD.                    TPC10018
+       SUB ID                                                           TPC10019
+       TNZ 0.10                                                         TPC10020
+       CLA COMP+1                                                       TPC10021
+       SUB ID+1                                                         TPC10022
+       TZE 0.20                                                         TPC10023
+ 0.10  HTR 0.00                        NO ID CARD OR WRONG ID CARD.     TPC10024
+ 0.20  LDQ COMP+3                      CONVERT NCOMP FOR MATCH.         TPC10025
+       TSX CONV,4                                                       TPC10026
+       SLW NCOMP                                                        TPC10027
+       LDQ COMP+2                      CONVERT FIRST WORD FOR MATCH.    TPC10028
+       TSX CONV,4                                                       TPC10029
+       SUB 1A                                                           TPC10030
+       ADD NCOMP                                                        TPC10031
+       ADD LIO                                                          TPC10032
+       STA 4.20                                                         TPC10033
+       CLA LCOMP                       COMP+N                           TPC10034
+       ADD NCOMP                                                        TPC10035
+       STA 4.30                                                         TPC10036
+       LDQ COMP+4                                                       TPC10037
+       TSX CONV,4                                                       TPC10038
+       SLW SIZE                        WORDS/INPUT RECORD.              TPC10039
+       CLA COMP+5                                                       TPC10040
+       STO FILL                        TYPE OF FILLER.                  TPC10041
+       REW OLD                         REWIND TAPES.                    TPC10042
+       REW NEW                                                          TPC10043
+       SWT 1                                                            TPC10044
+       TRA 1.00                                                         TPC10045
+       REW CHNG                                                         TPC10046
+ 1.00  SLN 2                           SLN 2 FOR MATCH TEST.            TPC10047
+       TSX READ,4                      READ A RECORD FOR COMPARISON.    TPC10048
+       PZE COMP,,CHNG                                                   TPC10049
+       SLN 1                           EOF--SLN 1 AS INDICATOR          TPC10050
+       CLA COMP                        TEST FOR MATCH INDICATOR.        TPC10051
+       SUB 6DOLS                                                        TPC10052
+       TNZ 2.00                                                         TPC10053
+       SLT 2                           SLT 2 AS $$$$$$ INDICATOR.       TPC10054
+       NOP                                                              TPC10055
+       TRA 6.00                                                         TPC10056
+ 2.00  TSX RTP,4                       READ AN OLD RECORD.              TPC10057
+       PZE INOUT,,OLD                                                   TPC10058
+       TRA 3.00                        EOF--WEF AND STOP.               TPC10059
+       TRA 4.00                                                         TPC10060
+ 3.00  WEF NEW                         WEF AND STOP.                    TPC10061
+       CAL TEMP1                       DISPLAY RECORD COUNT.            TPC10062
+       SLT 1                                                            TPC10063
+       ADD ALL7S                       CHANGES REMAINING.               TPC10064
+       HTR 2.00                        START TO CONTINUE.               TPC10065
+ 4.00  SLT 1                           TEST FOR MATCH.                  TPC10066
+       TRA 4.10                        OFF--TRY MATCH.                  TPC10067
+       SLN 1                           ON--SKIP MATCH.                  TPC10068
+       TRA 5.00                                                         TPC10069
+ 4.10  LXA NCOMP,4                                                      TPC10070
+ 4.20  CLA **,4                        GET OLD WORD.                    TPC10071
+ 4.30  SUB **,4                        SUBTRACT COMPARISON WORD.        TPC10072
+       TZE 4.40                                                         TPC10073
+ 5.00  TSX WTP,4                       INEQUALITY--WRITE OLD RECORD     TPC10074
+       PZE INOUT                       AS NEW RECORD.                   TPC10075
+       TRA 2.00                                                         TPC10076
+ 4.40  TIX 4.20,4,1                                                     TPC10077
+ 6.00  TSX READ,4                      RECORDS MATCH--READ              TPC10078
+       PZE INSTR,,CHNG                 INSTRUCTION RECORD.              TPC10079
+       HTR 6.00                                                         TPC10080
+       LDQ INSTR+1                     CONVERT N.                       TPC10081
+       TSX CONV,4                                                       TPC10082
+       SLW N                                                            TPC10083
+       CLA INSTR                       IS INSTRUCTION DELETE.           TPC10084
+       SUB DELET                                                        TPC10085
+       TNZ 7.00                                                         TPC10086
+       LXA N,2                                                          TPC10087
+       SLT 2                           WAS MATCH $$$$$$.                TPC10088
+       TXI 6.10,2,1                    YES--SET FOR N RECORDS.          TPC10089
+ 6.10  TNX 1.00,2,1                    READ N-1 RECORDS.                TPC10090
+       TSX RTP,4                                                        TPC10091
+       PZE INOUT,,OLD                                                   TPC10092
+       HTR 3.00                        EOF--START TO WEF                TPC10093
+       TRA 6.10                                                         TPC10094
+ 7.00  CLA INSTR                       IS INSTRUCTION INSERT.           TPC10095
+       SUB INSRT                                                        TPC10096
+       TNZ 8.00                                                         TPC10097
+       SLT 2                           WAS MATCH $$$$$$.                TPC10098
+       TRA 7.10                        YES--SKIP WRITING OLD RECORD.    TPC10099
+       TSX WTP,4                       WRITE THIS OLD RECORD.           TPC10100
+       PZE INOUT                                                        TPC10101
+ 7.10  CLA LTEN                        SET 11A.                         TPC10102
+       STA 11.00                                                        TPC10103
+       SLN 2                                                            TPC10104
+       TRA 8.20                                                         TPC10105
+ 8.00  CLA INSTR                       IS INSTRUCTION CHANGE.           TPC10106
+       SUB CHANG                                                        TPC10107
+       TZE 8.10                                                         TPC10108
+       HTR 6.00                        INSTRUCTION ERROR--START TO READ.TPC10109
+ 8.10  CLA LNINE                       SET 11B.                         TPC10110
+       STA 11.00                                                        TPC10111
+ 8.20  LXA N,2                                                          TPC10112
+       SLT 2                           WAS MATCH $$$$$$.                TPC10113
+       TRA 9.00                        YES--READ OLD RECORD.            TPC10114
+       TRA 10.00                                                        TPC10115
+ 9.00  TSX RTP,4                       READ OLD RECORD.                 TPC10116
+       PZE INOUT,,OLD                                                   TPC10117
+       HTR 3.00                        EOF--START TO WEF.               TPC10118
+ 10.00 TSX READ,4                      READ CHANGE RECORD.              TPC10119
+       PZE COMP,,CHNG                                                   TPC10120
+       HTR 10.00                       EOF--START TO READ AGAIN.        TPC10121
+       TSX WTP,4                       WRITE NEW RECORD.                TPC10122
+       PZE COMP                                                         TPC10123
+ 11.00 TIX **,2,1                                                       TPC10124
+       TRA 1.00                                                         TPC10125
+       REM                                                              TPC10126
+       REM SUBROUTINES                                                  TPC10127
+       REM                                                              TPC10128
+       REM CARD AND TAPE READING SUBROUTINE                             TPC10129
+       REM                                                              TPC10130
+ READ  SWT 1                           UP FOR CARDS--DOWN FOR TAPE.     TPC10131
+ SAVEC TXL RCD                                                          TPC10132
+       REM                                                              TPC10133
+       REM TAPE READING                                                 TPC10134
+       REM                                                              TPC10135
+ RTP   SXD SAVEB,2                                                      TPC10136
+       SXD SAVEA,1                                                      TPC10137
+       CLA 1,4                         COMPUTE FW+SIZE.                 TPC10138
+       ACL SIZE                                                         TPC10139
+       STA RTP2                                                         TPC10140
+       STA RTP3                                                         TPC10141
+       COM                                                              TPC10142
+       PDX ,1                          -(TAPE NO.+1)                    TPC10143
+ RTP0  CLA 3A                                                           TPC10144
+ RTP1  RDS 127,1                       RTD -1,1                         TPC10145
+       LXA SIZE,2                                                       TPC10146
+ RTP2  CPY **,2                                                         TPC10147
+ SAVEA TXL RTP4                                                         TPC10148
+       TXI RTP5,4,1                    EOF--TO EOF RETURN.              TPC10149
+       SWT 2                           EOR--SHORT RECORD.               TPC10150
+       HPR                             START TO FILL.                   TPC10151
+       STO TEMP1                                                        TPC10152
+       CAL FILL                        FILL.                            TPC10153
+ RTP3  SLW **,2                                                         TPC10154
+       TIX RTP3,2,1                                                     TPC10155
+       CLA TEMP1                                                        TPC10156
+ RTP4  TIX RTP2,2,1                                                     TPC10157
+       IOD                                                              TPC10158
+       RQL 255                                                          TPC10159
+       RQL 255                                                          TPC10160
+       RTT                                                              TPC10161
+ SAVEB TXL RTP6                                                         TPC10162
+ RTP5  LXD SAVEB,2                                                      TPC10163
+       TRA 3,4                                                          TPC10164
+ RTP6  SUB 1A                                                           TPC10165
+       TZE RTP7                                                         TPC10166
+       OCT 076400100177                BST -1,1                         TPC10167
+       TRA RTP1                                                         TPC10168
+ RTP7  HTR RTP5                                                         TPC10169
+       REM                                                              TPC10170
+       REM CARD READING                                                 TPC10171
+       REM                                                              TPC10172
+ RCD   SXD SAVEC,4                                                      TPC10173
+       CLA 1,4                                                          TPC10174
+       STA RCD1                                                         TPC10175
+       ACL SIZE                                                         TPC10176
+       STA RCD3                                                         TPC10177
+       RCD                                                              TPC10178
+       TSX B$DBD1,4                                                     TPC10179
+ RCD1  PZE **                                                           TPC10180
+       TXL RCD5                        EOF--TO EOF RETURN.              TPC10181
+       LXA SIZE,4                      FILL IF NECESSARY.               TPC10182
+       TXL RCD4,4,12                                                    TPC10183
+       TXI RCD2,4,-12                                                   TPC10184
+ RCD2  CAL FILL                                                         TPC10185
+ RCD3  SLW **,4                                                         TPC10186
+       TIX RCD3,4,1                                                     TPC10187
+ RCD4  LXD SAVEC,4                                                      TPC10188
+       TRA 3,4                                                          TPC10189
+ RCD5  LXD SAVEC,4                                                      TPC10190
+       TRA 2,4                                                          TPC10191
+B      HED                                                              TPC10192
+ DBD1  CLA 1,4                    SET                                   TPC10193
+       ADD L6                     UP                                    TPC10194
+       STA HBC1                   VARIOUS                               TPC10195
+       ADD L6                     CELLS                                 TPC10196
+       STA HBC2                   TO                                    TPC10197
+       STA HB1                    STORE                                 TPC10198
+       SUB L6                     OUTPUT                                TPC10199
+       ALS 18                     OF                                    TPC10200
+       STD HB121                  SUBROUTINES                           TPC10201
+       SXD SAVEA,1                SAVE                                  TPC10202
+       SXD SAVEB,2                THE                                   TPC10203
+       SXD SAVEC,4                I.R.)S                                TPC10204
+       LXA L12,5                  SET UP FOR 12 ROWS                    TPC10205
+       PXD 0,0                    CLEAR                                 TPC10206
+       STO LDGT                   VARIOUS                               TPC10207
+       STO RDGT                   CELLS                                 TPC10208
+ HB1   STO 0,1                    TO                                    TPC10209
+       TIX HB1,1,1                ZERO                                  TPC10210
+ HB2   CLA HB711                                                        TPC10211
+       STA HB91                                                         TPC10212
+ HB3   CPY LEFT                                                         TPC10213
+       TRA HB31                                                         TPC10214
+       LXD SAVEA,1                                                      TPC10215
+       LXD SAVEB,2                                                      TPC10216
+       LXD SAVEC,4                                                      TPC10217
+       TRA 2,4                    EOF EXIT                              TPC10218
+ HB31  CPY RIGHT                                                        TPC10219
+ HB4   TXL HB7,4,1                12 ROW                                TPC10220
+       TXL HB18,4,2               11 ROW                                TPC10221
+       TXL HB17,4,3               OROW                                  TPC10222
+       CAL LEFT                                                         TPC10223
+       ORS LDGT                                                         TPC10224
+       CAL RIGHT                                                        TPC10225
+       ORS RDGT                                                         TPC10226
+ HB5   LXA L8,1                   SET UP MASKS FOR CONVERSION LOOP      TPC10227
+ HB6   CAL NROW+12,4                                                    TPC10228
+       ANA MODEL+8,1                                                    TPC10229
+       STO MASK+8,1                                                     TPC10230
+       TIX HB6,1,1                                                      TPC10231
+ HB7   LDQ LEFT                   INITIALIZE TO                         TPC10232
+       CLA HBC1                   PROCESS FIRST                         TPC10233
+ HB71  STA HB10                   SIX CELLS                             TPC10234
+ HB711 STA HB11                                                         TPC10235
+ HB72  LXA L6,1                                                         TPC10236
+ HB8   PXD 0,0                    CLEAR AC                              TPC10237
+       LGL 3                                                            TPC10238
+ HB9   PAX 0,2                                                          TPC10239
+       CLA MASK+7,2               PRODUCE BCD CHARACTERS                TPC10240
+       ALS 15                     FOR 6 COLUMNS EACH TIME               TPC10241
+       LGL 3                      LOOP IS TRAVERSED                     TPC10242
+       PAX 0,2                                                          TPC10243
+       ANA HBC3                   WIPE OUT RIGHT HALF AC                TPC10244
+       ADD MASK+7,2                                                     TPC10245
+ HB91  TRA 0                      TRA TO HB11 OR HB10                   TPC10246
+ HB10  ANS 0,1                    ANS TO LOC+6 OR LOC+12                TPC10247
+       COM                                                              TPC10248
+       ANA NROW+12,4                                                    TPC10249
+ HB11  ORS 0,1                    LOC+6 OR LOC+12                       TPC10250
+ HB12  TIX HB8,1,1                                                      TPC10251
+       CLA HBC2                   PREPARE TO PROCESS RIGHT HALF         TPC10252
+       LDQ RIGHT                                                        TPC10253
+       LXA HB11,1                                                       TPC10254
+ HB121 TXL HB71,1,0                                                     TPC10255
+       TIX HB3,4,1                PROCESS NEXT ROW IF C EXCEEDS 1       TPC10256
+       LXD SAVEC,4                                                      TPC10257
+       LXD SAVEB,2                                                      TPC10258
+       LXD SAVEA,1                                                      TPC10259
+       TRA 3,4                    NORMAL EXIT,FINISHED                  TPC10260
+ HB17  CAL LEFT                                                         TPC10261
+       ANA LDGT                                                         TPC10262
+       SLW DUMP                                                         TPC10263
+       CAL LEFT                                                         TPC10264
+       ORA LDGT                   BUILD UP CELLS CONTAINING             TPC10265
+       COM                        THE FOLLOWING INFO                    TPC10266
+       ORA DUMP                   ZERO AND DIGIT OR NEITHER ZERO        TPC10267
+       SLW LEFT                   NOR DIGITS.THESE CELLS ARE USED       TPC10268
+       CAL RIGHT                  TO PUT ZERO ZONE PUNCHES              TPC10269
+       ANA RDGT                   INTO BLANK COLUMNS OR                 TPC10270
+       SLW DUMP                   ZERO ZONED COLUMNS                    TPC10271
+       CAL RIGHT                                                        TPC10272
+       ORA RDGT                                                         TPC10273
+       COM                                                              TPC10274
+       ORA DUMP                   ONLY NUMERIC BLANK                    TPC10275
+       SLW RIGHT                                                        TPC10276
+       TRA HB5                                                          TPC10277
+ HB18  CLA HB71                   INITIALIZE CONVERSION LOOP FOR 11     TPC10278
+       STA HB91                   AND 12 ROW PROCESSING                 TPC10279
+       LXA L8,1                                                         TPC10280
+ HB19  CAL SPEC                   PREPARE SPECIAL                       TPC10281
+       ANA MODEL+8,1              11 AND 12 ROW MASKS                   TPC10282
+       COM                                                              TPC10283
+       ANA MODEL                  WIPE OUT LEFT HALF AC                 TPC10284
+       STO MASK+8,1                                                     TPC10285
+       TIX HB19,1,1                                                     TPC10286
+       TRA HB7                                                          TPC10287
+ HBC1      0                                                            TPC10288
+ HBC3  OCT 777777000000           MASK TO WIPE OUT RIGHT HALF AC        TPC10289
+ NROW  OCT 000000111111                                                 TPC10290
+       OCT 000000101010                                                 TPC10291
+       OCT 000000070707           THESE ARE ANDED AGAINST               TPC10292
+       OCT 000000060606           THE MODELS TO PRODUCE MASKS           TPC10293
+       OCT 000000050505           FOR SETTING UP THE CHARACTERS         TPC10294
+       OCT 000000040404           FOR THE VARIOUS ROWS                  TPC10295
+       OCT 000000030303                                                 TPC10296
+       OCT 000000020202                                                 TPC10297
+       OCT 000000010101                                                 TPC10298
+ SPEC  OCT 000000606060           USED IN 0,11,12 ROWS                  TPC10299
+       OCT 404040404040                                                 TPC10300
+       OCT 202020202020                                                 TPC10301
+ MODEL OCT 000000777777                                                 TPC10302
+       OCT 000000777700           MODELS FOR PRODUCING MASKS            TPC10303
+       OCT 000000770077                                                 TPC10304
+       OCT 000000770000                                                 TPC10305
+       OCT 000000007777                                                 TPC10306
+       OCT 000000007700                                                 TPC10307
+       OCT 000000000077                                                 TPC10308
+ SAVEC PZE 0                                                            TPC10309
+ L12       12                                                           TPC10310
+ L6        6                                                            TPC10311
+ L8        8                                                            TPC10312
+ SAVEB BSS 1                                                            TPC10313
+ SAVEA BSS 1                                                            TPC10314
+ RDGT  BSS 1                                                            TPC10315
+ LDGT  BSS 1                                                            TPC10316
+ MASK  BSS 8                                                            TPC10317
+ LEFT  BSS 1                                                            TPC10318
+ RIGHT BSS 1                                                            TPC10319
+ DUMP      0                                                            TPC10320
+ HBC2      0                      INITIALIZE HB10 AND HB11              TPC10321
+A      HED                                                              TPC10322
+       REM TAPE WRITING SUBROUTINE                                      TPC10323
+       REM                                                              TPC10324
+ WTP   SXD SAVEB,2                                                      TPC10325
+       CLA 1,4                                                          TPC10326
+       ACL SIZE                                                         TPC10327
+       STA WTP1                                                         TPC10328
+       CAL TEMP1                                                        TPC10329
+       WTD NEW                         WRITE NEW TAPE.                  TPC10330
+       LXA SIZE,2                                                       TPC10331
+ WTP1  CPY **,2                                                         TPC10332
+       TIX WTP1,2,1                                                     TPC10333
+       ETT                             TEST END OF TAPE.                TPC10334
+       SWT 3                           UP TO IGNORE--DOWN FOR WEF, REW. TPC10335
+       TXL WTP2                                                         TPC10336
+       WEF NEW                                                          TPC10337
+       REW NEW                                                          TPC10338
+       HPR                             WAIT FOR NEW TAPE.               TPC10339
+       REW NEW                                                          TPC10340
+ WTP2  LXD SAVEB,2                                                      TPC10341
+       ADD ZERO                        INCREMENT RECORD COUNT.          TPC10342
+       SLW TEMP1                                                        TPC10343
+       TRA 2,4                                                          TPC10344
+       REM                                                              TPC10345
+       REM CONVERSION SUBROUTINE                                        TPC10346
+       REM                                                              TPC10347
+ CONV  SXD SAVEC,4                                                      TPC10348
+       LXA 6A,4                                                         TPC10349
+       STZ CONV2                                                        TPC10350
+ CONV1 PXD                             PROGRAMMED MULTIPLY BY 10.       TPC10351
+       RQL 2                           DROP ZONES.                      TPC10352
+       LGL 4                                                            TPC10353
+       STO CONV3                                                        TPC10354
+       CLA CONV2                                                        TPC10355
+       ALS 3                                                            TPC10356
+       ADD CONV2                                                        TPC10357
+       ADD CONV2                                                        TPC10358
+       ADD CONV3                                                        TPC10359
+       STO CONV2                                                        TPC10360
+       TIX CONV1,4,1                                                    TPC10361
+       LXD SAVEC,4                                                      TPC10362
+       TRA 1,4                                                          TPC10363
+ CONV2 BSS 1                                                            TPC10364
+ CONV3 BSS 1                                                            TPC10365
+       REM                                                              TPC10366
+       REM CONSTANTS                                                    TPC10367
+       REM                                                              TPC10368
+ ZERO  PZE ,,1                                                          TPC10369
+ 1A    PZE 1                                                            TPC10370
+ 3A    PZE 3                                                            TPC10371
+ 6A    PZE 6                                                            TPC10372
+ 10A   PZE 10                                                           TPC10373
+ ALL7S PZE -1                                                           TPC10374
+ LNINE PZE 9.00                                                         TPC10375
+ LTEN  PZE 10.00                                                        TPC10376
+ LIO   PZE INOUT                                                        TPC10377
+ LCOMP PZE COMP                                                         TPC10378
+ 6DOLS BCD 1$$$$$$                                                      TPC10379
+ DELET BCD 1DELETE                                                      TPC10380
+ CHANG BCD 1CHANGE                                                      TPC10381
+ INSRT BCD 1INSERT                                                      TPC10382
+ ID    BCD 2TPC1 CONTROL                                                TPC10383
+ OLD   EQU 2                                                            TPC10384
+ CHNG  EQU 3                                                            TPC10385
+ NEW   EQU 4                                                            TPC10386
+       REM                                                              TPC10387
+       REM STORAGE                                                      TPC10388
+       REM                                                              TPC10389
+ SIZE  BSS 1                           WORDS/INPUT RECORD.              TPC10390
+ N     BSS 1                           RECORDS/CORRECTION.              TPC10391
+ NCOMP BSS 1                           WORDS/COMPARISON.                TPC10392
+ FILL  BSS 1                           FILL FOR SHORT RECORDS.          TPC10393
+ TEMP1 BSS 1                           TEMPORARY STORAGE.               TPC10394
+ INOUT BSS 100                         INPUT-OUTPUT BLOCK.              TPC10395
+ COMP  BSS 100                         COMPARISON BLOCK.                TPC10396

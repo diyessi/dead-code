@@ -1,0 +1,347 @@
+C     MODULAR LINEAR PROGRAMMING FORTRAN CODE. (OFF-LINE PRINTING)      CEFLP001
+C                                                                       CEFLP002
+      DIMENSION A(51,92),ETA(51),B(51),JSUBI(51)                        CEFLP003
+      EQUIVALENCE (A(4642),ETA)                                         CEFLP004
+C                  START A PROBLEM--READ IN DATA                        CEFLP005
+  501 REWIND 8                                                          CEFLP006
+      IF(SENSE SWITCH 1) 502,503                                        CEFLP007
+  502 READ 920                                                          CEFLP008
+      READ 900,M,N,NOP1,NOP2,ISUM,NJI,SCALE,K1,K2,K3,K4                 CEFLP009
+  900 FORMAT(6I5,F5.2,4I5)                                              CEFLP010
+      GO TO 504                                                         CEFLP011
+  503 READ INPUT TAPE 9,920                                             CEFLP012
+      READ INPUT TAPE 9,900,M,N,NOP1,NOP2,ISUM,NJI,SCALE,K1,K2,K3,K4    CEFLP013
+  504 DO 505 J=1,N                                                      CEFLP014
+      DO 505 I=1,M                                                      CEFLP015
+  505 A(I,J)=0.                                                         CEFLP016
+      DO 506 I=1,M                                                      CEFLP017
+      B(I)=0.                                                           CEFLP018
+      ETA(I)=0.                                                         CEFLP019
+  506 JSUBI(I)=0                                                        CEFLP020
+      Z=0.                                                              CEFLP021
+      SUM=0.                                                            CEFLP022
+      MIST=0                                                            CEFLP023
+      JARB=0                                                            CEFLP024
+      ITNO=0                                                            CEFLP025
+C                  PRINT JOB ID ON-LINE                                 CEFLP026
+      PRINT 920                                                         CEFLP027
+      IF (K1) 508,508,507                                               CEFLP028
+  507 WRITE OUTPUT TAPE 10,920                                          CEFLP029
+  508 IF(NOP1) 517,517,515                                              CEFLP030
+  515 KPHAZ=1                                                           CEFLP031
+      GO TO 518                                                         CEFLP032
+  517 KPHAZ=2                                                           CEFLP033
+  518 IPRICE=NOP1+NOP2                                                  CEFLP034
+      IFEAS=IPRICE+1                                                    CEFLP035
+  521 IF(SENSE SWITCH 1) 522,523                                        CEFLP036
+  522 READ 901,I,J,ELEM                                                 CEFLP037
+  901 FORMAT(2I5,F10.5)                                                 CEFLP038
+      GO TO 526                                                         CEFLP039
+  523 READ INPUT TAPE 9,901,I,J,ELEM                                    CEFLP040
+  526 IF(I) 524,540,524                                                 CEFLP041
+  524 IF(J-N) 525,525,528                                               CEFLP042
+  525 IF(I-M) 530,530,528                                               CEFLP043
+C                  PRINT ERROR ON-LINE                                  CEFLP044
+  528 PRINT 902,I,J,ELEM                                                CEFLP045
+  902 FORMAT(3H I=I3,5H   J=I3,8H   ELEM=F10.5,                         CEFLP046
+     125H   SUBSCRIPT OUT OF RANGE)                                     CEFLP047
+      MIST=1                                                            CEFLP048
+      GO TO 521                                                         CEFLP049
+  530 IF(J) 535,535,531                                                 CEFLP050
+  531 ETA(I)=ETA(I)+ELEM                                                CEFLP051
+      SUM=SUM+ELEM                                                      CEFLP052
+      A(I,J)=ELEM                                                       CEFLP053
+      GO TO 521                                                         CEFLP054
+  535 B(I)=ELEM                                                         CEFLP055
+      GO TO 521                                                         CEFLP056
+  540 IF(NJI) 541,541,545                                               CEFLP057
+  541 IF (K1) 558,558,556                                               CEFLP058
+  907 FORMAT(18H   MATRIX ROW SUMS)                                     CEFLP059
+  903 FORMAT(3H I=I3,F14.5)                                             CEFLP060
+  904 FORMAT(F14.5,15H   MATRIX TOTAL)                                  CEFLP061
+  556 WRITE OUTPUT TAPE 10,907                                          CEFLP062
+      DO 557 I=1,M                                                      CEFLP063
+  557 WRITE OUTPUT TAPE 10,903,I,ETA(I)                                 CEFLP064
+      WRITE OUTPUT TAPE 10,904,SUM                                      CEFLP065
+  558 IF(MIST) 560,560,543                                              CEFLP066
+  543 PAUSE                                                             CEFLP067
+C                  CORRECT DATA AND RESTART PROBLEM                     CEFLP068
+      GO TO 501                                                         CEFLP069
+  545 IF(SENSE SWITCH 1) 546,548                                        CEFLP070
+  546 READ 905,I,J                                                      CEFLP071
+  905 FORMAT(2I5)                                                       CEFLP072
+      GO TO 549                                                         CEFLP073
+  548 READ INPUT TAPE 9,905,I,J                                         CEFLP074
+  549 IF(XABSF(J)-N)550,550,555                                         CEFLP075
+  550 IF(I-M) 551,551,555                                               CEFLP076
+  551 JSUBI(I)=J                                                        CEFLP077
+  552 NJI=NJI-1                                                         CEFLP078
+      GO TO 540                                                         CEFLP079
+C                  PRINT ERROR ON-LINE                                  CEFLP080
+  555 PRINT 906,I,J                                                     CEFLP081
+  906 FORMAT(3H I=I4,5H   J=I4,29H   JSUBI IMPROPERLY SPECIFIED)        CEFLP082
+      MIST=1                                                            CEFLP083
+      GO TO 552                                                         CEFLP084
+C                  END OF INPUT AND EDITING OF DATA                     CEFLP085
+  560 DO 561 I=1,M                                                      CEFLP086
+  561 ETA(I)=-B(I)                                                      CEFLP087
+      IF(ISUM)50,51,50                                                  CEFLP088
+C                  FORM SUM ROW FOR PHASE ONE                           CEFLP089
+   50 J=1                                                               CEFLP090
+   61 DO 62 I=IFEAS,M                                                   CEFLP091
+      IF(JSUBI(I)) 60,60,62                                             CEFLP092
+   60 A(ISUM,J)=A(ISUM,J)-A(I,J)                                        CEFLP093
+   62 CONTINUE                                                          CEFLP094
+   63 J=J+1                                                             CEFLP095
+      IF(J-N) 61,61,64                                                  CEFLP096
+C        (TO CHANGE MAX DIMENSIONS OF SYSTEM,CHANGE 92 IN NEXT 2 LINES) CEFLP097
+   64 IF(J-92) 65,66,66                                                 CEFLP098
+   65 J=92                                                              CEFLP099
+      GO TO 61                                                          CEFLP100
+   66 B(ISUM)=-ETA(ISUM)                                                CEFLP101
+      TOLER=ETA(ISUM)*1.E-7                                             CEFLP102
+      Z=B(ISUM)                                                         CEFLP103
+C                  TEST FOR ARBITRARY TRANSFORMATIONS (NEG JSUBI GIVEN) CEFLP104
+   51 DO 54 I=1,M                                                       CEFLP105
+      IF(JSUBI(I)) 52,54,54                                             CEFLP106
+   52 JARB=JARB+1                                                       CEFLP107
+   54 CONTINUE                                                          CEFLP108
+C                  SAVE INITIAL TABLEAU WITH -B FOR CHECKING (TAPE 8)   CEFLP109
+      WRITE TAPE 8, A                                                   CEFLP110
+   56 IF(JARB) 150,57,150                                               CEFLP111
+C              **  START OF MAIN MASTER CONTROL **                      CEFLP112
+   57 LRTN=1                                                            CEFLP113
+      GO TO 9                                                           CEFLP114
+  950 FORMAT(//28H LINEARLY DEPENDENT VARIABLEI7/)                      CEFLP115
+  926 FORMAT(6H     J14H        A(I,S)11H          I)                   CEFLP116
+    1 WRITE OUTPUT TAPE 10,920                                          CEFLP117
+      WRITE OUTPUT TAPE 10,950,JS                                       CEFLP118
+      WRITE OUTPUT TAPE 10,926                                          CEFLP119
+      DO 33 I=1,M                                                       CEFLP120
+   33 WRITE OUTPUT TAPE 10,922,JSUBI(I),A(I,JS),I                       CEFLP121
+    7 PAUSE 1111                                                        CEFLP122
+      JSUBI(L)=0                                                        CEFLP123
+      GO TO 1000                                                        CEFLP124
+    2 LRTN=2                                                            CEFLP125
+      GO TO 300                                                         CEFLP126
+  927 FORMAT(//21H NO FEASIBLE SOLUTION/)                               CEFLP127
+    3 WRITE OUTPUT TAPE 10,920                                          CEFLP128
+      WRITE OUTPUT TAPE 10,927                                          CEFLP129
+      ASSIGN 37 TO LINK                                                 CEFLP130
+      GO TO 400                                                         CEFLP131
+   37 PAUSE 3333                                                        CEFLP132
+      GO TO 501                                                         CEFLP133
+  951 FORMAT(//24H OPTIMAL SOLUTION ON ROWI3/)                          CEFLP134
+    4 WRITE OUTPUT TAPE 10, 920                                         CEFLP135
+      WRITE OUTPUT TAPE 10, 951, NOP2                                   CEFLP136
+   34 ASSIGN 42 TO LINK                                                 CEFLP137
+      GO TO 400                                                         CEFLP138
+   42 IF(NOP2-1)35,35,5                                                 CEFLP139
+    5 NOP2=NOP2-1                                                       CEFLP140
+      IPRICE=IPRICE-1                                                   CEFLP141
+      Z=B(IPRICE)                                                       CEFLP142
+      GOTO 9                                                            CEFLP143
+  952 FORMAT(//31H UNBOUNDED SOLUTION WITH VECTORI5/)                   CEFLP144
+  941 FORMAT(6H     J14H          BETA11H          I14H       A(I,JS))  CEFLP145
+  942 FORMAT(I7,F17.8,I8,F17.8)                                         CEFLP146
+    6 WRITE OUTPUT TAPE 10, 920                                         CEFLP147
+      WRITE OUTPUT TAPE 10, 952 , JS                                    CEFLP148
+      WRITE OUTPUT TAPE 10, 941                                         CEFLP149
+      DO 45 I=1,M                                                       CEFLP150
+   45 WRITE OUTPUT TAPE 10, 942, JSUBI(I), B(I), I, A(I,JS)             CEFLP151
+   46 PAUSE 4444                                                        CEFLP152
+      GO TO 501                                                         CEFLP153
+    9 GO TO 100                                                         CEFLP154
+   10 IF(JS)200,11,200                                                  CEFLP155
+   11 IF(KPHAZ-1)12,3,12                                                CEFLP156
+   12 IF(SCALE)13,14,13                                                 CEFLP157
+   13 IF(INF)16,4,16                                                    CEFLP158
+   14 IF(INF)3,15,3                                                     CEFLP159
+   15 SCALE=1.                                                          CEFLP160
+      GO TO 9                                                           CEFLP161
+   16 SCALE=0.                                                          CEFLP162
+      GO TO 9                                                           CEFLP163
+   20 IF (IR)300,21,300                                                 CEFLP164
+   30 IF(Z-B(IPRICE))22,22,17                                           CEFLP165
+   17 IF (INF)22,18,22                                                  CEFLP166
+C                  PRINT ERROR ON-LINE                                  CEFLP167
+   18 PRINT 930,Z,ITNO,JS,IR,B(IPRICE)                                  CEFLP168
+  930 FORMAT(//20H  Z DECREASED     Z=F17.8,7H  ITNO=4I,5H  JS=3I,      CEFLP169
+     C5H  IR=3I,12H  B(IPRICE)=F17.8)                                   CEFLP170
+   58 WRITE OUTPUT TAPE 10, 930,Z,ITNO,JS,IR,B(IPRICE)                  CEFLP171
+   19 PAUSE 5555                                                        CEFLP172
+      GO TO 22                                                          CEFLP173
+   21 IF(INF)3,6,3                                                      CEFLP174
+   22 Z =B(IPRICE)                                                      CEFLP175
+      ITNO=ITNO+1                                                       CEFLP176
+C                  TEST FOR PRINTING OR RESTART PUNCHOUTS               CEFLP177
+      IF (K2-1)59,28,67                                                 CEFLP178
+   67 IF(XMODF(ITNO,K2))998,28,59                                       CEFLP179
+   59 IF(K3-1)69,23,68                                                  CEFLP180
+   68 IF(XMODF(ITNO,K3))998,23,69                                       CEFLP181
+   69 IF(K4-ITNO)29,29,25                                               CEFLP182
+C                  ITERATION PRINT-OUT                                  CEFLP183
+  925 FORMAT(//11H  ITERATIONI4,8H   PHASEI3,6H  FORMI3,7H  JS IS       CEFLP184
+     1I4,7H  IR ISI3/27H  CURRENT VALUE OF FUNCTIONF20.8)               CEFLP185
+   28 WRITE OUTPUT TAPE 10, 925, ITNO, KPHAZ, IPRICE, JS, IR, Z         CEFLP186
+      GO TO 59                                                          CEFLP187
+C                  FULL PRINT-OUT                                       CEFLP188
+   23 WRITE OUTPUT TAPE 10, 920                                         CEFLP189
+      ASSIGN 69 TO LINK                                                 CEFLP190
+      GO TO 400                                                         CEFLP191
+   25 IF(KPHAZ-1)9,26,9                                                 CEFLP192
+   26 IF( B(IPRICE)+TOLER) 9,9,27                                       CEFLP193
+  953 FORMAT(//18H FEASIBLE SOLUTIONI6,17H ITERATIONS    Z=F17.8)       CEFLP194
+   27 WRITE OUTPUT TAPE 10, 920                                         CEFLP195
+C                  TEST FOR PHASE 1 AND NO PHASE 2.                     CEFLP196
+      IF (NOP2) 998,34,73                                               CEFLP197
+   73 WRITE OUTPUT TAPE 10, 953, ITNO, B(IPRICE-1)                      CEFLP198
+   48 KPHAZ=2                                                           CEFLP199
+      IPRICE=IPRICE-1                                                   CEFLP200
+      IFEAS=IFEAS-1                                                     CEFLP201
+      Z=B(IPRICE)                                                       CEFLP202
+C                       REDUCE ERROR IN SUM ROW  RELATIVELY             CEFLP203
+      TOLER=(1.E-7)/TOLER                                               CEFLP204
+      B(ISUM)=B(ISUM)*TOLER                                             CEFLP205
+      DO 47 J=1,N                                                       CEFLP206
+   47 A(ISUM,J)=A(ISUM,J)*TOLER                                         CEFLP207
+      GO TO 9                                                           CEFLP208
+C                  PUNCH-OUT AND STOP                                   CEFLP209
+   29 PUNCH 900, M,N,NOP1,NOP2,ISUM, M ,SCALE,K1,K2,K3,K4               CEFLP210
+      DO 76 I=1,M                                                       CEFLP211
+      MIST = -JSUBI(I)                                                  CEFLP212
+   76 PUNCH 905, I, MIST                                                CEFLP213
+      PAUSE 6666                                                        CEFLP214
+      GO TO 501                                                         CEFLP215
+   35 PRINT 954                                                         CEFLP216
+  954 FORMAT(//21H ALL PHASES COMPLETED)                                CEFLP217
+   49 WRITE OUTPUT TAPE 10, 954                                         CEFLP218
+  997 PAUSE 7777                                                        CEFLP219
+      GO TO 501                                                         CEFLP220
+  998 STOP 2222                                                         CEFLP221
+  999 ITNO=ITNO+1                                                       CEFLP222
+ 1000 JARB=JARB-1                                                       CEFLP223
+      GO TO 56                                                          CEFLP224
+C             **   FORMAT STATEMENTS USED IN SEVERAL PLACES   **        CEFLP225
+  920 FORMAT(55H                  LINEAR PROGRAMMING PROBLEM XX        )CEFLP226
+  921 FORMAT(6H     J14H          BETA11H          I)                   CEFLP227
+  922 FORMAT(I7,F17.8,I8)                                               CEFLP228
+C         **  SEARCH SUB-ROUT. TO FIND JS FOR ARBITRARY TRANSFRMNS  **  CEFLP229
+  150 DO 151 L=1,M                                                      CEFLP230
+      IF(JSUBI(L))152,151,151                                           CEFLP231
+  151 CONTINUE                                                          CEFLP232
+      GO TO 998                                                         CEFLP233
+  152 JS=-JSUBI(L)                                                      CEFLP234
+C         **  COMPARISON SUB-ROUT. TO FIND IR FOR ARBITRARY TRNSFMNS ** CEFLP235
+  250 IR=0                                                              CEFLP236
+      RMIN=0.                                                           CEFLP237
+      DO 254 I=IFEAS,M                                                  CEFLP238
+      IF(JSUBI(I)) 253,253,254                                          CEFLP239
+  253 PIVOT=ABSF(A(I,JS))                                               CEFLP240
+      IF(PIVOT-1.E-5) 254,251,251                                       CEFLP241
+  251 IF(PIVOT-RMIN) 254,254,252                                        CEFLP242
+  252 RMIN=PIVOT                                                        CEFLP243
+      IR=I                                                              CEFLP244
+  254 CONTINUE                                                          CEFLP245
+      IF(IR) 998,1,255                                                  CEFLP246
+  255 JSUBI(L)=JSUBI(IR)                                                CEFLP247
+      GO TO 2                                                           CEFLP248
+C         **  PRICING SUB-ROUTINE FOR COMPOSITE ALGORITHM  **           CEFLP249
+  100 INF=0                                                             CEFLP250
+      JS=0                                                              CEFLP251
+      SMIN=0.                                                           CEFLP252
+      DO 101 I=IFEAS,M                                                  CEFLP253
+      ETA(I)=0.                                                         CEFLP254
+C                  TOLERANCE IN NEXT STATEMENT MAY BE CRITICAL          CEFLP255
+  109 IF(B(I)+2.E-5)102,101,101                                         CEFLP256
+  102 ETA(I)=1.                                                         CEFLP257
+      INF=INF+1                                                         CEFLP258
+  101 CONTINUE                                                          CEFLP259
+      DO 105 J=1,N                                                      CEFLP260
+      DELTA=A(IPRICE,J)*SCALE                                           CEFLP261
+      IF(INF) 103,103,104                                               CEFLP262
+  104 DO 107 I=IFEAS,M                                                  CEFLP263
+      IF(ETA(I)) 107,107,108                                            CEFLP264
+  108 DELTA=DELTA+A(I,J)                                                CEFLP265
+  107 CONTINUE                                                          CEFLP266
+  103 IF(DELTA+2.E-5)110,105,105                                        CEFLP267
+  110 IF(DELTA-SMIN) 106,105,105                                        CEFLP268
+  106 SMIN=DELTA                                                        CEFLP269
+      JS=J                                                              CEFLP270
+  105 CONTINUE                                                          CEFLP271
+      GO TO  (10,999),LRTN                                              CEFLP272
+C         **  RATIO TEST SUB-ROUTINE FOR COMPOSITE ALGORITHM   **       CEFLP273
+  200 IR=0                                                              CEFLP274
+      RMIN=10.E30                                                       CEFLP275
+      IF (SENSE LIGHT 4) 211,211                                        CEFLP276
+  211 DO 201 I=IFEAS,M                                                  CEFLP277
+      IF(SENSE LIGHT 4) 208,207                                         CEFLP278
+  207 IF(ABSF(A(I,JS))- 1.E-5) 201,202,202                              CEFLP279
+  202 RATIO=B(I)/A(I,JS)                                                CEFLP280
+      IF(RATIO) 201,210,204                                             CEFLP281
+  204 IF(RATIO-RMIN) 205,201,201                                        CEFLP282
+  205 RMIN=RATIO                                                        CEFLP283
+      IR=I                                                              CEFLP284
+      GO TO 201                                                         CEFLP285
+  210 IF (A(I,JS))201,201,203                                           CEFLP286
+  208 IF (B(I))206,209,206                                              CEFLP287
+  209 IF(A(I,JS)-RMIN) 206,206,203                                      CEFLP288
+  203 RMIN=A(I,JS)                                                      CEFLP289
+      IR=I                                                              CEFLP290
+  206 SENSE LIGHT 4                                                     CEFLP291
+  201 CONTINUE                                                          CEFLP292
+      GO TO (20,999),LRTN                                               CEFLP293
+C             **   ELIMINATION SUB-ROUTINE     **                       CEFLP294
+  300 PIVOT=-A(IR,JS)                                                   CEFLP295
+      A(IR,JS)=-1.                                                      CEFLP296
+      IF QUOTIENT OVERFLOW 302,302                                      CEFLP297
+  302 DO 301 I=1,M                                                      CEFLP298
+  301 ETA(I)=A(I,JS)/PIVOT                                              CEFLP299
+      A(IR,JS) = -PIVOT                                                 CEFLP300
+      DO 305 J=1,N                                                      CEFLP301
+      PIVOT=A(IR,J)                                                     CEFLP302
+      IF (PIVOT) 304,305,304                                            CEFLP303
+  304 A(IR,J)=0.                                                        CEFLP304
+      DO 310 I=1,M                                                      CEFLP305
+      A(I,J)=A(I,J)+PIVOT*ETA(I)                                        CEFLP306
+      IF QUOTIENT OVERFLOW 308,310                                      CEFLP307
+  308 A(I,J)=0.                                                         CEFLP308
+  310 CONTINUE                                                          CEFLP309
+  305 CONTINUE                                                          CEFLP310
+      PIVOT=B(IR)                                                       CEFLP311
+      IF (PIVOT) 306,307,306                                            CEFLP312
+  306 B(IR) = 0.                                                        CEFLP313
+      DO 303 I=1,M                                                      CEFLP314
+      B(I)=B(I)+PIVOT*ETA(I)                                            CEFLP315
+      IF QUOTIENT OVERFLOW 309,303                                      CEFLP316
+  309 B(I)=0.                                                           CEFLP317
+  303 CONTINUE                                                          CEFLP318
+  307 JSUBI(IR)=JS                                                      CEFLP319
+      GO TO (30,999),LRTN                                               CEFLP320
+C             **   NORMAL FULL PRINT-OUT AND CHECK    **                CEFLP321
+  400 WRITE OUTPUT TAPE 10, 921                                         CEFLP322
+      DO 401 I=1,M                                                      CEFLP323
+  401 WRITE OUTPUT TAPE 10, 922, JSUBI(I), B(I), I                      CEFLP324
+      WRITE TAPE 8, A                                                   CEFLP325
+      REWIND 8                                                          CEFLP326
+      READ TAPE 8, A                                                    CEFLP327
+      DO 406 I=1,M                                                      CEFLP328
+      J=JSUBI(I)                                                        CEFLP329
+      IF (J) 403,403,404                                                CEFLP330
+  403 ETA(I)=ETA(I)+B(I)                                                CEFLP331
+      GO TO 406                                                         CEFLP332
+  404 DO 405 K=1,M                                                      CEFLP333
+  405 ETA(K)=ETA(K) + B(I)*A(K,J)                                       CEFLP334
+  406 CONTINUE                                                          CEFLP335
+      ERROR = 0.                                                        CEFLP336
+      K=0                                                               CEFLP337
+      DO 408 I=1,M                                                      CEFLP338
+      IF(ERROR-ABSF(ETA(I))) 407,408,408                                CEFLP339
+  407 ERROR=ABSF(ETA(I))                                                CEFLP340
+      K=I                                                               CEFLP341
+  408 CONTINUE                                                          CEFLP342
+      WRITE OUTPUT TAPE 10, 959, ERROR, K                               CEFLP343
+  959 FORMAT(/15H MAXIMUM ERROR=F17.8,9H   ON ROWI4)                    CEFLP344
+      READ TAPE 8, A                                                    CEFLP345
+      BACKSPACE 8                                                       CEFLP346
+      GO TO LINK,(37,42,69)                                             CEFLP347

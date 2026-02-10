@@ -1,0 +1,99 @@
+       REM WB TSB2, 704 ABSOLUTE BINARY TAPE LOADER, 99 CARDS           WBTSB201
+       REM LOADS RECORDS OF WB FORMAT 2                                 TSB20002
+  LOAD EQU 00000                                                        TSB20003
+       ORG LOAD              THIS CARD IS NOT USED IN WB CTB2.          TSB20004
+     K EQU 1               WB TSB2 LOADS FROM TAPE K.  TO LOAD A RECORD TSB20005
+       REM                    NOT ON TAPE K, MODIFY LOAD+31 AND LOAD+61.TSB20006
+   TSB TSX LOAD+1,4        WB TSB2 BOOTSTRAP LOADER, INITIATED BY LOAD  TSB20007
+       CPY 2,4               TAPE WHEN LOAD IS ZERO AND K IS ONE, OTHER-TSB20008
+       TXI LOAD+1,4,-1       WISE BY LOAD TAPE SEQUENCE TO LOAD.        TSB20009
+       HTR LOAD+3        ----FALSE EOF - NO RESTART PROVIDED.           TSB20010
+       TXL LOAD+7,4,-LAST-LOAD+TSB                                      TSB20011
+       REM                 STOP IF ALL PHYSICAL RECORD IS NOT LOADED.   TSB20012
+       BST K                 RETURN TAPE TO BEGINNING OF TSB2 RECORD.   TSB20013
+       HTR LOAD+6        ----LOADING ERROR - COMPLETE RECORD NOT STORED TSB20014
+       REM                   IF IR4 EXCEEDS DEC. OF TSB+4 - OTHERWISE   TSB20015
+       REM                   CHECKSUM ERROR IF AC NON-ZERO, DISCREPANCY TSB20016
+       REM                   BITS IN AC - OR TAPE CHECK FAILURE IF AC ISTSB20017
+       REM                   ZERO.  IF LOAD IS ZERO AND K IS ONE, PRESS TSB20018
+       REM                   LOAD TAPE TO TRY AGAIN.                    TSB20019
+       LXA LOAD+30,4       LENGTH OF WB TSB2 INTO IR4.                  TSB20020
+       CAL LAST+LOAD-TSB+1   WB TSB2 CHECKSUM INTO AC.                  TSB20021
+       COM                                                              TSB20022
+       ACL LAST+LOAD-TSB+1,4                                            TSB20023
+       REM                 COMPUTE ACL SUM OF WB TSB2 WITH ITS          TSB20024
+       TIX LOAD+10,4,1       COMPLEMENT INITIALLY IN AC.                TSB20025
+       COM                   CORRECT LOADING YEILDS 38 PLACE ZERO.      TSB20026
+       TNZ LOAD+5            INCORRECT CHECKSUM - BACKSPACE AND STOP.   TSB20027
+       TSX LOAD+20,4         TEST TAPE CHECK.                           TSB20028
+       TRA LOAD+5            TAPE CHECK FAILURE - BACKSPACE AND STOP.   TSB20029
+       TSX LOAD+20,4     ****UA CSB1 REENTRANCE - TURN OFF TAPE CHECK   TSB20030
+       NOP 3                                                            TSB20031
+       TRA LOAD+29                                                      TSB20032
+       TRA LOAD+16       ****PK CSB  REENTRANCE.                        TSB20033
+       ARS 255               DELAY FOR TAPE CHECK, SET Q,P,1-35 TO ZERO.TSB20034
+       RTT                   MIN DELAY IS 324 MICRO-SEC.                TSB20035
+       REM                   IMMEDIATELY FOLLOWS UA CSB1 REENTRANCE.    TSB20036
+       TRA 1,4               TAPE CHECK ON.                             TSB20037
+       TRA 2,4               TAPE CHECK OFF.                            TSB20038
+       COM                 YIELDS 38 PLACE ZERO WHEN COMPUTED CHECKSUM  TSB20039
+       REM                   COMPLEMENT AND CHECKSUM, AS READ, ARE      TSB20040
+       REM                   COMPLEMENTARY.                             TSB20041
+       TNZ LOAD+61         TRY AGAIN WHEN CHECKSUM FAILS TO VERIFY.     TSB20042
+       TSX LOAD+20,4         TEST TAPE CHECK INDICATOR.                 TSB20043
+       TRA LOAD+61         TRY AGAIN WHEN TAPE CHECK FAILS.             TSB20044
+       MZE 0             ****EXIT TRANSFER EXECUTED HERE.               TSB20045
+       LXA LOAD+17,2         3 INTO IR2 TO TRY THRICE TO LOAD.          TSB20046
+       PXD LAST-TSB+1        ZERO INTO AC.                              TSB20047
+       RTB K                 RECORD TO BE LOADED IS ON TAPE K.          TSB20048
+       LXA LOAD+23,4         2 INTO IR4 FOR PREFIX LOOP.                TSB20049
+       COM                   ONES INTO Q,P,1-35.                        TSB20050
+       CAD WORD4,4           COPY WORD 1 OR WORD 3.                     TSB20051
+       TRA LOAD+38           AVOID EOF AND EOR JUMPS.                   TSB20052
+       HTR LOAD+16       ----EOF -PRESS START TO READ NEXT RECORD.      TSB20053
+       TRA LOAD+61       ----FALSE EOR SO TRY AGAIN.                    TSB20054
+       TXH LOAD+40,4,1       STORE ONLY ADDRESS OF WORD 3.              TSB20055
+       STA LOAD+47           LAST LOCATION OF RECORD + 1 IN WORD 3 ADD. TSB20056
+       CAD WORD4             FORM ACL SUM OF WORDS 1 AND 2, OR 3 AND 4. TSB20057
+       COM                   YIELDS 38 PLACE ZERO WHEN CONSECUTIVE WORDSTSB20058
+       TZE LOAD+44           ARE COMPLEMENTARY.                         TSB20059
+       TRA LOAD+61       ----READ ERROR OR FALSE EOR SO TRY AGAIN.      TSB20060
+       TIX LOAD+33,4,1       LOOP TO PICK UP WORDS 3 AND 4.             TSB20061
+       TRA LOAD+64                                                      TSB20062
+       LXD WORD3,4           LENGTH OF LOGICAL RECORD INTO IR4.         TSB20063
+       CAD 0,4               STORE LOGICAL RECORD AND FORM ACL CHECKSUM.TSB20064
+       TIX LOAD+47,4,1                                                  TSB20065
+       TXL LOAD+51,4,1       GO ON IF COMPLETE LOGICAL RECORD STORED.   TSB20066
+       TRA LOAD+61       ----FALSE EOR OR EOF SO TRY AGAIN.             TSB20067
+       CAD LOAD+28         STORE EXIT TRANSFER.                         TSB20068
+       TRA LOAD+55                                                      TSB20069
+       TRA LOAD+61       ----FALSE EOF SO TRY AGAIN.                    TSB20070
+       TRA LOAD+61       ----FALSE EOR SO TRY AGAIN.                    TSB20071
+       COM                 AC BECOMES COMPLEMENT OF COMPUTED CHECKSUM.  TSB20072
+       CAD WORD4             ADD CHECKSUM READ FROM TAPE.               TSB20073
+       TRA LOAD+24                                                      TSB20074
+       TRA LOAD+61       ----FALSE EOF SO TRY AGAIN.                    TSB20075
+       TRA LOAD+61       ----FALSE EOR SO TRY AGAIN.                    TSB20076
+       MZE LOAD+60           NOT USED                                   TSB20077
+       BST K             ****TAPE PROBABLY IN POSITION AFTER TEST FAILEDTSB20078
+       TIX LOAD+30,2,1       SO TRY AGAIN.                              TSB20079
+       HTR LOAD+29       ----FAILED THRICE - PROBABLY TAPE CHECK FAILURETSB20080
+       REM                   IF AC ZERO - PROBABLY CHECKSUM ERROR WITH  TSB20081
+       REM                   DISCREPANCY BITS IN AC IF AC NON-ZERO AND  TSB20082
+       REM                   IR4 IS 2 - PROBABLY SHORT RECORD IF IR4    TSB20083
+       REM                   IS NOT 2.  PRESS START TO TRY THRICE AGAIN.TSB20084
+       LXA WORD3,4         GO STORE LOGICAL RECORD                      TSB20085
+       TXL LOAD+46,4,LOAD+13 IF B IS LESS THAN LOAD+13.                 TSB20086
+       LXD WORD3,1         GO STORE LOGICAL RECORD                      TSB20087
+       SXD LOAD+68,1         IF A IS GREATER THAN LOAD+70.              TSB20088
+       TIX LOAD+69,4         X                                          TSB20089
+       TXH LOAD+46,4,LOAD+70 X                                          TSB20090
+ LAST  HTR LOAD+70         WB TSB2 REFUSES TO DESTROY ITSELF.           TSB20091
+ WORD4 SYN LOAD+15         STORE FOR WORDS 2 AND 4, COMPLEMENTS OF      TSB20092
+       REM                   WORDS 1 AND 3, ALSO FORMAT 2 CHECKSUM.     TSB20093
+ WORD3 SYN WORD4-1         LENGTH OF LOGICAL RECORD IN DECREMENT, LAST  TSB20094
+       REM                   LOCATION OF LOG. REC. IN STORAGE PLUS ONE  TSB20095
+       REM                   IN ADDRESS.                                TSB20096
+ WORD1 SYN WORD4-2         FILE NUMBER IN DECREMENT, RECORD NUMBER      TSB20097
+       REM                   IN ADDRESS - USED HERE ONLY FOR FORMAT CK. TSB20098
+       END                                                              TSB20099
