@@ -1,0 +1,551 @@
+C                                LR SFDT                                 SFDT001
+C                         SIX DEGREE OF FREEDOM                          SFDT002
+C                       DYNAMIC TRAJECTORY PROGRAM                       SFDT003
+C                                                                        SFDT004
+       DIMENSION CONST(7), X(1),XG(1),PS(5),P(5),U(5),HW(4),ZLS(5),      SFDT005
+     1    PSDOT(4), PR(1), Y(1),YG(1),TH(5),Q(5),V(5),VW(4),ZM(5),       SFDT006
+     2    THDOT(4),THW(4), Z(1),ZG(1),PH(5),R(5),W(5),EFN(3,3),ZN(5),    SFDT007
+     3    PHDOT(4),CAAD(37,12),CMAD(37,12),CNAD(37,12),FD(3,3),SMX(5),   SFDT008
+     4    UDOT(4),PDOT(4), XDOT(4), ETAT(38),ALF(3,3),SMY(5),XGDOT(4),   SFDT009
+     5    VDOT(4),ZMT(12),  QDOT(4), YDOT(4), RG(1),SMZ(5),YGDOT(4),     SFDT010
+     6    WDOT(4), PRDOT(4),RDOT(4), ZDOT(4), ZGDOT(4),RGDOT(4)          SFDT011
+C                                                                        SFDT012
+         FREQUENCY 19(10,1,1),43(1,1,100),56(1,1,20),21(100,1,1),        SFDT013
+     X        70(30,1,1),59(1,1,5),125(1,1,100),86(1,500),79(100,1,1)    SFDT014
+C                                                                        SFDT015
+  100 FORMAT (5F10.0)                                                    SFDT016
+  101 FORMAT (4F15.0)                                                    SFDT017
+  102 FORMAT(/1F11.5,1E15.6,7E13.6,1I2/9E13.6,1I2/9E13.6,1I2/9E13.6)     SFDT018
+  103 FORMAT (119H0    TIME       ALTITUDE      ATTACK         AX        SFDT019
+     X    P           P DOT        PSI        LATITUDE     U DOT    ROL) SFDT020
+  104 FORMAT (119H   MACH NO.      RANGE       SIDESLIP        AY        SFDT021
+     X    Q           Q DOT       THETA       LONGITUDE    V DOT    PIT) SFDT022
+  105 FORMAT (119H  DYN.PRESS.  FLIGHT PATH   COMB.ANGLE       AZ        SFDT023
+     X    R           R DOT        PHI        AZIMUTH      W DOT    YAW) SFDT024
+  106 FORMAT (117H   VELOCITY        N           PHIB        U BAR       SFDT025
+     X  V BAR         W BAR        PR         INERT.VEL.     M        )  SFDT026
+  107 FORMAT (29H1                 FLIGHT NO. , F3.1)                    SFDT027
+  108 FORMAT (46H1INPUT DATA AND INITIAL CONDITIONS, FLIGHT NO., F3.1)   SFDT028
+C                                                                        SFDT029
+  109 FORMAT (27H0        MODEL CONSTANTS-   /30H               W,S,D    SFDT030
+     1       ,3E14.6/30H               IX,IY,IZ       ,3E14.6/30H        SFDT031
+     2        EPS1,EPS2,IXZ  ,3E14.6)                                    SFDT032
+C                                                                        SFDT033
+  110 FORMAT (27H0        JET CONSTANTS-     /30H               KP,KQ,KR SFDT034
+     1       ,3E14.6/30H               LP,MQ,NR       ,3E14.6/30H        SFDT035
+     2        FQ,FR,DELP     ,3E14.6)                                    SFDT036
+C                                                                        SFDT037
+  111 FORMAT( 28H0        INITIAL CONDITIONS-/30H               X,Y,Z    SFDT038
+     1       ,3E14.6/30H               XG,YG,ZG       ,3E14.6/30H        SFDT039
+     2        PSI,THETA,PHI  ,3E14.6/30H               P,Q,R           , SFDT040
+     33E14.6/30H               U,V,W          ,3E14.6/30H                SFDT041
+     4A,B,PR         ,3E14.6/30H               T,DELT,PHI1    ,3E14.6/   SFDT042
+     530H               L,LAMBDA,A       ,3E14.6/30H               GAMMA SFDT043
+     6            ,1E14.6)                                               SFDT044
+  112 FORMAT (12F6.3)                                                    SFDT045
+  113 FORMAT (1I2,5F5.1)                                                 SFDT046
+  114 FORMAT (5E14.6)                                                    SFDT047
+  115 FORMAT (9E13.6)                                                    SFDT048
+  116 FORMAT (119H  SON.VEL.        CAN          CMN          CRN        SFDT049
+     X   CMQ           L          PSIDOT       THDOT         WX        ) SFDT050
+  117 FORMAT (119H     FA           FY           FN        AT.PRESS.     SFDT051
+     X DENSITY        THW          VW           WY           WZ        ) SFDT052
+C                                                                        SFDT053
+       VSUBXF(A1,A2,A3,A4,A5,A6)=(-COSF(A1)*COSF(A2))*A4+(SINF(A1)*      SFDT054
+     1       COSF(A3)-COSF(A1)*SINF(A2)*SINF(A3))*A5-(COSF(A1)*          SFDT055
+     2       SINF(A2)*COSF(A3)+SINF(A1)*SINF(A3))*A6                     SFDT056
+       VSUBYF(A1,A2,A3,A4,A5,A6)=(SINF(A1)*COSF(A2))*A4+(COSF(A1)*       SFDT057
+     1       COSF(A3)+SINF(A1)*SINF(A2)*SINF(A3))*A5+(SINF(A1)*          SFDT058
+     2       SINF(A2)*COSF(A3)-COSF(A1)*SINF(A3))*A6                     SFDT059
+       VSUBZF(A2,A3,A4,A5,A6)=SINF(A2)*A4-COSF(A2)*SINF(A3)*A5-          SFDT060
+     X       COSF(A2)*COSF(A3)*A6                                        SFDT061
+         T1P5F(P1,P2,P3) = .375*P1 - 1.25*P2 + 1.875*P3                  SFDT062
+         T2PTF(Q1,Q2,Q3) = Q1 - 3.*Q2 + 3.*Q3                            SFDT063
+C                                      PROGRAM CONSTANTS                 SFDT064
+        CONST(1) =1.0                                                    SFDT065
+        CONST(2) =1.0                                                    SFDT066
+        CONST(3) =0.5                                                    SFDT067
+        CONST(4) =0.0                                                    SFDT068
+        CONST(5) = 0.0                                                   SFDT069
+        CONST(6) = 1.0                                                   SFDT070
+        CONST(7) = 1.0                                                   SFDT071
+        PI=3.14159265                                                    SFDT072
+        CONVF=57.2957795                                                 SFDT073
+        RE=20855530.                                                     SFDT074
+        GO =32.174049                                                    SFDT075
+        VCM = 1050.0                                                     SFDT076
+         ASSIGN 17 TO NEXT                                               SFDT077
+         LOOP = 2                                                        SFDT078
+C                                      READ 10 MODEL CONSTANTS (CDS.1,2) SFDT079
+C                                      AND 9 JET VALUES (CDS. 3,4)       SFDT080
+   60    READ INPUT TAPE 7,100, WC,S,D,ZIX,ZIY,                          SFDT081
+     1                          ZIZ,ZIXZ,EP1,EP2,CASE,                   SFDT082
+     2                          ZKPJ,ZKQ,ZKRJ,ZLSP,ZMQ,                  SFDT083
+     3                          ZNR,FQ,FR,DELP                           SFDT084
+C                                                                        SFDT085
+C                                      READ 19 INITIAL CONDITIONS        SFDT086
+C                                      DATA CARDS 5,6,7,8                SFDT087
+         READ INPUT TAPE 7,114, XG(1),YG(1),ZG(1),P(1),Q(1),             SFDT088
+     1                          R(1),U(1),V(1),W(1),PR(1),               SFDT089
+     2                          T,DELTK,ZLLDEG,ZLDEG,BIGAD,              SFDT090
+     3                          GAMDEG,PHI1D,ADEG,BDEG                   SFDT091
+C                                                                        SFDT092
+C                                      READ 5 PROGRAM CONTROL CONSTANTS  SFDT093
+C                                      DATA CARD  9                      SFDT094
+      READ INPUT TAPE 7,113,KPCHI, FINALT, FINALM, FINALH, CASE1,DBUGK   SFDT095
+C                                                                        SFDT096
+C                                      READ ATMOSPHERIC DATA             SFDT097
+      READ INPUT TAPE 7,101,HW,VW,THW,ZMT                                SFDT098
+C                                                                        SFDT099
+C                                      READ AERODYNAMIC DATA             SFDT100
+         DO 42 I = 1,37                                                  SFDT101
+   42    READ INPUT TAPE 7, 112, (CAAD(I,J), J=1,12)                     SFDT102
+         DO 48 I = 1,37                                                  SFDT103
+   48    READ INPUT TAPE 7, 112, (CMAD(I,J), J=1,12)                     SFDT104
+         DO 55 I = 1,37                                                  SFDT105
+   55    READ INPUT TAPE 7, 112, (CNAD(I,J), J=1,12)                     SFDT106
+C                                      CALCULATE STEP SIZE               SFDT107
+         DELT = .0625*DELTK                                              SFDT108
+C                                      CONVERSION TO RADIANS             SFDT109
+         ZL   = ZLLDEG/CONVF                                             SFDT110
+         ZLAM = ZLDEG /CONVF                                             SFDT111
+         BIGA = BIGAD /CONVF                                             SFDT112
+         GAM  = GAMDEG/CONVF                                             SFDT113
+         PHI1 = PHI1D /CONVF                                             SFDT114
+         A    = ADEG  /CONVF                                             SFDT115
+         B    = BDEG  /CONVF                                             SFDT116
+         SI = SINF(BIGA)                                                 SFDT117
+         CI = COSF(BIGA)                                                 SFDT118
+         SB = SINF(B)                                                    SFDT119
+         CB = COSF(B)                                                    SFDT120
+         SH = SINF(PHI1)                                                 SFDT121
+         CH = COSF(PHI1)                                                 SFDT122
+         SG = SINF(GAM)                                                  SFDT123
+         CG = COSF(GAM)                                                  SFDT124
+         SA = SINF(A)                                                    SFDT125
+         CA = COSF(A)                                                    SFDT126
+         SD = SINF(ZLAM)                                                 SFDT127
+         CD = COSF(ZLAM)                                                 SFDT128
+         SL = SINF(ZL)                                                   SFDT129
+         CL = COSF(ZL)                                                   SFDT130
+C                                      CALCULATION OF INITIAL CONDITIONS SFDT131
+         DIFF = RE - ZG(1)                                               SFDT132
+         X(1) = DIFF*CL*CD                                               SFDT133
+         Y(1) = DIFF*CL*SD                                               SFDT134
+         Z(1) = DIFF*SL                                                  SFDT135
+C                                      CALCULATION OF EULER ANGLES,      SFDT136
+C                                                PSI, THETA, PHI         SFDT137
+C                                      MATRIX PRODUCT T4, T5             SFDT138
+         B11 =CB*CA*CI*CG + CA*SB*(CI*SG*SH-SI*CH)-SA*(CI*SG*CH+SI*SH)   SFDT139
+         B12 =  -SB*CI*CG +    CB*(CI*SG*SH-SI*CH)                       SFDT140
+         B13 =CB*SA*CI*CG + SA*SB*(CI*SG*SH-SI*CH)+CA*(CI*SG*CH+SI*SH)   SFDT141
+         B21 =CB*CA*SI*CG + CA*SB*(SI*SG*SH+CI*CH)-SA*(SI*SG*CH-CI*SH)   SFDT142
+         B31 =CB*CA*(-SG) + CA*SB*CG*SH-SA*CG*CH                         SFDT143
+         B32 =   SB*  SG  +    CB*CG*SH                                  SFDT144
+         B33 =CB*SA*(-SG) + SA*SB*CG*SH+CA*CG*CH                         SFDT145
+C                                      MATRIX PRODUCT T2,T3INV,T4,T5     SFDT146
+         C11 =-B11*CD*SL - B21*SD+ B31*CL*CD                             SFDT147
+         C21 = B11*SD*SL - B21*CD- B31*SD*CL                             SFDT148
+         C31 = B11*CL + B31*SL                                           SFDT149
+         C32 = B12*CL + B32*SL                                           SFDT150
+         C33 = B13*CL + B33*SL                                           SFDT151
+C                                      REDUCTION OF EULER ANGLES         SFDT152
+         PS(1)= ATANF(C21/C11)                                           SFDT153
+         PH(1)= ATANF(C32/C33)                                           SFDT154
+         VAL1 = -C31                                                     SFDT155
+         VAL2 = ((-C31/C32)*SINF(PH(1)))                                 SFDT156
+         TH(1)= ATANF(ABSF(VAL2))                                        SFDT157
+   49    IF(VAL1) 53, 74, 74                                             SFDT158
+   53    IF(VAL2) 73, 72, 72                                             SFDT159
+   72    TH(1) = TH(1) + PI                                              SFDT160
+           GO TO 76                                                      SFDT161
+   73    TH(1)=2.0*PI - TH(1)                                            SFDT162
+           GO TO 76                                                      SFDT163
+   74    IF(VAL2) 75, 76, 76                                             SFDT164
+   75    TH(1) = PI - TH(1)                                              SFDT165
+C                                                                        SFDT166
+   76    IF (C11) 200, 201, 201                                          SFDT167
+  200    IF (C21) 202, 203, 203                                          SFDT168
+  202    PS(1) = PS(1) - PI                                              SFDT169
+           GO TO 201                                                     SFDT170
+  203    PS(1) = PS(1) + PI                                              SFDT171
+C                                                                        SFDT172
+  201    IF (C33) 204, 205, 205                                          SFDT173
+  204    IF (C32) 206, 207, 207                                          SFDT174
+  206    PH(1) = PH(1) - PI                                              SFDT175
+           GO TO 205                                                     SFDT176
+  207    PH(1) = PH(1) + PI                                              SFDT177
+  205    IF (CASE1 - CASE) 83, 83, 82                                    SFDT178
+   82    READ INPUT TAPE 7, 114, PS(1),TH(1),PH(1),RG(1),UDOT(1),        SFDT179
+     X                       VDOT(1),WDOT(1),PDOT(1),QDOT(1),RDOT(1)     SFDT180
+C                                      CONVERSION TO DEGREES FOR OUTPUT  SFDT181
+   83    PSDEG = PS(1)*CONVF                                             SFDT182
+         THDEG = TH(1)*CONVF                                             SFDT183
+         PHDEG = PH(1)*CONVF                                             SFDT184
+C                            PRINT OUT INPUT DATA AND INITIAL CONDITIONS SFDT185
+      WRITE OUTPUT TAPE 6, 108, CASE1                                    SFDT186
+      WRITE OUTPUT TAPE 6, 109,WC,S,D,ZIX,ZIY,ZIZ,EP1,EP2,ZIXZ           SFDT187
+      WRITE OUTPUT TAPE 6, 110,ZKPJ,ZKQ,ZKRJ,ZLSP,ZMQ,ZNR,FQ,FR,DELP     SFDT188
+      WRITE OUTPUT TAPE 6, 111, X(1),Y(1),Z(1),XG(1),YG(1),ZG(1),PSDEG,  SFDT189
+     1THDEG,PHDEG,P(1),Q(1),R(1),U(1),V(1),W(1),ADEG,BDEG,PR(1),T,DELT,  SFDT190
+     2PHI1D,ZLLDEG,ZLDEG ,BIGAD,GAMDEG                                   SFDT191
+C                                      PRINT OUT DATA HEADINGS           SFDT192
+      WRITE OUTPUT TAPE 6,107, CASE1                                     SFDT193
+      WRITE OUTPUT TAPE 6,103                                            SFDT194
+      WRITE OUTPUT TAPE 6,104                                            SFDT195
+      WRITE OUTPUT TAPE 6,105                                            SFDT196
+      WRITE OUTPUT TAPE 6,106                                            SFDT197
+         IF (DBUGK-0.5) 40,40,18                                         SFDT198
+   18    WRITE OUTPUT TAPE 6, 116                                        SFDT199
+         WRITE OUTPUT TAPE 6, 117                                        SFDT200
+   40   ASSIGN 16 TO NN                                                  SFDT201
+C                                      START OF MAIN PROGRAM LOOP        SFDT202
+C                                      INITIAL CALCULATIONS              SFDT203
+   25    H = -ZG(1)                                                      SFDT204
+         G = GO*(RE/(RE+H))**2                                           SFDT205
+         ZL= ATANF(Z(1)/SQRTF(X(1)**2+Y(1)**2))                          SFDT206
+         ZLAM = ATANF(Y(1)/X(1))                                         SFDT207
+   81    IF (X(1)) 3, 39, 39                                             SFDT208
+    3    IF (Y(1)) 5, 6, 6                                               SFDT209
+    5    ZLAM = ZLAM - PI                                                SFDT210
+           GO TO 39                                                      SFDT211
+    6    ZLAM = ZLAM + PI                                                SFDT212
+C                                      DETERMINE ATMOSPHERIC PROPERTIES  SFDT213
+   39    RHO = EXPF((-2.2525+H*(-2.4243E-5+H*1.2636E-11))*2.3025851)     SFDT214
+         PC = EXPF((3.5289+H*(-2.3666E-5+H*1.3054E-11))*2.3025851)       SFDT215
+C                                      DETERMINE SONIC VELOCITY          SFDT216
+   19    IF(H-400000.) 14,15,15                                          SFDT217
+   15    GO TO NN,(16,41)                                                SFDT218
+   16    VC = VCM                                                        SFDT219
+         ASSIGN 41 TO NN                                                 SFDT220
+         GO TO 41                                                        SFDT221
+   14    VC = SQRTF(1.4*PC/RHO)                                          SFDT222
+C                                      TRANSFORMATION OF AXIS SYSTEM     SFDT223
+   41    SS = SINF(PS(1))                                                SFDT224
+         CS = COSF(PS(1))                                                SFDT225
+         SP = SINF(PH(1))                                                SFDT226
+         CP = COSF(PH(1))                                                SFDT227
+         ST = SINF(TH(1))                                                SFDT228
+         CT = COSF(TH(1))                                                SFDT229
+         SD = SINF(ZLAM)                                                 SFDT230
+         CD = COSF(ZLAM)                                                 SFDT231
+         SL = SINF(ZL)                                                   SFDT232
+         CL = COSF(ZL)                                                   SFDT233
+                   F1 = SS*CP-CS*ST*SP                                   SFDT234
+                   F2 = SS*ST*SP+CS*CP                                   SFDT235
+                   F3 = SS*SP+CS*ST*CP                                   SFDT236
+                   F4 = SS*ST*CP-CS*SP                                   SFDT237
+                   F5 = CD*CL                                            SFDT238
+                   F6 = CD*SL                                            SFDT239
+                   F7 = SD*CL                                            SFDT240
+                   F8 = SD*SL                                            SFDT241
+         VX = VSUBXF(PS(1),TH(1),PH(1),U(1),V(1),W(1))                   SFDT242
+         VY = VSUBYF(PS(1),TH(1),PH(1),U(1),V(1),W(1))                   SFDT243
+         VZ = VSUBZF(TH(1),PH(1),U(1),V(1),W(1))                         SFDT244
+      WX=WC*(CS*CT*F5-SS*CT*F7-ST*SL)                                    SFDT245
+      WY=WC*(-F1*F5-F2*F7+CT*SP*SL)                                      SFDT246
+      WZ=WC*(F3*F5-F4*F7+CT*CP*SL)                                       SFDT247
+         VXG = F6*VX+F8*VY-CL*VZ                                         SFDT248
+         VYG = SD*VX-CD*VY                                               SFDT249
+         VZG =-F5*VX-F7*VY-SL*VZ                                         SFDT250
+C                                      FIND WIND VELOCITY AND DIRECTION  SFDT251
+                   DO 50 I = 1,4                                         SFDT252
+   56              IF (H - HW(I)) 51, 51, 50                             SFDT253
+   50              CONTINUE                                              SFDT254
+                   I = 4                                                 SFDT255
+   51              F = (H - HW(I-1))/(HW(I) - HW(I-1))                   SFDT256
+                   VWK= VW(I-1) + F*(VW(I) - VW(I-1))                    SFDT257
+                   THWK=(THW(I-1) + F*(THW(I) - THW(I-1)))/CONVF         SFDT258
+C                                                                        SFDT259
+         VCAP  = SQRTF(VXG**2 + VYG**2 + VZG**2)                         SFDT260
+         ZLAMC = PI + ATANF(VYG/VXG)                                     SFDT261
+         GAM  =-(ATANF(VZG/SQRTF(VCAP**2-VZG**2)))                       SFDT262
+C                                                                        SFDT263
+         VBXG = VXG - VWK* COSF(THWK)                                    SFDT264
+         VBYG = VYG - VWK* SINF(THWK)                                    SFDT265
+         VBZG = VZG                                                      SFDT266
+C                                                                        SFDT267
+         A11 = -CS*CT*F6 + SS*CT*F8 -ST*CL                               SFDT268
+         A12 = -CS*CT*SD - SS*CT*CD                                      SFDT269
+         A13 =  CS*CT*F5 - SS*CT*F7 -ST*SL                               SFDT270
+         A21 =  F1*F6    + F2*F8 +CT*SP*CL                               SFDT271
+         A22 =  F1*SD    - F2*CD                                         SFDT272
+         A23 = -F1*F5    - F2*F7 +CT*SP*SL                               SFDT273
+         A31 = -F3*F6    + F4*F8 +CT*CP*CL                               SFDT274
+         A32 = -F3*SD    - F4*CD                                         SFDT275
+         A33 =  F3*F5    - F4*F7 +CT*CP*SL                               SFDT276
+C                                                                        SFDT277
+         UB = A11 * VBXG + A12 * VBYG + A13 * VBZG                       SFDT278
+         VB = A21 * VBXG + A22 * VBYG + A23 * VBZG                       SFDT279
+         WB = A31 * VBXG + A32 * VBYG + A33 * VBZG                       SFDT280
+C                                      CALCULATE PHOEBE                  SFDT281
+         PHIB = ATANF(VB/WB)                                             SFDT282
+         IF (WB) 4, 7, 7                                                 SFDT283
+    4    IF (VB) 8, 9, 9                                                 SFDT284
+    8    PHIB = PHIB - PI                                                SFDT285
+           GO TO 7                                                       SFDT286
+    9    PHIB = PHIB + PI                                                SFDT287
+C                                                                        SFDT288
+    7    VCAPB = SQRTF(UB**2 + VB**2 + WB**2)                            SFDT289
+         ZMB   = VCAPB/VC                                                SFDT290
+         QB    = .5*RHO*VCAPB**2                                         SFDT291
+C                                      ALPHA, BETA, ETA CALCULATION      SFDT292
+         A = ATANF(WB/UB)                                                SFDT293
+         B = ATANF(VB/UB)                                                SFDT294
+         IF (UB) 44, 45, 45                                              SFDT295
+   44    IF (WB) 57, 66, 66                                              SFDT296
+   57    A = A - PI                                                      SFDT297
+           GO TO 68                                                      SFDT298
+   66    A = A + PI                                                      SFDT299
+   68    IF (VB) 69, 77, 77                                              SFDT300
+   69    B = B - PI                                                      SFDT301
+           GO TO 45                                                      SFDT302
+   77    B = B + PI                                                      SFDT303
+   45    ROOT = SQRTF(VB**2 + WB**2)                                     SFDT304
+         ETAN  = ATANF(ROOT/UB)                                          SFDT305
+         IF (UB) 78, 79, 79                                              SFDT306
+   78    ETAN = ETAN+ PI                                                 SFDT307
+   79    IF (ABSF(ETAN-ETA) - 1.0) 1,2,2                                 SFDT308
+    1    ZNDOT = (ETAN - ETA)/DELT                                       SFDT309
+    2    ETA = ETAN                                                      SFDT310
+C                                     DETERMINE AERODYNAMIC COEFFICIENTS SFDT311
+         ARG = ETA*CONVF                                                 SFDT312
+         ETAT(1) = 0.0                                                   SFDT313
+         DO 71 I=1,37                                                    SFDT314
+   67    IF (ARG-ETAT(I)) 70,71,71                                       SFDT315
+   71    ETAT(I+1) = ETAT(I) + 5.0                                       SFDT316
+   70    IF (I-37) 61,62,62                                              SFDT317
+   62         I=36                                                       SFDT318
+   61    ETAFR = (ARG-ETAT(I-1))/5.0                                     SFDT319
+           DO 47 J = 1,12                                                SFDT320
+   58      IF (ZMB - ZMT(J)) 46, 47, 47                                  SFDT321
+   47      CONTINUE                                                      SFDT322
+   46    D1 = (ETAFR-1.)/2.                                              SFDT323
+         D2 = ETAFR-2.                                                   SFDT324
+         AF1 = D1*D2                                                     SFDT325
+         AF2 = -ETAFR*D2                                                 SFDT326
+         AF3 = ETAFR*D1                                                  SFDT327
+C                                      INTERPOLATE ON ANGLES (3-POINT)   SFDT328
+           DO 87 LK=1,3                                                  SFDT329
+           JM=J-2+LK                                                     SFDT330
+      ALF(1,LK)=AF1*CAAD(I-1,JM)+AF2*CAAD(I,JM)+AF3*CAAD(I+1,JM)         SFDT331
+      ALF(2,LK)=AF1*CMAD(I-1,JM)+AF2*CMAD(I,JM)+AF3*CMAD(I+1,JM)         SFDT332
+   87 ALF(3,LK)=AF1*CNAD(I-1,JM)+AF2*CNAD(I,JM)+AF3*CNAD(I+1,JM)         SFDT333
+   85      IF (J-12) 63,64,64                                            SFDT334
+   64      CAN = ALF(1,2)                                                SFDT335
+           CMN = ALF(2,2)                                                SFDT336
+           CRN = ALF(3,2)                                                SFDT337
+              GO TO 80                                                   SFDT338
+C                                 LAGRANGIAN INTERPOLATION ON MACH NO.   SFDT339
+   63      DO 84 LK=1,3                                                  SFDT340
+        EFN(LK,1) = (ZMB-ZMT(J  ))*(ZMB-ZMT(J+1))*ALF(LK,1)              SFDT341
+        EFN(LK,2) = (ZMB-ZMT(J-1))*(ZMB-ZMT(J+1))*ALF(LK,2)              SFDT342
+        EFN(LK,3) = (ZMB-ZMT(J-1))*(ZMB-ZMT(J  ))*ALF(LK,3)              SFDT343
+         FD(LK,1) = (ZMT(J-1)-ZMT(J  ))*(ZMT(J-1)-ZMT(J+1))              SFDT344
+         FD(LK,2) = (ZMT(J  )-ZMT(J-1))*(ZMT(J  )-ZMT(J+1))              SFDT345
+   84    FD(LK,3) = (ZMT(J+1)-ZMT(J-1))*(ZMT(J+1)-ZMT(J  ))              SFDT346
+         CAN =EFN(1,1)/FD(1,1)+EFN(1,2)/FD(1,2)+EFN(1,3)/FD(1,3)         SFDT347
+         CMN =EFN(2,1)/FD(2,1)+EFN(2,2)/FD(2,2)+EFN(2,3)/FD(2,3)         SFDT348
+         CRN =EFN(3,1)/FD(3,1)+EFN(3,2)/FD(3,2)+EFN(3,3)/FD(3,3)         SFDT349
+C                                                                        SFDT350
+   80    IF (ZMB - 9.0) 300, 301, 301                                    SFDT351
+  300    IF (ZMB - 5.0) 302, 303, 303                                    SFDT352
+  302    IF (ZMB - 3.0) 304, 305, 305                                    SFDT353
+  304    IF (ZMB - 1.0) 306, 307, 307                                    SFDT354
+  301    CMQ =-.65                                                       SFDT355
+           GO TO 308                                                     SFDT356
+  303    CMQ =-.65 + (9.0 - ZMB)*.025                                    SFDT357
+           GO TO 308                                                     SFDT358
+  305    CMQ =-.55 + (5.0 - ZMB)*.075                                    SFDT359
+           GO TO 308                                                     SFDT360
+  307    CMQ =-.40 + (3.0 - ZMB)*.105                                    SFDT361
+           GO TO 308                                                     SFDT362
+  308    CNR = CMQ                                                       SFDT364
+  306    CMQ =-.19 + (1.0 - ZMB)*.19                                     SFDT363
+           CMNDOT = 0.0                                                  SFDT365
+           CLP =-0.001                                                   SFDT366
+C                                      CHECK REACTION JET CONTROLS       SFDT367
+C                                                ROLL                    SFDT368
+   24    IF (P(1) -(ZKPJ+DELP)) 26, 28, 28                               SFDT369
+   26    IF (P(1) -(ZKPJ-DELP))128,128, 27                               SFDT370
+   28    ZK1 = -1.0                                                      SFDT371
+         GO TO 29                                                        SFDT372
+  128    ZK1 =  1.0                                                      SFDT373
+         GO TO 29                                                        SFDT374
+   27      ZK1 = 0.0                                                     SFDT375
+C                                                PITCH                   SFDT376
+   29    IF (R(1) -ZKRJ) 30,30,31                                        SFDT377
+   31    IF (R(1)) 32,33,33                                              SFDT378
+   32      ZK3 = 1.0                                                     SFDT379
+           GO TO 34                                                      SFDT380
+   33      ZK3 = -1.0                                                    SFDT381
+           GO TO 34                                                      SFDT382
+   30      ZK3 = 0.0                                                     SFDT383
+C                                                YAW                     SFDT384
+   34    IF (Q(1) - ZKQ) 35,35,36                                        SFDT385
+   36    IF (Q(1)) 37,38,38                                              SFDT386
+   37      ZK2 = 1.0                                                     SFDT387
+           GO TO 23                                                      SFDT388
+   38      ZK2 = -1.0                                                    SFDT389
+           GO TO 23                                                      SFDT390
+   35      ZK2 = 0.0                                                     SFDT391
+C                                      CALCULATION OF EXTERNAL MOMENTS   SFDT392
+   23    DV = D/(2.*VCAPB)                                               SFDT393
+         SNP = VB/ROOT                                                   SFDT394
+         CSP = WB/ROOT                                                   SFDT395
+         QSD = QB*S*D                                                    SFDT396
+         CMND= CMNDOT*ZNDOT*DV                                           SFDT397
+   13    ZLS1=ZLS2                                                       SFDT398
+         ZLS2=ZLS3                                                       SFDT399
+         ZM1=ZM2                                                         SFDT400
+         ZM2=ZM3                                                         SFDT401
+         ZN1=ZN2                                                         SFDT402
+         ZN2=ZN3                                                         SFDT403
+         SMX1=SMX2                                                       SFDT404
+         SMX2=SMX3                                                       SFDT405
+         SMY1=SMY2                                                       SFDT406
+         SMY2=SMY3                                                       SFDT407
+         SMZ1=SMZ2                                                       SFDT408
+         SMZ2=SMZ3                                                       SFDT409
+C                                                                        SFDT410
+      ZLS(1) = (CLP*P(1)*DV+CRN*EP1*SNP/D+CRN*CSP*EP2/D)*QSD+ZLSP*ZK1    SFDT411
+      ZM(1)  = (CAN*EP1/D+CMN*CSP+CMQ*Q(1)*DV+CMND*CSP)*QSD+ZMQ*ZK2      SFDT412
+      ZN(1)  = (CAN*EP2/D-CMN*SNP+CNR*R(1)*DV-CMND*SNP)*QSD+ZNR*ZK3      SFDT413
+C                                      CALCULATION OF EXTERNAL FORCES    SFDT414
+         FA = -CAN*QB*S                                                  SFDT415
+         FY = -CRN*QB*S*SNP + FR*ZK3                                     SFDT416
+         FN = -CRN*QB*S*CSP + FQ*ZK2                                     SFDT417
+         SMX(1) = (WX+FA)*G                                              SFDT418
+         SMY(1) = (WY+FY)*G                                              SFDT419
+         SMZ(1) = (WZ+FN)*G                                              SFDT420
+         ZLS3=ZLS(1)                                                     SFDT421
+         ZM3=ZM(1)                                                       SFDT422
+         ZN3=ZN(1)                                                       SFDT423
+         SMX3=SMX(1)                                                     SFDT424
+         SMY3=SMY(1)                                                     SFDT425
+         SMZ3=SMZ(1)                                                     SFDT426
+C                                      CALCULATION OF LOAD FACTORS       SFDT427
+         AX = FA/WC                                                      SFDT428
+         AY =-FY/WC                                                      SFDT429
+         AZ = FN/WC                                                      SFDT430
+         IF (LOOP) 11, 11, 12                                            SFDT431
+   12    LOOP = LOOP - 1                                                 SFDT432
+              GO TO 13                                                   SFDT433
+   11    GO TO NEXT, (17,59)                                             SFDT434
+   17    ASSIGN 59 TO NEXT                                               SFDT435
+         LOOP = 2                                                        SFDT436
+              GO TO 59                                                   SFDT437
+C                                      OUTPUT CONTROL                    SFDT438
+   59    IF (KPCH - 1) 52, 52, 54                                        SFDT439
+   52    KPCH = KPCHI                                                    SFDT440
+C                                      CONVERSION TO DEGREES FOR OUTPUT  SFDT441
+           PSDEG = CONVF*PS(1)                                           SFDT442
+           THDEG = CONVF*TH(1)                                           SFDT443
+           PHDEG = CONVF*PH(1)                                           SFDT444
+           ADEG  = CONVF*A                                               SFDT445
+           BDEG  = CONVF*B                                               SFDT446
+           GAMDEG= CONVF*GAM                                             SFDT447
+           ZLDEG = CONVF*ZLAM                                            SFDT448
+           ZLCDEG= CONVF*ZLAMC                                           SFDT449
+           ETADEG= CONVF*ETA                                             SFDT450
+           ZLLDEG= CONVF*ZL                                              SFDT451
+           PHIBD = PHIB * CONVF                                          SFDT452
+           K1 = ZK1                                                      SFDT453
+           K2 = ZK2                                                      SFDT454
+           K3 = ZK3                                                      SFDT455
+C                                                                        SFDT456
+         WRITE OUTPUT TAPE 6, 102,                                       SFDT457
+     1    T,     H,  ADEG,AX,P(1),PDOT(1),PSDEG,ZLLDEG,UDOT(1),K1,       SFDT458
+     2  ZMB, RG(1),  BDEG,AY,Q(1),QDOT(1),THDEG, ZLDEG,VDOT(1),K2,       SFDT459
+     3   QB,GAMDEG,ETADEG,AZ,R(1),RDOT(1),PHDEG,ZLCDEG,WDOT(1),K3,       SFDT460
+     4VCAPB, ZN(1), PHIBD,UB,  VB,     WB,PR(1),  VCAP,  ZM(1)           SFDT461
+C                                      OPTIONAL TWO-LINE PRINT OUT       SFDT462
+   10    IF (DBUGK- 0.5) 86, 86, 98                                      SFDT463
+   98    WRITE OUTPUT TAPE 6, 115,                                       SFDT464
+     1             VC,CAN,CMN,CRN,CMQ,ZLS(1),PSDOT(1),THDOT(1),WX,       SFDT465
+     2             FA, FY, FN, PC, RHO, THWK, VWK, WY, WZ                SFDT466
+C                                                                        SFDT467
+C                                      TEST FOR END                      SFDT468
+   86    IF (SENSE SWITCH 6)122,125                                      SFDT469
+  125    IF (ZMB-FINALM) 22, 21, 21                                      SFDT470
+   21    IF (T  -FINALT) 43, 43, 22                                      SFDT471
+   43    IF (H  -FINALH) 22, 65, 65                                      SFDT472
+  122         PAUSE 77777                                                SFDT473
+C                                      DUMP FOR RESTART (6 CARDS)        SFDT474
+   22    PUNCH 114,  XG(1), YG(1), ZG(1),P(1),Q(1),R(1),U(1),V(1),W(1),  SFDT475
+     1               PR(1),T,DELTK,ZLLDEG,ZLDEG,BIGA,GAMDEG,PHI1,        SFDT476
+     2               ADEG,BDEG,BDEG,                                     SFDT477
+     3               PS(1),TH(1),PH(1),RG(1),UDOT(1),                    SFDT478
+     4               VDOT(1),WDOT(1),PDOT(1),QDOT(1),RDOT(1)             SFDT479
+              GO TO 60                                                   SFDT480
+C                                                                        SFDT481
+   54    KPCH = KPCH - 1                                                 SFDT482
+C                                      MODIFIED RUNGE-KUTTA INTEGRATION  SFDT483
+   65    DO 20 K=1,4                                                     SFDT484
+           SINP = SINF(PH(K))                                            SFDT485
+           COSP = COSF(PH(K))                                            SFDT486
+      PDOT(K)=((ZLS(K)*ZIZ+ZN(K)*ZIXZ+P(K)*Q(K)*(ZIX-ZIY+ZIZ)*ZIXZ       SFDT487
+     X     +Q(K)*R(K)*(ZIY*ZIZ-ZIZ**2-ZIXZ**2))/(ZIX*ZIZ-ZIXZ**2))*DELT  SFDT488
+      QDOT(K)=((ZM(K)+P(K)*R(K)*(ZIZ-ZIX)+(R(K)**2-P(K)**2)*ZIXZ)/ZIY)   SFDT489
+     X     *DELT                                                         SFDT490
+      RDOT(K)=((ZN(K)*ZIX+ZLS(K)*ZIXZ+P(K)*Q(K)*(ZIX**2+ZIXZ**2-ZIX*ZIY) SFDT491
+     X     +Q(K)*R(K)*(ZIY-ZIX-ZIZ)*ZIXZ)/(ZIX*ZIZ-ZIXZ**2))*DELT        SFDT492
+      PSDOT(K)=((Q(K)*SINP+R(K)*COSP)/COSF(TH(K)))*DELT                  SFDT493
+      THDOT(K)=(Q(K)*COSP-R(K)*SINP)*DELT                                SFDT494
+      PHDOT(K)=(P(K)*DELT+PSDOT(K)*SINF(TH(K)))                          SFDT495
+      UDOT(K)=(SMX(K)/WC-W(K)*Q(K)+V(K)*R(K))*DELT                       SFDT496
+      VDOT(K)=(SMY(K)/WC-U(K)*R(K)+W(K)*P(K))*DELT                       SFDT497
+      WDOT(K)=(SMZ(K)/WC-V(K)*P(K)+U(K)*Q(K))*DELT                       SFDT498
+      XDOT(K)=(VSUBXF(PS(K),TH(K),PH(K),U(K),V(K),W(K)))*DELT            SFDT499
+      YDOT(K)=(VSUBYF(PS(K),TH(K),PH(K),U(K),V(K),W(K)))*DELT            SFDT500
+      ZDOT(K)=(VSUBZF(TH(K),PH(K),U(K),V(K),W(K)))*DELT                  SFDT501
+      XGDOT(K)=F6*XDOT(K)+F8*YDOT(K)-CL*ZDOT(K)                          SFDT502
+      YGDOT(K)=SD*XDOT(K)-CD*YDOT(K)                                     SFDT503
+      ZGDOT(K)=(-F5*XDOT(K) - F7*YDOT(K) - SL*ZDOT(K))                   SFDT504
+      PRDOT(K)=P(K)*DELT                                                 SFDT505
+      RGDOT(K)=SQRTF(XGDOT(K)**2 + YGDOT(K)**2)*(RE/(RE+H))              SFDT506
+C                                                                        SFDT507
+         P (K+1) = P (1) + P DOT(K) / (2.* CONST(K))                     SFDT508
+         Q (K+1) = Q (1) + Q DOT(K) / (2.* CONST(K))                     SFDT509
+         R (K+1) = R (1) + R DOT(K) / (2.* CONST(K))                     SFDT510
+         PS(K+1) = PS(1) + PSDOT(K) / (2.* CONST(K))                     SFDT511
+         TH(K+1) = TH(1) + THDOT(K) / (2.* CONST(K))                     SFDT512
+         PH(K+1) = PH(1) + PHDOT(K) / (2.* CONST(K))                     SFDT513
+         U (K+1) = U (1) + U DOT(K) / (2.* CONST(K))                     SFDT514
+         V (K+1) = V (1) + V DOT(K) / (2.* CONST(K))                     SFDT515
+         W (K+1) = W (1) + W DOT(K) / (2.* CONST(K))                     SFDT516
+C                                                                        SFDT517
+         KKK=8-K                                                         SFDT518
+         C1=CONST(KKK)                                                   SFDT519
+         C2=CONST(K+3)                                                   SFDT520
+         ZLS(K+1)=T1P5F(ZLS1,ZLS2,ZLS3)*C1+T2PTF(ZLS1,ZLS2,ZLS3)*C2      SFDT521
+         ZM (K+1)=T1P5F(ZM1,ZM2,ZM3)*C1+T2PTF(ZM1,ZM2,ZM3)*C2            SFDT522
+         ZN (K+1)=T1P5F(ZN1,ZN2,ZN3)*C1+T2PTF(ZN1,ZN2,ZN3)*C2            SFDT523
+         SMX(K+1)=T1P5F(SMX1,SMX2,SMX3)*C1+T2PTF(SMX1,SMX2,SMX3)*C2      SFDT524
+         SMY(K+1)=T1P5F(SMY1,SMY2,SMY3)*C1+T2PTF(SMY1,SMY2,SMY3)*C2      SFDT525
+   20    SMZ(K+1)=T1P5F(SMZ1,SMZ2,SMZ3)*C1+T2PTF(SMZ1,SMZ2,SMZ3)*C2      SFDT526
+C                                                                        SFDT527
+        P (1) = P (1)+ (PDOT(1) +2.*PDOT(2) +2.*PDOT (3)+PDOT (4))/6.    SFDT528
+        Q (1) = Q (1)+ (QDOT(1) +2.*QDOT(2) +2.*QDOT (3)+QDOT (4))/6.    SFDT529
+        R (1) = R (1)+ (RDOT(1) +2.*RDOT(2) +2.*RDOT (3)+RDOT (4))/6.    SFDT530
+        PS(1) = PS(1)+ (PSDOT(1)+2.*PSDOT(2)+2.*PSDOT(3)+PSDOT(4))/6.    SFDT531
+        TH(1) = TH(1)+ (THDOT(1)+2.*THDOT(2)+2.*THDOT(3)+THDOT(4))/6.    SFDT532
+        PH(1) = PH(1)+ (PHDOT(1)+2.*PHDOT(2)+2.*PHDOT(3)+PHDOT(4))/6.    SFDT533
+        U (1) = U (1)+ (UDOT(1) +2.*UDOT(2) +2.*UDOT (3)+UDOT (4))/6.    SFDT534
+        V (1) = V (1)+ (VDOT(1) +2.*VDOT(2) +2.*VDOT (3)+VDOT (4))/6.    SFDT535
+        W (1) = W (1)+ (WDOT(1) +2.*WDOT(2) +2.*WDOT (3)+WDOT (4))/6.    SFDT536
+        X (1) = X (1)+ (XDOT(1) +2.*XDOT(2) +2.*XDOT (3)+XDOT (4))/6.    SFDT537
+        Y (1) = Y (1)+ (YDOT(1) +2.*YDOT(2) +2.*YDOT (3)+YDOT (4))/6.    SFDT538
+        Z (1) = Z (1)+ (ZDOT(1) +2.*ZDOT(2) +2.*ZDOT (3)+ZDOT (4))/6.    SFDT539
+        ZG(1) = ZG(1)+ (ZGDOT(1)+2.*ZGDOT(2)+2.*ZGDOT(3)+ZGDOT(4))/6.    SFDT540
+        PR(1) = PR(1)+ (PRDOT(1)+2.*PRDOT(2)+2.*PRDOT(3)+PRDOT(4))/6.    SFDT541
+        RG(1) = RG(1)+ (RGDOT(1)+2.*RGDOT(2)+2.*RGDOT(3)+RGDOT(4))/6.    SFDT542
+C                                                                        SFDT543
+           PDOT(1) = PDOT(1)/DELT                                        SFDT544
+           QDOT(1) = QDOT(1)/DELT                                        SFDT545
+           RDOT(1) = RDOT(1)/DELT                                        SFDT546
+           UDOT(1) = UDOT(1)/DELT                                        SFDT547
+           VDOT(1) = VDOT(1)/DELT                                        SFDT548
+           WDOT(1) = WDOT(1)/DELT                                        SFDT549
+           T = T + DELT                                                  SFDT550
+           GO TO 25                                                      SFDT551

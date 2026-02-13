@@ -1,0 +1,1870 @@
+       REM CAPACITATED NETWORK FLOW PROGRAM                       CD    CNF10000
+       REM COMMON STORAGE AND DEFINITION OF SYMBOLS               CD    CNF10001
+       REM  THIS SECTION MUST BE PLACED AT END OF SECOND PART OF  CD  MICNF10002
+       REM  OUTPUT PROGRAM AFTER ASSEMBLY                         CD  MICNF10003
+ TNR   EQU 4                 TAPE 4 USED FOR PROBLEM DATA         CD  MICNF10004
+ TNP   EQU 7                 TAPE 7 USED FOR PROGRAM TAPE         CD  MICNF10005
+ WPTS  EQU 0                                                      CD  MICNF10006
+ COST1 SYN 8                                                      CD  MICNF10007
+ COST2 SYN 9                                                      CD  MICNF10008
+ COSTT SYN 10                                                     CD  MICNF10009
+       ORG 11                                                     CD  MICNF10010
+ LWC   OCT 000000777777                                           CD  MICNF10011
+ IP100 MZE                                                        CD  MICNF10012
+ IP001 PON                                                        CD  MICNF10014
+ IP110 MTW                                                        CD  MICNF10013
+ IPCD  BCD 100000/           / IN LAST CHARACTER                  CD  MICNF10015
+ RCFTA PZE RPTK+195          ADDRESS TO SET TRANSFER TO CFTA      CD  MICNF10016
+ STB   EQU RCFTA             STARTING BRANCH FOR NETWORK SEARCH   CD  MICNF10017
+ BETA  PZE                   STORAGE FOR BETA (INDEX 2)           CD  MICNF10018
+ Z2    PZE                   SATURATING BRANCH                    CD  MICNF10019
+ ALPHA SYN 19                                                     CD  MICNF10020
+ BCH   SYN 20                                                     CD  MICNF10021
+ BMAX  SYN 21                                                     CD  MICNF10022
+ NODE  SYN 22                                                     CD  MICNF10023
+ NMAX  SYN 23                                                     CD  MICNF10024
+ Q     SYN 24                                                     CD  MICNF10025
+ S     SYN 25                                                     CD  MICNF10026
+ M     SYN 26                                                     CD  MICNF10027
+ N     SYN 27                                                     CD  MICNF10028
+ CONT  SYN 28                                                     CD  MICNF10029
+ W     SYN 29                                                     CD  MICNF10030
+ STW   SYN 30                                                     CD  MICNF10031
+ STBT  EQU COSTT             STORAGE OF BRANCH TABLE ENTRY IN SM  CD  MICNF10032
+       REM NT1-NODES                                              CD  MICNF10033
+       REM BT5                                                    CD  MICNF10034
+       REM BT4                                                    CD  MICNF10035
+       REM BT3                                                    CD  MICNF10036
+       REM BT2                                                    CD  MICNF10037
+       REM BT1               ORIGIN OF BRANCH TABLES              CD  MICNF10038
+ NT1   EQU 0                                                      CD  MICNF10039
+ NODES EQU 0                                                      CD  MICNF10040
+ BT5   EQU 0                                                      CD  MICNF10041
+ BT4   EQU 0                                                      CD  MICNF10042
+ BT3   EQU 0                                                      CD  MICNF10043
+ BT2   EQU 0                                                      CD  MICNF10044
+ BT1   EQU 0                                                      CD  MICNF10045
+       ORG 37                                                     CD  MICNF10046
+       OCT 77777             ORIGIN OF NODE TABLE NT1             CD  MICNF10047
+ RPTH  PZE                                                        CD  MICNF10048
+       REM READ PROGRAM FROM TAPE                                 CD  MICNF10049
+ RPTI  REW TNP               REWIND PROGRAM TAPE                  CD  MICNF10050
+       HPR 0                                                      CD  MICNF10051
+ RPT   RTB TNP               SELECT PROGRAM TAPE                  CD  MICNF10052
+       CLA RPTK              SET INITIAL ORIGIN                   CD  MICNF10053
+       STA RPTD              )                                    CD  MICNF10054
+ RPTA  CPY RPTG              READ CODE WORD                       CD  MICNF10055
+       TRA RPTB              )                                    CD  MICNF10056
+       HTR RPTI              END OF FILE                          CD  MICNF10057
+       TRA RPTJ              END OF RECORD                        CD  MICNF10058
+ RPTB  CLA RPTG                                                   CD  MICNF10059
+       LXD RPTG,2            SELECT QUANTITY TO BE INSERTED       CD  MICNF10060
+       LXA RPTG,1            LOAD NO. OF REGISTERS IN BLOCK       CD  MICNF10061
+       ACL RPTD              SET ORIGIN OF BLOCK                  CD  MICNF10062
+       CLM                                                        CD  MICNF10064
+       ACL RPTH,2                                                 CD  MICNF10065
+ RPTC  CAD RPTG              TRANSFER BLOCK TO CORE STORAGE       CD  MICNF10066
+       TRA RPTD              )                                    CD  MICNF10067
+       HTR RPTI              ) END OF FILE                        CD  MICNF10068
+       HTR RPTI              ) END OF RECORD                      CD  MICNF10069
+ RPTD  SLW 0,1               )                                    CD  MICNF10070
+       TNX RPTA,1,1          ) INDEX AND TEST                     CD  MICNF10071
+       CLM                   )                                    CD  MICNF10072
+       TRA RPTC              )                                    CD  MICNF10073
+ RPTG  PZE                                                        CD  MICNF10074
+ RPTJ  IOD                                                        CD  MICNF10075
+       RTT                                                        CD  MICNF10076
+       HTR RPTI                                                   CD  MICNF10077
+ RPTL  TRA RPTK+1                                                 CD  MICNF10078
+ IPEA  BCD 3PARITY TAPE CHECK                                     CD  MICNF10079
+ IPEB  BCD 3END OF FILE STOP                                      CD  MICNF10080
+ IPEC  BCD 4ERROR IN DATA ON CARD                                 CD  MICNF10081
+ LWN   OCT 377777777777                                           CD  MICNF10082
+ LWDEC OCT 077777000000                                           CD  MICNF10083
+ RPTK  PZE RPTK+1                                                 CD  MICNF10084
+       REM WRITE PROGRAM ON TAPE                                  WP  MICNF10085
+       ORG 3000              WRITE PROGRAM ON TAPE ORIGIN         WP  MICNF10086
+ PS    CLA PSCA              STORE TRANSFER TO START PROBLEM      WP  MICNF10087
+       STA WPTR-1            )                                    WP  MICNF10088
+       TRA WPT               )                                    WP  MICNF10089
+ PSTB  REW TNP               READ INPUT PROGRAM FROM TAPE         WP  MICNF10090
+       TRA RPT               )                                    WP  MICNF10091
+ PSCA  PZE PSTB              ADDRESS FOR WPT TRANSFER             WP  MICNF10092
+ WPA   REW TNP               REWIND PROGRAM TAPE                  WP  MICNF10093
+ WPT   WTB TNP               SELECT PROGRAM TAPE                  WP  MICNF10094
+       CLA WPTK              SET INITIAL ORIGIN                   WP  MICNF10095
+       STA WPTJ              )                                    WP  MICNF10096
+       STO WPTH              FOR FIRST CODE WORD                  WP  MICNF10097
+       LXD WPTJ,2            INITIALIZE FOR ADDRESS TABLE         WP  MICNF10098
+ WPTB  CAL WPTK+1,2          PICK UP ENTRY FROM ADDRESS TABLE     WP  MICNF10099
+       TZE WPTL              LAST BLOCK HAS BEEN WRITTEN          WP  MICNF10100
+       STA WPTE                                                   WP  MICNF10101
+       STA WPTM                                                   WP  MICNF10102
+       STA WPTA              FIND NO. IN BLOCK                    WP  MICNF10103
+       SUB WPTJ              )                                    WP  MICNF10104
+       PAX 0,1               SET TO WRITE BLOCK                   WP  MICNF10105
+       STA WPTH              INSERT ADDRESS SECTION OF CODE WORD  WP  MICNF10106
+       CPY WPTH              RECORD CODE WORD                     WP  MICNF10107
+       LXD WPTH,4                                                 WP  MICNF10108
+       SLW WPTH              STORE SIGN AND DEC. OF NXT CODE WD.  WP  MICNF10109
+       CAL WPTA              STORE NEW ORIGIN                     WP  MICNF10110
+       STA WPTJ              T                                    WP  MICNF10111
+       TXL WPTA,4,0          NO QUANTITY TO BE INSERTED           WP  MICNF10112
+       CLA WPTK,2                                                 WP  MICNF10113
+       CLM                   CLEAR ADDRESS                        WP  MICNF10114
+       TMI WPTM                                                   WP  MICNF10115
+ WPTE  STA 0,1               )                                    WP  MICNF10116
+ WPTA  CPY 0,1               WRITE BLOCK ON TAPE                  WP  MICNF10117
+       TIX WPTA,1,1          )                                    WP  MICNF10118
+       TXI WPTB,2,-1         INDEX ADDRESS TABLE                  WP  MICNF10119
+ WPTM  STD 0,1               CLEAR DECREMENT                      WP  MICNF10120
+       TRA WPTA                                                   WP  MICNF10121
+ WPTH  PZE 0                                                      WP  MICNF10122
+ WPTJ  PZE                   CURRENT ORIGIN                       WP  MICNF10123
+ WPTL  BST TNP               CHECK                                WP  MICNF10124
+       RTB TNP               )                                    WP  MICNF10125
+ WPTP  CPY WPTR              )                                    WP  MICNF10126
+       TRA WPTP              )                                    WP  MICNF10127
+       HTR WPTS              )                                    WP  MICNF10128
+       IOD                   )                                    WP  MICNF10129
+       RTT                   )                                    WP  MICNF10130
+       HTR WPTN              )                                    WP  MICNF10131
+       TRA WPTN              EXIT                                 WP  MICNF10132
+ WPTR  PZE                                                        WP  MICNF10133
+ WPTN  EQU 0                 TRANSFER TO BINARY CARD LOADER       WP  MICNF10134
+       WST 7,1               WRITE COMMON SYMBOL TABLE ON TAPE    WP  MICNF10135
+       REM  COMMON PART OF INPUT PROGRAM                          IC  MICNF10136
+       ORG RPTK+170          ORIGIN FOR COMMON INPUT PROGRAM      IC  MICNF10137
+ IPTA  TSX EDR,4             WRITE ERROR DESIGNATION              IC  MICNF10138
+       PZE IPEA,0,3          )PARITY TAPE CHECK                   IC  MICNF10139
+       HTR RTD               )STOP PROBLEM RUN                    IC  MICNF10140
+ IPTB  TSX EDR,4             WRITE ERROR DESIGNATION              IC  MICNF10141
+       PZE IPEB,0,3          )END FILE STOP                       IC  MICNF10142
+       HTR RTD               )STOP PROBLEM RUN                    IC  MICNF10143
+ IPTC  TSX EDR,4             WRITE ERROR DESIGNATION              IC  MICNF10144
+       PZE IPEC,0,4          )ERROR IN DATA ON CARD               IC  MICNF10145
+       HTR RTD               )STOP PROBLEM RUN                    IC  MICNF10146
+ TNX   EQU 3                                                      IC  MICNF10147
+ TNW   EQU 2                                                      IC  MICNF10148
+ IPCE  OCT 5                 5 IN LAST CHARACTER                  IC  MICNF10149
+ IPCF  BCD 100000*           * IN LAST CHARACTER                  IC  MICNF10150
+       REM ADVANCE OVER FIELD                                     IC  MICNF10151
+ AOF   SXD RWCC,1          SAVE IR 1                              IC  MICNF10152
+       LXA RWCB,1          PICK UP CHAR. INDEX                    IC  MICNF10153
+       PXD 0,1             )                                      IC  MICNF10154
+       SBM 1,4             DECREASE BY 6 N                        IC  MICNF10155
+       LXD RWCB,1          PICK UP BCD WORD INDEX                 IC  MICNF10156
+       TZE AOFB                                                   IC  MICNF10157
+ AOFA  TPL AOFC            CHAR. INDEX IN CORRECT RANGE           IC  MICNF10158
+ AOFB  ADD AOFD            INCREMENT CHAR. INDEX                  IC  MICNF10159
+       TXI AOFA,1,-1       INCREMENT WORD INDEX                   IC  MICNF10160
+ AOFC  SXD RWCB,1          STORE BCD INDICES                      IC  MICNF10161
+       ARS 18              )                                      IC  MICNF10162
+       STA RWCB            )                                      IC  MICNF10163
+       LXD RWCC,1          RESET IR 1                             IC  MICNF10164
+       TRA 2,4             RETURN                                 IC  MICNF10165
+ AOFD  PZE 0,,36                                                  IC  MICNF10166
+       REM  OBTAIN ONE CHARACTER                                  IC  MICNF10167
+ OCH   SXD RWCC,1          SAVE IR 1                              IC  MICNF10168
+       LXD RWCB,1          PICK UP WORD INDEX                     IC  MICNF10169
+       LDQ RWC,1           LOAD BCD WORD                          IC  MICNF10170
+       LXA RWCB,1          SELECT CHARACTER                       IC  MICNF10171
+       RQL 36,1            )                                      IC  MICNF10172
+       TNX OCHA,1,6        ADVANCE CHARACTER INDEX                IC  MICNF10173
+       PXD 0,1             STORE CHARACTER INDEX                  IC  MICNF10174
+       ARS 18              )                                      IC  MICNF10175
+ OCHC  STA RWCB            )                                      IC  MICNF10176
+       LXD RWCC,1          RESET IR 1                             IC  MICNF10177
+       CLM                 PLACE CHARACTER IN ACCUMLATOR          IC  MICNF10178
+       LGL 6               )                                      IC  MICNF10179
+       TRA 1,4               RETURN                               IC  MICNF10180
+ OCHA  LXD RWCB,1          ADVANCE BCD WORD INDEX                 IC  MICNF10181
+       TXI OCHB,1,-1       )                                      IC  MICNF10182
+ OCHB  SXD RWCB,1          )                                      IC  MICNF10183
+       CLA RWCA            RESET CHARACTER INDEX                  IC  MICNF10184
+       TRA OCHC                                                   IC  MICNF10185
+       REM WRITE ON DIRECT PRINTER                                IC  MICNF10186
+ WPR   WPR                   SELECT PRINTER                       IC  MICNF10187
+       SXD RWCC,1                                                 IC  MICNF10188
+       SXD RWCD,2                                                 IC  MICNF10189
+       LXD RWCB,1                                                 IC  MICNF10190
+       SXD WPRU,1                                                 IC  MICNF10191
+       SXD WPRR,4                                                 IC  MICNF10192
+       LXD RWCA,4                                                 IC  MICNF10193
+       CAL WPRR                                                   IC  MICNF10194
+ WPRB  STA WPRU                                                   IC  MICNF10195
+       STP WPRS                                                   IC  MICNF10196
+       TSX WPRN,2                                                 IC  MICNF10197
+       SSM                                                        IC  MICNF10198
+       STO WPRT                                                   IC  MICNF10199
+ WPRC  LDQ RWC,4                                                  IC  MICNF10200
+ WPRD  CLM                                                        IC  MICNF10201
+       LGL 2                                                      IC  MICNF10202
+       PAX 0,2                                                    IC  MICNF10203
+       CLM                                                        IC  MICNF10204
+       LGL 4                                                      IC  MICNF10205
+       PAX 0,1                                                    IC  MICNF10206
+       CLM                                                        IC  MICNF10207
+       ACL WPRT                                                   IC  MICNF10208
+       TXL WPRE,2,0                                               IC  MICNF10209
+       TXL WPRF,1,0                                               IC  MICNF10210
+       ORS WPRV,2                                                 IC  MICNF10211
+ WPRE  TXL WPRH,1,9                                               IC  MICNF10212
+       TXH WPRG,1,10                                              IC  MICNF10213
+       TXH WPRG,2,2                                               IC  MICNF10214
+       ORS WPRV-3                                                 IC  MICNF10215
+       TRA WPRI                                                   IC  MICNF10216
+ WPRF  TXH WPRI,2,2                                               IC  MICNF10217
+       ORS WPRV,2                                                 IC  MICNF10218
+       TRA WPRI                                                   IC  MICNF10219
+ WPRG  ORS WPRV-11                                                IC  MICNF10220
+       TXI WPRH,1,-8                                              IC  MICNF10221
+ WPRH  ORS WPRV-3,1                                               IC  MICNF10222
+ WPRI  ARS 1                                                      IC  MICNF10223
+       SLW WPRT                                                   IC  MICNF10224
+       TZE WPRJ                                                   IC  MICNF10225
+       ANA WPRQ                                                   IC  MICNF10226
+       TNZ WPRD                                                   IC  MICNF10227
+ WPRU  TXL 0,4,0                                                  IC  MICNF10228
+       TXI WPRC,4,-1                                              IC  MICNF10229
+ WPRJ  CLA WPRS                                                   IC  MICNF10230
+       TPL WPRL                                                   IC  MICNF10231
+       TXI WPRB,4,-1                                              IC  MICNF10232
+ WPRK  TSX WPRN,2                                                 IC  MICNF10233
+ WPRL  LXD WPRS,1                                                 IC  MICNF10234
+ WPRM  CPY WPRV-12,1                                              IC  MICNF10235
+       CPY WPRV,1                                                 IC  MICNF10236
+       TIX WPRM,1,1                                               IC  MICNF10237
+       LXD RWCC,1                                                 IC  MICNF10238
+       LXD RWCD,2                                                 IC  MICNF10239
+       LXD WPRR,4                                                 IC  MICNF10240
+       TRA 1,4                                                    IC  MICNF10241
+ WPRN  LXD WPRS,1                                                 IC  MICNF10242
+       CLM                                                        IC  MICNF10243
+ WPRP  LDQ WPRV,1                                                 IC  MICNF10244
+       STQ WPRV-12,1                                              IC  MICNF10245
+       SLW WPRV,1                                                 IC  MICNF10246
+       TIX WPRP,1,1                                               IC  MICNF10247
+       TRA 1,2                                                    IC  MICNF10248
+ WPRQ  OCT +373737373737                                          IC  MICNF10249
+ WPRR  MZE WPRK                                                   IC  MICNF10250
+ WPRS  PZE WPRL,,12                                               IC  MICNF10251
+ WPRT  HTR 0                                                      IC  MICNF10252
+ WPRV  BES 24                                                     IC  MICNF10253
+       REM  RESET BCD STORE                                       IC  MICNF10254
+ RBD   SXD RWCC,1            SAVE IR 1                            IC  MICNF10255
+ IPBC  EQU RBD                                                    IC  MICNF10256
+       LXD RWCA,1            SET FOR COUNT                        IC  MICNF10257
+       CAL RBDB              SET BCD TO BLANKS                    IC  MICNF10258
+ RBDA  SLW RWC,1             )                                    IC  MICNF10259
+       TIX RBDA,1,1          )                                    IC  MICNF10260
+       CLA RWCA              RESET BCD INDICES                    IC  MICNF10261
+       STO RWCB              )                                    IC  MICNF10262
+       LXD RWCC,1            RESTORE IR 1                         IC  MICNF10263
+       TRA 1,4               RETURN                               IC  MICNF10264
+ RBDB  BCD 1                 BLANK BCD WORD                       IC  MICNF10265
+       REM ERROR DESIGNATION FOR INPUT ROUTINE                    IC  MICNF10266
+ EDR   SXD EDRD,4            SAVE IR 4                            IC  MICNF10267
+       CLA 1,4               STORE PROGRAM PAREMETER              IC  MICNF10268
+       STO EDRA              )                                    IC  MICNF10269
+       CLA RWC-2           SAVE CARD IDENTIFICATION               IC  MICNF10270
+       STO EDRC              )                                    IC  MICNF10271
+       CLA RWC-1           )                                      IC  MICNF10272
+       STO EDRC+1            )                                    IC  MICNF10273
+       TSX RBD,4           RESET BCD STORE                        IC  MICNF10274
+       TSX WHW,4           WRITE CARD IDENTIFICATION              IC  MICNF10275
+       PZE EDRB,,4         )                                      IC  MICNF10276
+       TSX WHW,4           )                                      IC  MICNF10277
+       PZE EDRC,,2         )                                      IC  MICNF10278
+       TSX WPR,4             )                                    IC  MICNF10279
+       WPR                   )                                    IC  MICNF10280
+       TSX RBD,4           RESET BCD STORE                        IC  MICNF10281
+       TSX WHW,4           WRITE ERROR DESIGNATION                IC  MICNF10282
+ EDRA  PZE                   )                                    IC  MICNF10283
+       TSX WPR,4             )                                    IC  MICNF10284
+       WPR                   )                                    IC  MICNF10285
+       LXD EDRD,4          RETURN                                 IC  MICNF10286
+       TRA 2,4                                                    IC  MICNF10287
+ EDRB  BCD 4THE LAST CARD READ WAS                                IC  MICNF10288
+ EDRC  PZE                                                        IC  MICNF10289
+       PZE                                                        IC  MICNF10290
+ EDRD  PZE                                                        IC  MICNF10291
+       REM READ WRITE COMMON                                      IC  MICNF10292
+ RWC   BES 14                BCD STORAGE                          IC  MICNF10293
+ RWCA  PZE 36,,14                                                 IC  MICNF10294
+ RWCB  PZE                   BCD INDICES                          IC  MICNF10295
+ RWCC  PZE                   FOR IR 1                             IC  MICNF10296
+ RWCD  PZE                   FOR IR 2                             IC  MICNF10297
+ RWCF  PZE                   FOR IR 4                             IC  MICNF10298
+ RWCE  PZE 1                                                      IC  MICNF10299
+       REM WRITE HOLERITH WORDS                                   IC  MICNF10300
+ WHW   SXD RWCC,1            SAVE IR 1                            IC  MICNF10301
+       CAL RWCB              COMPUTE ADDRESS                      IC  MICNF10302
+       PDX 0,1               )                                    IC  MICNF10303
+       ARS 18                )                                    IC  MICNF10304
+       ADD 1,4               )                                    IC  MICNF10305
+       STA WHWA              )                                    IC  MICNF10306
+       ARS 18                SET FOR COUNT                        IC  MICNF10307
+ WHWA  LDQ 0,1               TRANSFER WORD                        IC  MICNF10308
+       STQ RWC,1                                                  IC  MICNF10309
+       SUB RWCE              COUNT                                IC  MICNF10310
+       TXI WHWB,1,-1         GO TO NEXT BCD WORD                  IC  MICNF10311
+ WHWB  TNZ WHWA              CONTINUE                             IC  MICNF10312
+       SXD RWCB,1            SAVE BCD WORD INDEX                  IC  MICNF10313
+       LXD RWCC,1            RESET IR 1                           IC  MICNF10314
+       TRA 2,4               RETURN                               IC  MICNF10315
+ WTD   WTD TNW               SELECT OUTPUT TAPE                   IC  MICNF10316
+       TRA RPTK+154          TRANSFER TO WTD ROUTINE              IC  MICNF10317
+       REM DECIMAL INTEGER TO BINARY                              IC  MICNF10318
+ DIB   SXD RWCF,4            SAVE IR 4                            IC  MICNF10319
+       SXD RWCC,1            SAVE IR 1                            IC  MICNF10320
+       SXD RWCD,2            SAVE IR 2                            IC  MICNF10321
+       LXD RWCB,1            PICK UP BCD INDICES                  IC  MICNF10322
+       LXA RWCB,2            )                                    IC  MICNF10323
+       CAL 1,4               PICK UP WIDTH OF FIELD               IC  MICNF10324
+       PDX 0,4               )                                    IC  MICNF10325
+       CLM                   RESET N TO ZERO                      IC  MICNF10326
+ DIBA  STO DIBG                                                   IC  MICNF10327
+       LDQ RWC,1             READ A CHARACTER                     IC  MICNF10328
+       LGL 42,2              )                                    IC  MICNF10329
+       ANA DIBJ              )                                    IC  MICNF10330
+       LDQ DIBK                                                   IC  MICNF10331
+       TLQ DIBC              NON NUMERIC                          IC  MICNF10332
+ DIBF  STO DIBH              COMPUTE N = 10 N + CURRENT DIGIT     IC  MICNF10333
+       CLA DIBG              )                                    IC  MICNF10334
+       ALS 1                 )                                    IC  MICNF10335
+       STO DIBG              )                                    IC  MICNF10336
+       ALS 2                 )                                    IC  MICNF10337
+       ADD DIBG              )                                    IC  MICNF10338
+       ADD DIBH              )                                    IC  MICNF10339
+ DIBN  TIX DIBB,2,6          SELECT NEXT CHARACTER                IC  MICNF10340
+       LXA RWCA,2            )                                    IC  MICNF10341
+       TXI DIBB,1,-1         )                                    IC  MICNF10342
+ DIBB  TIX DIBM,4,6          COUNT                                IC  MICNF10343
+       STO DIBH              SAVE ACCUMULATOR                     IC  MICNF10344
+       PXD 0,2               STORE BCD INDICES                    IC  MICNF10345
+       ARS 18                )                                    IC  MICNF10346
+       STA RWCB              )                                    IC  MICNF10347
+       SXD RWCB,1            )                                    IC  MICNF10348
+       LXD RWCC,1            RESET IR 1                           IC  MICNF10349
+       LXD RWCD,2            )                                    IC  MICNF10350
+       LXD RWCF,4            )                                    IC  MICNF10351
+       CLA DIBH              RESTORE ACCUMULATOR                  IC  MICNF10352
+       TQP DIBD                                                   IC  MICNF10353
+       TXI DIBD,4,1          FOR SPECIAL CHARACTER                IC  MICNF10354
+ DIBD  TRA 3,4               RETURN                               IC  MICNF10355
+ DIBC  SUB DIBL              TEST NON-NUMERIC CHAR.               IC  MICNF10356
+       TZE DIBF              CHARACTER IS BLANK                   IC  MICNF10357
+       ADD DIBL                                                   IC  MICNF10358
+       LDQ DIB               SET MQ MINUS                         IC  MICNF10359
+ DIBM  TQP DIBA              NO SPECIAL CHARACTER YET             IC  MICNF10360
+       TRA DIBN                                                   IC  MICNF10361
+ DIBG  PZE                   N                                    IC  MICNF10362
+ DIBH  PZE                   DIGIT                                IC  MICNF10363
+ DIBJ  PZE 63                MASK                                 IC  MICNF10364
+ DIBK  PZE 9                                                      IC  MICNF10365
+ DIBL  PZE 48                                                     IC  MICNF10366
+       REM READ INPUT TAPE IN BCD                                 IC  MICNF10367
+ RTD   RTD TNR               SELECT INPUT TAPE                    IC  MICNF10368
+       SXD RWCC,1            SAVE IR 1                            IC  MICNF10369
+       CLA RWCA              RESET BCD INDICES                    IC  MICNF10370
+       STO RWCB              )                                    IC  MICNF10371
+       LXD RWCA,1            COPY RECORD INTO BCD STORE           IC  MICNF10372
+ RTDA  CPY RWC,1             )                                    IC  MICNF10373
+       TXI RTDA,1,-1         )                                    IC  MICNF10374
+       TXI RTDC,4,1          END OF FILE                          IC  MICNF10375
+       IOD                   CHECK                                IC  MICNF10376
+       RTT                   )                                    IC  MICNF10377
+       TRA RTDD              TAPE CHECK ON                        IC  MICNF10378
+       TRA RTDC                                                   IC  MICNF10379
+ RTDD  BST TNR               BACK FOR SECOND TRY                  IC  MICNF10380
+       RTD TNR               )                                    IC  MICNF10381
+       LXD RWCA,1            COPY RECORD INTO BCD STORE           IC  MICNF10382
+ RTDB  CPY RWC,1             )                                    IC  MICNF10383
+       TXI RTDB,1,-1         )                                    IC  MICNF10384
+       TXI RTDC,4,1          END OF FILE                          IC  MICNF10385
+       IOD                   CHECK                                IC  MICNF10386
+       RTT                                                        IC  MICNF10387
+       TXI RTDC,4,2          TAPE CHECK ON                        IC  MICNF10388
+ RTDC  LXD RWCC,1            RESET IR 1                           IC  MICNF10389
+       TRA 3,4               RETURN                               IC  MICNF10390
+       WST 7,2               WRITE COMMON INPUT PROGRAM SYMBOL    IC  MICNF10391
+       REM                   TABLE ON TAPE                        IC  MICNF10392
+       REM FIRST PART OF INPUT PROGRAM                            IA  MICNF10393
+       ORG RPTK+1                                                 IA  MICNF10394
+ IPA   TSX RTD,4             READ TITLE OR CONTROL CARD           IA  MICNF10395
+       TRA IPTA              TAPE CHECK ERROR                     IA  MICNF10396
+       TRA IPTB              END OF FILE RETURN                   IA  MICNF10397
+       TSX OCH,4             TEST FOR CONTROL CARD                IA  MICNF10398
+       SUB IPCF              )                                    IA  MICNF10399
+       TZE IPC               )IS A CONTROL CARD                   IA  MICNF10400
+       CLA IPB+2             PRINT TITLE                          IA  MICNF10401
+       STD RWCB              )                                    IA  MICNF10402
+       TSX WPR,4             )                                    IA  MICNF10403
+       LXD RWCA,4            STORE TITLE IN TITLE STORAGE         IA  MICNF10404
+ IPB   CLA RWC,4             )                                    IA  MICNF10405
+       STO IPBC,4            )                                    IA  MICNF10406
+       TIX IPB,4,1           )                                    IA  MICNF10407
+       TRA IPA               TRANSFER TO READ CONTROL CARD        IA  MICNF10408
+ IPC   TSX OCH,4             TEST FOR OUTPUT TAPE UNIT            IA  MICNF10409
+       STZ CONT              STORE CONT=0                         IA  MICNF10410
+       SUB IP60              )                                    IA  MICNF10411
+       TZE IPD               )OUTPUT IS TO BE ON TAPE TNX         IA  MICNF10412
+       CAL IP401             )OUTPUT IS TO BE ON TAPE TNW         IA  MICNF10413
+       ORS CONT              )                                    IA  MICNF10414
+       CLA IPCG              )                                    IA  MICNF10415
+       STO WTD               )                                    IA  MICNF10416
+ IPD   TSX OCH,4             TEST FOR BRANCH FLOW OUTPUT          IA  MICNF10417
+       SUB IP60              )                                    IA  MICNF10418
+       TZE IPE               )                                    IA  MICNF10419
+       CLA IP110             )BRANCH FLOWS ARE TO BE PRINTED      IA  MICNF10420
+       ORS CONT              )                                    IA  MICNF10421
+       TSX OCH,4             TEST FOR ZERO FLOW OUTPUT            IA  MICNF10422
+       SUB IP60              )                                    IA  MICNF10423
+       TZE IPF               )                                    IA  MICNF10424
+       CLA IP001             )ZERO FLOWS ARE TO BE PRINTED        IA  MICNF10425
+       ORS CONT              )                                    IA  MICNF10426
+       TRA IPF                                                    IA  MICNF10427
+ IPE   TSX OCH,4                                                  IA  MICNF10428
+ IPF   TSX OCH,4             TEST FOR NODE POTENTIAL OUTPUT       IA  MICNF10429
+       SUB IP60              )                                    IA  MICNF10430
+       TZE IPG               )                                    IA  MICNF10431
+       CLA IP301             )NODE POTENTIALS ARE TO BE PRINTED   IA  MICNF10432
+       ORS CONT              )                                    IA  MICNF10433
+ IPG   TSX OCH,4             TEST FOR FLOW SPECIFICATION          IA  MICNF10434
+       SUB IP60              )                                    IA  MICNF10435
+       TZE IPH               )                                    IA  MICNF10436
+       CAL IP100             )FLOW SPECIFICATION                  IA  MICNF10437
+       ORS CONT              )                                    IA  MICNF10438
+ IPH   TSX OCH,4             TEST FOR NETWORK SPECIFICATION       IA  MICNF10439
+       SUB IP60              )                                    IA  MICNF10440
+       TNZ IPI               )                                    IA  MICNF10441
+       CLA CONT              )NO NETWORK SPECIFICATION            IA  MICNF10442
+       TMI IPI-3             TRANSFER IF FLOW SPECIFICATION       IA  MICNF10443
+       HTR IPA               STOP PROBLEM FINISHED                IA  MICNF10444
+       TSX AOF,4             OBTAIN FLOW SPECIFICATION            IA  MICNF10445
+       PZE 0,0,198           )                                    IA  MICNF10446
+IPI    STZ M                 STORE M 3 0                          IA  MICNF10447
+       TRA RPT               TRANSFER TO READ PROGRAM             IA  MICNF10448
+       STZ N                 STORE NOC FLOW ALLOCATIONS 3 0       IA  MICNF10449
+       TSX OCH,4             OBTAIN N                             IA  MICNF10450
+       TSX DIB,4             )                                    IA  MICNF10451
+       PZE 0,0,48            )                                    IA  MICNF10452
+       TRA IPTC              )NON-NUMERIC CHARACTER INFIELD       IA  MICNF10453
+       ADD RWCE              )                                    IA  MICNF10454
+       SUB NODE                                                   IA  MICNF10455
+       TMI IPTE              TRANSFER IF N LESS THAN NODE         IA  MICNF10456
+       ADD NODE                                                   IA  MICNF10457
+       STO NODE              STORE NODE=N                         IA  MICNF10458
+       SUB NMAX                                                   IA  MICNF10459
+       TZE IPIA                                                   IA  MICNF10460
+       TPL IPTF              TRANSFER IF N GREATER THAN NMAX      IA  MICNF10461
+ IPIA  TSX DIB,4             OBTAIN B                             IA  MICNF10462
+       PZE 0,0,48            )                                    IA  MICNF10463
+       TRA IPTC              )NON-NUMERIC CHARACTER INFIELD       IA  MICNF10464
+       SUB BCH                                                    IA  MICNF10465
+       TMI IPTG              TRANSFER IF B LESS THAN BCH          IA  MICNF10466
+       LXA BCH,2             STORE STBT = BCH                     IA  MICNF10467
+       SXD STBT,2            )                                    IA  MICNF10468
+       ADD BCH               STORE BCH = B                        IA  MICNF10469
+       STO BCH               )                                    IA  MICNF10470
+       SUB BMAX                                                   IA  MICNF10471
+       TZE IPIB                                                   IA  MICNF10472
+       TPL IPTH              TRANSFER IF B GREATER THAN BMAX      IA  MICNF10473
+ IPIB  TSX DIB,4             TEST NMAX FOR NEW NETWORK            IA  MICNF10474
+       PZE 0,0,48            )                                    IA  MICNF10475
+       TRA IPTC              )NON-NUMERIC CHARACTERER IN FIELD    IA  MICNF10476
+       TNZ IPTH+4            )                                    IA  MICNF10477
+       CLA CONT              TEST FLOW SPECIFICATION              IA  MICNF10478
+       STZ Q                 STORE Q = 0                          IA  MICNF10479
+       TPL IPTW              )TRANSFER IF NO FLOW SPECIFICATION   IA  MICNF10480
+       TSX AOF,4             OBTAIN FLOW                          IA  MICNF10481
+       PZE 0,0,48            )                                    IA  MICNF10482
+       TSX DIB,4             )                                    IA  MICNF10483
+       PZE 0,0,60            )                                    IA  MICNF10484
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IA  MICNF10485
+       STO Q                 )STORE Q=FLOW                        IA  MICNF10486
+ IPTW  CLA RPTH-1            STORE NT1-NODES IN ADDRESS TABLE     IA  MICNF10487
+       SUB NODE              )                                    IA  MICNF10488
+       STO RPTH-7            )                                    IA  MICNF10489
+       CLA Q                 STORE S=Q                            IA  MICNF10490
+       STO S                 )                                    IA  MICNF10491
+       TRA IPJ               TRANSFER TO WRITE TITLE              IA  MICNF10492
+ IPTE  ADD NODE                                                   IA  MICNF10493
+       STO NODE              STORE NODE=N                         IA  MICNF10494
+ IPTF  TSX DIB,4             OBTAIN B                             IA  MICNF10495
+       PZE 0,0,48            )                                    IA  MICNF10496
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IA  MICNF10497
+       STO BCH               STORE BCH=B                          IA  MICNF10498
+       TRA IPTH                                                   IA  MICNF10499
+ IPTG  ADD BCH                                                    IA  MICNF10500
+       STO BCH               STORE BCH=B                          IA  MICNF10501
+ IPTH  TSX DIB,4             OBTAIN NMAX                          IA  MICNF10502
+       PZE 0,0,48            )                                    IA  MICNF10503
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IA  MICNF10504
+       TZE IPTC              TRANSFER IF NMAX = 0                 IA  MICNF10505
+       ADD RWCE              STORE NMAX                           IA  MICNF10506
+       STO NMAX              STORE NMAX                           IA  MICNF10507
+       TSX DIB,4             OBTAIN BMAX                          IA  MICNF10508
+       PZE 0,0,48            )                                    IA  MICNF10509
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IA  MICNF10510
+       TZE IPTC              TRANSFER IF BMAX = 0                 IA  MICNF10511
+       STO BMAX              STORE BMAX                           IA  MICNF10512
+       LXA LWC,4             PICK UP CORE MEMORY SIZE             IA  MICNF10513
+       PXD 0,4               )                                    IA  MICNF10514
+       ARS 18                )                                    IA  MICNF10515
+       SUB NODE                                                   IA  MICNF10516
+       STO RPTH-7            SET NT1-NODES                        IA  MICNF10517
+       ADD NODE                                                   IA  MICNF10518
+       SUB NMAX                                                   IA  MICNF10519
+       STO RPTH-2            SET BT1                              IA  MICNF10520
+       SUB BMAX                                                   IA  MICNF10521
+       STO RPTH-3            SET BT2                              IA  MICNF10522
+       SUB BMAX                                                   IA  MICNF10523
+       STO RPTH-4            SET BT3                              IA  MICNF10524
+       SUB BMAX                                                   IA  MICNF10525
+       STO RPTH-5            SET BT4                              IA  MICNF10526
+       SUB BMAX                                                   IA  MICNF10527
+       STO RPTH-6            SET BT5                              IA  MICNF10528
+       SUB BMAX                                                   IA  MICNF10529
+       SUB IPCA              TEST MEMORY SIZE                     IA  MICNF10530
+       TPL IPTI              TRANSFER IF MEMORY NOT EXCEEDED      IA  MICNF10531
+       TSX EDR,4             MEMORY CAPACITY EXCEEDED             IA  MICNF10532
+       PZE IPCC,0,4          )                                    IA  MICNF10533
+       HTR IPA               STOP PROBLEM                         IA  MICNF10534
+ IPCC  BCD 4MEMORY CAPACITY EXCEEDED                              IA  MICNF10535
+ IPTI  STZ Q                 STORE Q = 0                          IA  MICNF10536
+       CLA CONT                                                   IA  MICNF10537
+       TPL IPTU              TRANSFER IF NO FLOW SPECIFICATION    IA  MICNF10538
+       TSX DIB,4             OBTAIN FLOW                          IA  MICNF10539
+       PZE 0,0,60            )                                    IA  MICNF10540
+       TRA IPTC              )NON'NUMERIC CHARACTER IN FIELD      IA  MICNF10541
+       STO Q                 STORE Q=FLOW                         IA  MICNF10542
+       STO S                 STORE S = FLOW                       IA  MICNF10543
+ IPTU  STZ STBT              STORE STBT = 0                       IA  MICNF10544
+ IPJ   TSX RBD,4             STORE TITLE IN BCD STORAGE           IA  MICNF10545
+       TSX WHW,4             )                                    IA  MICNF10546
+       PZE IPBC-14,,14       )                                    IA  MICNF10547
+       CLA IPCI              STORE TRANSFER TO READ CARDS         IA  MICNF10548
+       STA RPTL              )                                    IA  MICNF10549
+       TRA RPT               )                                    IA  MICNF10550
+ IPCA  PZE RPTK+450          LAST PROGRAN REGISTER + 1            IA  MICNF10551
+ IPCI  PZE RPTK+38           ADDRESS FOR TRANSFER TO READ CARDS   IA  MICNF10552
+ IP60  OCT 60                BLANK IN LAST CHARACTER              IA  MICNF10553
+ IP401 OCT 20000000000                                            IA  MICNF10554
+ IP301 OCT 40000000000                                            IA  MICNF10555
+ IPCG  WTD TNX               ADDRESS TO SELECT PUNCH OUTPUT       IA  MICNF10556
+       REM ADDRESS TABLE FOR FIRST PART OF INPUT PROGRAM          IA  MICNF10557
+       ORG WPTR+1            ADDRESS TABLE ORIGIN                 IA  MICNF10558
+ WPTK  PZE RPTK+1                                                 IA  MICNF10559
+       PZE RTDC+2,0,0                                             IA  MICNF10560
+       PZE                   END OF BLOCK                         IA  MICNF10561
+       END WPA               TRANSFER TO WRITE PROGRAM ON TAPE    IA  MICNF10562
+       REM SECOND PART OF INPUT PROGRAM                           IB  MICNF10563
+       RST 7,2               READ COMMON INPUT SYMBOL TABLE       IB  MICNF10564
+       ORG RPTK+1                                                 IB  MICNF10565
+       TSX DIB,4             )                                    IB  MICNF10566
+       PZE 0,0,60            )                                    IB  MICNF10567
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IB  MICNF10568
+       TNZ IPK               TRANSFER IF FLOW NOT=0               IB  MICNF10569
+       CLA Q                 STORE S=Q                            IB  MICNF10570
+       STO S                 )                                    IB  MICNF10571
+       STZ Q                 STORE Q=0                            IB  MICNF10572
+       TRA IPL                                                    IB  MICNF10573
+ IPK   SUB Q                                                      IB  MICNF10574
+       TMI IPN               TRANSFER IF FLOW LESS THAN Q         IB  MICNF10575
+       STO S                 STORE S=FLOW-Q                       IB  MICNF10576
+       ADD Q                 STORE Q=FLOW                         IB  MICNF10577
+       STO Q                 )                                    IB  MICNF10578
+ IPL   CLA STW               STORE W=STW                          IB  MICNF10579
+       TPL IPL+4             TRANSFER IF STW POSITIVE             IB  MICNF10580
+       ORA Q                 STORE MINUS Q                        IB  MICNF10581
+       STO Q                 )                                    IB  MICNF10582
+       STO W                 )                                    IB  MICNF10583
+       CLA RCFTA             STORE TRANSFER TO FA IN RPT          IB  MICNF10584
+       STA RPTL              )                                    IB  MICNF10585
+       TSX RBD,4             )                                    IB  MICNF10586
+       TSX WHW,4             STORE TITLE IN BCD STORAGE           IB  MICNF10587
+       PZE IPBC-14,0,14      )                                    IB  MICNF10588
+       TSX WTD,4             )                                    IB  MICNF10589
+       TRA RPT               TRANSFER TO READ IN PROGRAM          IB  MICNF10590
+ IPN   ADD Q                 STORE Q=FLOW                         IB  MICNF10591
+       STO Q                 )                                    IB  MICNF10592
+       STO S                 STORE S = FLOW                       IB  MICNF10593
+       STZ M                 STORE M = 0                          IB  MICNF10594
+       STZ N                 STORE NO. FLOW ALLOCATIONS = 0       IB  MICNF10595
+       TSX RBD,4             STORE TITLE IN BCD STORAGE           IB  MICNF10596
+       TSX WHW,4             )                                    IB  MICNF10597
+       PZE IPBC-14,0,14      )                                    IB  MICNF10598
+       TSX WTD,4             )                                    IB  MICNF10599
+       CLA RPP6              OPERATION TO TRANSFER TO PP6+1       IB  MICNF10600
+       STO PP1               )                                    IB  MICNF10601
+       TRA IPOA-1            TRANSFER TO INCHANGE L,I WITH K,J    IB  MICNF10602
+       TSX WTD,4             WRITE TITLE (ENTRY PT. TO READ CARDS)IB  MICNF10603
+       LXD STBT,2            SET INDEX 2 = PREVIOUS BCH VALUE     IB  MICNF10604
+       TXI IPTN,2,1          SET  INDEX 2 = INDEX 2 + 1           IB  MICNF10605
+ IPTN  TSX RTD,4             READ BRANCH CARD                     IB  MICNF10606
+       TRA IPTA              TAPE CHECK                           IB  MICNF10607
+       TRA IPTB              END OF FILE                          IB  MICNF10608
+       TSX AOF,4             OBTAIN I                             IB  MICNF10609
+       PZE 0,0,48            )                                    IB  MICNF10610
+       TSX DIB,4             )                                    IB  MICNF10611
+       PZE 0,0,48            )                                    IB  MICNF10612
+       TRA IPTK              )NON-NUMERIC CHARACTER IN FIELD      IB  MICNF10613
+ IPBA1 STO BT1,2             STORE I IN BRANCH TABLE              IB  MICNF10614
+       SUB NODE                                                   IB  MICNF10615
+       TPL IPTC              TRANSFER IF I GREATER THAN NODE-1    IB  MICNF10616
+ IPTR  TSX DIB,4             OBTAIN J                             IB  MICNF10617
+       PZE 0,0,48            )                                    IB  MICNF10618
+       TRA IPTM              )NON-NUMERIC CHARACTER IN FIELD      IB  MICNF10619
+ IPBB  STO BT2,2             STORE J IN BRANCH TABLE              IB  MICNF10620
+       SUB NODE                                                   IB  MICNF10621
+       TPL IPTC              TRANSFER IF J GREATER THAN NODE-1    IB  MICNF10622
+ IPTT  TSX DIB,4             OBTAIN C                             IB  MICNF10623
+       PZE 0,0,48            )                                    IB  MICNF10624
+       TRA IPTC              ) NON-NUMERIC CHARACTER IN FIELD     IB  MICNF10625
+ IPB3  STO BT3,2             STORE C IN BRANCH TABLE              IB  MICNF10626
+       SUB LWC                                                    IB  MICNF10627
+       TPL IPTC              TRANSFER IF C EXCEEDS MAX VALUE      IB  MICNF10628
+       TSX DIB,4             OBTAIN M                             IB  MICNF10629
+       PZE 0,0,48            )                                    IB  MICNF10630
+       TRA IPTC              )NON-NUMERIC CHARACTER IN FIELD      IB  MICNF10631
+ IPBD  STO BT4,2             STORE M IN BRANCH TABLE              IB  MICNF10632
+       SUB LWC                                                    IB  MICNF10633
+       TPL IPTC              TRANSFER IF M EXCEEDS MAX VALUE      IB  MICNF10634
+       TXI IPTN,2,1          TRANSFER TO READ NEXT BRANCH CARD    IB  MICNF10635
+ IPTK  SUB IPCD              TEST FOR SOURCE NODE                 IB  MICNF10636
+       TZE IPTO              )TRANSFER IF SOURCE NODE             IB  MICNF10637
+       ADD IPCE              TEST FOR LAST BRANCH                 IB  MICNF10638
+       TNZ IPTC              )TRANSFER IF NOT LAST BRANCH CARD    IB  MICNF10639
+       TXI IPTQ,2,-1         TRANSFER AND SET IR 2 = IR 2 - 1     IP  MICNF10640
+ IPTO  CLA NODE              STORE I=SOURCE NODE IN BRANCH TABLE  IB  MICNF10641
+ IPBA2 STO BT1,2             )                                    IB  MICNF10642
+       TRA IPTR              TRANSFER TO OBTAIN J                 IB  MICNF10643
+ IPTM  SUB IPCD              TEST FOR SINK NODE                   IB  MICNF10644
+       TZE IPTBB             )TRANSFER IF SINK NODE               IB  MICNF10645
+       TRA IPTC              ERROR ON BRANCH CARD                 IB  MICNF10646
+ IPTBB STZ BT2,2             STORE J=SINK NODE IN BRANCH TABLE    IB  MICNF10647
+       TRA IPTT              TRANSFER TO OBTAIN C                 IB  MICNF10648
+ IPTQ  PXD 0,2               TEST NUMBER OF BRANCHES READ IN      IB  MICNF10649
+       ARS 18                )                                    IB  MICNF10650
+       SUB BCH               )                                    IB  MICNF10651
+       TNZ IPTC              )TRANSFER IF NUMBER INCORRECT        IB  MICNF10652
+       LXA BCH,4             SET INDEX 4=BCH                      IB  MICNF10653
+ IPOA  CLA BT1,4                                                  IB  MICNF10654
+       TPL IPP               TRANSFER IF V=0                      IB  MICNF10655
+       STO STBT              INTERCHANGE L,I WITH K,J             IB  MICNF10656
+ IPBB3 CLA BT2,4             )                                    IB  MICNF10657
+ IPBA3 STO BT1,4             )                                    IB  MICNF10658
+       CLA STBT              )                                    IB  MICNF10659
+ IPBB4 STO BT2,4             )                                    IB  MICNF10660
+ IPP   TIX IPOA,4,1          TRANSFER IF INDEX 4 NOT = 1          IB  MICNF10661
+       REM ASSIGNMENT OF K AND L VALUES                           KL  MICNF10662
+ PP1   LXA NODE,4            SET INDEX 4=NODE                     KL  MICNF10663
+ PP2F1 STZ NT1,4             RECORD D=0                           KL  MICNF10664
+       TIX PP2F1,4,1         TRANSFER IF INDEX 4 GREATER THAN 2   KL  MICNF10665
+       CLA LWDEC                                                  KL  MICNF10666
+ PP2F2 STO NT1                       RECORD D=0 TERRMINAL NODE    KL  MICNF10667
+       LXA BCH,2             SET INDEX 2=BCH                      KL  MICNF10668
+ PP4A1 CLA BT1,2                                                  KL  MICNF10669
+       PAX 0,4               SET INDEX 4=I                        KL  MICNF10670
+ PP4F1 CLA NT1,4                                                  KL  MICNF10671
+ PP4B1 STD BT2,2             RECORD K=D                           KL  MICNF10672
+       PXD 0,2                                                    KL  MICNF10673
+ PP4F2 STD NT1,4             RECORD D=INDEX2                      KL  MICNF10674
+ PP4B2 CLA BT2,2                                                  KL  MICNF10675
+       PAX 0,4               SET INDEX 4=J                        KL  MICNF10676
+ PP4F3 CLA NT1,4                                                  KL  MICNF10677
+ PP4A2 STD BT1,2             RECORD L=D                           KL  MICNF10678
+       TXL PP3,4,0                   TRANSFER IF INDEX4=0         KL  MICNF10679
+       PXD 0,2                                                    KL  MICNF10680
+ PP4F4 STD NT1,4             RECORD D=INDEX2                      KL  MICNF10681
+ PP    TIX PP4A1,2,1         TRANSFER IF INDEX 2 GREATER THAN 1   KL  MICNF10682
+ PP3G1 CLA NT1-NODES                                              KL  M9CNF10683
+       STD STB               STORE STARTING BRANCH NUMBER.        KL  MICNF10684
+       LXA BCH,2             SET INDEX 2=BCH                      KL  MICNF10685
+ PP7   CAL LWDEC                                                  KL  MICNF10686
+ PP7B1 ANA BT2,2             PLACE K IN AC                        KL  MICNF10687
+       TNZ PP5               TRANSFER IF K NOT=0                  KL  MICNF10688
+ PP7A  CLA BT1,2                                                  KL  MICNF10689
+       PAX 0,4               SET INDEX 4=I                        KL  MICNF10690
+ PP7F  CLA NT1,4                                                  KL  MICNF10691
+ PP7B2 STD BT2,2             RECORD K=D                           KL  MICNF10692
+ PP5   CAL LWDEC                                                  KL  MICNF10693
+ PP5A1 ANA BT1,2                                                  KL  MICNF10694
+       TNZ PP6               TRANSRER IF L NOT=0                  KL  MICNF10695
+ PP5B  CLA BT2,2                                                  KL  MICNF10696
+       PAX 0,4               SET INDEX 4=J                        KL  MICNF10697
+ PP5F  CLA NT1,4                                                  KL  MICNF10698
+ PP5A2 STD BT1,2             RECORD L=D                           KL  MICNF10699
+ PP6   TIX PP7,2,1           TRANSFER IF INDEX 2 NOT=1            KL  MICNF10700
+       LXA BCH,2             SET INDEX 2=BCH                      KL  MICNF10701
+       CAL LWN                                                    KL  MICNF10702
+ PP8A  ANS BT1,2             RECORD V=0                           KL  MICNF10703
+ PP8B  ANS BT2,2             RECORD S=0                           KL  MICNF10704
+       TIX PP8A,2,1          TRANSFER IF INDEX2 NOT=1             KL  MICNF10705
+       LXA BCH,2             SET INDEX 2=BCH                      KL  MICNF10706
+       TIX PP9E,2,1          TRANSFER IF INDEX 2 NOT=1            KL  MICNF10708
+       LXA NODE,4            SET INDEX 4=NODE                     KL  MICNF10709
+       CLA LW100                                                  KL  MICNF10710
+ PP1F0 STO NT1,4             RECORD T=1, U=0                      KL  MICNF10711
+       TIX PP1F0,4,1         TRANSFER IF INDEX 4 NOT=1            KL  MICNF10712
+ PP9F  STO NT1                       RECORD T=1, U=0              KL  MICNF10713
+ PP9G  SLW NT1-NODES                 RECORD T=0, U=0 SOURCE NODE  KL  MICNF10714
+       CLA RPTK              STORE TRANSFER TO NETWORK SEARCH     KL  MICNF10715
+       STA RPTL              )                                    KL  MICNF10716
+       STZ COST1             STORE COST = 0                       KL  MICNF10717
+       STZ COST2             )                                    KL  MICNF10718
+       TRA RPT               TRANSFER TO READ PROGRAM             KL  MICNF10719
+       REM WRITE OUTPUT TAPE IN BCD                               IB  MICNF10720
+       SXD RWCC,1            SAVE IR 1                            IB  MICNF10721
+       CLA RWCB              SET FOR COUNT TEST                   IB  MICNF10722
+       STD WTDE              )                                    IB  MICNF10723
+       CAL WTDF                                                   IB  MICNF10724
+       LXD RWCA,1            WRITE AND CLEAR TO BLANKS            IB  MICNF10725
+ WTDB  CPY RWC,1             )                                    IB  MICNF10726
+       SLW RWC,1             )                                    IB  MICNF10727
+  WTDE TXL WTDC,1,0          )                                    IB  MICNF10728
+       TIX WTDB,1,1          COUNT                                IB  MICNF10729
+ WTDC  CLA RWCA              RESET BCD INDICES                    IB  MICNF10730
+       STO RWCB              )                                    IB  MICNF10731
+       LXD RWCC,1            RESET IR 1                           IB  MICNF10732
+       IOD                                                        IB  MICNF10733
+       TRA 1,4               RETURN                               IB  MICNF10734
+ WTDF  OCT -206060606060     BCD BLANK WORD                       IB  MICNF10735
+ RPP6  TRA PP6+1             OPERATION TO TRANSFER TO PP6+1       IB  MICNF10736
+ LW100 EQU IP100                                                  IB  MICNF10737
+       REM ADDRESS TABLE FOR SECOND PART OF INPUT PROGRAM         IB  MICNF10738
+       ORG WPTR+2            ADDRESS TABLE ORIGIN                 IB  MICNF10739
+       PZE IPBA1,0,2                                              IB  MICNF10740
+       PZE IPBB,0,3                                               IB  MICNF10741
+       PZE IPB3,0,4                                               IB  MICNF10742
+       PZE IPBD,0,5                                               IB  MICNF10743
+       PZE IPBA2,0,2                                              IB  MICNF10744
+       PZE IPTBB,0,3                                              IB  MICNF10745
+       PZE IPOA,0,2                                               IB  MICNF10746
+       PZE IPBB3,0,3                                              IB  MICNF10747
+       PZE IPBA3,0,2                                              IB  MICNF10748
+       PZE IPBB4,0,3                                              IB  MICNF10749
+       PZE PP2F1,0,1                                              IB  MICNF10750
+       PZE PP2F2,0,1                                              IB  MICNF10751
+       PZE PP4A1,0,2                                              IB  MICNF10752
+       PZE PP4F1,0,1                                              IB  MICNF10753
+       PZE PP4B1,0,3                                              IB  MICNF10754
+       PZE PP4F2,0,1                                              IB  MICNF10755
+       PZE PP4B2,0,3                                              IB  MICNF10756
+       PZE PP4F3,0,1                                              IB  MICNF10757
+       PZE PP4A2,0,2                                              IB  MICNF10758
+       PZE PP4F4,0,1                                              IB  MICNF10759
+       PZE PP3G1,0,7                                              IB  MICNF10760
+       PZE PP7B1,0,3                                              IB  MICNF10761
+       PZE PP7A,0,2                                               IB  MICNF10762
+       PZE PP7F,0,1                                               IB  MICNF10763
+       PZE PP7B2,0,3                                              IB  MICNF10764
+       PZE PP5A1,0,2                                              IB  MICNF10765
+       PZE PP5B,0,3                                               IB  MICNF10766
+       PZE PP5F,0,1                                               IB  MICNF10767
+       PZE PP5A2,0,2                                              IB  MICNF10768
+       PZE PP8A,0,2                                               IB  MICNF10769
+       PZE PP8B,0,3                                               IB  MICNF10770
+       PZE PP9E,0,6                                               IB  MICNF10771
+       PZE PP1F0,0,1                                              IB  MICNF10772
+       PZE PP9F,0,1                                               IB  MICNF10773
+       PZE PP9G,0,7                                               IB  MICNF10774
+       PZE RPP6+1                                                 IB  MICNF10775
+       PZE                   END OF BLOCK                         IB  MICNF10776
+       END WPT               TRANSFER TO WRITE PROGRAM ON TAPE    IB  MICNF10777
+       REM  MAIN PROGRAM                                          MP  MICNF10778
+       RST 7,1               READ COMMON SYMBOL TABLE FROM TAPE   MP  MICNF10779
+       REM NETWORK SEARCH                                         NS  MICNF10780
+       ORG RPTK+1                                                 NS  MICNF10781
+ PP12  LXD STB,4             SET INDEX 4=STB                      NS  MICNF10782
+       LXA ONE,2             SET INDEX 2=1                        NS  MICNF10783
+       LXA ONE,1             SET INDEX 1=1                        NS  MICNF10784
+       TOV PP13-2                                                 NS  MICNF10785
+       SXD H,4               STORE H = STB                        NS  MICNF10786
+       CLA NODE                                                   NS  MICNF10787
+ PP13  STO X                 STORE X=NODE                         NS  MICNF10788
+       TRA SN4                       TRANSFER TO NETWORK SEARCH   NS  MICNF10789
+ NS1C  CLA BT3,2             PICK UP LAST BRANCH POINT            NS  MICNF10790
+ NS1D1 STD BT4,1             RECORD B=F                           NS  MICNF10791
+       STD H                 RECORD H=F                           NS  MICNF10792
+       PDX 0,4               SET INDEX 4=F                        NS  MICNF10793
+       TMI SN1               TRANSFER IF R=1                      NS  MICNF10794
+       CAL LW110                                                  NS  MICNF10795
+ NS1D2 STP BT4,1             RECORD O=1, P=1, Q=0                 NS  MICNF10796
+ NS2B  CLA BT2,4                                                  NS  MICNF10797
+       STA X                 STORE X=J                            NS  MICNF10798
+       PAX 0,4                       SET INDEX4=J                 NS  MICNF10799
+ NS2F1 CLA NT1,4             TEST T = 0                           NS  MICNF10800
+       TPL SN9               )TRANSFER IF T = 0                   NS  MICNF10801
+       SSP                   RECORD T = 0                         NS  MICNF10802
+ NS2F2 STO NT1,4             )                                    NS  MICNF10803
+       LXD H,4                       SET INDEX4=H                 NS  MICNF10804
+ NS3A  CLA BT1,4                                                  NS  MICNF10805
+       PDX 0,4               SET INDEX 4=L                        NS  MICNF10806
+       TXL SN2,4,-2          TRANSFER IF NOT SINK NODE            NS  MICNF10807
+       TXI FC1,2,-1          TRANSFER TO FLOW CHANGE COMPUTATION  NS  MICNF10808
+ SN1   CAL LW111                                                  NS  MICNF10809
+ NS3D  STP BT4,1             RECORD O=1, P=1, Q=1                 NS  MICNF10810
+ NS4A  CLA BT1,4                                                  NS  MICNF10811
+       STA X                 STORE X=I                            NS  MICNF10812
+       PAX 0,4                       SET INDEX4=I                 NS  MICNF10813
+ NS4F1 CLA NT1,4             TEST T = 0                           NS  MICNF10814
+       TPL SN9               )TRANSFER IF T = 0                   NS  MICNF10815
+       SSP                   RECORD T = 0                         NS  MICNF10816
+ NS4F2 STO NT1,4             )                                    NS  MICNF10817
+       LXD H,4                       SET INDEX4=H                 NS  MICNF10818
+ NS5B1 CLA BT2,4                                                  NS  MICNF10819
+       PDX 0,4               SET INDEX 4=K                        NS  MICNF10820
+ SN2   TXI SN3,1,1                                                NS  MICNF10821
+  SN3  CAL LWADR                                                  NS  MICNF10822
+ NS5A1 ANA BT1,4             PLACE I IN AC                        NS  MICNF10823
+       SUB X                                                      NS  MICNF10824
+       TZE SN4               TRANSFER IF X=I                      NS  MICNF10825
+ NS5B2 CLA BT2,4                                                  NS  MICNF10826
+       TMI SN5               TRANSFER IF S=1                      NS  MICNF10827
+ NS5A2 CLA BT1,4                                                  NS  MICNF10828
+       PDX 0,4               SET INDEX 4=L                        NS  MICNF10829
+       PXD 0,4               PLACE L IN AC                        NS  MICNF10830
+       SUB H                                                      NS  MICNF10831
+       TNZ SN3               TRANSFER IF L NOT=H                  NS  MICNF10832
+ SN9   TIX NS1C,2,1          TRANSFER IF B NOT=1                  NS  MICNF10833
+       TXI PC1,1,-1          TRA. TO POTENTIAL CHANGE COMPUTATION NS  MICNF10834
+ SN5   PXD 0,4                                                    NS  MICNF10835
+ NS5D1 STD BT4,1             RECORD B=INDEX 4                     NS  MICNF10836
+       CAL LWDEC                                                  NS  MICNF10837
+ NS5A3 ANA BT1,4             PLACE L IN AC                        NS  MICNF10838
+       SUB H                                                      NS  MICNF10839
+       TNZ SN6               TRANSFER IF L NOT=H                  NS  MICNF10840
+       CAL LW101                                                  NS  MICNF10841
+ NS5D2 STP BT4,1             RECORD O=1, P=0, Q=1                 NS  MICNF10842
+       SXD H,4                       STORE H=INDEX4               NS  MICNF10843
+       TRA NS4A                                                   NS  MICNF10844
+ SN6   CAL LW001                                                  NS  MICNF10845
+ NS5D3 STP BT4,1             RECORD O=0, P=0, Q=1                 NS  MICNF10846
+       CAL LW100                                                  NS  MICNF10847
+ NS5C1 ORS BT3,2             RECORD R=1                           NS  MICNF10848
+       PXD 0,4                                                    NS  MICNF10849
+ NS5C2 STD BT3,2             RECORD F=INDEX 4                     NS  MICNF10850
+       TXI NS3A,2,1          SET INDEX2=INDEX2+1                  NS  MICNF10851
+ SN4   PXD 0,4                                                    NS  MICNF10852
+ NS5D4 STD BT4,1             RECORD B=INDEX 4                     NS  MICNF10853
+ NS5B3 CLA BT2,4                                                  NS  MICNF10854
+       TPL SN7               TRANSFER IF S=0                      NS  MICNF10855
+       ANA LWDEC             PLACE K IN AC                        NS  MICNF10856
+       SUB H                                                      NS  MICNF10857
+       TNZ SN8               TRANSFER IF K NOT=H                  NS  MICNF10858
+       CAL LW100                                                  NS  MICNF10859
+ NS5D5 STP BT4,1             RECORD O=1, P=0, Q=0                 NS  MICNF10860
+       SXD H,4                       STORE H=INDEX4               NS  MICNF10861
+       TRA NS2B                                                   NS  MICNF10862
+ SN8   CLM                                                        NS  MICNF10863
+ NS5D6 STP BT4,1             RECORD O=0, P=0, Q=0                 NS  MICNF10864
+       CAL LWN                                                    NS  MICNF10865
+ NS5C3 ANS BT3,2             RECORD R=0                           NS  MICNF10866
+       PXD 0,4                                                    NS  MICNF10867
+ NS5C4 STD BT3,2             RECORD B=INDEX 4                     NS  MICNF10868
+       TXI NS5B1,2,1         SET INDEX 2=INDEX2+1                 NS  MICNF10869
+ SN7   PDX 0,4               SET INDEX 4=K                        NS  MICNF10870
+       CLM                                                        NS  MICNF10871
+ NS5D7 STP BT4,1             RECORD O=0, P=0, Q=0                 NS  MICNF10872
+       PXD 0,4               PLACE K IN AC                        NS  MICNF10873
+       SUB H                                                      NS  MICNF10874
+       TNZ SN2               TRANSFER IF H NOT=K                  NS  MICNF10875
+       TXI SN9,1,1           TRANSFER TO BRANCH POINT TABLE TEST  NS  MICNF10876
+       REM POTENTIAL CHANGE COMPUTATION                           PC  MICNF10877
+ PC1   CLA LWN                                                    PC  MICNF10878
+       STO Y                 STORE Y=INFINITY                     PC  MICNF10879
+       SXD ALPHA,1                   STORE ALPHA=INDEX1           PC  MICNF10880
+       CLA M                                                      PC  MICNF10881
+       ADD ONE                                                    PC  MICNF10882
+       STO M                 NUMBER OF POTENTIAL COMPUTATIONS     PC  MICNF10883
+ PC2D  CLA BT4,1                                                  PC  MICNF10884
+       TMI PC3               TRANSFER IF O=1                      PC  MICNF10885
+       PDX 0,4               SET INDEX 4=B                        PC  MICNF10886
+ PC2B  CLA BT2,4                                                  PC  MICNF10887
+       PAX 0,2                       SET INDEX2=J                 PC  MICNF10888
+ PC2F  CLA NT1,2                                                  PC  MICNF10889
+       TPL PC3               TRANSFER IF T=0                      PC  MICNF10890
+       STO Z1                                                     PC  MICNF10891
+ PC2A  CLA BT1,4                                                  PC  MICNF10892
+       PAX 0,2                       SET INDEX2=I                 PC  MICNF10893
+       TMI CP2               TRANSFER IF V=1                      PC  MICNF10894
+       CAL LWC                                                    PC  MICNF10895
+ PC2C  ANA BT3,4             PLACE C IN AC                        PC  MICNF10896
+ PC4F  SBM NT1,2                                                  PC  MICNF10897
+       ADM Z1                COMPUTATION OF Y                     PC  MICNF10898
+       TNZ CP3               TRANSFER IF Y NOT=0                  PC  MICNF10899
+       LXA ONE,2             SET INDEX 2=1                        PC  MICNF10900
+       PXD 0,4                                                    PC  MICNF10901
+ PC4C1 STD BT3,2             RECORD F=INDEX 4                     PC  MICNF10902
+       CAL LWN                                                    PC  MICNF10903
+ PC4C2 ANS BT3,2             RECORD R=0                           PC  MICNF10904
+       LXD ALPHA,1           SET INDEX 1=ALPHA                    PC  MICNF10905
+       TXI NS1C,1,1          TRANSFER TO NETWORK SEARCH           PC  MICNF10906
+ CP2   CAL LWC                                                    PC  MICNF10907
+ PC4C3 ANA BT3,4             PLACE C IN AC                        PC  MICNF10908
+       SSM                                                        PC  MICNF10909
+       TRA PC4F              TRANSFER TO Y COMPUTATION            PC  MICNF10910
+ CP3   CAS Y                                                      PC  MICNF10911
+       TRA PC3               TRANSFER TO INDEX 1 TEST             PC  MICNF10912
+       TRA CP4               TRANSFER TO SET INDEX 2=BETA+1       PC  MICNF10913
+       STO Y                                                      PC  MICNF10914
+       LXA ONE,2             SET INDEX 2=1                        PC  MICNF10915
+ CP5   CAL LWN                                                    PC  MICNF10916
+ PC4C4 ANS BT3,2             RECORD R=0                           PC  MICNF10917
+       PXD 0,4                                                    PC  MICNF10918
+ PC4C5 STD BT3,2             RECORD F=INDEX4                      PC  MICNF10919
+       SXD BETA,2            STORE BETA=INDEX2                    PC  MICNF10920
+ PC3   TIX PC2D,1,1                                               PC  MICNF10921
+       CLA Y                                                      PC  MICNF10922
+       SUB LWN                                                    PC  MICNF10923
+       TNZ PH1               TRANSFER IF Y NOT=INFINITY           PC  MICNF10924
+       LXD RIPCR,4           SET OUTPUT SWITCH TO IPCR            PC  MICNF10925
+       TRA OP1               TRANSFER TO OUTPUT ROUTINE           PC  MICNF10926
+ CP4   LXD BETA,2            SET INDEX 2=BETA                     PC  MICNF10927
+       TXI CP5,2,1           TRANSFER TO RECORD R                 PC  MICNF10928
+       REM POTENTIAL CHANGE                                       PH  MICNF10929
+ PH1   LXA NODE,1                                                 PH  MICNF10930
+ PH2F  CLA NT1,1                                                  PH  MICNF10931
+       TMI HP1               TRANSFER TO INDEX 1 TEST             PH  MICNF10932
+       ADD Y                                                      PH  MICNF10933
+ PH2F2 STO NT1,1                     STORE U=U+Y                  PH  MICNF10934
+ HP1   TIX PH2F,1,1          TRANSFER IF INDEX 1 NOT=1            PH  MICNF10935
+       TOV HP2               TRA. IF POTENTIAL MAXIMUM EXCEEDED   PH  MICNF10936
+       LXD ALPHA,1           SET INDEX 1=ALPHA                    PH  MICNF10937
+       LXD BETA,2                    SET INDEX2=BETA              PH  MICNF10938
+       TXI NS1C,1,1          TRANSFER TO NETWORK SEARCH           PH  MICNF10939
+ HP2   LXD RPME,4            SET OUTPUT SWITCH TO PME             PH  MICNF10940
+       TRA OP1               TRANSFER TO OUTPUT ROUTINE           PH  MICNF10941
+       REM FLOW CHANGE COMPUTATION                                FC  MICNF10942
+ FC1   CLA LWC                                                    FC  MICNF10943
+       STO W                 STORE W=INFINITY                     FC  MICNF10944
+       SXD ALPHA,1                   STORE ALPHA=INDEX1           FC  MICNF10945
+       SXD BETA,2                    STORE BETA=INDEX2            FC  MICNF10946
+       CLA N                                                      FC  MICNF10947
+       ADD ONE                                                    FC  MICNF10948
+       STO N                 NUMBER OF FLOW COMPUTATIONS          FC  MICNF10949
+ CF6D  CLA BT4,1                                                  FC  MICNF10950
+       TPL CF1               TRANSFER IF O=0                      FC  MICNF10951
+       PDX 0,4               SET INDEX 4=B                        FC  MICNF10952
+       ANA LW001                                                  FC  MICNF10953
+       TNZ CF2               TRANSFER IF Q=1                      FC  MICNF10954
+       CAL LWC                                                    FC  MICNF10955
+ FC1D1 ANA BT4,4             PLACE M IN AC                        FC  MICNF10956
+       TZE CF3               TRANSFER IF M=0                      FC  MICNF10957
+       STO STM1                                                   FC  MICNF10958
+       CAL LWC                                                    FC  MICNF10959
+ FC1E  ANA BT5,4             PLACE X IN AC                        FC  MICNF10960
+       SSM                                                        FC  MICNF10961
+       ADD STM1              CALCULATE W                          FC  MICNF10962
+ FC3   CAS W                                                      FC  MICNF10963
+       TRA CF3               TRANSFER IF W LESS THAN AC           FC  MICNF10964
+       TRA CF4               TRANSFER IF W=AC                     FC  MICNF10965
+       STO W                 W GREATER THAN AC                    FC  MICNF10966
+ CF4   SXD Z2,4              STORE Z2=INDEX 4                     FC  MICNF10967
+ CF3   CLA LW110                                                  FC  MICNF10968
+ FC1D2 ANA BT4,1                                                  FC  MICNF10969
+       TZE CF1               TRANSFER IF P=0                      FC  MICNF10970
+       SXD GAMMA,4           STORE GAMMA=INDEX4                   FC  MICNF10971
+ FC2   TNX ONE,1,1           SET INDEX 1 = INDEX 1 - 1            FC  MICNF10972
+       CAL LWDEC                                                  FC  MICNF10973
+ FC2D1 ANA BT4,1             PLACE B IN AC                        FC  MICNF10974
+       SUB GAMMA                                                  FC  MICNF10975
+       TNZ FC2               TRANSFER IF B NOT=INSH               FC  MICNF10976
+ CF1   TIX CF6D,1,1          SET INDEX 1=INDEX 1-1                FC  MICNF10977
+ FC4   TRA CFTA                                                   FC  MICNF10978
+ CFTA  CLA Q                                                      FC  MICNF10979
+       TOV CFTA+2                                                 FC  MICNF10980
+       TMI PC3+4             TRANSFER IF Q MINUS TO IPCR OUTPUT   FC  MICNF10981
+       TNZ CFTB              TRANSFER IF Q NOT=0                  FC  MICNF10982
+       CLA RCFQ0                                                  FC  MICNF10983
+       STA FC4               SET SWITCH Q TO 0 IN FC              FC  MICNF10984
+       TRA CFQ0                                                   FC  MICNF10985
+ CFTB  CLA RCFQ1                                                  FC  MICNF10986
+       STA FC4                                                    FC  MICNF10987
+ CFQ1  CLA S                                                      FC  MICNF10988
+       SUB W                                                      FC  MICNF10989
+       TMI CF7               TRANSFER IF S LESS THAN W            FC  MICNF10990
+       STO S                                                      FC  MICNF10991
+       TNZ FA1               TRANSFER IF S GREATER THAN W         FC  MICNF10992
+       STO STW               STORE STW=0                          FC  MICNF10993
+       TRA CF9                                                    FC  MICNF10994
+ CF7   SLW STW               STORE STW = W - S                    FC  MICNF10995
+       CLA S                                                      FC  MICNF10996
+       STO W                 STORE W=S                            FC  MICNF10997
+ CF9   CLA RFAC1                                                  FC  MICNF10998
+       STA FA6               SET SWITCH A TO 1 IN FA              FC  MICNF10999
+       TRA FA1               TRANSFER TO FLOW ALLOCATION          FC  MICNF11000
+ CF2   CAL LWC                                                    FC  MICNF11001
+ FC3E  ANA BT5,4             PLACE X IN AC                        FC  MICNF11002
+       TRA FC3               TRANSFER TO COMPARE W WITH AC        FC  MICNF11003
+ CF8   LXD RIFP,4            SET OUTPUT SWITCH TO IFP             FC  MICNF11004
+       TRA OP1               TRANSFER TO OUTPUT ROUTINE           FC  MICNF11005
+ CFQ0  CLA W                                                      FC  MICNF11006
+       SUB LWC                                                    FC  MICNF11007
+       TZE CF8               TRANSFER IF W = INFINITY             FC  MICNF11008
+       CLA S                                                      FC  MICNF11009
+       ADD W                                                      FC  MICNF11010
+       STO S                 STORE S=S+W                          FC  MICNF11011
+       REM                   PROCEED TO FLOW ALLOCATION           FC  MICNF11012
+       REM FLOW ALLOCATION                                        FA  MICNF11013
+ FA1   LXD ALPHA,1                   SET INDEX1=ALPHA             FA  MICNF11014
+ FA1G  LDQ NT1-NODES                 PLACE U NODE VALUE IN MQ     FA  MICNF11015
+       MPY W                                                      FA  MICNF11016
+       ADD COST1                                                  FA  MICNF11017
+       STO COST1                                                  FA  MICNF11018
+       STQ COSTT                                                  FA  MICNF11019
+       CLA COSTT                                                  FA  MICNF11020
+       ADD COST2                                                  FA  MICNF11021
+       STO COST2                                                  FA  MICNF11022
+       TNO FA2                       TRANSFER IF NO OVER FLOW     FA  MICNF11023
+       CLA ONE                                                    FA  MICNF11024
+       ADD COST1                                                  FA  MICNF11025
+       STO COST1             INCREMENTAL COST CALCULATION         FA  MICNF11026
+ FA2   CAL LWC                                                    FA  MICNF11027
+       SUB W                                                      FA  MICNF11028
+       LRS 35                        STORE X MAXIMUM-W IN MQ      FA  MICNF11029
+ AF1D  CLA BT4,1                                                  FA  MICNF11030
+       TPL AF2               TRANSFER IF O=0                      FA  MICNF11031
+       PDX 0,4               SET INDEX 4=B                        FA  MICNF11032
+       ANA LW001                                                  FA  MICNF11033
+       TZE AF3               TRANSFER IF Q=0                      FA  MICNF11034
+ FA1E1 CAL BT5,4                                                  FA  MICNF11035
+       SUB W                                                      FA  MICNF11036
+ FA1E2 SLW BT5,4             STORE X=X-W                          FA  MICNF11037
+       ANA LWC               PLACE X IN AC                        FA  MICNF11038
+       TNZ AF4               TRANSFER IF X NOT=0                  FA  MICNF11039
+       CAL LWN                                                    FA  MICNF11040
+ FA1B  ANS BT2,4             RECORD S=0                           FA  MICNF11041
+       TRA AF4               TRANSFER TO P TEST                   FA  MICNF11042
+ AF3   CAL LWC                                                    FA  MICNF11043
+ FA1D1 ANA BT4,4             PLACE M IN AC                        FA  MICNF11044
+       TNZ AF5               TRANSFER IF M NOT=0                  FA  MICNF11045
+       CAL LWC                                                    FA  MICNF11046
+ FA1E3 ANA BT5,4             PLACE X IN AC                        FA  MICNF11047
+       TLQ AF9               TRANSFER IF X GREATER THAN X MAXIMUM FA  MICNF11048
+ FA1D2 CAL BT5,4                                                  FA  MICNF11049
+       ADD W                                                      FA  MICNF11050
+ FA1E4 SLW BT5,4             STORE X=X+W                          FA  MICNF11051
+ FA3   CAL LW100                                                  FA  MICNF11052
+ FA3B  ORS BT2,4             RECORD S=1                           FA  MICNF11053
+ AF4   CLA LW110                                                  FA  MICNF11054
+ FA3D  ANA BT4,1                                                  FA  MICNF11055
+       TZE FAG1              TRANSFER IF P = 0                    FA  MICNF11056
+       SXD GAMMA,4                   STORE GAMMA=INDEX4           FA  MICNF11057
+       TRA AF7               TRANSFER TO SET INDEX 1              FA  MICNF11058
+ FA4   CAL LWDEC                                                  FA  MICNF11059
+ FA4D  ANA BT4,1                     PLACE B IN AC                FA  MICNF11060
+       SUB GAMMA                                                  FA  MICNF11061
+ FA5   TZE FAG1              TRANSFER IF GAMMA=B                  FA  MICNF11062
+ AF7   TXI FA4,1,-1          SET INDEX 1=INDEX 1-1                FA  MICNF11063
+ FAG0  CAL LW001                                                  FA  MICNF11064
+ FA5D1 ORS BT4,1             RECORD Q=0                           FA  MICNF11065
+ FAG1  CLA RFAG1                                                  FA  MICNF11066
+       STA FA5               SET SWITCH G TO 1 IN FA              FA  MICNF11067
+ AF2   TIX AF1D,1,1          TRANSFER IF INDEX 1 GREATER THAN 1   FA  MICNF11068
+ FA6   TRA FAC0              TRANSFER TO SEARCH TABLE MODIFICATIONFA  MICNF11069
+ FAC1  LXD ONE,4          SET OUTPUT SWITCH TO PROBLEM TERMINATIONFA  MICNF11070
+       TRA OP1               TRANSFER TO OUTPUT ROUTINE           FA  MICNF11071
+ AF5   STO STM2              STORE STM2=M                         FA  MICNF11072
+ FA5E1 CAL BT5,4                                                  FA  MICNF11073
+       ADD W                                                      FA  MICNF11074
+ FA5E2 SLW BT5,4             STORE X=X+W                          FA  MICNF11075
+       ANA LWC                                                    FA  MICNF11076
+       SUB STM2                                                   FA  MICNF11077
+       TNZ FA3               TRANSFER IF X NOT=M                  FA  MICNF11078
+       CAL LWCC                                                   FA  MICNF11079
+ FA5E3 ANS BT5,4             RECORD X=0                           FA  MICNF11080
+       CAL LWN                                                    FA  MICNF11081
+ FA5B1 ANS BT2,4             RECORD S=0                           FA  MICNF11082
+       CAL LW001                                                  FA  MICNF11083
+ FA5D3 ORS BT4,1             RECORD Q=1                           FA  MICNF11084
+ FA5A1 CLA BT1,4                                                  FA  MICNF11085
+       STO STBT                                                   FA  MICNF11086
+ FA5B2 CLA BT2,4                                                  FA  MICNF11087
+ FA5A2 STD BT1,4             RECORD K IN L POSITION               FA  MICNF11088
+ FA5A3 STA BT1,4             RECORD J IN I POSITION               FA  MICNF11089
+       CLA STBT                                                   FA  MICNF11090
+ FA5B3 STD BT2,4             RECORD L IN K POSITION               FA  MICNF11091
+ FA5B4 STA BT2,4             RECORD I IN J POSITION               FA  MICNF11092
+       CLA RFAG0                                                  FA  MICNF11093
+       STA FA5               SET SWITCH G TO 0 IN FA              FA  MICNF11094
+ FA5A4 CLA BT1,4                                                  FA  MICNF11095
+       TMI AF8               TRANSFER IF V=1                      FA  MICNF11096
+       SSM                   RECORD V=1                           FA  MICNF11097
+ FA5A5 STO BT1,4                                                  FA  MICNF11098
+       TRA AF4               TRANSFER TO P TEST                   FA  MICNF11099
+ AF8   SSP                   RECORD V=0                           FA  MICNF11100
+ FA5A6 STO BT1,4                                                  FA  MICNF11101
+       TRA AF4               TRANSFER TO P TEST                   FA  MICNF11102
+ AF9   LXD RFCE,4            SET OUTPUT SWITCH TO FCE             FA  MICNF11103
+       TRA OP1               TRANSFER TO OUTPUT ROUTINE           FA  MICNF11104
+       REM SEARCH TABLE MODIFICATION                              SM  MICNF11105
+ FAC0  CLA ALPHA                                                  SM  MICNF11106
+       SUB R2DEC                                                  SM  MICNF11107
+       STD SME0              PREPARE INDEX 1=ALPHA-2 TEST         SM  MICNF11108
+       CLA RSMA0                                                  SM  MICNF11109
+       STA SM3               SET SWITCH A TO 0 IN SM              SM  MICNF11110
+       CLA RSMD0                                                  SM  MICNF11111
+       STA SMA0              SET SWITCH D TO 0 IN SM              SM  MICNF11112
+       LXD ONE,2                     SET INDEX2=0                 SM  MICNF11113
+       LXD ONE,1                     SET INDEX1=0                 SM  MICNF11114
+ SMA0  TXI SMD0,1,1          SET INDEX 1=INDEX 1+1                SM  MICNF11115
+ SMD0  CAL LWDEC                                                  SM  MICNF11116
+ SM1D1 ANA BT4,1             PLACE B IN AC                        SM  MICNF11117
+       SUB Z2                                                     SM  MICNF11118
+       TNZ SM3                       TRANSFER IF B NOT=Z2         SM  MICNF11119
+       CLA RSMAD                                                  SM  MICNF11120
+       STA SM3               SET SWITCH A TO 1 IN SM              SM  MICNF11121
+ SM1D2 CLA BT4,1                                                  SM  MICNF11122
+       TPL SME0              TRANSFER IF O=0                      SM  MICNF11123
+       CLA RSMDD                                                  SM  MICNF11124
+       STA SMA0              SET SWITCH D TO 1 IN SM              SM  MICNF11125
+       TRA MS5D              TRANSFER TO RECORD T=1               SM  MICNF11126
+ SMDD  CLA BT4,1                                                  SM  MICNF11127
+ SM2   TPL SME0              TRANSFER IF O=0                      SM  MICNF11128
+       PDX 0,4               SET INDEX 4=B                        SM  MICNF11129
+       ANA LW001                                                  SM  MICNF11130
+       TZE MS6A              TRANSFER IF Q=0                      SM  MICNF11131
+ SM2B  CLA BT2,4                                                  SM  MICNF11132
+       PAX 0,4               SET INDEX 4=J                        SM  MICNF11133
+ SM2F  CLA NT1,4                                                  SM  MICNF11134
+       TMI MS5D              TRANSFER IF T=1                      SM  MICNF11135
+       CAL LWDEC                                                  SM  MICNF11136
+ SM2D  ANA BT4,1             PLACE B IN AC                        SM  MICNF11137
+       SUB Z2                                                     SM  MICNF11138
+       TZE MS7               TRANSFER IF B=Z                      SM  MICNF11139
+ SM4   CLA RSM3                                                   SM  MICNF11140
+       STA SM2               SET SWITCH E TO 1 IN SM              SM  MICNF11141
+ SM3   TXI SMA0,2,1          SET INDEX 2=INDEX 2+1                SM  MICNF11142
+ MS6A  CLA BT1,4                                                  SM  MICNF11143
+       PAX 0,4               SET INDEX 4=I                        SM  MICNF11144
+ SM3F  CLA NT1,4                                                  SM  MICNF11145
+       TPL SM4               TRANSFER IF T=0                      SM  MICNF11146
+ SM3D  CLA BT4,1                                                  SM  MICNF11147
+       PDX 0,4               SET INDEX 4=B                        SM  MICNF11148
+ SM3B  CLA BT2,4                                                  SM  MICNF11149
+       PAX 0,4                       SET INDEX4=J                 SM  MICNF11150
+ SM5   CAL LW100                                                  SM  MICNF11151
+ SM5F1 ORS NT1,4             RECORD T=1                           SM  MICNF11152
+ MS7   CAL RSME0                                                  SM  MICNF11153
+       STA SM2               SET SWITCH E=0 IN SM                 SM  MICNF11154
+       TRA SME0                                                   SM  MICNF11155
+ MS5D  CLA BT4,1                                                  SM  MICNF11156
+       PDX 0,4               SET INDEX 4=B                        SM  MICNF11157
+ SM5A  CLA BT1,4                                                  SM  MICNF11158
+       PAX 0,4               SET INDEX 4=I                        SM  MICNF11159
+       TRA SM5               TRANSFER TO RECORD T=1               SM  MICNF11160
+ SMAD  CAL BT4,1                                                  SM  MICNF11161
+ SM5D1 STP BT4,2             RECORD 0,P, AND Q IN SEARCH TABLE    SM  MICNF11162
+ SM5D2 STD BT4,2             RECORD B IN SEARCH TABLE             SM  MICNF11163
+ SME0  TXL SMA0,1,0          TRA.IF INDEX 1 GREATER THAN ALPHA-2  SM  MICNF11164
+       CAL LW100                                                  SM  MICNF11165
+ SM5G  ORS NT1                       RECORD T=1 ON TERMINAL NODE  SM  MICNF11166
+       TXL CP4-2,2,0         TRANSFER IF INDEX 2 = 0              SM  MICNF11167
+       CLA BETA              TEST BETA                            SM  MICNF11168
+       TNZ BM1               )TRA. TO BRANCH PT. TABLE MODIF.     SM  MICNF11169
+       PXD 0,2                                                    SM  MICNF11170
+       PDX 0,1                       SET INDEX1=INDEX2            SM  MICNF11171
+       TRA PC1               TRA. TO POTENTIAL CHANGE COMPUTATION SM  MICNF11172
+       REM PROCEED TO BRANCH POINT TABLE MODIFICATION             SM  MICNF11173
+       REM BRANCH POINT TABLE MODIFICATION                        BM  MICNF11174
+ BM1   SXD ALPHA,2           STORE ALPHA = INDEX 2                BM  MICNF11175
+       SUB R1DEC             PREPARE INDEX 2 = BETA - 1 TEST      BM  MICNF11176
+       STD BMF1              )                                    BM  MICNF11177
+       CLA RBMF0                                                  BM  MICNF11178
+       STA BM3               SET SWITCH F TO 0 IN BM              BM  MICNF11179
+       CLA RBMF1                                                  BM  MICNF11180
+       STA BM4               SET SWITCH F TO 0 IN BM              BM  MICNF11181
+       LXD ONE,1             SET INDEX 1=0                        BM  MICNF11182
+       LXA ONE,2             SET INDEX 2=1                        BM  MICNF11183
+ BM2C  CLA BT3,2                                                  BM  MICNF11184
+       PDX 0,4               SET INDEX 4=F                        BM  MICNF11185
+       TPL MB2A              TRANSFER IF R = 0                    BM  MICNF11186
+ BM1B  CLA BT2,4                                                  BM  MICNF11187
+       PAX 0,4               SET INDEX 4=J                        BM  MICNF11188
+       TRA MB3F                                                   BM  MICNF11189
+ MB2A  CLA BT1,4                                                  BM  MICNF11190
+       PAX 0,4               SET INDEX 4=I                        BM  MICNF11191
+ MB3F  CLA NT1,4                                                  BM  MICNF11192
+ BM3   TMI BMF0              TRANSFER IF T=1                      BM  MICNF11193
+ BM4   TXI BMF1,1,1          SET INDEX 1=INDEX 1+1                BM  MICNF11194
+ MBFC  CAL BT3,2                                                  BM  MICNF11195
+ BM4C1 STP BT3,1             RECORD R IN BRANCH POINT TABLE       BM  MICNF11196
+ BM4C2 STD BT3,1             RECORD F IN BRANCH POINT TABLE       BM  MICNF11197
+ BMF1  TXH MB4,2,0           TRA. IF INDEX 2 GREATER THAN BETA-1  BM  MICNF11198
+       TXI BM2C,2,1          SET INDEX 2=INDEX2+1                 BM  MICNF11199
+ BMF0  CLA RBMF1                                                  BM  MICNF11200
+       STA BM3               SET SWITCH F TO 1 IN BM              BM  MICNF11201
+       CLA RMBFC                                                  BM  MICNF11202
+       STA BM4               SET SWITCH F TO 1 IN BM              BM  MICNF11203
+       TRA BMF1              TRANSFER TO INDEX 2 TEST             BM  MICNF11204
+ MB4   PXD 0,1               PLACE INDEX 1 IN AC                  BM  MICNF11205
+       LXD ALPHA,1           SET INDEX 1=ALPHA                    BM  MICNF11206
+       TZE PC1               TRANSFER IF INDEX 1 WAS=0            BM  MICNF11207
+       PDX 0,2               SET INDEX 2=INDEX 1                  BM  MICNF11208
+ BM5   TXI NS1C,1,1          TRANSFER TO NETWORK SEARCH           BM  MICNF11209
+       REM PROGRAM PARAMETERS AND CONSTANTS                       PP  MICNF11210
+ ONE   DEC 1                                                      PP  MICNF11211
+ LW100 EQU IP100                                                  PP  MICNF11212
+ LW001 EQU IP001                                                  PP  MICNF11213
+ LWADR OCT 77777                                                  PP  MICNF11214
+ LW101 MON SMA0              ADDRESS TO SET SWITCH A TO 0         PP  MICNF11215
+ RSMA0 EQU LW101                                                  PP  MICNF11216
+ LW110 EQU IP110                                                  PP  MICNF11217
+ LW111 MTH SMAD              ADDRESS TO SET SWITCH A TO 1         PP  MICNF11218
+ RSMAD EQU LW111                                                  PP  MICNF11219
+ LWCC  OCT 777777000000                                           PP  MICNF11220
+ R2DEC OCT 000002000000                                           PP  MICNF11221
+ R1DEC OCT 000001000000                                           PP  MICNF11222
+ RFAC1 PZE FAC1,0,PME        ADDRESS TO SET SWITCH C TO 1         PP  MICNF11223
+ RSMD0 PZE SMD0,0,FCE        ADDRESS TO SET SWITCH D TO 0         PP  MICNF11224
+ RSMDD PZE SMDD              ADDRESS TO SET SWITCH D TO 1         PP  MICNF11225
+ RSME0 PZE SME0,0,IPCR               ADDRESS TO SET SWITCH E TO 0 PP  MICNF11226
+ RSM3  PZE SM3                       ADDRESS TO SET SWITCH E TO 2 PP  MICNF11227
+ RBMF0 PZE BMF0,0,IFP        ADDRESS TO SET SWITCH F TO 0         PP  MICNF11228
+ RBMF1 PZE BMF1              ADDRESS BMF1 TO SET SWITCH F TO 1    PP  MICNF11229
+ RFAG0 PZE FAG0              ADDRESS FAG0 TO SET SWITCH G TO 0    PP  MICNF11230
+ RFAG1 PZE FAG1              ADDRESS TO SET SWITCH G TO 1         PP  MICNF11231
+ RCFQ1 PZE CFQ1              ADDRESS TO SET SWITCH Q TO 1         PP  MICNF11232
+ RCFQ0 PZE CFQ0              ADDRESS TO SET SWITCH Q TO 0         PP  MICNF11233
+ RMBFC PZE MBFC              ADDRESS TO SET SWITCH F TO 1         PP  MICNF11234
+ RFAC0 PZE FAC0              ADDRESS TO SET SWITCH C TO 0         PP  MICNF11235
+ X     PZE                                                        PP  MICNF11236
+ H     PZE                                                        PP  MICNF11237
+ Y     PZE                                                        PP  MICNF11238
+ Z1    PZE                   STORAGE OF U IN P C                  PP  MICNF11239
+ STM1  PZE                   STORAGE OF M IN FC                   PP  MICNF11240
+ STM2  EQU STM1              STORAGE OF M IN FA                   PP  MICNF11241
+ GAMMA PZE                                                        PP  MICNF11242
+ RPME  EQU RFAC1             DECREMENT TO SET OUTPUT SWITCH TO PMEPP  MICNF11243
+ RIFP  EQU RBMF0             DECREMENT TO SET OUTPUT SWITCH TO IFPPP  MICNF11244
+ RFCE  EQU RSMD0             DECREMENT TO SET OUTPUT SWITCH TO FCEPP  MICNF11245
+ RIPCR EQU RSME0          DECREMENT TO SET OUTPUT SWITCH TO IPCR  PP  MICNF11246
+ FCE   EQU 27                SET FCE = 27                         PP  MICNF11247
+ PME   EQU 30                SET PME = 30                         PP  MICNF11248
+ IFP   EQU 39                SET IFP = 39                         PP  MICNF11249
+ IPCR  EQU 24                SET IPCR = 24                        PP  MICNF11250
+       REM TRANSFER TO OUTPUT PROGRAM                             MP  MICNF11251
+ OP1   CLA RPTK              SET TRANSFER TO OUTPUT PROGRAM       MP  MICNF11252
+       STA RPTL              )                                    MP  MICNF11253
+ OP2   TRA RPT               TRANSFER TO READ OUTPUT PROGRAM      MP  MICNF11254
+       REM ADDRESS TABLE FOR MAIN PROGRAM                         MP  MICNF11255
+       ORG WPTR+2            ADDRESS TABLE ORIGIN                 MP  MICNF11256
+       PZE NS1C,0,4                                               MP  MICNF11257
+       PZE NS1D1,0,5                                              MP  MICNF11258
+       PZE NS1D2,0,5                                              MP  MICNF11259
+       PZE NS2B,0,3                                               MP  MICNF11260
+       PZE NS2F1,0,1                                              MP  MICNF11261
+       PZE NS2F2,0,1                                              MP  MICNF11262
+       PZE NS3A,0,2                                               MP  MICNF11263
+       PZE NS3D,0,5                                               MP  MICNF11264
+       PZE NS4A,0,2                                               MP  MICNF11265
+       PZE NS4F1,0,1                                              MP  MICNF11266
+       PZE NS4F2,0,1                                              MP  MICNF11267
+       PZE NS5B1,0,3                                              MP  MICNF11268
+       PZE NS5A1,0,2                                              MP  MICNF11269
+       PZE NS5B2,0,3                                              MP  MICNF11270
+       PZE NS5A2,0,2                                              MP  MICNF11271
+       PZE NS5D1,0,5                                              MP  MICNF11272
+       PZE NS5A3,0,2                                              MP  MICNF11273
+       PZE NS5D2,0,5                                              MP  MICNF11274
+       PZE NS5D3,0,5                                              MP  MICNF11275
+       PZE NS5C1,0,4                                              MP  MICNF11276
+       PZE NS5C2,0,4                                              MP  MICNF11277
+       PZE NS5D4,0,5                                              MP  MICNF11278
+       PZE NS5B3,0,3                                              MP  MICNF11279
+       PZE NS5D5,0,5                                              MP  MICNF11280
+       PZE NS5D6,0,5                                              MP  MICNF11281
+       PZE NS5C3,0,4                                              MP  MICNF11282
+       PZE NS5C4,0,4                                              MP  MICNF11283
+       PZE NS5D7,0,5                                              MP  MICNF11284
+       PZE PC2D,0,5                                               MP  MICNF11285
+       PZE PC2B,0,3                                               MP  MICNF11286
+       PZE PC2F,0,1                                               MP  MICNF11287
+       PZE PC2A,0,2                                               MP  MICNF11288
+       PZE PC2C,0,4                                               MP  MICNF11289
+       PZE PC4F,0,1                                               MP  MICNF11290
+       PZE PC4C1,0,4                                              MP  MICNF11291
+       PZE PC4C2,0,4                                              MP  MICNF11292
+       PZE PC4C3,0,4                                              MP  MICNF11293
+       PZE PC4C4,0,4                                              MP  MICNF11294
+       PZE PC4C5,0,4                                              MP  MICNF11295
+       PZE PH2F,0,1                                               MP  MICNF11296
+       PZE PH2F2,0,1                                              MP  MICNF11297
+       PZE CF6D,0,5                                               MP  MICNF11298
+       PZE FC1D1,0,5                                              MP  MICNF11299
+       PZE FC1E,0,6                                               MP  MICNF11300
+       PZE FC1D2,0,5                                              MP  MICNF11301
+       PZE FC2D1,0,5                                              MP  MICNF11302
+       PZE FC3E,0,6                                               MP  MICNF11303
+       PZE FA1G,0,7                                               MP  MICNF11304
+       PZE AF1D,0,5                                               MP  MICNF11305
+       PZE FA1E1,0,6                                              MP  MICNF11306
+       PZE FA1E2,0,6                                              MP  MICNF11307
+       PZE FA1B,0,3                                               MP  MICNF11308
+       PZE FA1D1,0,5                                              MP  MICNF11309
+       PZE FA1E3,0,6                                              MP  MICNF11310
+       PZE FA1D2,0,6                                              MP  MICNF11311
+       PZE FA1E4,0,6                                              MP  MICNF11312
+       PZE FA3B,0,3                                               MP  MICNF11313
+       PZE FA3D,0,5                                               MP  MICNF11314
+       PZE FA4D,0,5                                               MP  MICNF11315
+       PZE FA5D1,0,5                                              MP  MICNF11316
+       PZE FA5E1,0,6                                              MP  MICNF11317
+       PZE FA5E2,0,6                                              MP  MICNF11318
+       PZE FA5E3,0,6                                              MP  MICNF11319
+       PZE FA5B1,0,3                                              MP  MICNF11320
+       PZE FA5D3,0,5                                              MP  MICNF11321
+       PZE FA5A1,0,2                                              MP  MICNF11322
+       PZE FA5B2,0,3                                              MP  MICNF11323
+       PZE FA5A2,0,2                                              MP  MICNF11324
+       PZE FA5A3,0,2                                              MP  MICNF11325
+       PZE FA5B3,0,3                                              MP  MICNF11326
+       PZE FA5B4,0,3                                              MP  MICNF11327
+       PZE FA5A4,0,2                                              MP  MICNF11328
+       PZE FA5A5,0,2                                              MP  MICNF11329
+       PZE FA5A6,0,2                                              MP  MICNF11330
+       PZE SM1D1,0,5                                              MP  MICNF11331
+       PZE SM1D2,0,5                                              MP  MICNF11332
+       PZE SMDD,0,5                                               MP  MICNF11333
+       PZE SM2B,0,3                                               MP  MICNF11334
+       PZE SM2F,0,1                                               MP  MICNF11335
+       PZE SM2D,0,5                                               MP  MICNF11336
+       PZE MS6A,0,2                                               MP  MICNF11337
+       PZE SM3F,0,1                                               MP  MICNF11338
+       PZE SM3D,0,5                                               MP  MICNF11339
+       PZE SM3B,0,3                                               MP  MICNF11340
+       PZE SM5F1,0,1                                              MP  MICNF11341
+       PZE MS5D,0,5                                               MP  MICNF11342
+       PZE SM5A,0,2                                               MP  MICNF11343
+       PZE SMAD,0,5                                               MP  MICNF11344
+       PZE SM5D1,0,5                                              MP  MICNF11345
+       PZE SM5D2,0,5                                              MP  MICNF11346
+       PZE SM5G,0,1                                               MP  MICNF11347
+       PZE BM2C,0,4                                               MP  MICNF11348
+       PZE BM1B,0,3                                               MP  MICNF11349
+       PZE MB2A,0,2                                               MP  MICNF11350
+       PZE MB3F,0,1                                               MP  MICNF11351
+       PZE MBFC,0,4                                               MP  MICNF11352
+       PZE BM4C1,0,4                                              MP  MICNF11353
+       PZE BM4C2,0,4                                              MP  MICNF11354
+       PZE OP2+1                                                  MP  MICNF11355
+       PZE                   END OF BLOCK                         MP  MICNF11356
+       END WPT               TRANSFER TO WRITE PROGRAAM ON TAPE   MP  MICNF11357
+       REM COMMON PART OF OUTPUT PROGRAM                          OC  MICNF11358
+       RST 7,1               READ COMMON SYMBOL TABLE FROM TAPE   OC  MICNF11359
+       ORG RPTK+153   ORIGIN FOR COMMON PART OF OUTPUT PROGRAM    OC  MICNF11360
+ DR100 MZE                                                        OC  MICNF11361
+ DR110 EQU IP110                                                  OC  MICNF11362
+ DR001 EQU IP001                                                  OC  MICNF11363
+ DR301 OCT 40000000000                                            OC  MICNF11364
+ DRCE  PZE                   STORAGE FOR X OR M-X                 OC  MICNF11365
+ LWADR OCT 77777                                                  OC  MICNF11366
+ DRCF  PZE                   STORAGE FOR I,M,C                    OC  MICNF11367
+ DRCG  PZE                   STORAGE FOR J                        OC  MICNF11368
+ DRCJ  PZE 5                                                      OC  MICNF11369
+ DRCM  BCD 2     COST                                             OC  MICNF11370
+ TFA   BCD 1TOTAL                                                 OC  MICNF11371
+ MFA   BCD 1MAX.                                                  OC  MICNF11372
+ FALL  BCD 3FLOW ALLOCATED                                        OC  MICNF11373
+ TNX   EQU 3                                                      OC  MICNF11374
+ TNW   EQU 2                                                      OC  MICNF11375
+       REM ADVANCE OVER FIELD                                     OC  MICNF11376
+ AOF   SXD RWCC,1          SAVE IR 1                              OC  MICNF11377
+       LXA RWCB,1          PICK UP CHAR. INDEX                    OC  MICNF11378
+       PXD 0,1             )                                      OC  MICNF11379
+       SBM 1,4             DECREASE BY 6 N                        OC  MICNF11380
+       LXD RWCB,1          PICK UP BCD WORD INDEX                 OC  MICNF11381
+       TZE AOFB                                                   OC  MICNF11382
+ AOFA  TPL AOFC            CHAR. INDEX IN CORRECT RANGE           OC  MICNF11383
+ AOFB  ADD AOFD            INCREMENT CHAR. INDEX                  OC  MICNF11384
+       TXI AOFA,1,-1       INCREMENT WORD INDEX                   OC  MICNF11385
+ AOFC  SXD RWCB,1          STORE BCD INDICES                      OC  MICNF11386
+       ARS 18              )                                      OC  MICNF11387
+       STA RWCB            )                                      OC  MICNF11388
+       LXD RWCC,1          RESET IR 1                             OC  MICNF11389
+       TRA 2,4             RETURN                                 OC  MICNF11390
+ AOFD  PZE 0,,36                                                  OC  MICNF11391
+       REM WRITE ON DIRECT PRINTER                                OC  MICNF11392
+ WPR   WPR                   SELECT PRINTER                       OC  MICNF11393
+       SXD RWCC,1                                                 OC  MICNF11394
+       SXD RWCD,2                                                 OC  MICNF11395
+       LXD RWCB,1                                                 OC  MICNF11396
+       SXD WPRU,1                                                 OC  MICNF11397
+       SXD WPRR,4                                                 OC  MICNF11398
+       LXD RWCA,4                                                 OC  MICNF11399
+       CAL WPRR                                                   OC  MICNF11400
+ WPRB  STA WPRU                                                   OC  MICNF11401
+       STP WPRS                                                   OC  MICNF11402
+       TSX WPRN,2                                                 OC  MICNF11403
+       SSM                                                        OC  MICNF11404
+       STO WPRT                                                   OC  MICNF11405
+ WPRC  LDQ RWC,4                                                  OC  MICNF11406
+ WPRD  CLM                                                        OC  MICNF11407
+       LGL 2                                                      OC  MICNF11408
+       PAX 0,2                                                    OC  MICNF11409
+       CLM                                                        OC  MICNF11410
+       LGL 4                                                      OC  MICNF11411
+       PAX 0,1                                                    OC  MICNF11412
+       CLM                                                        OC  MICNF11413
+       ACL WPRT                                                   OC  MICNF11414
+       TXL WPRE,2,0                                               OC  MICNF11415
+       TXL WPRF,1,0                                               OC  MICNF11416
+       ORS WPRV,2                                                 OC  MICNF11417
+ WPRE  TXL WPRH,1,9                                               OC  MICNF11418
+       TXH WPRG,1,10                                              OC  MICNF11419
+       TXH WPRG,2,2                                               OC  MICNF11420
+       ORS WPRV-3                                                 OC  MICNF11421
+       TRA WPRI                                                   OC  MICNF11422
+ WPRF  TXH WPRI,2,2                                               OC  MICNF11423
+       ORS WPRV,2                                                 OC  MICNF11424
+       TRA WPRI                                                   OC  MICNF11425
+ WPRG  ORS WPRV-11                                                OC  MICNF11426
+       TXI WPRH,1,-8                                              OC  MICNF11427
+ WPRH  ORS WPRV-3,1                                               OC  MICNF11428
+ WPRI  ARS 1                                                      OC  MICNF11429
+       SLW WPRT                                                   OC  MICNF11430
+       TZE WPRJ                                                   OC  MICNF11431
+       ANA WPRQ                                                   OC  MICNF11432
+       TNZ WPRD                                                   OC  MICNF11433
+ WPRU  TXL 0,4,0                                                  OC  MICNF11434
+       TXI WPRC,4,-1                                              OC  MICNF11435
+ WPRJ  CLA WPRS                                                   OC  MICNF11436
+       TPL WPRL                                                   OC  MICNF11437
+       TXI WPRB,4,-1                                              OC  MICNF11438
+ WPRK  TSX WPRN,2                                                 OC  MICNF11439
+ WPRL  LXD WPRS,1                                                 OC  MICNF11440
+ WPRM  CPY WPRV-12,1                                              OC  MICNF11441
+       CPY WPRV,1                                                 OC  MICNF11442
+       TIX WPRM,1,1                                               OC  MICNF11443
+       LXD RWCC,1                                                 OC  MICNF11444
+       LXD RWCD,2                                                 OC  MICNF11445
+       LXD WPRR,4                                                 OC  MICNF11446
+       TRA 1,4                                                    OC  MICNF11447
+ WPRN  LXD WPRS,1                                                 OC  MICNF11448
+       CLM                                                        OC  MICNF11449
+ WPRP  LDQ WPRV,1                                                 OC  MICNF11450
+       STQ WPRV-12,1                                              OC  MICNF11451
+       SLW WPRV,1                                                 OC  MICNF11452
+       TIX WPRP,1,1                                               OC  MICNF11453
+       TRA 1,2                                                    OC  MICNF11454
+ WPRQ  OCT +373737373737                                          OC  MICNF11455
+ WPRR  MZE WPRK                                                   OC  MICNF11456
+ WPRS  PZE WPRL,,12                                               OC  MICNF11457
+ WPRT  HTR 0                                                      OC  MICNF11458
+ WPRV  BES 24                                                     OC  MICNF11459
+       REM READ WRITE COMMON                                      OC  MICNF11460
+       OCT -206060606060     BCD STORAGE                          OC  MICNF11461
+       REP 1,13              )                                    OC  MICNF11462
+ RWCA  PZE 36,,14                                                 OC  MICNF11463
+ RWC   EQU RWCA                                                   OC  MICNF11464
+ RWCB  PZE 36,,14            BCD INDICES                          OC  MICNF11465
+ RWCC  PZE                   FOR IR 1                             OC  MICNF11466
+ RWCD  PZE                   FOR IR 2                             OC  MICNF11467
+ RWCF  PZE                   FOR IR 4                             OC  MICNF11468
+ RWCE  PZE 1                                                      OC  MICNF11469
+       REM WRITE HOLERITH WORDS                                   OC  MICNF11470
+ WHW   SXD RWCC,1            SAVE IR 1                            OC  MICNF11471
+       CAL RWCB              COMPUTE ADDRESS                      OC  MICNF11472
+       PDX 0,1               )                                    OC  MICNF11473
+       ARS 18                )                                    OC  MICNF11474
+       ADD 1,4               )                                    OC  MICNF11475
+       STA WHWA              )                                    OC  MICNF11476
+       ARS 18                SET FOR COUNT                        OC  MICNF11477
+ WHWA  LDQ 0,1               TRANSFER WORD                        OC  MICNF11478
+       STQ RWC,1                                                  OC  MICNF11479
+       SUB RWCE              COUNT                                OC  MICNF11480
+       TXI WHWB,1,-1         GO TO NEXT BCD WORD                  OC  MICNF11481
+ WHWB  TNZ WHWA              CONTINUE                             OC  MICNF11482
+       SXD RWCB,1            SAVE BCD WORD INDEX                  OC  MICNF11483
+       LXD RWCC,1            RESET IR 1                           OC  MICNF11484
+       TRA 2,4               RETURN                               OC  MICNF11485
+       REM WRITE OUTPUT TAPE IN BCD                               OC  MICNF11486
+ WTD   WTD TNW               SELECT OUTPUT TAPE                   OC  MICNF11487
+       SXD RWCC,1            SAVE IR 1                            OC  MICNF11488
+       CLA RWCB              SET FOR COUNT TEST                   OC  MICNF11489
+       STD WTDE              )                                    OC  MICNF11490
+       CAL WTDF                                                   OC  MICNF11491
+       LXD RWCA,1            WRITE AND CLEAR TO BLANKS            OC  MICNF11492
+ WTDB  CPY RWC,1             )                                    OC  MICNF11493
+       SLW RWC,1             )                                    OC  MICNF11494
+  WTDE TXL WTDC,1,0          )                                    OC  MICNF11495
+       TIX WTDB,1,1          COUNT                                OC  MICNF11496
+ WTDC  CLA RWCA              RESET BCD INDICES                    OC  MICNF11497
+       STO RWCB              )                                    OC  MICNF11498
+       LXD RWCC,1            RESET IR 1                           OC  MICNF11499
+       IOD                                                        OC  MICNF11500
+       TRA 1,4               RETURN                               OC  MICNF11501
+ WTDF  OCT -206060606060     BCD BLANK WORD                       OC  MICNF11502
+       REM BINARY TO DECIMAL INTEGER                              OC  MICNF11503
+ BDI   SXD RWCC,1            SAVE IR 1                            OC  MICNF11504
+       SXD RWCD,2            SAVE IR 2                            OC  MICNF11505
+       LXD RWCB,1            SET BCD INDICES                      OC  MICNF11506
+       LXA RWCB,2            )                                    OC  MICNF11507
+       CLA 1,4               PICK UP PROGRAM PARAMETER            OC  MICNF11508
+       STD BDIL              )                                    OC  MICNF11509
+       TPL BDIM              NUMBER IS IN MQ                      OC  MICNF11510
+       STA BDIA              PICK UP NUMBER                       OC  MICNF11511
+ BDIA  LDQ 0                 )                                    OC  MICNF11512
+ BDIM  PXD 0,2               ADVANCE BCD INDICES TO FIELD END     OC  MICNF11513
+       SBM BDIL              )                                    OC  MICNF11514
+       ARS 18                )                                    OC  MICNF11515
+       TZE BDIB              )                                    OC  MICNF11516
+ BDIC  TPL BDID              )                                    OC  MICNF11517
+ BDIB  ADD BDIJ              )                                    OC  MICNF11518
+       TXI BDIC,1,-1         )                                    OC  MICNF11519
+ BDID  LRS 0                 SET SIGN OF MQ TO PLUS               OC  MICNF11520
+       STA RWCB              STORE BCD INDICES                    OC  MICNF11521
+       SUB BDII              )                                    OC  MICNF11522
+       PAX 0,2               )                                    OC  MICNF11523
+       SXD RWCB,1            )                                    OC  MICNF11524
+       TIX BDIF,2,6          MOVE BACK ONE CHARACTER              OC  MICNF11525
+       LXA BDIJ,2            )                                    OC  MICNF11526
+       TXI BDIF,1,1          )                                    OC  MICNF11527
+ BDIE  CLA RWCE              TEST FOR END OF CONVERSION           OC  MICNF11528
+       TLQ BDIG              )                                    OC  MICNF11529
+ BDIF  CAL BDIK              RECORD ONE DIGIT N                   OC  MICNF11530
+       ALS 36,2              BCD STORE                            OC  MICNF11531
+       COM                   )                                    OC  MICNF11532
+       ANS RWC,1             )                                    OC  MICNF11533
+       CLM                   )                                    OC  MICNF11534
+       DVP BDIH              )                                    OC  MICNF11535
+       ALS 36,2              )                                    OC  MICNF11536
+       ORS RWC,1             )                                    OC  MICNF11537
+       TIX BDIE,2,6          MOVE BACK ONE CHARACTER              OC  MICNF11538
+       LXA BDIJ,2            )                                    OC  MICNF11539
+       TXI BDIE,1,1          )                                    OC  MICNF11540
+ BDIG  LXD RWCC,1            INDEX REG. RESET                     OC  MICNF11541
+       LXD RWCD,2            )                                    OC  MICNF11542
+       TRA 2,4               RETURN                               OC  MICNF11543
+ BDIH  PZE 10                CONSTANTS                            OC  MICNF11544
+ BDII  PZE 42                )                                    OC  MICNF11545
+ BDIJ  PZE 36                )                                    OC  MICNF11546
+ BDIK  PZE 63                )                                    OC  MICNF11547
+ BDIL  PZE                   )                                    OC  MICNF11548
+       REM DOUBLE LENGTH BINARY TO DECIMAL INTEGER                OC  MICNF11549
+ DBD   SLW DBDG              STORE MOST SIGNIFICANT HALF          OC  MICNF11550
+       CLA 1,4               PICK UP PROGRAM PARAMETER            OC  MICNF11551
+       TPL DBDB              NUMBER WAS IN AC AND MQ              OC  MICNF11552
+       ADD RWCE              PICK UP MOST SIGNIFICANT HALF        OC  MICNF11553
+       STA DBDA              )                                    OC  MICNF11554
+ DBDA  CLA 0                 )                                    OC  MICNF11555
+       TZE BDI               TRANSFER TO NORMAL CONVERSION IF AC=0OC  MICNF11556
+       SLW DBDG              STORE MOST SIGNIFICANT HALF          OC  MICNF11557
+ DBDD  CLA DBDER             MODIFY BDI ROUTINE                   OC  MICNF11558
+       STO BDIF+4            )                                    OC  MICNF11559
+       CLA BDIE-1            )                                    OC  MICNF11560
+       STA BDIG-3            )                                    OC  MICNF11561
+       STA BDIG-1            )                                    OC  MICNF11562
+       TRA BDI               TRANSFER TO MODIFIED BDI ROUTINE     OC  MICNF11563
+ DBDB  CLA DBDG              PICK UP MOST SIGNIFICANT HALF        OC  MICNF11564
+       TZE BDI               TRANSFER TO NORMAL CONVERSION IF AC=0OC  MICNF11565
+       TRA DBDD              TRANSFER TO MODIFY BDI ROUTINE       OC  MICNF11566
+ DBDE  STQ DBDI              STORE LEAST SIGNIFICANT HALF         OC  MICNF11567
+       LDQ DBDG              LOAD MOST SIGNIFICANT HALF           OC  MICNF11568
+       CLA RWCE              TEST FOR ZERO MOST SIGNIFICANT HALF  OC  MICNF11569
+       TLQ DBDF              )                                    OC  MICNF11570
+ DBDH  CLM                   CLM OPERATION                        OC  MICNF11571
+       DVP BDIH              )                                    OC  MICNF11572
+       STQ DBDG              STORE MOST SIGNIFICANT HALF          OC  MICNF11573
+       LDQ DBDI              LOAD LEAST SIGNIFICANT HALF          OC  MICNF11574
+       TRA BDIF+5            TRANSFER TO MODIFIED BDI             OC  MICNF11575
+ DBDF  CLA DBDH              RESET TO NORMAL CONVERSION           OC  MICNF11576
+       STO BDIF+4            )                                    OC  MICNF11577
+       CLA DBDJ              )                                    OC  MICNF11578
+       STA BDIG-3            )                                    OC  MICNF11579
+       STA BDIG-1            )                                    OC  MICNF11580
+       LDQ DBDI              )                                    OC  MICNF11581
+       TRA BDIF+4            TRA. TO COMPLETE NORMAL CONVERSION   OC  MICNF11582
+ DBDG  PZE                   MOST SIGNIFICANT HALF STORAGE        OC  MICNF11583
+ DBDI  PZE                   LEAST SIGNIFICANT HALF STORAGE       OC  MICNF11584
+ DBDER TRA DBDE              TRA DBDE OPERATION                   OC  MICNF11585
+       REM WRITE BLANK LINE ON TAPE                               OC  MICNF11587
+ DBDJ  PZE BDIE              ADDRESS TO SET BDIE                  OC  MICNF11586
+ BLT   WTD TNW                                                    OC  MICNF11588
+       CPY BLTA                                                   OC  MICNF11589
+       TRA 1,4                                                    OC  MICNF11590
+ BLTA  BCD 1                                                      OC  MICNF11591
+ DRTU  WEF TNW               WRITE END OF FILE                    OC  MICNF11592
+       TRA RPT               TRANSFER TO READ INPUT PROGRAM       OC  MICNF11593
+       WST 7,3               WRITE OUTPUT SYMBOL TABLE            OC  MICNF11594
+       REM FIRST PART OF OUTPUT PROGRAM                           OA  MICNF11595
+       ORG RPTK+1            PROGRAM ORIGIN                       OA  MICNF11596
+       CAL DR401             TEST FOR OUTPUT TAPE UNIT            OA  MICNF11597
+       ANA CONT              )                                    OA  MICNF11598
+       TZE DRTB              )OUTPUT TO BE ON TAPE TNX            OA  MICNF11599
+       CLA DRCS              )OUTPUT TO BE ON TAPE TNW            OA  MICNF11600
+       STO WTD                                                    OA  MICNF11601
+       STO BLT                                                    OA  MICNF11602
+       STA DRTB+6            )                                    OA  MICNF11603
+       STA DRTU              )                                    OA  MICNF11604
+ DRTB  TRA DR4,4                                                  OA  MICNF11605
+       CLA W                 STORE STW = W                        OA  MICNF11606
+       STO STW               )                                    OA  MICNF11607
+       TSX WHW,4             STORE INFINITE FLOW POSSIBLE IN BCD  OA  MICNF11608
+       PZE RIFP,,4           )                                    OA  MICNF11609
+       REW TNP               REWIND TAPE TO INPUT PROGRAM         OA  MICNF11610
+       TSX WPR,4             PRINT INFINITE FLOW POSSIBLE         OA  MICNF11611
+       TSX WTD,4             WRITE INFINITE FLOW POSSIBLE         OA  MICNF11612
+       WEF TNW               WRITE IND OF FILE                    OA  MICNF11613
+       HTR RPT               HALT AND TRANSFER TO NEXT PROBLEM    OA  MICNF11614
+       TSX WHW,4             STORE POTENTIAL MAX. EXCEEDED IN BCD OA  MICNF11615
+       PZE RPME,,5           )                                    OA  MICNF11616
+       TRA DR3               TRANSFER TO PRINT BCD STORAGE        OA  MICNF11617
+       TSX WHW,4             STORE FLOW CAPACITY EXCEEDED IN BCD  OA  MICNF11618
+       PZE RFCE,,4           )                                    OA  MICNF11619
+       TRA DR3               TRANSFER TO PRINT BCD STORAGE        OA  MICNF11620
+       CLA Q                                                      OA  MICNF11621
+       TPL DR5               TRANSFER IF Q PLUS                   OA  MICNF11622
+       TZE RD1               TRANSFER IF Q = 0                    OA  MICNF11623
+       TSX WHW,4             STORE SAME AS PREVIOUS OUTPUT        OA  MICNF11624
+       PZE RSAPO,,4          )                                    OA  MICNF11625
+       TRA DRTB+3            TRANSFER TO PREPARE FOR NEXT PROBLEM OA  MICNF11626
+ DR5   TZE RD1               TRANSFER TO NORMAL DATA OUTPUT       OA  MICNF11627
+       TSX WHW,4             STORE INFINITE POTENTIAL CH. REQUIREDOA  MICNF11628
+       PZE RIPCR,,6          )                                    OA  MICNF11629
+ DR3   CLA Q                 STORE Q = FLOW ALLOCATED             OA  MICNF11630
+       SUB S                 )                                    OA  MICNF11631
+       STO Q                 )                                    OA  MICNF11632
+       CLA DR110             SET STW MINUS                        OA  MICNF11633
+       STO STW               )                                    OA  MICNF11634
+       TSX WPR,4             PRINT BCD STORAGE                    OA  MICNF11635
+       TSX WTD,4             WRITE BCD STORAGE                    OA  MICNF11636
+       HTR DR2               HALT AND TRANSFER TO WRITE Q         OA  MICNF11637
+ RD1   TSX WHW,4             STORE MAX. FLOW ALLOCATED IN BCD     OA  MICNF11638
+       PZE MFA,,1                                                 OA  MICNF11639
+       CLA S                 STORE Q = S                          OA  MICNF11640
+       STO Q                 )                                    OA  MICNF11641
+       CLA DR100             STORE STW = MINUS ZERO               OA  MICNF11642
+       STO STW               )                                    OA  MICNF11643
+       TRA DR2               TRANSFER TO STORE FLOW ALLOCATED     OA  MICNF11644
+ DR4   TSX WHW,4             STORE TOTAL FLOW ALLOCATED IN BCD    OA  MICNF11645
+       PZE TFA,,1                                                 OA  MICNF11646
+ DR2   TSX WHW,4             STORE FLOW ALLOCATED IN BCD          OA  MICNF11647
+       PZE FALL,,3                                                OA  MICNF11648
+       TSX BDI,4             STORE Q IN BCD                       OA  MICNF11649
+       MZE Q,0,72            )                                    OA  MICNF11650
+ DRTM  TSX WHW,4             STORE COST IN BCD                    OA  MICNF11651
+       PZE DRCM,0,2          )                                    OA  MICNF11652
+       TSX DBD,4             STORE COST IN BCD                    OA  MICNF11653
+       MZE COST2,0,114       )                                    OA  MICNF11654
+       TSX BLT,4             WRITE BLANK LINE                     OA  MICNF11655
+       TSX WTD,4             WRITE BCD STORAGE                    OA  MICNF11656
+       CAL DR301             TEST FOR NODE POTENTIAL OUTPUT       OA  MICNF11657
+       ANA CONT              )                                    OA  MICNF11658
+       TZE RPT               )TRANSFER IF NO OUTPUT               OA  MICNF11659
+       TSX WHW,4             STORE NODE POTENTIALS IN BCD         OA  MICNF11660
+       PZE DRCH,0,6          )                                    OA  MICNF11661
+ DRAF  CLA NT1-NODES         STORE SOURCE NODE IN BCD             OA  MICNF11662
+       STO DRCF              )                                    OA  MICNF11663
+       TSX BDI,4             )                                    OA  MICNF11664
+       MZE DRCF,0,60         )                                    OA  MICNF11665
+       TSX BLT,4             WRITE BLANK LINE                     OA  MICNF11666
+       TSX WTD,4             WRITE BCD STORAGE                    OA  MICNF11667
+       CLA NODE              PREPARE NODES-6 TEST                 OA  MICNF11668
+       SUB DRCT              )                                    OA  MICNF11669
+       PAX 0,4               )                                    OA  MICNF11670
+       SXD DRTT,4            )                                    OA  MICNF11671
+       TPL *+4               )                                    OA  MICNF11672
+       ADD DRCJ              )                                    OA  MICNF11673
+       STO DRCJ              )                                    OA  MICNF11674
+       SXD DRTT,0            )                                    OA  MICNF11675
+       TSX WHW,4             STORE NODE,U,U,U,U,U IN BCD          OA  MICNF11676
+       PZE DRCI,0,11         )                                    OA  MICNF11677
+       TSX BLT,4             WRITE BLANK LINE                     OA  MICNF11678
+       TSX WTD,4             WRITE BCD STORAGE                    OA  MICNF11679
+       LXD RWCE,1            SET INDEX 1 = 0                      OA  MICNF11680
+ DRTK  LXA DRCJ,2            SET INDEX 2=5                        OA  MICNF11681
+       TXI DRTL,1,1          SET INDEX 1 = INDEX 1 + 1            OA  MICNF11682
+ DRTL  PXD 0,1               WRITE NODE NUMBER IN BCD             OA  MICNF11683
+       ARS 18                )                                    OA  MICNF11684
+       STO DRCF              )                                    OA  MICNF11685
+       TSX BDI,4             )                                    OA  MICNF11686
+       MZE DRCF,0,48         )                                    OA  MICNF11687
+ DRTJ  CLA NT1,1             WRITE U VALUE IN BCD                 OA  MICNF11688
+       STO DRCF              )                                    OA  MICNF11689
+       TSX BDI,4             )                                    OA  MICNF11690
+       MZE DRCF,0,72         )                                    OA  MICNF11691
+       TNX DRTI,2,1          TRANSFER IF INDEX2 NOT=1             OA  MICNF11692
+       TXI DRTJ,1,1          SET INDEX 1=INDEX1+1                 OA  MICNF11693
+ DRTI  TSX WTD,4             WRITE BCD STORAGE                    OA  MICNF11694
+ DRTT  TXL DRTK,1,NODES-5    TRA. IF INDEX 1 LESS THAN NODES-5    OA  MICNF11695
+       PXD 0,1               SET INDEX 2 TO STORE REM. NODE VALUESOA  MICNF11696
+       ARS 18                )                                    OA  MICNF11697
+       SUB NODE              )                                    OA  MICNF11698
+       PAX 0,2               )                                    OA  MICNF11699
+       TIX DRTL-1,2,1        )TRANSFER IF INDEX2 NOT = 1          OA  MICNF11700
+       TRA RPT               TRANSFER TO READ PROGRAM             OA  MICNF11701
+ DRCH  BCD 6NODE  POTENTIALS     SOURCE NODE U=                   OA  MICNF11702
+ RIFP  BCD 4INFINITE FLOW POSSIBLE                                OA  MICNF11703
+ RPME  BCD 5POTENTIAL MAXIMUM EXCEEDED                            OA  MICNF11704
+ RFCE  BCD 4FLOW CAPACITY EXCEEDED                                OA  MICNF11705
+ RIPCR BCD 6INFINITE POTENTIAL CHANGE REQUIRED                    OA  MICNF11706
+ RSAPO BCD 4SAME AS PREVIOUS OUTPUT                               OA  MICNF11707
+ DRCS  WTD TNX                                                    OA  MICNF11708
+ DRCT  OCT 6                                                      OA  MICNF11709
+ DR401 OCT 20000000000                                            OA  MICNF11710
+ DRCI  BCD 9  NODE       U           U           U           U    OA  MICNF11711
+       BCD 2       U                                              OA  MICNF11712
+       ORG WPTR+2            ADDRESS TABLE ORIGIN                 OA  MICNF11713
+       REM ADDRESS TABLE TABLE FOR FIRST PART OF OUTPUT PROGRAM   OA  MICNF11714
+       PZE DRAF,0,7                                               OA  MICNF11715
+       PZE DRTJ,0,1                                               OA  MICNF11716
+       PZE DRTU+2                                                 OA  MICNF11717
+       PZE                   END OF BLOCK                         OA  MICNF11718
+       END WPT                                                    OA  MICNF11719
+       REM SECOND PART OF OUTPUT PROGRAM                          OB  MICNF11720
+       RST 7,3               READ COMMON OUTPUT SYMBOL TABLE      OB  MICNF11721
+       ORG RPTK+1            PROGRAM ORIGIN                       OB  MICNF11722
+       REW TNP               REWIND PROGRAM TAPE                  OB  MICNF11723
+ DRB   CLA DR110             TEST FOR BRANCH FLOW OUTPUT          OB  MICNF11724
+       ANA CONT              )                                    OB  MICNF11725
+       TNZ DRTN              )TRANSFER IF FLOWS ARE TO BE PRINTED OB  MICNF11726
+       CLA DRCO              MODIFY BRANCH PRINT OUT TO           OB  MICNF11727
+       STO DRC               )CALCULATE COST ONLY                 OB  MICNF11728
+       STO DRD               )                                    OB  MICNF11729
+       CLA DRCQ              )                                    OB  MICNF11730
+       STO DRAC+2            )                                    OB  MICNF11731
+       CLA DRTE              )                                    OB  MICNF11732
+       STO DRTH              )                                    OB  MICNF11733
+       CLA DRCR              )                                    OB  MICNF11734
+       STO DRTH+1            )                                    OB  MICNF11735
+       TRA DRTR              TRANSFER TO CALCULATE COST           OB  MICNF11736
+ DRTN  CLA NODE              PREPARE NODES-1 TEST                 OB  MICNF11737
+       SUB RWCE              )                                    OB  MICNF11738
+       PAX 0,4               )                                    OB  MICNF11739
+       SXD DRE,4                                                  OB  MICNF11740
+       SXD DRF,4             )                                    OB  MICNF11741
+       SXD DRG,4             )                                    OB  MICNF11742
+       SXD DRH,4             )                                    OB  MICNF11743
+       TSX WHW,4             STORE BRANCH ALLOCATIONS IN BCD      OB  MICNF11744
+       PZE DRCB,0,3                                               OB  MICNF11745
+       CAL DR001             TEST FOR ZERO FLOW OUTPUT            OB  MICNF11746
+       ANA CONT              )                                    OB  MICNF11747
+       TZE DRTC              )TRANSFER IF NO OUTPUT               OB  MICNF11748
+       CLA DRCP                                                   OB  MICNF11749
+       STO DRA               )ELIMINATE X=0 TEST                  OB  MICNF11750
+       TSX WHW,4             STORE (ALL BRANCHES)                 OB  MICNF11751
+       PZE DRCC,0,3          )                                    OB  MICNF11752
+ DRTC  TSX BLT,4             WRITE BLANK LINE                     OB  MICNF11753
+       TSX WTD,4             WRITE BCD STORAGE                    OB  MICNF11754
+       TSX WHW,4             STORE I,J,M,X,C,CX IN BCD            OB  MICNF11755
+       PZE DRCD,,10          )                                    OB  MICNF11756
+       TSX BLT,4             WRITE BLANK LINE                     OB  MICNF11757
+       TSX WTD,4             WRITE BCD STORAGE                    OB  MICNF11758
+ DRTR  LXA BCH,1             SET IR1=BCH                          OB  MICNF11759
+       STZ COST1                                                  OB  MICNF11760
+       STZ COST2                                                  OB  MICNF11761
+       CAL LWC                                                    OB  MICNF11762
+ DRAE  ANA BT5,1             PLACE X IN AC                        OB  MICNF11763
+       STO DRCE              STORE DRCE=X                         OB  MICNF11764
+ DRSA  CLA BT1,1                                                  OB  MICNF11765
+       TMI DRTD              TRANSFER IF V=1                      OB  MICNF11766
+       CLA DRCE                                                   OB  MICNF11767
+ DRA   TZE DRTE              TRANSFER IF X=0                      OB  MICNF11768
+ DRC   CLA LWADR                                                  OB  MICNF11769
+ DRAA1 ANA BT1,1             PLACE I IN AC                        OB  MICNF11770
+       STO DRCF              STORE DRCF=I                         OB  MICNF11771
+       PAX 0,4                                                    OB  MICNF11772
+ DRG   TXL DRTF,4,NODES-1    TRA. IF I NOT GREATER THAN NODES-1   OB  MICNF11773
+       STZ DRCF              STORE DRCF = 0                       OB  MICNF11774
+ DRTF  CLA LWADR                                                  OB  MICNF11775
+ DRAB1 ANA BT2,1             PLACE J IN AC                        OB  MICNF11776
+       STO DRCG              STORE DRCG=J                         OB  MICNF11777
+       PAX 0,4                                                    OB  MICNF11778
+ DRH   TXL DRTG,4,NODES-1    TRA. IF J NOT GREATER THAN NODES-1   OB  MICNF11779
+ DRTV  STZ DRCG              STORE DRCG=0                         OB  MICNF11780
+ DRTG  TSX BDI,4             STORE I IN BCD                       OB  MICNF11781
+       MZE DRCF,0,72         )                                    OB  MICNF11782
+       TSX BDI,4             STORE J IN BCD                       OB  MICNF11783
+       MZE DRCG,0,48                                              OB  MICNF11784
+       CLA LWC                                                    OB  MICNF11785
+ DRAD1 ANA BT4,1             PLACE M IN AC                        OB  MICNF11786
+       STO DRCF              STORE M IN BCD                       OB  MICNF11787
+       TSX BDI,4             )                                    OB  MICNF11788
+       MZE DRCF,0,72         )                                    OB  MICNF11789
+       TSX BDI,4             STORE X IN BCD                       OB  MICNF11790
+       MZE DRCE,0,48         )                                    OB  MICNF11791
+ DRTO  CLA LWC                                                    OB  MICNF11792
+ DRAC  ANA BT3,1             PLACE C IN AC                        OB  MICNF11793
+       STO DRCF              STORE C IN BCD                       OB  MICNF11794
+       TSX BDI,4             )                                    OB  MICNF11795
+       MZE DRCF,0,72         )                                    OB  MICNF11796
+ DRTQ  LDQ DRCE              LOAD MQ=X                            OB  MICNF11797
+       TOV DRTQ+2            TURN OFF OVERFLOW INDICATOR          OB  MICNF11798
+       MPY DRCF              FORM XC                              OB  MICNF11799
+       STO DRCG-1            STORE XC                             OB  MICNF11800
+       STQ DRCG              )                                    OB  MICNF11801
+       ADD COST1             INCREMENTAL COST CALCULATION         OB  MICNF11802
+       STO COST1             )                                    OB  MICNF11803
+       STQ COSTT             )                                    OB  MICNF11804
+       CLA COSTT             )                                    OB  MICNF11805
+       ADD COST2             )                                    OB  MICNF11806
+       STO COST2             )                                    OB  MICNF11807
+       TNO DRTH              )TRANSFER IF NO OVER FLOW            OB  MICNF11808
+       CLA RWCE              )                                    OB  MICNF11809
+       ADD COST1             )                                    OB  MICNF11810
+       STO COST1             )                                    OB  MICNF11811
+ DRTH  TSX DBD,4             STORE CX IN BCD                      OB  MICNF11812
+       MZE DRCG,0,78         )                                    OB  MICNF11813
+       TSX WTD,4             WRITE BCD STORAGE                    OB  MICNF11814
+ DRTE  TIX DRAE-1,1,1        TRANSFER IF INDEX 1 NOT = 1          OB  MICNF11815
+ DRT   TSX WHW,4             STORE POTENTIAL CHANGES IN BCD       OB  MICNF11816
+       PZE DRCK,0,3          )                                    OB  MICNF11817
+       TSX BDI,4             STORE M IN BCD                       OB  MICNF11818
+       MZE M,0,36            )                                    OB  MICNF11819
+       TSX WHW,4             STORE FLOW ALLOCATIONS               OB  MICNF11820
+       PZE DRCL,0,4          )                                    OB  MICNF11821
+       TSX BDI,4             STORE N IN BCD                       OB  MICNF11822
+       MZE N,,36                                                  OB  MICNF11823
+       TSX WHW,4             STORE COST IN BCD                    OB  MICNF11824
+       PZE DRCM,0,2          )                                    OB  MICNF11825
+       TSX DBD,4             STORE VALUE OF COST IN BCD STORAGE   OB  MICNF11826
+       MZE COST2,,78         )                                    OB  MICNF11827
+       TSX BLT,4             WRITE BLANK LINE                     OB  MICNF11828
+       TSX WTD,4             WRITE BCD STORAGE                    OB  MICNF11829
+       TRA DRTU              TRANSFER TO WRITE END OF FILE        OB  MICNF11830
+ DRTD  CLA LWC                                                    OB  MICNF11831
+ DRAD2 ANA BT4,1             PLACE M IN AC                        OB  MICNF11832
+       SUB DRCE              SUBTRACT X                           OB  MICNF11833
+       STO DRCE              STORE DRCE=M-X                       OB  MICNF11834
+ DRD   CLA LWADR                                                  OB  MICNF11835
+ DRAB2 ANA BT2,1             PLACE I IN AC                        OB  MICNF11836
+       STO DRCF              STORE DRCF=I                         OB  MICNF11837
+       PAX 0,4                                                    OB  MICNF11838
+ DRE   TXL DRTP,4,NODES-1    TRA. IF I NOT GREATER THAN NODES-1   OB  MICNF11839
+       STZ DRCF              STORE DRCF=0                         OB  MICNF11840
+ DRTP  CLA LWADR                                                  OB  MICNF11841
+ DRAA2 ANA BT1,1             PLACE J IN AC                        OB  MICNF11842
+       STO DRCG              STORE DRCG=J                         OB  MICNF11843
+       PAX 0,4                                                    OB  MICNF11844
+ DRF   TXL DRTG,4,NODES-1    TRA. IF J NOT GREATED THAN NODES-1   OB  MICNF11845
+       TRA DRTV              TRANSFER TO STORE 0 IN DRCG          OB  MICNF11846
+ DRCB  BCD 3BRANCH ALLOCATIONS                                    OB  MICNF11847
+ DRCC  BCD 3   (ALL BRANCHES)                                     OB  MICNF11848
+ DRCK  BCD 3POTENTIAL CHANGES                                     OB  MICNF11849
+ DRCL  BCD 4     FLOW ALLOCATIONS                                 OB  MICNF11850
+ DRCN  TRA RPT               OPERATIONS TO MODIFY PROGRAM         OB  MICNF11851
+ DRCO  TRA DRTO              )TO CALCULATE COST ONLY              OB  MICNF11852
+ DRCQ  TRA DRTQ              )                                    OB  MICNF11853
+ DRCR  TRA DRT               )                                    OB  MICNF11854
+ DRCP  NOP                   OPERATION TO ELIMINATE X=0 TEST      OB  MICNF11855
+ DRCD  BCD 9       I       J           M       X           C      OB  MICNF11856
+       BCD 1    CX                                                OB  MICNF11857
+       REM ADDRESS TABLE FOR SECOND PART OF OUTPUT PROGRAM        OB  MICNF11858
+       ORG WPTR+2            ADDRESS TABLE ORIGIN                 OB  MICNF11859
+       PZE DRAE,0,6                                               OB  MICNF11860
+       PZE DRSA,0,2                                               OB  MICNF11861
+       PZE DRAA1,0,2                                              OB  MICNF11862
+       PZE DRAB1,0,3                                              OB  MICNF11863
+       PZE DRAD1,0,5                                              OB  MICNF11864
+       PZE DRAC,0,4                                               OB  MICNF11865
+       PZE DRAD2,0,5                                              OB  MICNF11866
+       PZE DRAB2,0,3                                              OB  MICNF11867
+       PZE DRAA2,0,2                                              OB  MICNF11868
+       PZE DRCD+10                                                OB  MICNF11869
+       PZE                   ENDOF BLOCK                          OB  MICNF11870
+       END PS                                                     OB  MICNF11871

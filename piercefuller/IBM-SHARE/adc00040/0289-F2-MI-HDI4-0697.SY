@@ -1,0 +1,571 @@
+       REM REAL, SYMMETRIC MATRIX DIAGONALIZATION SUBROUTINE            HDI40000
+       REM MAY 18, 1959                                                 HDI40001
+       REM MODEL 3, OPTIMUM-SEARCH BEFORE EACH ROTATION                 HDI40002
+       REM          WITH AUTOMATIC SHUT OFF                             HDI40003
+       REM CALLING SEQUENCE                                             HDI40004
+       REM   INITIAL ENTRY                                              HDI40005
+       REM L    TSX HDIAG,C                                             HDI40006
+       REM L+1  PZE H,0,RCN      H=INIT. TRI. ADDR., RCN=REG. CNT. N    HDI40007
+       REM L+2  PZE U     OR MZE       U= INIT. SQ. ADDR.               HDI40008
+       REM L+3  (PERIODIC RETURN)      C(AC)=R                          HDI40009
+       REM L+4  (ERROR RETURN)         OVERFLOW, C(AC) MEANINGFUL       HDI40010
+       REM L+5  (NORMAL RETURN)        C(AC)=R                          HDI40011
+       REM   PERIODIC REENTRY                                           HDI40012
+       REM M    TRA HDIAG+1                                             HDI40013
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40014
+ A     EQU 1                 SET INDEX CONVENTION                       HDI40015
+ B     EQU 2                                                            HDI40016
+ C     EQU 4                                                            HDI40017
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40018
+       REM FIRST PRESET BLOCK                                           HDI40019
+ HDIAG TXI SKIP,0,0          INITIAL ENTRY, DECREMENT SECTION USED      HDI40020
+       SXD ASAV,A            ROLL BACK REENTRY                          HDI40021
+       SXD BSAV,B                                                       HDI40022
+       TXI CONTR,0,0         UNUSED DECREMENT SECTION                   HDI40023
+ SKIP  SXD ASAV,A            SAVE INDEX REGISTERS                       HDI40024
+       SXD BSAV,B                                                       HDI40025
+       SXD CSAV,C                                                       HDI40026
+       CLA 1,C                                                          HDI40027
+       STA PB28              STORE H AS ADDRESS IN REVISE F BLOCK       HDI40028
+       ARS 18                                                           HDI40029
+       STA RCNAD                                                        HDI40030
+ RCNAD CLA -                                                            HDI40031
+       STO N                 STORE N                                    HDI40032
+       PAX 0,A                                                          HDI40033
+       SXD PB29,A            STORE N AS DECREMENT IN REVISE F BLOCK     HDI40034
+ H01   TXI H01+1,A,1                                                    HDI40035
+       SXD NP1D,A            STORE N+1 AS DECREMENT                     HDI40036
+       PZE R,0,6*64*64       SET ROTATION COUNTER=0                     HDI40037
+       PZE RB,0,6*64*64      SET ROLLBACK COUNTER=0                     HDI40038
+ H45   PXD H44,0                                                        HDI40039
+       LDQ RBK               ROLLBACK CONSTANT                          HDI40040
+       DVH N                                                            HDI40041
+       STQ RBTST             ROLLBACK TEST ROTATION COUNT               HDI40042
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40043
+       REM U SWITCH BLOCK                                               HDI40044
+       CLA 2,C                                                          HDI40045
+       STO UADDR             STORE (U(0,0))                             HDI40046
+       TMI PB2               TO SECOND PRESET BLOCK                     HDI40047
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40048
+       REM SET UNIT MATRIX IN U BLOCK                                   HDI40049
+       LDQ N                                                            HDI40050
+       MPY N                                                            HDI40051
+       LLS 35                                                           HDI40052
+       PAX 0,A+B             UAS                                        HDI40053
+       ADM UADDR                                                        HDI40054
+       STA ZERAD             (U(0,N))                                   HDI40055
+       STA ONEAD                                                        HDI40056
+ ZERAD PZE 0,A,6*64*64                                                  HDI40057
+ 1D    TIX ZERAD,A,1                                                    HDI40058
+       CLA ONE                                                          HDI40059
+ ONEAD STO 0,B                                                          HDI40060
+ NP1D  TIX ONEAD,B,0                                                    HDI40061
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40062
+       REM SECOND PRESET BLOCK                                          HDI40063
+ PB2   CLA INITF             SET INITIAL F                              HDI40064
+       STO F                                                            HDI40065
+       LXA N,A               SET INITIAL COLUMN MAXIMUMS                HDI40066
+ HH1   TXI PB26,0,-          SKIP L=0                                   HDI40067
+ PB24  SXD PB25,A                                                       HDI40068
+       LXA N,C                                                          HDI40069
+ PB25  TNX 0,C,0             UAS, (N-L)D, RESULTS IN C(C)=L             HDI40070
+       PXD 0,C               UAS                                        HDI40071
+       LRS 18+35                                                        HDI40072
+       TSX CLMAX,C           SR USES INDEX REG. B                       HDI40073
+ PB26  TIX PB24,A,1                                                     HDI40074
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40075
+       REM CONTROL BLOCK                                                HDI40076
+ CONTR PXD 0,0               FIND MAX X(J)                              HDI40077
+       LXD M1D,A             -1D                                        HDI40078
+       LXA N,B                                                          HDI40079
+ HH2   TXI M1D,0,-           SKIP L=0                                   HDI40080
+ CN1   CAS X-1,A                                                        HDI40081
+       TXI CN2,A,-1                                                     HDI40082
+       TXI CN2,A,-1                                                     HDI40083
+       CLA X-1,A                                                        HDI40084
+       SXD DC1,A             2COM(J+1) IN DECODE BLOCK                  HDI40085
+ M1D   TXI CN2,A,-1                                                     HDI40086
+ CN2   TIX CN1,B,1                                                      HDI40087
+       STO MAX               MAX X(J)                                   HDI40088
+       TZE FINIS                                                        HDI40089
+       CLS F                                                            HDI40090
+       TPL SETF              RESET  F  IN CASE  QUIRK IN DATA           HDI40091
+       ADD MAX                                                          HDI40092
+       TPL ROTAT                                                        HDI40093
+SETF   LXA N,A               REVISE F = (2**-27)*MIN(ABS(H(K,K)))       HDI40094
+       LXA PB29,B                                                       HDI40095
+       CLA INITF                                                        HDI40096
+       STO MIN                                                          HDI40097
+ PB27  CLS MIN                                                          HDI40098
+ PB28  ADM -,B               H                                          HDI40099
+       TPL PB30                                                         HDI40100
+       ADD MIN                                                          HDI40101
+       STO MIN                                                          HDI40102
+ PB30  TXI PB30+1,B,-2                                                  HDI40103
+ PB29  TNX 0,B,-             (N)D, (0)A                                 HDI40104
+       SXD PB31,A                                                       HDI40105
+ PB31  TXI PB31+1,B,-                                                   HDI40106
+       TIX PB27,A,1                                                     HDI40107
+       CLA MIN                                                          HDI40108
+       SUB RAP                                                          HDI40109
+       STO F                                                            HDI40110
+       SUB MAX                                                          HDI40111
+       TMI ROTAT                                                        HDI40112
+ FINIS LXD ASAV,A                                                       HDI40113
+       LXD BSAV,B                                                       HDI40114
+       LXD CSAV,C                                                       HDI40115
+       CLA R                                                            HDI40116
+       TRA 5,C                                                          HDI40117
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40118
+       REM DECODE TO I,J,J-I BLOCK                                      HDI40119
+ ROTAT CLA MAX                                                          HDI40120
+       ANA AMASK                                                        HDI40121
+       STO I                 STORE I                                    HDI40122
+       LXD M1D,A             -1D                                        HDI40123
+ DC1   TNX 0,A,0             UAS, -(J+1)D, RESULTS IN C(A)=J            HDI40124
+       PXD 0,A               UAS                                        HDI40125
+       ARS 18                                                           HDI40126
+       STO J                 STORE J                                    HDI40127
+       SUB I                                                            HDI40128
+       STO JMI               STORE J-I                                  HDI40129
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40130
+       REM H TRANSFORMATION AND ROTATOR PRESET BLOCK                    HDI40131
+       LDQ I                                                            HDI40132
+       TSX HADSR,C           STORE (H(I,I))                             HDI40133
+       STA H4                                                           HDI40134
+       STA H12                                                          HDI40135
+       STO HIIAD             +//(H(I,I))/                               HDI40136
+       TSX RT1AD,C                                                      HDI40137
+       LDQ J                                                            HDI40138
+       TSX HADSR,C           STORE (H(I,J))                             HDI40139
+       STA H2                                                           HDI40140
+       STA H3                                                           HDI40141
+       TSX RT2AD,C                                                      HDI40142
+       ADD JMI               J-I                                        HDI40143
+       STA H5                STORE (H(J,J))                             HDI40144
+       STA H13                                                          HDI40145
+       STO HJJAD             +//(H(J,J))/                               HDI40146
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40147
+       REM H TRANSFORMATION                                             HDI40148
+ H1    TOV H1+1              *                                          HDI40149
+ H2    CLA 0                 H(I,J)                                     HDI40150
+       STO HIJ                                                          HDI40151
+       FAD HIJ                                                          HDI40152
+       TSX AMTST,C           *                                          HDI40153
+       STO 2HIJ                                                         HDI40154
+ H3    PZE 0,0,6*64*64       H(I,J)/=0                                  HDI40155
+       LDQ 2HIJ                                                         HDI40156
+       FMP 2HIJ                                                         HDI40157
+       TSX AMTST,C           *                                          HDI40158
+       STO 4HIJS                                                        HDI40159
+ H5    CLA -                 H(J,J)                                     HDI40160
+       STO HJJ                                                          HDI40161
+ H4    CLA 0                 H(I,I)                                     HDI40162
+       STO HII                                                          HDI40163
+       FSB HJJ                                                          HDI40164
+       TSX AMTST,C           *                                          HDI40165
+       STO IND                                                          HDI40166
+       LDQ IND                                                          HDI40167
+       FMP IND                                                          HDI40168
+       TSX AMTST,C           *                                          HDI40169
+       FAD 4HIJS                                                        HDI40170
+       TSX AMTST,C           *                                          HDI40171
+       TSX SQRT,C                                                       HDI40172
+ AMASK PZE -1                IMPOSS. ERROR RETURN USED FOR CONSTANT     HDI40173
+       LDQ IND               PREPARE TAN ACCURATELY                     HDI40174
+       TQP H55                                                          HDI40175
+       SSM                                                              HDI40176
+ H55   FAD IND                                                          HDI40177
+       TSX AMTST,C           *                                          HDI40178
+       STO DENOM                                                        HDI40179
+       CLA 2HIJ                                                         HDI40180
+ H6    TQO H6+1              *                                          HDI40181
+       FDH DENOM             ONLY UNDERFLOW POSSIBLE                    HDI40182
+       TQO H10               *     IF NEGLIGIBLE ROTATION               HDI40183
+ H8    TOV H8+1              *                                          HDI40184
+       STQ TAN                                                          HDI40185
+       FMP TAN                                                          HDI40186
+       TSX AMTST,C           *                                          HDI40187
+       FAD ONE                                                          HDI40188
+       STO SECSQ                                                        HDI40189
+       CLA ONE                                                          HDI40190
+       FDH SECSQ             NO OVER OR UNDERFLOW POSSIBLE              HDI40191
+       STQ COSSQ                                                        HDI40192
+       LDQ HJJ                                                          HDI40193
+       FMP TAN                                                          HDI40194
+       TSX AMTST,C           *                                          HDI40195
+       FAD 2HIJ                                                         HDI40196
+       TSX AMTST,C           *                                          HDI40197
+       LRS 35                                                           HDI40198
+       FMP TAN                                                          HDI40199
+       TSX AMTST,C           *                                          HDI40200
+       FAD HII                                                          HDI40201
+       TSX AMTST,C           *                                          HDI40202
+       LRS 35                                                           HDI40203
+       FMP COSSQ                                                        HDI40204
+       TSX AMTST,C           *                                          HDI40205
+       STO HIIP                                                         HDI40206
+       LDQ HII                                                          HDI40207
+       FMP TAN                                                          HDI40208
+       TSX AMTST,C           *                                          HDI40209
+       FSB 2HIJ                                                         HDI40210
+       TSX AMTST,C           *                                          HDI40211
+       LRS 35                                                           HDI40212
+       FMP TAN                                                          HDI40213
+       TSX AMTST,C           *                                          HDI40214
+       FAD HJJ                                                          HDI40215
+       TSX AMTST,C           *                                          HDI40216
+       LRS 35                                                           HDI40217
+       FMP COSSQ                                                        HDI40218
+       TSX AMTST,C           *                                          HDI40219
+       STO HJJP                                                         HDI40220
+       CLA COSSQ                                                        HDI40221
+       TSX SQRT,C                                                       HDI40222
+ I1    PZE 1                 IMPOSS. ERROR RETURN USED FOR CONSTANT     HDI40223
+       STO COS                                                          HDI40224
+       LDQ COS                                                          HDI40225
+       FMP TAN                                                          HDI40226
+       TSX AMTST,C           *                                          HDI40227
+       STO SIN                                                          HDI40228
+ H11   CLA HIIP              PSUEDO-RANK EIGENVALUES                    HDI40229
+       LDQ HJJP                                                         HDI40230
+       TLQ H12                                                          HDI40231
+       STO HJJP                                                         HDI40232
+       STQ HIIP                                                         HDI40233
+       CLS SIN                                                          HDI40234
+       LDQ COS                                                          HDI40235
+       LRS 0                                                            HDI40236
+       SSP                                                              HDI40237
+       STO COS                                                          HDI40238
+       STQ SIN                                                          HDI40239
+       CLA HIIP                                                         HDI40240
+       LDQ HJJP                                                         HDI40241
+       TRA H12                                                          HDI40242
+ H10   LDQ J                 NEW X(J)                                   HDI40243
+       TSX CLMAX,C                                                      HDI40244
+       TRA CONTR             SKIP NEGLIGIBLE ROTATION                   HDI40245
+ H12   STO -                                                            HDI40246
+ H13   STQ -                                                            HDI40247
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40248
+       REM RESURVEY X FOR CANCELLED MAXIMA AND RECTIFY                  HDI40249
+       LXD DC1,A             2COM(J+1) IN DECODE BLOCK                  HDI40250
+       PZE X-1,A,6*64*64     X(J)=0 TO AVOID UNNECESARY COL MAX         HDI40251
+       LXA I,A                                                          HDI40252
+       SXD RSX1,A                                                       HDI40253
+       SXD RSX2,A                                                       HDI40254
+       LXD M1D,A             -1D                                        HDI40255
+ RSX1  TNX 0,A,0             UAS, (I)D, RESULTS IN C(A)=-(I+1)          HDI40256
+       LXA N,B                                                          HDI40257
+ RSX2  TNX 0,B,0             UAS, (I)D, RESULTS IN C(B)=N-I             HDI40258
+       TRA RSX6                                                         HDI40259
+ RSX3  CLA X,A                                                          HDI40260
+       TZE RSX5              NO MAXIMUM, IF ZERO                        HDI40261
+       ANA AMASK             PZE-1                                      HDI40262
+       CAS I                                                            HDI40263
+       TRA RSX4                                                         HDI40264
+       TRA RSXA1             TO RESURVEY X APPENDAGE BLOCK              HDI40265
+ RSX4  CAS J                                                            HDI40266
+       TXI RSX6,A,-1                                                    HDI40267
+       TRA RSXA1             TO RESURVEY X APPENDAGE BLOCK              HDI40268
+ RSX5  TXI RSX6,A,-1         REENTRY POINT FROM APPENDAGE BLOCK         HDI40269
+ RSX6  TIX RSX3,B,1                                                     HDI40270
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40271
+       REM H ROTATION CONTROL BLOCK                                     HDI40272
+       LXD 1D,C                                                         HDI40273
+       CLA HC1RA                                                        HDI40274
+       STA R10                                                          HDI40275
+       LXA I,A+B                                                        HDI40276
+       SXD H18,A+B           I                                          HDI40277
+ H41   TXI H15,A+B,1                                                    HDI40278
+ H14   TXI ROT,0,-                                                      HDI40279
+ H15   TIX H14,A+B,1                                                    HDI40280
+       SXD H14,C             SAVE INDEX REG. C                          HDI40281
+       CLA HJJAD             +//(H(J,J))/                               HDI40282
+       TSX RT2AD,C                                                      HDI40283
+       LDQ J                                                            HDI40284
+       TSX HADSR,C           +//(H(I,J))/                               HDI40285
+       TSX RT1AD,C                                                      HDI40286
+       SUB HIIAD             -//(H(I,I))/                               HDI40287
+ H43   PAX R11,A             ASU                                        HDI40288
+       CLA R13                                                          HDI40289
+       STA R10                                                          HDI40290
+       CLA HC2RA                                                        HDI40291
+       STA R16                                                          HDI40292
+       LXA JMI,B             J-I                                        HDI40293
+       LXD H14,C             RESTORE INDEX REG. C                       HDI40294
+ H23   TXI H17,C,-1          DSU                                        HDI40295
+ H16   TRA ROT                                                          HDI40296
+ H17   TXI H17+1,B,-1                                                   HDI40297
+       SXD H14,C             SAVE INDEX REG. C                          HDI40298
+       CAL H18                                                          HDI40299
+       ACL 1D                                                           HDI40300
+       STD H18                                                          HDI40301
+ H18   TIX H16,A,0                                                      HDI40302
+       LDQ N                                                            HDI40303
+       TSX HADSR,C           +//(H(I,N))/                               HDI40304
+       TSX RT1AD,C                                                      HDI40305
+       ADD JMI               J-I                                        HDI40306
+       TSX RT2AD,C                                                      HDI40307
+       SUB HJJAD             -//(H(J,J))/                               HDI40308
+ H42   PAX H40,A+B           ASU                                        HDI40309
+       CLA HC3JA                                                        HDI40310
+       STA R10                                                          HDI40311
+       CLA HC3RA                                                        HDI40312
+       STA R16                                                          HDI40313
+       CAL H18                                                          HDI40314
+       LXD H14,C             RESTORE INDEX REG. C                       HDI40315
+ H24   TXI H20,C,-1          DSU                                        HDI40316
+ H19   TRA ROT                                                          HDI40317
+ H40   CAL H21                                                          HDI40318
+ H20   ACL 1D                                                           HDI40319
+       STD H21                                                          HDI40320
+ H21   TIX H19,A+B,0                                                    HDI40321
+       LDQ I                                                            HDI40322
+       TSX CLMAX,C           NEW X(I)                                   HDI40323
+       LDQ J                                                            HDI40324
+       TSX CLMAX,C           NEW X(J)                                   HDI40325
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40326
+       REM U SWITCH                                                     HDI40327
+       CLA UADDR                                                        HDI40328
+       TMI BKR                                                          HDI40329
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40330
+       REM U ROTATION CONTROL BLOCK                                     HDI40331
+       LDQ J                                                            HDI40332
+       TSX UADSR,C           (U(0,J+1))                                 HDI40333
+       TSX RT2AD,C                                                      HDI40334
+       LDQ I                                                            HDI40335
+       TSX UADSR,C           (U(0,I+1))                                 HDI40336
+       TSX RT1AD,C                                                      HDI40337
+       CLA UC1RA                                                        HDI40338
+       STA R10                                                          HDI40339
+       LXA N,A+B                                                        HDI40340
+ H22   TRA ROT                                                          HDI40341
+ H44   TIX H22,A+B,1                                                    HDI40342
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40343
+       REM ROTATION BOOKKEEPING BLOCK                                   HDI40344
+ BKR   CLA R                                                            HDI40345
+       ADD I1                                                           HDI40346
+       STO R                                                            HDI40347
+       CLA RB                                                           HDI40348
+       ADD I1                                                           HDI40349
+       STO RB                                                           HDI40350
+       SUB RBTST                                                        HDI40351
+       TMI CONTR                                                        HDI40352
+       PZE RB,0,6*64*64      RB/=0                                      HDI40353
+       CLA R                                                            HDI40354
+       LXD ASAV,A                                                       HDI40355
+       LXD BSAV,B                                                       HDI40356
+       LXD CSAV,C                                                       HDI40357
+       TRA 3,C               ROLLBACK RETURN                            HDI40358
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40359
+       REM RESURVEY X APPENDAGE BLOCK                                   HDI40360
+ RSXA1 SXD RSXA2,B           SAVE INDEX REG. B                          HDI40361
+       LXA N,C                                                          HDI40362
+ RSXA2 TNX 0,C,0             UAS, (N-L)D, RESULTS IN C(C)=L             HDI40363
+       PXD 0,C               UAS                                        HDI40364
+       LRS 18+35                                                        HDI40365
+       TSX HADSR,C           +//(H(I,L))/                               HDI40366
+       STA RSXA3                                                        HDI40367
+       STA RSXA4                                                        HDI40368
+       STA RSXA7                                                        HDI40369
+       ADD JMI               J-I                                        HDI40370
+       STA RSXA5             +//(H(J,L))/                               HDI40371
+       STA RSXA6                                                        HDI40372
+       STA RSXA8                                                        HDI40373
+ RSXA3 CLA 0                 REMOVE H(I,K)                              HDI40374
+       STO TI                SAVE                                       HDI40375
+ RSXA4 PZE 0,0,6*64*64       DUMMY ZERO                                 HDI40376
+ RSXA5 CLA 0                 REMOVE REAL OR PSUEDO H(J,K)               HDI40377
+       STO TJ                SAVE                                       HDI40378
+ RSXA6 PZE 0,0,6*64*64       DUMMY ZERO                                 HDI40379
+       LDQ K                 FROM  HADSR SETTING                        HDI40380
+       TSX CLMAX,C           SR USES INDEX REG. B                       HDI40381
+       CLA TI                                                           HDI40382
+ RSXA7 STO 0                 RESTORE H(I,K)                             HDI40383
+       CLA TJ                                                           HDI40384
+ RSXA8 STO 0                 RESTORE REAL OR PSUEDO H(J,K)              HDI40385
+       LXD RSXA2,B           RESTORE INDEX REG. B                       HDI40386
+       TRA RSX5              RETURN TO MAIN RESURVEY X BLOCK            HDI40387
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40388
+       REM COLUMN MAX SR                                                HDI40389
+ CLMAX STQ K                 K=COLUMN NUMBER                            HDI40390
+       LXA K,B                                                          HDI40391
+       TXL C8,B,0            RETURN IF K=0                              HDI40392
+       MPY K                 K=0(1)N-1, K=0 FORBIDDEN                   HDI40393
+       LLS 35                                                           HDI40394
+       ADD K                                                            HDI40395
+       ARS 1                                                            HDI40396
+       ADD K                                                            HDI40397
+       ADM HADDR                                                        HDI40398
+       STA C2                (H(K,K))                                   HDI40399
+       PZE MAX,0,6*64*64     MAX=0                                      HDI40400
+ C1    CLS MAX                                                          HDI40401
+ C2    ADM 0,B                                                          HDI40402
+       TMI C3                                                           HDI40403
+       ADD MAX                                                          HDI40404
+       STO MAX                                                          HDI40405
+       SXD C4,B              K-R, R=MAX ROW NUMBER                      HDI40406
+ C3    TIX C1,B,1                                                       HDI40407
+       CLA MAX               AVOID PLANTING ROW NO. IF MAX=0            HDI40408
+       TZE C7                                                           HDI40409
+       LXA K,B                                                          HDI40410
+ C5    TXI C5+1,B,1          IN CASE R=0                                HDI40411
+ C4    TNX 0,B,0             UAS, (K-R)D, RESULTS IN C(B)=R             HDI40412
+ C6    TXI C6+1,B,-1                                                    HDI40413
+       PXD 0,B               UAS                                        HDI40414
+       ARS 18                                                           HDI40415
+       STA MAX               STORE ROW NUMBER                           HDI40416
+ C7    CLA K                                                            HDI40417
+       COM                                                              HDI40418
+       PAX 0,B               UAS                                        HDI40419
+       CLA MAX                                                          HDI40420
+       STO X-1,B             STORE COL MAX INCLUDING ROW NUMBER         HDI40421
+ C8    TRA 1,C                                                          HDI40422
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40423
+       REM (H(I,K)) SUBROUTINE                                          HDI40424
+ HADSR STQ K                                                            HDI40425
+       MPY K                                                            HDI40426
+       LLS 35                                                           HDI40427
+       ADD K                                                            HDI40428
+       ARS 1                                                            HDI40429
+       ADD I                                                            HDI40430
+       ADM HADDR             +//(H(0,0))/                               HDI40431
+       TRA 1,C                                                          HDI40432
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40433
+       REM (U(0,K+1)) SUBROUTINE                                        HDI40434
+ UADSR MPY N                                                            HDI40435
+       LLS 35                                                           HDI40436
+       ADD N                                                            HDI40437
+       ADM UADDR                                                        HDI40438
+       TRA 1,C                                                          HDI40439
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40440
+       REM SET ROTATOR ADDRESSES SUBROUTINES                            HDI40441
+ RT1AD STA R2                                                           HDI40442
+       STA R4                                                           HDI40443
+       STA R5                                                           HDI40444
+       STA R15                                                          HDI40445
+       TRA 1,C                                                          HDI40446
+ RT2AD STA R01                                                          HDI40447
+       STA R7                                                           HDI40448
+       STA R9                                                           HDI40449
+       STA R12                                                          HDI40450
+       TRA 1,C                                                          HDI40451
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40452
+       REM ROTATOR SUBROUTINE                                           HDI40453
+ ROT   LDQ SIN               SIN                                        HDI40454
+ R01   FMP 0,B               U2                                         HDI40455
+       TNO R1                *                                          HDI40456
+       PXD 0,0               *                                          HDI40457
+ R1    STO T                                                            HDI40458
+       LDQ COS               COS                                        HDI40459
+ R2    FMP 0,A               U1                                         HDI40460
+       TNO R3                *                                          HDI40461
+       PXD 0,0               *                                          HDI40462
+ R3    FAD T                                                            HDI40463
+       TNO R4                *                                          HDI40464
+       ARS 1                 *                                          HDI40465
+       PBT                   *                                          HDI40466
+       TSX ALARM,C           *                                          HDI40467
+       PXD 0,0               *                                          HDI40468
+ R4    LDQ 0,A               U1                                         HDI40469
+ R5    STO 0,A               U1/                                        HDI40470
+       FMP SIN               SIN                                        HDI40471
+       TNO R6                *                                          HDI40472
+       PXD 0,0               *                                          HDI40473
+ R6    STO T                                                            HDI40474
+       LDQ COS               COS                                        HDI40475
+ R7    FMP 0,B               U2                                         HDI40476
+       TNO R8                *                                          HDI40477
+       PXD 0,0               *                                          HDI40478
+ R8    FSB T                                                            HDI40479
+       TNO R9                *                                          HDI40480
+       ARS 1                 *                                          HDI40481
+       PBT                   *                                          HDI40482
+       TSX ALARM,C           *                                          HDI40483
+       PXD 0,0               *                                          HDI40484
+ R9    STO 0,B               U2/                                        HDI40485
+ R10   TXI 0,C,-1            CONTROL SWITCH                             HDI40486
+ R11   CLS X,C                                                          HDI40487
+ R12   ADM 0,B               SET BY RT2AD                               HDI40488
+ R13   TMI R14                                                          HDI40489
+       ADD X,C                                                          HDI40490
+       STO X,C                                                          HDI40491
+       CLA J                                                            HDI40492
+       STA X,C                                                          HDI40493
+ R14   CLS X,C                                                          HDI40494
+ R15   ADM 0,A               SET BY RT1AD                               HDI40495
+       TMI R16                                                          HDI40496
+       ADD X,C                                                          HDI40497
+       STO X,C                                                          HDI40498
+       CLA I                                                            HDI40499
+       STA X,C                                                          HDI40500
+ R16   TRA -                 CONTROL SWITCH                             HDI40501
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40502
+       REM UNDERFLOW CORRECTION SUBROUTINE FOR FAD,FSB,FMP              HDI40503
+ AMTST TNO 1,C               *                                          HDI40504
+       ARS 1                 *                                          HDI40505
+       PBT                   *                                          HDI40506
+       TRA ALARM             *  OVERFLOW                                HDI40507
+       PXD 0,0               *                                          HDI40508
+       TRA 1,C               *                                          HDI40509
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40510
+       REM ERROR RETURN BLOCK                                           HDI40511
+ ALARM PXD 0,C               *                                          HDI40512
+       LXD ASAV,A            *                                          HDI40513
+       LXD BSAV,B            *                                          HDI40514
+       LXD CSAV,C            *                                          HDI40515
+       TRA 4,C               *                                          HDI40516
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40517
+       REM CONSTANTS                                                    HDI40518
+ RBK   DEC 90000             CONSTANT FOR PERIODIC RETURN EVERY 5 MIN. IHDI40519
+ ONE   DEC +1.                                                          HDI40520
+ RAP   DEC 27B8              RELATIVE ACCURACY PARAMETER                HDI40521
+ INITF OCT 377777777777      INITIAL F                                  HDI40522
+ NEXT  BSS 0                                                            HDI40523
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40524
+       REM STORAGE ASSIGNMENTS                                          HDI40525
+ ASAV  SYN HH1               DECREMENT STORAGE ONLY                     HDI40526
+ BSAV  SYN HH2               DECREMENT STORAGE ONLY                     HDI40527
+ CSAV  SYN HDIAG             DECREMENT STORAGE ONLY                     HDI40528
+ HADDR SYN PB28              ADDRESS STORAGE ONLY                       HDI40529
+ HC1RA SYN H41               ADDRESS STORAGE ONLY                       HDI40530
+ HC2RA SYN H23               ADDRESS STORAGE ONLY                       HDI40531
+ HC3RA SYN H42               ADDRESS STORAGE ONLY                       HDI40532
+ HC3JA SYN H43               ADDRESS STORAGE ONLY                       HDI40533
+ UC1RA SYN H45               ADDRESS STORAGE ONLY                       HDI40534
+       ORG COMMON                                                       HDI40535
+ K     BSS 1                 ALSO USED FOR                              HDI40536
+ T     BSS 1                       SQUARE ROOT SUBROUTINE               HDI40537
+ N     BSS 1                                                            HDI40538
+ I     BSS 1                                                            HDI40539
+ J     BSS 1                                                            HDI40540
+ JMI   BSS 1                                                            HDI40541
+ R     BSS 1                                                            HDI40542
+ RB    BSS 1                                                            HDI40543
+ RBTST BSS 1                                                            HDI40544
+ UADDR BSS 1                                                            HDI40545
+ HIIAD BSS 1                                                            HDI40546
+ HJJAD BSS 1                                                            HDI40547
+ F     BSS 1                                                            HDI40548
+ MAX   BSS 1                                                            HDI40549
+ HIJ   SYN MAX                                                          HDI40550
+ 2HIJ  SYN MAX                                                          HDI40551
+ HJJP  SYN MAX                                                          HDI40552
+ MIN   BSS 1                                                            HDI40553
+ 4HIJS SYN MIN                                                          HDI40554
+ DENOM SYN MIN                                                          HDI40555
+ TAN   SYN MIN                                                          HDI40556
+ HJJ   BSS 1                                                            HDI40557
+ TJ    SYN HJJ                                                          HDI40558
+ HII   BSS 1                                                            HDI40559
+ DIFF  SYN HII                                                          HDI40560
+ COS   SYN HII                                                          HDI40561
+ IND   BSS 1                                                            HDI40562
+ SECSQ SYN IND                                                          HDI40563
+ COSSQ SYN IND                                                          HDI40564
+ SIN   SYN IND                                                          HDI40565
+ HIIP  BSS 1                                                            HDI40566
+ TI    SYN HIIP                                                         HDI40567
+ X     SYN HIIP              START OF N ELEMENT COLUMN VECTOR           HDI40568
+       ORG NEXT              END OF MAIN SUBROUTINE                     HDI40569
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI40570

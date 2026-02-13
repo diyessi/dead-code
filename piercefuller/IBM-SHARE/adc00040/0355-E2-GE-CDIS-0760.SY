@@ -1,0 +1,82 @@
+C CDIS                                                                  CDIS0001
+      SUBROUTINE CDIS (A,X,Y,XP,YP,N,FN)                                CDIS 002
+      DIMENSION X(361),Y(361),A(720,4)                                  CDIS 003
+      IF(X(1)-XP)11,11,10                                               CDIS 004
+   10 SLOPE1=(Y(2)-Y(1))/(X(2)-X(1))+A(1,1)*(X(2)-X(1))                 CDIS 005
+      YP=Y(1)+SLOPE1*(XP-X(1))                                          CDIS 006
+      FN=-1.0                                                           CDIS 007
+      GO TO 16                                                          CDIS 008
+   11 N=N                                                               CDIS 009
+      IF(XP-X(N))13,13,12                                               CDIS 010
+   12 N2=2*(N-1)                                                        CDIS 011
+      SLOPE2=(Y(N)-Y(N-1))/(X(N)-X(N-1))-A(N2-1,1)*(X(N)-X(N-1))        CDIS 012
+     1-A(N2,1)*(X(N)-X(N-1))*(X(N)-X(N-1))                              CDIS 013
+      YP=Y(N)+SLOPE2*(XP-X(N))                                          CDIS 014
+      FN=1.0                                                            CDIS 015
+      GO TO 16                                                          CDIS 016
+   13 I=1                                                               CDIS 017
+   14 I=I+1                                                             CDIS 018
+      IF(X(I)-XP)14,15,15                                               CDIS 019
+   15 K=2*I-3                                                           CDIS 020
+      C = Y(I-1)+((Y(I)-Y(I-1))/(X(I)-X(I-1)))*(XP-X(I-1))              CDIS 021
+      C=C+A(K,1)*(XP-X(I-1))*(X(I)-XP)                                  CDIS 022
+      YP=C+A(K+1,1)*(XP-X(I-1))*(XP-X(I-1))*(X(I)-XP)                   CDIS 023
+      FN=0.0                                                            CDIS 024
+   16 RETURN                                                            CDIS 025
+C CCDIS                                                                 CCDIS001
+      SUBROUTINE CCDIS ( X,Y,A,N,FN)                                    CCDI 002
+      DIMENSION X(361),Y(361),A(720,4)                                  CCDI 003
+      A(1,1)=0.0                                                        CCDI 004
+      A(1,2)=-2.0                                                       CCDI 005
+      A(1,3)=2.0*(X(2)-X(1))                                            CCDI 006
+      A(1,4)=0.0                                                        CCDI 007
+      N3 = N-1                                                          CCDI 008
+      N1 = N3-1                                                         CCDI 009
+      J = 1                                                             CCDI 010
+      DO 10 I = 1,N1                                                    CCDI 011
+      J = J+1                                                           CCDI 012
+      A(J,1)=(X(I+1)-X(I))/(X(I+2)-X(I+1))                              CCDI 013
+      A(J,2)=A(J,1)*(X(I+1)-X(I))                                       CCDI 014
+      A(J,3)=1.0                                                        CCDI 015
+      A(J,4)= (Y(I+1)-Y(I))/((X(I+1)-X(I))*(X(I+2)-X(I+1)))             CCDI 016
+      A(J,4)=A(J,4)-(Y(I+2)-Y(I+1))/((X(I+2)-X(I+1))*(X(I+2)-X(I+1)))   CCDI 017
+      K=I                                                               CCDI 018
+      J = J+1                                                           CCDI 019
+      A(J,1) = (X(K+1)-X(K))/(X(K+2)-X(K+1))                            CCDI 020
+      A(J,2)=-((X(K+2)-X(K))/((X(K+2)-X(K+1))*(X(K+1)-X(K))))           CCDI 021
+      A(J,3)=1.0                                                        CCDI 022
+      A(J,4)=(Y(K+2)-Y(K+1))/((X(K+1)-X(K))*(X(K+2)-X(K+1)))            CCDI 023
+      A(J,4)=A(J,4)/(X(K+2)-X(K+1))                                     CCDI 024
+      R=(Y(K+1)-Y(K))/((X(K+1)-X(K))*(X(K+1)-X(K)))                     CCDI 025
+      R=R/(X(K+2)-X(K+1))                                               CCDI 026
+   10 A(J,4)=A(J,4)-R                                                   CCDI 027
+      N2 = 2*N3                                                         CCDI 028
+      A(N2,1)=-2.0                                                      CCDI 029
+      A(N2,2) = -4.0*(X(N3+1)-X(N3))                                    CCDI 030
+      A(N2,3)=0.0                                                       CCDI 031
+      A(N2,4)=0.0                                                       CCDI 032
+      CALL TDSEQ (A,N2,FN)                                              CCDI 033
+      RETURN                                                            CCDI 034
+C TDSEQ                                                                 TDSEQ001
+C TDSEQ SOLVES A SYSTEM OF SIMULTANEOUS EQUATIONS                       TDSEQ002
+C WHOSE COEFFICIENT MATRIX IS TRI-DIAGONAL                              TDSEQ003
+      SUBROUTINE TDSEQ (A,N,FN)                                         TDSEQ004
+      DIMENSION A(720,4)                                                TDSEQ005
+      IF(A(1,2)) 12,11,12                                               TDSEQ006
+   11 FN = 1.0                                                          TDSEQ007
+      GO TO 50                                                          TDSEQ008
+   12 A(1,3)=A(1,3)/A(1,2)                                              TDSEQ009
+      A(1,1)=A(1,4)/A(1,2)                                              TDSEQ010
+      N=N                                                               TDSEQ011
+      DO 10 I=2,N                                                       TDSEQ012
+      A(I,2)=A(I,2)-A(I,1)*A(I-1,3)                                     TDSEQ013
+      IF(A(I,2)) 13,11,13                                               TDSEQ014
+   13 A(I,3)=A(I,3)/A(I,2)                                              TDSEQ015
+   10 A(I,1) = (A(I,4) - A(I,1)*A(I-1,1))/A(I,2)                        TDSEQ016
+      I=N                                                               TDSEQ017
+   20 I=I-1                                                             TDSEQ018
+      IF(I)40,40,30                                                     TDSEQ019
+   30 A(I,1) = A(I,1) - A(I,3)*A(I+1,1)                                 TDSEQ020
+      GO TO 20                                                          TDSEQ021
+   40 FN=0.0                                                            TDSEQ022
+   50 RETURN                                                            TDSEQ023

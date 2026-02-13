@@ -1,0 +1,526 @@
+       REM MIHDI2, REAL, SYMMETRIC MATRIX DIAGONALIZATION SUBROUTINE    HDI20000
+       REM MAY 18, 1959                                                 HDI20001
+       REM          OPTIMUM-SEARCH BEFORE EACH ROTATION                 HDI20002
+       REM          WITH AUTOMATIC SHUT OFF                             HDI20003
+       REM CALLING SEQUENCE                                             HDI20004
+       REM   INITIAL ENTRY                                              HDI20005
+       REM L    TSX HDIAG,C                                             HDI20006
+       REM L+1  PZE H,0,RCN      H=INIT. TRI. ADDR., RCN=REG. CNT. N    HDI20007
+       REM L+2  PZE U     OR MZE       U= INIT. SQ. ADDR.               HDI20008
+       REM L+3  (PERIODIC RETURN)      C(AC)=R                          HDI20009
+       REM L+4  (ERROR RETURN)         OVERFLOW, C(AC) MEANINGFUL       HDI20010
+       REM L+5  (NORMAL RETURN)        C(AC)=R                          HDI20011
+       REM   PERIODIC REENTRY                                           HDI20012
+       REM M    TRA HDIAG+1                                             HDI20013
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20014
+ A     EQU 1                 SET INDEX CONVENTION                       HDI20015
+ B     EQU 2                                                            HDI20016
+ C     EQU 4                                                            HDI20017
+       REM FIRST PRESET BLOCK                                           HDI20018
+ HDIAG TXI SKIP,0,0          INITIAL ENTRY, DECREMENT SECTION USED      HDI20019
+       SXD ASAV,A            ROLL BACK REENTRY                          HDI20020
+       SXD BSAV,B                                                       HDI20021
+       TRA SET                                                          HDI20022
+ SKIP  SXD ASAV,A            SAVE INDEX REGISTERS                       HDI20023
+       SXD BSAV,B                                                       HDI20024
+       SXD CSAV,C                                                       HDI20025
+       CLA 1,C                                                          HDI20026
+       STA PB28              STORE H AS ADDRESS IN REVISE F BLOCK       HDI20027
+       ARS 18                                                           HDI20028
+       STA RCNAD                                                        HDI20029
+ RCNAD CLA -                                                            HDI20030
+       STO N                 STORE N                                    HDI20031
+       PAX 0,A                                                          HDI20032
+       SXD PB29,A            STORE N AS DECREMENT IN REVISE F BLOCK     HDI20033
+ H01   TXI H01+1,A,1                                                    HDI20034
+       SXD NP1D,A            STORE N+1 AS DECREMENT                     HDI20035
+       PZE R,0,6*64*64       SET ROTATION COUNTER=0                     HDI20036
+       PZE RB,0,6*64*64      SET ROLLBACK COUNTER=0                     HDI20037
+ H45   PXD H44,0                                                        HDI20038
+       LDQ RBK               ROLLBACK CONSTANT                          HDI20039
+       DVH N                                                            HDI20040
+       STQ RBTST             ROLLBACK TEST ROTATION COUNT               HDI20041
+       REM U SWITCH BLOCK                                               HDI20042
+       CLA 2,C                                                          HDI20043
+       STO UADDR             STORE (U(0,0))                             HDI20044
+       TMI PB2               TO SECOND PRESET BLOCK                     HDI20045
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20046
+       REM SET UNIT MATRIX IN U BLOCK                                   HDI20047
+       LDQ N                                                            HDI20048
+       MPY N                                                            HDI20049
+       LLS 35                                                           HDI20050
+       PAX 0,A+B             UAS                                        HDI20051
+       ADM UADDR                                                        HDI20052
+       STA ZERAD             (U(0,N))                                   HDI20053
+       STA ONEAD                                                        HDI20054
+ ZERAD PZE 0,A,6*64*64                                                  HDI20055
+ 1D    TIX ZERAD,A,1                                                    HDI20056
+       CLA ONE                                                          HDI20057
+ ONEAD STO 0,B                                                          HDI20058
+ NP1D  TIX ONEAD,B,0                                                    HDI20059
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20060
+       REM SECOND PRESET BLOCK                                          HDI20061
+ PB2   CLA INITF             SET INITIAL F                              HDI20062
+       STO F                                                            HDI20063
+       LXA N,A               SET INITIAL COLUMN MAXIMUMS                HDI20064
+ HH1   TXI PB26,0,-          SKIP L=0                                   HDI20065
+ PB24  SXD PB25,A                                                       HDI20066
+       LXA N,C                                                          HDI20067
+ PB25  TNX 0,C,0             UAS, (N-L)D, RESULTS IN C(C)=L             HDI20068
+       PXD 0,C               UAS                                        HDI20069
+       LRS 18+35                                                        HDI20070
+       TSX CLMAX,C           SR USES INDEX REG. B                       HDI20071
+ PB26  TIX PB24,A,1                                                     HDI20072
+SET    TSX FLSET,4           INITIALIZE FLOATING-TRAP                   HDI20073
+       PZE                   REG. 8 STORAGE                             HDI20074
+       PZE                   MODE STATUS                                HDI20075
+       TRA ERROR                                                        HDI20076
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20077
+       REM CONTROL BLOCK                                                HDI20078
+ CONTR PXD 0,0               FIND MAX X(J)                              HDI20079
+       LXD M1D,A             -1D                                        HDI20080
+       LXA N,B                                                          HDI20081
+ HH2   TXI M1D,0,-           SKIP L=0                                   HDI20082
+ CN1   CAS X-1,A                                                        HDI20083
+       TXI CN2,A,-1                                                     HDI20084
+       TXI CN2,A,-1                                                     HDI20085
+       CLA X-1,A                                                        HDI20086
+       SXD DC1,A             2COM(J+1) IN DECODE BLOCK                  HDI20087
+ M1D   TXI CN2,A,-1                                                     HDI20088
+ CN2   TIX CN1,B,1                                                      HDI20089
+       STO MAX               MAX X(J)                                   HDI20090
+       TZE FINIS                                                        HDI20091
+       CLS F                                                            HDI20092
+       TPL SETF              RESET  F  IN CASE  QUIRK IN DATA           HDI20093
+       ADD MAX                                                          HDI20094
+       TPL ROTAT                                                        HDI20095
+SETF   LXA N,A               REVISE F = (2**-27)*MIN(ABS(H(K,K)))       HDI20096
+       LXA PB29,B                                                       HDI20097
+       CLA INITF                                                        HDI20098
+       STO MIN                                                          HDI20099
+ PB27  CLS MIN                                                          HDI20100
+ PB28  ADM -,B               H                                          HDI20101
+       TPL PB30                                                         HDI20102
+       ADD MIN                                                          HDI20103
+       STO MIN                                                          HDI20104
+ PB30  TXI PB30+1,B,-2                                                  HDI20105
+ PB29  TNX 0,B,-             (N)D, (0)A                                 HDI20106
+       SXD PB31,A                                                       HDI20107
+ PB31  TXI PB31+1,B,-                                                   HDI20108
+       TIX PB27,A,1                                                     HDI20109
+       CLA MIN                                                          HDI20110
+       SUB RAP                                                          HDI20111
+       STO F                                                            HDI20112
+       SUB MAX                                                          HDI20113
+       TMI ROTAT                                                        HDI20114
+FINIS  TSX RESET,4           RESTORE PREVIOUS FLOATING-TRAP CONDITIONS  HDI20115
+       LXD ASAV,A                                                       HDI20116
+       LXD BSAV,B                                                       HDI20117
+       LXD CSAV,C                                                       HDI20118
+       CLA R                                                            HDI20119
+       TRA 5,C                                                          HDI20120
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20121
+       REM DECODE TO I,J,J-I BLOCK                                      HDI20122
+ ROTAT CLA MAX                                                          HDI20123
+       ANA AMASK                                                        HDI20124
+       STO I                 STORE I                                    HDI20125
+       LXD M1D,A             -1D                                        HDI20126
+ DC1   TNX 0,A,0             UAS, -(J+1)D, RESULTS IN C(A)=J            HDI20127
+       PXD 0,A               UAS                                        HDI20128
+       ARS 18                                                           HDI20129
+       STO J                 STORE J                                    HDI20130
+       SUB I                                                            HDI20131
+       STO JMI               STORE J-I                                  HDI20132
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20133
+       REM H TRANSFORMATION AND ROTATOR PRESET BLOCK                    HDI20134
+       LDQ I                                                            HDI20135
+       TSX HADSR,C           STORE (H(I,I))                             HDI20136
+       STA H4                                                           HDI20137
+       STA H12                                                          HDI20138
+       STO HIIAD             +//(H(I,I))/                               HDI20139
+       TSX RT1AD,C                                                      HDI20140
+       LDQ J                                                            HDI20141
+       TSX HADSR,C           STORE (H(I,J))                             HDI20142
+       STA H2                                                           HDI20143
+       STA H3                                                           HDI20144
+       TSX RT2AD,C                                                      HDI20145
+       ADD JMI               J-I                                        HDI20146
+       STA H5                STORE (H(J,J))                             HDI20147
+       STA H13                                                          HDI20148
+       STO HJJAD             +//(H(J,J))/                               HDI20149
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20150
+       REM H TRANSFORMATION                                             HDI20151
+ H2    CLA 0                 H(I,J)                                     HDI20152
+       STO HIJ                                                          HDI20153
+       FAD HIJ                                                          HDI20154
+       STO 2HIJ                                                         HDI20155
+ H3    PZE 0,0,6*64*64       H(I,J)/=0                                  HDI20156
+       LDQ 2HIJ                                                         HDI20157
+       FMP 2HIJ                                                         HDI20158
+       STO 4HIJS                                                        HDI20159
+ H5    CLA -                 H(J,J)                                     HDI20160
+       STO HJJ                                                          HDI20161
+ H4    CLA 0                 H(I,I)                                     HDI20162
+       STO HII                                                          HDI20163
+       FSB HJJ                                                          HDI20164
+       STO IND                                                          HDI20165
+       LDQ IND                                                          HDI20166
+       FMP IND                                                          HDI20167
+       FAD 4HIJS                                                        HDI20168
+       TSX SQRT,C                                                       HDI20169
+ AMASK PZE -1                IMPOSS. ERROR RETURN USED FOR CONSTANT     HDI20170
+       LDQ IND               PREPARE TAN ACCURATELY                     HDI20171
+       TQP H55                                                          HDI20172
+       SSM                                                              HDI20173
+ H55   FAD IND                                                          HDI20174
+       STO DENOM                                                        HDI20175
+       CLA 2HIJ                                                         HDI20176
+       FDH DENOM             ONLY UNDERFLOW POSSIBLE                    HDI20177
+       STQ TAN                                                          HDI20178
+       FMP TAN                                                          HDI20179
+       FAD ONE                                                          HDI20180
+       STO SECSQ                                                        HDI20181
+       CLA ONE                                                          HDI20182
+       FDH SECSQ             NO OVER OR UNDERFLOW POSSIBLE              HDI20183
+       STQ COSSQ                                                        HDI20184
+       LDQ HJJ                                                          HDI20185
+       FMP TAN                                                          HDI20186
+       FAD 2HIJ                                                         HDI20187
+       LRS 35                                                           HDI20188
+       FMP TAN                                                          HDI20189
+       FAD HII                                                          HDI20190
+       LRS 35                                                           HDI20191
+       FMP COSSQ                                                        HDI20192
+       STO HIIP                                                         HDI20193
+       LDQ HII                                                          HDI20194
+       FMP TAN                                                          HDI20195
+       FSB 2HIJ                                                         HDI20196
+       LRS 35                                                           HDI20197
+       FMP TAN                                                          HDI20198
+       FAD HJJ                                                          HDI20199
+       LRS 35                                                           HDI20200
+       FMP COSSQ                                                        HDI20201
+       STO HJJP                                                         HDI20202
+       CLA COSSQ                                                        HDI20203
+       TSX SQRT,C                                                       HDI20204
+ I1    PZE 1                 IMPOSS. ERROR RETURN USED FOR CONSTANT     HDI20205
+       STO COS                                                          HDI20206
+       LDQ COS                                                          HDI20207
+       FMP TAN                                                          HDI20208
+       STO SIN                                                          HDI20209
+ H11   CLA HIIP              PSUEDO-RANK EIGENVALUES                    HDI20210
+       LDQ HJJP                                                         HDI20211
+       TLQ H12                                                          HDI20212
+       STO HJJP                                                         HDI20213
+       STQ HIIP                                                         HDI20214
+       CLS SIN                                                          HDI20215
+       LDQ COS                                                          HDI20216
+       LRS 0                                                            HDI20217
+       SSP                                                              HDI20218
+       STO COS                                                          HDI20219
+       STQ SIN                                                          HDI20220
+       CLA HIIP                                                         HDI20221
+       LDQ HJJP                                                         HDI20222
+       TRA H12                                                          HDI20223
+ H10   LDQ J                 NEW X(J)                                   HDI20224
+       TSX CLMAX,C                                                      HDI20225
+       TRA CONTR             SKIP NEGLIGIBLE ROTATION                   HDI20226
+ H12   STO -                                                            HDI20227
+ H13   STQ -                                                            HDI20228
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20229
+       REM RESURVEY X FOR CANCELLED MAXIMA AND RECTIFY                  HDI20230
+       LXD DC1,A             2COM(J+1) IN DECODE BLOCK                  HDI20231
+       PZE X-1,A,6*64*64     X(J)=0 TO AVOID UNNECESARY COL MAX         HDI20232
+       LXA I,A                                                          HDI20233
+       SXD RSX1,A                                                       HDI20234
+       SXD RSX2,A                                                       HDI20235
+       LXD M1D,A             -1D                                        HDI20236
+ RSX1  TNX 0,A,0             UAS, (I)D, RESULTS IN C(A)=-(I+1)          HDI20237
+       LXA N,B                                                          HDI20238
+ RSX2  TNX 0,B,0             UAS, (I)D, RESULTS IN C(B)=N-I             HDI20239
+       TRA RSX6                                                         HDI20240
+ RSX3  CLA X,A                                                          HDI20241
+       TZE RSX5              NO MAXIMUM, IF ZERO                        HDI20242
+       ANA AMASK             PZE-1                                      HDI20243
+       CAS I                                                            HDI20244
+       TRA RSX4                                                         HDI20245
+       TRA RSXA1             TO RESURVEY X APPENDAGE BLOCK              HDI20246
+ RSX4  CAS J                                                            HDI20247
+       TXI RSX6,A,-1                                                    HDI20248
+       TRA RSXA1             TO RESURVEY X APPENDAGE BLOCK              HDI20249
+ RSX5  TXI RSX6,A,-1         REENTRY POINT FROM APPENDAGE BLOCK         HDI20250
+ RSX6  TIX RSX3,B,1                                                     HDI20251
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20252
+       REM H ROTATION CONTROL BLOCK                                     HDI20253
+       LXD 1D,C                                                         HDI20254
+       CLA HC1RA                                                        HDI20255
+       STA R10                                                          HDI20256
+       LXA I,A+B                                                        HDI20257
+       SXD H18,A+B           I                                          HDI20258
+ H41   TXI H15,A+B,1                                                    HDI20259
+ H14   TXI ROT,0,-                                                      HDI20260
+ H15   TIX H14,A+B,1                                                    HDI20261
+       SXD H14,C             SAVE INDEX REG. C                          HDI20262
+       CLA HJJAD             +//(H(J,J))/                               HDI20263
+       TSX RT2AD,C                                                      HDI20264
+       LDQ J                                                            HDI20265
+       TSX HADSR,C           +//(H(I,J))/                               HDI20266
+       TSX RT1AD,C                                                      HDI20267
+       SUB HIIAD             -//(H(I,I))/                               HDI20268
+ H43   PAX R11,A             ASU                                        HDI20269
+       CLA R13                                                          HDI20270
+       STA R10                                                          HDI20271
+       CLA HC2RA                                                        HDI20272
+       STA R16                                                          HDI20273
+       LXA JMI,B             J-I                                        HDI20274
+       LXD H14,C             RESTORE INDEX REG. C                       HDI20275
+ H23   TXI H17,C,-1          DSU                                        HDI20276
+ H16   TRA ROT                                                          HDI20277
+ H17   TXI H17+1,B,-1                                                   HDI20278
+       SXD H14,C             SAVE INDEX REG. C                          HDI20279
+       CAL H18                                                          HDI20280
+       ACL 1D                                                           HDI20281
+       STD H18                                                          HDI20282
+ H18   TIX H16,A,0                                                      HDI20283
+       LDQ N                                                            HDI20284
+       TSX HADSR,C           +//(H(I,N))/                               HDI20285
+       TSX RT1AD,C                                                      HDI20286
+       ADD JMI               J-I                                        HDI20287
+       TSX RT2AD,C                                                      HDI20288
+       SUB HJJAD             -//(H(J,J))/                               HDI20289
+ H42   PAX H40,A+B           ASU                                        HDI20290
+       CLA HC3JA                                                        HDI20291
+       STA R10                                                          HDI20292
+       CLA HC3RA                                                        HDI20293
+       STA R16                                                          HDI20294
+       CAL H18                                                          HDI20295
+       LXD H14,C             RESTORE INDEX REG. C                       HDI20296
+ H24   TXI H20,C,-1          DSU                                        HDI20297
+ H19   TRA ROT                                                          HDI20298
+ H40   CAL H21                                                          HDI20299
+ H20   ACL 1D                                                           HDI20300
+       STD H21                                                          HDI20301
+ H21   TIX H19,A+B,0                                                    HDI20302
+       LDQ I                                                            HDI20303
+       TSX CLMAX,C           NEW X(I)                                   HDI20304
+       LDQ J                                                            HDI20305
+       TSX CLMAX,C           NEW X(J)                                   HDI20306
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20307
+       REM U SWITCH                                                     HDI20308
+       CLA UADDR                                                        HDI20309
+       TMI BKR                                                          HDI20310
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20311
+       REM U ROTATION CONTROL BLOCK                                     HDI20312
+       LDQ J                                                            HDI20313
+       TSX UADSR,C           (U(0,J+1))                                 HDI20314
+       TSX RT2AD,C                                                      HDI20315
+       LDQ I                                                            HDI20316
+       TSX UADSR,C           (U(0,I+1))                                 HDI20317
+       TSX RT1AD,C                                                      HDI20318
+       CLA UC1RA                                                        HDI20319
+       STA R10                                                          HDI20320
+       LXA N,A+B                                                        HDI20321
+ H22   TRA ROT                                                          HDI20322
+ H44   TIX H22,A+B,1                                                    HDI20323
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20324
+       REM ROTATION BOOKKEEPING BLOCK                                   HDI20325
+ BKR   CLA R                                                            HDI20326
+       ADD I1                                                           HDI20327
+       STO R                                                            HDI20328
+       CLA RB                                                           HDI20329
+       ADD I1                                                           HDI20330
+       STO RB                                                           HDI20331
+       SUB RBTST                                                        HDI20332
+       TMI CONTR                                                        HDI20333
+       PZE RB,0,6*64*64      RB/=0                                      HDI20334
+       TSX RESET,4           RESTORE PREVIOUS FLOATING-TRAP CONDITIONS  HDI20335
+       LXD ASAV,A                                                       HDI20336
+       LXD BSAV,B                                                       HDI20337
+       LXD CSAV,C                                                       HDI20338
+       CLA R                                                            HDI20339
+       TRA 3,C               ROLLBACK RETURN                            HDI20340
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20341
+       REM RESURVEY X APPENDAGE BLOCK                                   HDI20342
+ RSXA1 SXD RSXA2,B           SAVE INDEX REG. B                          HDI20343
+       LXA N,C                                                          HDI20344
+ RSXA2 TNX 0,C,0             UAS, (N-L)D, RESULTS IN C(C)=L             HDI20345
+       PXD 0,C               UAS                                        HDI20346
+       LRS 18+35                                                        HDI20347
+       TSX HADSR,C           +//(H(I,L))/                               HDI20348
+       STA RSXA3                                                        HDI20349
+       STA RSXA4                                                        HDI20350
+       STA RSXA7                                                        HDI20351
+       ADD JMI               J-I                                        HDI20352
+       STA RSXA5             +//(H(J,L))/                               HDI20353
+       STA RSXA6                                                        HDI20354
+       STA RSXA8                                                        HDI20355
+ RSXA3 CLA 0                 REMOVE H(I,K)                              HDI20356
+       STO TI                SAVE                                       HDI20357
+ RSXA4 PZE 0,0,6*64*64       DUMMY ZERO                                 HDI20358
+ RSXA5 CLA 0                 REMOVE REAL OR PSUEDO H(J,K)               HDI20359
+       STO TJ                SAVE                                       HDI20360
+ RSXA6 PZE 0,0,6*64*64       DUMMY ZERO                                 HDI20361
+       LDQ K                 FROM  HADSR SETTING                        HDI20362
+       TSX CLMAX,C           SR USES INDEX REG. B                       HDI20363
+       CLA TI                                                           HDI20364
+ RSXA7 STO 0                 RESTORE H(I,K)                             HDI20365
+       CLA TJ                                                           HDI20366
+ RSXA8 STO 0                 RESTORE REAL OR PSUEDO H(J,K)              HDI20367
+       LXD RSXA2,B           RESTORE INDEX REG. B                       HDI20368
+       TRA RSX5              RETURN TO MAIN RESURVEY X BLOCK            HDI20369
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20370
+       REM COLUMN MAX SR                                                HDI20371
+ CLMAX STQ K                 K=COLUMN NUMBER                            HDI20372
+       LXA K,B                                                          HDI20373
+       TXL C8,B,0            RETURN IF K=0                              HDI20374
+       MPY K                 K=0(1)N-1, K=0 FORBIDDEN                   HDI20375
+       LLS 35                                                           HDI20376
+       ADD K                                                            HDI20377
+       ARS 1                                                            HDI20378
+       ADD K                                                            HDI20379
+       ADM HADDR                                                        HDI20380
+       STA C2                (H(K,K))                                   HDI20381
+       PZE MAX,0,6*64*64     MAX=0                                      HDI20382
+ C1    CLS MAX                                                          HDI20383
+ C2    ADM 0,B                                                          HDI20384
+       TMI C3                                                           HDI20385
+       ADD MAX                                                          HDI20386
+       STO MAX                                                          HDI20387
+       SXD C4,B              K-R, R=MAX ROW NUMBER                      HDI20388
+ C3    TIX C1,B,1                                                       HDI20389
+       CLA MAX               AVOID PLANTING ROW NO. IF MAX=0            HDI20390
+       TZE C7                                                           HDI20391
+       LXA K,B                                                          HDI20392
+ C5    TXI C5+1,B,1          IN CASE R=0                                HDI20393
+ C4    TNX 0,B,0             UAS, (K-R)D, RESULTS IN C(B)=R             HDI20394
+ C6    TXI C6+1,B,-1                                                    HDI20395
+       PXD 0,B               UAS                                        HDI20396
+       ARS 18                                                           HDI20397
+       STA MAX               STORE ROW NUMBER                           HDI20398
+ C7    CLA K                                                            HDI20399
+       COM                                                              HDI20400
+       PAX 0,B               UAS                                        HDI20401
+       CLA MAX                                                          HDI20402
+       STO X-1,B             STORE COL MAX INCLUDING ROW NUMBER         HDI20403
+ C8    TRA 1,C                                                          HDI20404
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20405
+       REM (H(I,K)) SUBROUTINE                                          HDI20406
+ HADSR STQ K                                                            HDI20407
+       MPY K                                                            HDI20408
+       LLS 35                                                           HDI20409
+       ADD K                                                            HDI20410
+       ARS 1                                                            HDI20411
+       ADD I                                                            HDI20412
+       ADM HADDR             +//(H(0,0))/                               HDI20413
+       TRA 1,C                                                          HDI20414
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20415
+       REM (U(0,K+1)) SUBROUTINE                                        HDI20416
+ UADSR MPY N                                                            HDI20417
+       LLS 35                                                           HDI20418
+       ADD N                                                            HDI20419
+       ADM UADDR                                                        HDI20420
+       TRA 1,C                                                          HDI20421
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20422
+       REM SET ROTATOR ADDRESSES SUBROUTINES                            HDI20423
+ RT1AD STA R2                                                           HDI20424
+       STA R4                                                           HDI20425
+       STA R5                                                           HDI20426
+       STA R15                                                          HDI20427
+       TRA 1,C                                                          HDI20428
+ RT2AD STA R01                                                          HDI20429
+       STA R7                                                           HDI20430
+       STA R9                                                           HDI20431
+       STA R12                                                          HDI20432
+       TRA 1,C                                                          HDI20433
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20434
+       REM ROTATOR SUBROUTINE                                           HDI20435
+ ROT   LDQ SIN               SIN                                        HDI20436
+ R01   FMP 0,B               U2                                         HDI20437
+ R1    STO T                                                            HDI20438
+       LDQ COS               COS                                        HDI20439
+ R2    FMP 0,A               U1                                         HDI20440
+ R3    FAD T                                                            HDI20441
+ R4    LDQ 0,A               U1                                         HDI20442
+ R5    STO 0,A               U1/                                        HDI20443
+       FMP SIN               SIN                                        HDI20444
+ R6    STO T                                                            HDI20445
+       LDQ COS               COS                                        HDI20446
+ R7    FMP 0,B               U2                                         HDI20447
+ R8    FSB T                                                            HDI20448
+ R9    STO 0,B               U2/                                        HDI20449
+ R10   TXI 0,C,-1            CONTROL SWITCH                             HDI20450
+ R11   CLS X,C                                                          HDI20451
+ R12   ADM 0,B               SET BY RT2AD                               HDI20452
+ R13   TMI R14                                                          HDI20453
+       ADD X,C                                                          HDI20454
+       STO X,C                                                          HDI20455
+       CLA J                                                            HDI20456
+       STA X,C                                                          HDI20457
+ R14   CLS X,C                                                          HDI20458
+ R15   ADM 0,A               SET BY RT1AD                               HDI20459
+       TMI R16                                                          HDI20460
+       ADD X,C                                                          HDI20461
+       STO X,C                                                          HDI20462
+       CLA I                                                            HDI20463
+       STA X,C                                                          HDI20464
+ R16   TRA -                 CONTROL SWITCH                             HDI20465
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20466
+       REM ERROR RETURN BLOCK                                           HDI20467
+ERROR  TSX RESET,4           RESTORE PREVIOUS FLOATING-TRAP CONDITIONS  HDI20468
+       LXD ASAV,A                                                       HDI20469
+       LXD BSAV,B                                                       HDI20470
+       LXD CSAV,C                                                       HDI20471
+       TRA 4,C                                                          HDI20472
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20473
+       REM CONSTANTS                                                    HDI20474
+ RBK   DEC 90000             CONSTANT FOR PERIODIC RETURN EVERY 5 MIN. IHDI20475
+ ONE   DEC +1.                                                          HDI20476
+ RAP   DEC 27B8              RELATIVE ACCURACY PARAMETER                HDI20477
+ INITF OCT 377777777777      INITIAL F                                  HDI20478
+ NEXT  BSS 0                                                            HDI20479
+       REM XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXHDI20480
+       REM STORAGE ASSIGNMENTS                                          HDI20481
+ ASAV  SYN HH1               DECREMENT STORAGE ONLY                     HDI20482
+ BSAV  SYN HH2               DECREMENT STORAGE ONLY                     HDI20483
+ CSAV  SYN HDIAG             DECREMENT STORAGE ONLY                     HDI20484
+ HADDR SYN PB28              ADDRESS STORAGE ONLY                       HDI20485
+ HC1RA SYN H41               ADDRESS STORAGE ONLY                       HDI20486
+ HC2RA SYN H23               ADDRESS STORAGE ONLY                       HDI20487
+ HC3RA SYN H42               ADDRESS STORAGE ONLY                       HDI20488
+ HC3JA SYN H43               ADDRESS STORAGE ONLY                       HDI20489
+ UC1RA SYN H45               ADDRESS STORAGE ONLY                       HDI20490
+       ORG COMMON                                                       HDI20491
+ K     BSS 1                 ALSO USED FOR                              HDI20492
+ T     BSS 1                       SQUARE ROOT SUBROUTINE               HDI20493
+ N     BSS 1                                                            HDI20494
+ I     BSS 1                                                            HDI20495
+ J     BSS 1                                                            HDI20496
+ JMI   BSS 1                                                            HDI20497
+ R     BSS 1                                                            HDI20498
+ RB    BSS 1                                                            HDI20499
+ RBTST BSS 1                                                            HDI20500
+ UADDR BSS 1                                                            HDI20501
+ HIIAD BSS 1                                                            HDI20502
+ HJJAD BSS 1                                                            HDI20503
+ F     BSS 1                                                            HDI20504
+ MAX   BSS 1                                                            HDI20505
+ HIJ   SYN MAX                                                          HDI20506
+ 2HIJ  SYN MAX                                                          HDI20507
+ HJJP  SYN MAX                                                          HDI20508
+ MIN   BSS 1                                                            HDI20509
+ 4HIJS SYN MIN                                                          HDI20510
+ DENOM SYN MIN                                                          HDI20511
+ TAN   SYN MIN                                                          HDI20512
+ HJJ   BSS 1                                                            HDI20513
+ TJ    SYN HJJ                                                          HDI20514
+ HII   BSS 1                                                            HDI20515
+ DIFF  SYN HII                                                          HDI20516
+ COS   SYN HII                                                          HDI20517
+ IND   BSS 1                                                            HDI20518
+ SECSQ SYN IND                                                          HDI20519
+ COSSQ SYN IND                                                          HDI20520
+ SIN   SYN IND                                                          HDI20521
+ HIIP  BSS 1                                                            HDI20522
+ TI    SYN HIIP                                                         HDI20523
+ X     SYN HIIP              START OF N ELEMENT COLUMN VECTOR           HDI20524
+       ORG NEXT              END OF MAIN SUBROUTINE                     HDI20525

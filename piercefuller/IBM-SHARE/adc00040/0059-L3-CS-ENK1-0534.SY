@@ -1,0 +1,370 @@
+CSENK1 REM 0370 10108                                                   ENK10001
+SYSENK SWT     4                                                        ENK10002
+       TTR     1,4                                                      ENK10003
+       TTR     ENK4                                                     ENK10004
+SYSASN TRA     ASN                                                      ENK10005
+*                                                                       ENK10006
+*THESE CELLS GO ELSEWHERE IN THE MONITOR                       P        ENK10007
+*                                                                       ENK10008
+*SYSENK.  ENTER KEYS SUBROUTINE. CALLING SEQUENCE IS                    ENK10009
+*      TSX     SYSENK,4                                                 ENK10010
+* OPERATOR PLACES A WORD IN THE KEYS AND DEPRESSES SWITCH 4             ENK10011
+*THE PREFIX IS PTH TO DISCONNECT A TAPE, PON TO CONNECT IT. THE BCD TAPEENK10012
+* TAPE ADDRESS IS IN THE ADDRESS OF THIS WORD AND THE RESERVED NUMBER   ENK10013
+* IS IN THE DECREMENT.  RESERVED NUMBER ZERO IS A GENERAL UTILITY TAPE  ENK10014
+*RESERVED NUMBERS 6,7 AND 8 ARE SYSTEM PERIPHERAL TAPES.                ENK10015
+*                                                                       ENK10016
+ ENK1  TRA     ENK2          PROTOTYPE                                  ENK10017
+ ENK2  CLA     ENK3          RESTORE SYSENK TO NORMAL                   ENK10018
+       STO     SYSENK+1      X                                          ENK10019
+ ENK3  TTR     1,4           X                                          ENK10020
+ ENK4  BEGIN   1,7,1                                                    ENK10021
+       CLA     ENK1          TEST FOR FIRST TIME THROUGH                ENK10022
+       CAS     SYSENK+1      X                                          ENK10023
+       TTR     *+2           X                                          ENK10024
+       TTR     1,4           X                                          ENK10025
+       STO     SYSENK+1      SET TO RESTORE SYSENK WHEN UP              ENK10026
+       CAL     CLERE         PRESET BLANK OUTPUT                        ENK10027
+       SLW     SAY+2         X                                          ENK10028
+       STA     SAY+3         X                                          ENK10029
+       AXT     0,1           PRESENT                                    ENK10030
+ ENK4A TXH     ENK4B,1,0     CARD OR KEYS SWITCH                        ENK10031
+       ENK                                                              ENK10032
+       STQ     COMMON        X                                          ENK10033
+ ENK4B CLA     COMMON        X                                          ENK10034
+       TMI     SYSERR        OTHER USES OF KEYS                         ENK10035
+       PDX     0,4           SYMBOLIC NUMBER, SYMN                      ENK10036
+       SXA     SYMN,4        X                                          ENK10037
+       PAX     0,1           PHYSICAL NUMBER, PHYN                      ENK10038
+       TIX     *,1,128       X                                          ENK10039
+       SXA     PHYN,1        X                                          ENK10040
+       ANA     TADDR         CHANNEL NUMBER                             ENK10041
+       ARS     9             X                                          ENK10042
+       PAX     0,2           X                                          ENK10043
+ ENK22 TXH     CARD,1,8      READ CARD IF KEYS ARE INCORRECT            ENK10044
+       TXL     CARD,1,0      X                                          ENK10045
+       TXH     CARD,2,2      X                                          ENK10046
+       TXL     CARD,2,0      X                                          ENK10047
+       TXH     CARD,4,7      X                                          ENK10048
+       CLA     COMMON        INSTRUCTION TO X4                          ENK10049
+       ARS     15            X                                          ENK10050
+       PDX     0,4           X                                          ENK10051
+       CLA     WHERE+2,2     CHANNEL NUMBER COMMENT                     ENK10052
+       STD     SAY+1         X                                          ENK10053
+       LDI*    TFIND+2,2     TEST PRIOR TAPE STATUS                     ENK10054
+       LFT     700000        X                                          ENK10055
+       TRA     ENK5          NOT IN USE                                 ENK10056
+*                                                                       ENK10057
+*TAPE IS IN USE                                                         ENK10058
+       CLA     WHAT+3        TELL OPERATOR UNTIL HE                     ENK10059
+       STO     SAY           X RESCINDS ACTION                          ENK10060
+ RTRN1 TSX     25P,4         X                                          ENK10061
+       MZE     SAY,,4        X                                          ENK10062
+       SWT     4             X                                          ENK10063
+       TRA     ENK15         X                                          ENK10064
+       HTR     RTRN1         X                                          ENK10065
+*                                                                       ENK10066
+*MUST USE TEST SINCE CARD READER WAY TURN ON END OF FILE                ENK10067
+       TSX     TEST,4                                                   ENK10068
+ CARD  ZET     SYSAPR        SET SYSTEM PRIORITY                        ENK10069
+       TRA     *-2           X                                          ENK10070
+       CLA     ENK23         X                                          ENK10071
+       STO     SYSAPR        X                                          ENK10072
+       TSX TEST,4            WAIT TILL CARD IS READ                     ENK10073
+       CLA     ENK25         X                                          ENK10074
+       SUB     SYSAAC        X                                          ENK10075
+       TZE     *-3           X                                          ENK10076
+       TRA     ENK4A         RETURN AND CHECK THIS WORD                 ENK10077
+*                                                                       ENK10078
+* THIS IS AN EMPTY ROUTINE                                              ENK10079
+ ENK23 PZE     0,,ENK24                                                 ENK10080
+ ENK24 ZET     SYSAAC                                                   ENK10081
+       TRA     SYSERR        IMPOSSIBLE                                 ENK10082
+       CLA     ENK25         SET ACTIVITY INDICATOR                     ENK10083
+       RCDA                  READ CARD                                  ENK10084
+       RCHA    ENK19         X                                          ENK10085
+       STO     SYSAAC        X                                          ENK10086
+       STZ     SYSAPR        CLEAR SYSTEM PRIORITY                      ENK10087
+       TRA     1,4           X                                          ENK10088
+*                                                                       ENK10089
+* THIS IS THE END ROUTINE                                               ENK10090
+ ENK25 PZE     0,0,ENK20     X                                          ENK10092
+ ENK20 AXT     1,1           SET SWITCH                                 ENK10091
+       TEFA    ENK21         TEST TRIGGER                               ENK10093
+ ENK2A STZ     SYSAAC        CLEAR CHANNEL                              ENK10094
+       TRA     1,4           X                                          ENK10095
+ ENK19 IOCD    COMMON,,1     CHANNEL CONTROL TO READ A CARD             ENK10096
+ ENK21 TSX     25P,4         NEITHER KEYS NOR CARD WILL WORK.           ENK10097
+       MZE     GOOF,,2       X                                          ENK10098
+       AXT     0,1           SET SWITCH                                 ENK10099
+       HTR     ENK2A                                                    ENK10100
+ GOOF  BCI     2,TSK TSK     X                                          ENK10101
+*                                                                       ENK10102
+ ENK7  TSX     25P,4         TELL OPERATOR HE WASTED                    ENK10103
+       MZE     WHY,,2        X HIS TIME                                 ENK10104
+       RETURN  ENK4          X                                          ENK10105
+ ENK15 CLA     ENK3          X                                          ENK10106
+       STO     SYSENK+1      X                                          ENK10107
+       RETURN  ENK4          X                                          ENK10108
+*                                                                       ENK10109
+*TAPE IS NOT IN USE                                                     ENK10110
+ ENK5  LNT     200000        TEST STATUS FURTHER                        ENK10111
+       TRA     ENK6          IT IS UNASSIGNED                           ENK10112
+       TXH     ENK7,4,1      DISCONNECTED. TRYING TO REDISCONNECT.      ENK10113
+*                                                                       ENK10114
+*CONNECT A TAPE                                                         ENK10115
+       LXA     SYMN,4        IS IT TO BE RESERVED                       ENK10116
+       TXL     ENK14,4       X NO                                       ENK10117
+*                                                                       ENK10118
+*ADD TO RESERVED LIST                                                   ENK10119
+       CLA     WHO           TELL ITS RESERVED                          ENK10120
+       STO     SAY+2         X                                          ENK10121
+       CAL     SYMN          ASSEMBLE ITEM FOR RESERVED LIST            ENK10122
+       ALS     3             X                                          ENK10123
+       ACL     PHYN          X                                          ENK10124
+       SUB     ONE           WE USE PHYN LESS ONE ON LIST               ENK10125
+       LGR     6             PLACE ON LIST                              ENK10126
+       CAL     RLIST+2,2     X                                          ENK10127
+       TOV     *+1           X                                          ENK10128
+       LGL     5             X                                          ENK10129
+       TOV     ENK9          DID WE SHIFT AN ITEM OFF                   ENK10130
+       LGL     1             X                                          ENK10131
+       SLW     RLIST+2,2                                                ENK10132
+       CAL     ENK16         CHANGE STATUS PHYS TAPE                    ENK10133
+ ENK8  STP*    TFIND+2,2     X                                          ENK10134
+       CLA     WHAT+1        SET ANNOUNCEMENT                           ENK10135
+       STO     SAY           X                                          ENK10136
+ ENK11 TSX     25P,4         ANNOUNCE                                   ENK10137
+       MZE     SAY,,4        X                                          ENK10138
+       RETURN  ENK4          X                                          ENK10139
+ ENK6  TXL     ENK7,4,1      CONNECTED. CANNOT RECONNECT.               ENK10140
+       LNT     100000                                                   ENK10141
+       TRA     ENK17         NOT RESERVED                               ENK10142
+       LDQ     RLIST+2,2     FIND IN RESERVED LIST                      ENK10143
+       AXT     36,4          X                                          ENK10144
+ ENK16 TXI     *+1,1,-1      WE USE PHYN LESS ONE IN REVERVED LIST      ENK10145
+       SXA     MADDR,1       X                                          ENK10146
+ ENK18 LGL     6             X                                          ENK10147
+       ANA     MSQ7          X                                          ENK10148
+       SUB     MADDR         X                                          ENK10149
+       TZE     ENK12         FOUND                                      ENK10150
+       TIX     ENK18,4,6     X                                          ENK10151
+       TSX     SYSERR,4      IMPOSSIBLE. NOT IN LIST                    ENK10152
+ ENK17 CLA     WHO+1         UTILITY                                    ENK10153
+       STO     SAY+2         X                                          ENK10154
+ ENK13 CLA     ENK6          SET PHYSICAL TAPE                                  
+* (INSTRUCTION DELETED)                                                 ENK10156
+       STP*    TFIND+2,2     X                                          ENK10157
+       CLA     WHAT+4        SET -OFF OK-                               ENK10158
+       STO     SAY                                                      ENK10159
+       TRA     ENK11                                                    ENK10160
+ ENK12 LDQ     RLIST+2,2     REMOVE ITEM FROM RESERVED LIST             ENK10161
+       LGL     36,4          X                                          ENK10162
+       SLW     COMMON        X                                          ENK10163
+       LGL     3             X                                          ENK10164
+       PAX     0,1           SYMN TO X1 AND COMMENT                     ENK10165
+       SXA     SAY+3,1       X                                          ENK10166
+       LGL     3             CONTINUE REMOVAL                           ENK10167
+       CAL     COMMON        X                                          ENK10168
+       LGR     42,4          X                                          ENK10169
+       STQ     RLIST+2,2     X                                          ENK10170
+       CLA     WHO           SET COMMENT-RSVRD                          ENK10171
+       STO     SAY+2         X                                          ENK10172
+       TXI     ENK13,1,1     RESTORE PHYN                               ENK10173
+ ENK9  CLA     WHAT+5        SET COMMENT - 2 MANY                       ENK10174
+       STO     SAY           X                                          ENK10175
+       TRA     RTRN1         X                                          ENK10176
+ ENK14 CLA     WHO+1         SET COMMENT -UTLTY-                        ENK10177
+       STO     SAY+2                                                    ENK10178
+       CAL     *             X                                          ENK10179
+       TRA     ENK8                                                     ENK10180
+*                                                                       ENK10181
+*SUBROUTINE TO ASSIGN TAPES. CALLING SEQUENCE                           ENK10182
+*      TSX     SYSASN,4                                                 ENK10183
+*       P      TAPE                                                     ENK10184
+*      VACUOUS RETURN                                                   ENK10185
+*      NORMAL RETURN                                                    ENK10186
+*    TAPE=     SYMBOLIC TAPE ADDRESS                                    ENK10187
+*    P=        PZE   ASSIGN USING RESERVED LIST FOR RESERVED TAPES      ENK10188
+*              PON   ASSIGN FROM UTILITY POOL FOR ALL TAPES             ENK10189
+*              MZE   RETURN TO UTILITY POOL                             ENK10190
+*              PTH   DISCONNECT THIS TAPE.                              ENK10191
+*                                                                       ENK10192
+* SIMULATING THE BEGIN MACRO INSCAT WHICH 9AP WILL NOT ASSEMBLE THE SAMEENK10193
+ ASN   TXL     *+7                                                      ENK10194
+       AXT     0,4                                                      ENK10195
+       AXT     0,2                                                      ENK10196
+       AXT     0,1                                                      ENK10197
+       LDI     *+2                                                      ENK10198
+       TRA     3,4                                                      ENK10199
+       PZE                                                              ENK10200
+       STI     *-1                                                      ENK10201
+       SXA     *-5,1                                                    ENK10202
+       SXA     *-7,2                                                    ENK10203
+       SXA     *-9,4                                                    ENK10204
+*                                                                       ENK10205
+       CAL     CLERE         PRESET BLANKS                              ENK10206
+       STA     SAY+1         X                                          ENK10207
+       STA     SAY+3         X                                          ENK10208
+       CLA     1,4           INITIALIZE                                 ENK10209
+       STA     MADDR         X                                          ENK10210
+       STO     COMMON        X                                          ENK10211
+       TMI     ASN1          TEST IF DISASSIGN                          ENK10212
+       TOV     *+1           X                                          ENK10213
+       ALS     1             X                                          ENK10214
+       TOV     ASN1          X                                          ENK10215
+       STP     ASN2          SET SWITCH TO USE RESERVED LIST OR NOT     ENK10216
+*                                                                       ENK10217
+*ASSIGN A TAPE                                                          ENK10218
+       ZET*    MADDR                                                    ENK10219
+       TRA     RTR2          A TAPE IS ALREADY ASSIGNED HERE            ENK10220
+       TSX     TAS1,4        INTERPRET SYMBOLIC NAME                    ENK10221
+ ASN2  TRA     ASN2A         SWITCH (TRA OR TIX=NOP)                    ENK10222
+       AXT     8,1           FIND A PHYSICAL TAPE                       ENK10223
+       CLA*    TFIND+2,2     X                                          ENK10224
+       TMI     ASN3          X                                          ENK10225
+       TIX     *-2,1,1       X                                          ENK10226
+       CLA     WHO+1         ENSURE UTILITY TAPE IS REQUESTED           ENK10227
+       STO     SAY+2         X                                          ENK10228
+*                                                                       ENK10229
+*NO TAPE THERE                                                          ENK10230
+ ASN4  CLA     WHAT          THERE AINT NONE TO BE HAD                  ENK10231
+       STO     SAY           X                                          ENK10232
+       TSX     25P,4         X                                          ENK10233
+       MZE     SAY,,4        X                                          ENK10234
+       HPR                   X                                          ENK10235
+       TSX     SYSENK,4      ENTER KEYS AND REPEAT                      ENK10236
+       LXA     ASN+1,4       X                                          ENK10237
+       TXI     ASN+2,4,3     X                                          ENK10238
+ ASN3  CLA     ASN3          CHANGE STATUS OF PHYSICAL TAPE             ENK10239
+       STP*    TFIND+2,2     X                                          ENK10240
+       PXA     0,1           MAKEUP COMPLETE PHYSICAL ADDRESS           ENK10241
+       ADD     CHAN+2,2      X                                          ENK10242
+       STA*    MADDR         X                                          ENK10243
+       TRA     ASN+1         X                                          ENK10244
+ RTR2  LXA     ASN+1,4       EXIT TO VACUOUS EXIT                       ENK10245
+       TXI     ASN+2,4,1     X                                          ENK10246
+*                                                                       ENK10247
+*ASSIGN A RESERVED TAPE                                                 ENK10248
+ ASN2A SXA     ADDRS,1       SYMN TO ADDRS                              ENK10249
+       AXT     0,4           FIND SYMN IN LIST                          ENK10250
+       LDQ     RLIST+2,2     X                                          ENK10251
+ ASN5  LGL     3             X                                          ENK10252
+       SUB     ADDRS         X                                          ENK10253
+       TZE     ASN6          X                                          ENK10254
+       LGL     3             X                                          ENK10255
+       PXD                   X                                          ENK10256
+       TXI     *+1,4,6                                                  ENK10257
+       TXL     ASN5,4,35     X                                          ENK10258
+       TRA     ASN4          AINT GOT ONE                               ENK10259
+ ASN6  LGL     3             WE HAVE PHYN LESS ONE                      ENK10260
+       ACL     ONE           X                                          ENK10261
+       PAX     0,1           X                                          ENK10262
+       CAL     RLIST+2,2     REMOVE ITEM FROM LIST                      ENK10263
+       ARS     36,4          X                                          ENK10264
+       LGL     30,4          X                                          ENK10265
+       SLW     RLIST+2,2     X                                          ENK10266
+       TRA     ASN3          X                                          ENK10267
+*                                                                       ENK10268
+*DISASSIGN OR DISCONNECT A TAPE                                         ENK10269
+ ASN1  CLA*    MADDR         PHYS TAPE TO ACC                           ENK10270
+       TZE     RTR2          ALREADY ASSIGNED                           ENK10271
+       STZ*    MADDR         DISASSIGN                                  ENK10272
+       PAX     0,1           PHYSN TO X1                                ENK10273
+       TIX     *,1,128       X                                          ENK10274
+       ANA     TADDR         CHAN TO X2                                 ENK10275
+       ARS     9             X                                          ENK10276
+       PAX     0,2           X                                          ENK10277
+       SXA     ASN8,2        X                                          ENK10278
+       CAL     COMMON        SET PREFIX PHYS TAPE TO MZE                ENK10279
+       STP*    TFIND+2,2     X                                          ENK10280
+       PBT                   WAS IT DISCONNECTED                        ENK10281
+       TRA     ASN7                                                     ENK10282
+       TRA     ASN+1         X                                          ENK10283
+ ASN7  SXA     SAY+1,1       STORE PHYN                                 ENK10284
+       TSX     TAS1,4        INTERPRET SYMBOLIC NUME IN PRINTOUT        ENK10285
+ ASN8  AXT     **,2          CORRECT CHANNEL                            ENK10286
+       CLA     WHERE+2,2     X                                          ENK10287
+       STD     SAY+1         X                                          ENK10288
+       CLA     WHAT+2        SET COMMENT-REMOVE-                        ENK10289
+       STO     SAY           X                                          ENK10290
+       TSX     25P,4         PRINT                                      ENK10291
+       MZE     SAY,,4                                                   ENK10292
+       TRA     ASN+1         X                                          ENK10293
+*                                                                       ENK10294
+*SUBROUTINE TO DECIPHER SYMBOLIC NAME.                                  ENK10295
+*CALLING SEQUENCE                                                       ENK10296
+*      TSX     TAS1,4                                                   ENK10297
+*              RESERVED TAPE EXIT                                       ENK10298
+*              UTILITY TAPE EXIT                                        ENK10299
+*ON EXIT INDEX 1 HAS SYMN, INDEX 2 HAS CHANNEL NUMBERS                  ENK10300
+*                                                                       ENK10301
+ TAS1  SXA     TAS5,4                                                   ENK10302
+       AXT     36,4          PRESET TYPE                                ENK10303
+ TAS9  AXT     2,2           PRESET CHANNEL                             ENK10304
+ TAS2  AXT     8,1           PRESET SYMN                                ENK10305
+ TAS3  CLA*    TFIND+2,2                                                ENK10306
+       ARS     36,4                                                     ENK10307
+       ANA     CADDR                                                    ENK10308
+       CAS     MADDR                                                    ENK10309
+       TRA     TAS4                                                     ENK10310
+       TRA     TAS6                                                     ENK10311
+ TAS4  TIX     TAS3,1,1      STEP SYMN                                  ENK10312
+       TIX     TAS2,2,1      STEP CHANNEL                               ENK10313
+       TIX     TAS9,4,18     STEP TYPE                                  ENK10314
+       TSX     SYSERR,4      NO SUCH TAPE                               ENK10315
+ TAS6  SXA     SAY+3,1       SET UP COMMENT DETAILS                     ENK10316
+       CLA     WHERE+2,2     X                                          ENK10317
+       STD     SAY+1         X                                          ENK10318
+       TXL     TAS10,4,18    TEST TYPE                                  ENK10319
+       CLA     WHO+1         UTLTY                                      ENK10320
+       STO     SAY+2                                                    ENK10321
+ TAS5  AXT     **,4          X                                          ENK10322
+       TRA     2,4           X                                          ENK10323
+ TAS10 CLA     WHO           RSVRD                                      ENK10324
+       STO     SAY+2         X                                          ENK10325
+       LXA     TAS5,4        X                                          ENK10326
+       TRA     1,4           X                                          ENK10327
+*                                                                       ENK10328
+*COMMENTS ON LINE                                                       ENK10329
+ WHY   BCI     2,ALREADY DONE                                           ENK10330
+ SAY   BCI     4,I NEED  A 00 RSRVD NO 00                               ENK10331
+ WHERE BCI     2,  B 00  A 00                                           ENK10332
+ WHAT  BCI     6,I NEED ON OKREMOVEIN USEOFF OK2 MANY                   ENK10333
+ WHO   BCI     2, RSRVD UTLTY                                           ENK10334
+ PHYN  SYN     SAY+1         X1 TAPE NUMBER PHYSICAL                    ENK10335
+ SYMN  SYN     SAY+3         X1 TAPE NUMBER SYMBOLIC                    ENK10336
+ RLIST BSS     2             TAPE RESERVATION LISTS                     ENK10337
+ CLERE BCI     1,            BLANK FOR PRESETTING                       ENK10338
+ TADDR OCT     7777          MASK                                       ENK10339
+ CADDR OCT     77777                                                    ENK10340
+ TFIND         TABB+8,1      INDIRECT ADDRRES TO FIND ITEM IN TABLE     ENK10341
+               TABA+8,1      X                                          ENK10342
+ MADDR                       TEMPORARY                                  ENK10343
+ MSQ7          7             MASK                                       ENK10344
+ CHAN  DEC     1152,640      USED TO FORM PHYSICAL ADDRESSES.           ENK10345
+ ADDRS PZE     **,0,0        USED TO STORE ADDRESS ONLY                 ENK10346
+ ONE           1                                                        ENK10347
+*                                                                       ENK10348
+* THE PREFIX IN THESE TABLES INDICATES THE STAUUS OF PHYSICAL TAPES.    ENK10349
+* PZE = ASSIGNED,  MZE = UNASSIGNED UTILITY,  PON = UNASSIGNED RESERVE, ENK10350
+* PTH = DISCONNECTED.  THE ADDRESS AND DECREMENT ARE USED TO INTERPRET  ENK10351
+* SYMBOLIC TAPE NAMES                                                   ENK10352
+*                                                                       ENK10353
+ TABB  PTH     SYSMOT,,SYSPBT   B8                                      ENK10354
+       PTH     SYSBU7,,SYSPIT  B7                                       ENK10355
+       PTH     SYSBU6,,SYSBPT  B6                                       ENK10356
+       PTH     SYSBU5,,SYSBR5  B5                                       ENK10357
+       PTH     SYSBU4,,SYSBR4  B4                                       ENK10358
+       PTH     SYSBU3,,SYSBR3  B3                                       ENK10359
+       PTH     SYSBU2,,SYSBR2  B2                                       ENK10360
+       PTH     SYSBU1,,SYSBR1  B1                                       ENK10361
+ TABA  PTH     SYSMIT,,SYSPOT  A8                                       ENK10362
+       PTH     SYSAU7,,SYSPAT  A7                                       ENK10363
+       PTH     SYSAU6,,SYSPPT  A6                                       ENK10364
+       PTH     SYSAU5,,SYSAR5  A5                                       ENK10365
+       PTH     SYSAU4,,SYSAR4  A4                                       ENK10366
+       PTH     SYSAU3,,SYSAR3  A3                                       ENK10367
+       PTH     SYSAU2,,SYSAR2  A2                                       ENK10368
+       PZE     SYSAU1,,SYSAR1 THIS PHYSICAL TAPE IS SYSTAP              ENK10369
+*                                                                       ENK10370

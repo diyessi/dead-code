@@ -1,0 +1,2021 @@
+CSTUKS REM 02023 CARDS       8192 CELLS MINIMUM                         TUKS 001
+CSTUKS REM TUKEY SPECTRUM ESTIMATION                                    TUKS 002
+       ORG 0                                                            TUKS 003
+       REM D  I  C  T  I  O  N  A  R  Y                                 TUKS 004
+ TAPEA EQU 7                 BCD INPUT TAPE                             TUKS 005
+ TAPEB EQU 8                 OUTPUT TAPE                                TUKS 006
+ TAPEC EQU 5                 PRIMARY RECORD STORAGE                     TUKS 007
+ TAPED EQU 6                 SECONDARY RECORD STORAGE                   TUKS 008
+ NWPC  EQU 12                NUMBER OF WORDS PER CARD                   TUKS 009
+ MMAX  EQU 511               MAXIMUM NO. OF ESTIMATES                   TUKS 010
+ NR    EQU 12                NUMBER OF RECORDS IN ONE BLOCK             TUKS 011
+ MBLK  EQU NR*MMAX           MAXIMUM BLOCK SIZE                         TUKS 012
+ DAT   BSS 0                                                            TUKS 013
+ X     BES MMAX+1            PRIMARY TIME SERIES                        TUKS 014
+       BSS MMAX+1                                                       TUKS 015
+ Y     BES MMAX+1            SECONDARY TIME SERIES                      TUKS 016
+       BSS MMAX+1                                                       TUKS 017
+ S1    BSS MMAX+1            RESERVE CELLS FOR PARTIAL RESULTS          TUKS 018
+ S2    BSS MMAX+1                                                       TUKS 019
+ S3    BSS MMAX+1                                                       TUKS 020
+ S4    BSS MMAX+1                                                       TUKS 021
+ S5    BSS MMAX+1                                                       TUKS 022
+ S6    BSS MMAX+1                                                       TUKS 023
+ S7    BSS MMAX+1                                                       TUKS 024
+ S8    BSS MMAX+1                                                       TUKS 025
+ A     SYN S4                PRIMARY AUTOCORRELATION                    TUKS 026
+ B     SYN S8                SECONDARY AUTOCORRELATION                  TUKS 027
+ E     SYN S3                IN-PHASE CORRELATION                       TUKS 028
+ F     SYN S7                OUT-OF-PHASE CORRELATION                   TUKS 029
+ SINT  SYN S5                TABLE SINE K PI/M                          TUKS 030
+ COST  SYN S1                TABLE COSINE K PI/M                        TUKS 031
+ PU    BSS 30                                                           TUKS 032
+ J     SYN PU                ALIAS FLAG, 1-ALIAS, 0-NO ALIAS            TUKS 033
+ FXK   SYN PU+1              FREQUENCY SCALE FACTOR                     TUKS 034
+ XK    SYN PU+3              PRIMARY ENERGY                             TUKS 035
+ YK    SYN PU+5              SECONDARY ENERGY                           TUKS 036
+ ZK    SYN PU+7              IN-PHASE SPECTRUM                          TUKS 037
+ WK    SYN PU+9              OUT-OF-PHASE SPECTRUM                      TUKS 038
+ LNX   SYN PU+10             LOG X                                      TUKS 039
+ LNY   SYN PU+11             LOG Y                                      TUKS 040
+ NCS   SYN PU+12             NORM CO SPECTRUM                           TUKS 041
+ NQS   SYN PU+13             NORMAL QUADRITURE SPECTRUM                 TUKS 042
+ CH    SYN PU+14             COHERENCE                                  TUKS 043
+ CHS   SYN PU+15             COHERENCE SQUARED                          TUKS 044
+ PHI2  SYN PU+16             PHASE ANGLE                                TUKS 045
+ LNXA  SYN PU+17             LOG X WITH INSTR CORR                      TUKS 046
+ LNXC  SYN PU+18             LOG X WITH INSTR AND DEPTH CORR            TUKS 047
+ LNYB  SYN PU+19             LOG Y WITH INSTR CORR                      TUKS 048
+ LNYD  SYN PU+20             LOG Y WITH INSTR AND DEPTH CORR            TUKS 049
+ RHO   SYN PU+21             DIRECTION                                  TUKS 050
+ DEL   SYN PU+28             BEAM WIDTH                                 TUKS 051
+ PHI4  SYN PU+29             PHASE WITH INSTR CORR                      TUKS 052
+       REM PARAMETERS                                                   TUKS 053
+ FXN   BSS 1       1         TOTAL NO OF U,S - FIXED POINT              TUKS 054
+ FXM   BSS 1       2         NUMBER ESTIMATES - FIXED POINT             TUKS 055
+ ALPHA BSS 1       3         CALIBRATION FACTOR FOR DATA-FLOATING       TUKS 056
+ Q     BSS 1       4         0=SINGLE SPECT,  1=QUADRITURE,  FIXED      TUKS 057
+ R     BSS 1       5         0=NO INSTR PARAM, 1=INSTR PARAM, FIX       TUKS 058
+ S     BSS 1       6         0=NO ALIASING,  1=ALIASING,  FIXED PT      TUKS 059
+ ID    BSS 12                                                           TUKS 060
+ IC    BSS 7                 INSTRUMENT CORRECTIONS                     TUKS 061
+ LNA   SYN IC                                                           TUKS 062
+ LNB   SYN IC+1                                                         TUKS 063
+ LNC   SYN IC+2                                                         TUKS 064
+ LND   SYN IC+3                                                         TUKS 065
+ PHIE  SYN IC+4                                                         TUKS 066
+ EFF   SYN IC+5                                                         TUKS 067
+ PHIG  SYN IC+6                                                         TUKS 068
+ AL    BSS 4                 ALIASING CORRECTIONS                       TUKS 069
+ XA    SYN AL                                                           TUKS 070
+ YA    SYN AL+1                                                         TUKS 071
+ ZA    SYN AL+2                                                         TUKS 072
+ WA    SYN AL+3                                                         TUKS 073
+ N     BSS 1                 TOTAL NO OF U,S - FLOATING PT              TUKS 074
+ M     BSS 1                 FLOATING M                                 TUKS 075
+ FXL   BSS 1                 STORE FIXED PT RUNNING L                   TUKS 076
+ L     BSS 1                 STORE FLOATING PT RUNNING L                TUKS 077
+ K     BSS 1                                                            TUKS 078
+ COUNT BSS 1                 STORE PARTIAL COUNTER                      TUKS 079
+ SUM   BSS 2                                                            TUKS 080
+ SU    BSS 2                 STORE SUM OF U,S                           TUKS 081
+ SV    BSS 2                 STORE SUM OF V,S                           TUKS 082
+ UB    SYN SU+1              AVERAGE OF U,S                             TUKS 083
+ VB    SYN SV+1              AVERAGE OF V,S                             TUKS 084
+ T     BSS 3                 TEMP STORAGE                               TUKS 085
+ INML  SYN T                 1 / (N-L)                                  TUKS 086
+ C     SYN T                                                            TUKS 087
+ D     SYN T+1                                                          TUKS 088
+ PHI1  SYN T+1                                                          TUKS 089
+ PHI3  SYN T+1                                                          TUKS 090
+ 2EL   SYN T                 2 E (L)                                    TUKS 091
+ 2ELC  BSS 1                 2 E (L) COS KL/M PI                        TUKS 092
+ 2ELS  BSS 1                 2 E (L) SIN KL/M PI                        TUKS 093
+ CORE  BSS 1                 DECREMENT = CORE SIZE                      TUKS 094
+ SMALL OCT 100400000000                                                 TUKS 095
+ TAPCN PZE TAPEC                                                        TUKS 096
+ TAPDN PZE TAPED                                                        TUKS 097
+ LMMAX PZE MMAX                                                         TUKS 098
+ LMBLK PZE MBLK                                                         TUKS 099
+ LNWPC PZE NWPC                                                         TUKS 100
+ ZERO  PZE 0                                                            TUKS 101
+ N1    DEC 1                                                            TUKS 102
+ N2    DEC 2                                                            TUKS 103
+ N3    DEC 3                                                            TUKS 104
+ N12   PZE 12                                                           TUKS 105
+ N15   PZE 15                                                           TUKS 106
+ N144  PZE 144                                                          TUKS 107
+ D1    PZE 0,,1                                                         TUKS 108
+ F1    DEC 1.0                                                          TUKS 109
+ F2    DEC 2.0                                                          TUKS 110
+ F912  DEC 9.12              CONST FOR FIGURING DEL                     TUKS 111
+ F20   DEC 20.0                                                         TUKS 112
+ F90   DEC 90.0                                                         TUKS 113
+ F180  DEC 180.0                                                        TUKS 114
+ F360  DEC 360.0                                                        TUKS 115
+ RADEG DEC 0.017453293       RADIANS PER DEGREEE                        TUKS 116
+ PI    DEC 3.1415927                                                    TUKS 117
+ EXP   DEC 2.30259           NATURAL LOG 10                             TUKS 118
+ FIXER OCT 233000000000      FIXED INTEGERS                             TUKS 119
+       REM BCD WORDS                                                    TUKS 120
+ TITLE BCD 9    T U K E Y   S P E C T R U M   E S T I M A T I O N       TUKS 121
+ HD1   BCD 9 J  K     A        X     LOGX     B        Y     LOGY       TUKS 122
+       BCD 9    E        Z        F        W      P     Q     R         TUKS 123
+       BCD 2 R*R    PHI1                                                TUKS 124
+ HD2   BCD 9                A+LGX   C+LGX           B+LGY   D+LGY       TUKS 125
+       BCD 9    RHO-3  RHO-2  RHO-1  RHO 0  RHO 1  RHO 2  RHO 3         TUKS 126
+       BCD 2 DEL    PHI2                                                TUKS 127
+ HD3   BCD 2INSTR.ALIAS                                                 TUKS 128
+ BLANK BCD 1                                                            TUKS 129
+ BCD99 BCD 1999999                                                      TUKS 130
+       REM                                                              TUKS 131
+       REM H A N D L E   I N P U T                                      TUKS 132
+ BEGIN LXA ZERO,1                                                       TUKS 133
+       TXI BEGIN+2,1,-1                                                 TUKS 134
+       PXD 0,1                                                          TUKS 135
+       ADD D1                                                           TUKS 136
+       STO CORE                                                         TUKS 137
+       REW TAPEA                                                        TUKS 138
+       REW TAPEB                                                        TUKS 139
+ PT1   REW TAPEC                                                        TUKS 140
+       REW TAPED                                                        TUKS 141
+       REM R  E  A  D   P  A  R  A  M  E  T  E  R  S                    TUKS 142
+       TSX RBCD,4            READ IN IDENTIFICATION                     TUKS 143
+       CAL BUFFER                                                       TUKS 144
+       SBM BCD99                                                        TUKS 145
+       TZE ERR1                                                         TUKS 146
+       LXA N12,4                                                        TUKS 147
+ RID   CLA BUFFER+12,4                                                  TUKS 148
+       STO ID+12,4                                                      TUKS 149
+       TIX RID,4,1                                                      TUKS 150
+       TSX RBCD,4            READ IN PARAMETERS                         TUKS 151
+       CAL BUFFER                                                       TUKS 152
+       SBM BCD99                                                        TUKS 153
+       TZE ERR1                                                         TUKS 154
+       TSX FILE,4                                                       TUKS 155
+       MON FXN,,0110                                                    TUKS 156
+       MON FXM,,1120                                                    TUKS 157
+       MTW ALPHA,,2130                                                  TUKS 158
+       MON Q,,3535                                                      TUKS 159
+       MON R,,4040                                                      TUKS 160
+       MON S,,4545                                                      TUKS 161
+       TSX ERR1,4                                                       TUKS 162
+       CLA FXN                                                          TUKS 163
+       ADD FIXER                                                        TUKS 164
+       FAD FIXER                                                        TUKS 165
+       STO N                                                            TUKS 166
+       TMI ERR1                                                         TUKS 167
+       CLA FXM                                                          TUKS 168
+       LDQ LMMAX                                                        TUKS 169
+       TLQ ERR2                                                         TUKS 170
+       CLA FXM                                                          TUKS 171
+       ADD FIXER                                                        TUKS 172
+       FAD FIXER                                                        TUKS 173
+       STO M                                                            TUKS 174
+       TMI ERR1                                                         TUKS 175
+       TZE ERR1                                                         TUKS 176
+       FSB N                                                            TUKS 177
+       TPL ERR1                                                         TUKS 178
+       CLA TAPCN                                                        TUKS 179
+       STA RITE+1                                                       TUKS 180
+       CLA ALPHA                                                        TUKS 181
+       TNZ BB                                                           TUKS 182
+       CLA F1                                                           TUKS 183
+       STO ALPHA                                                        TUKS 184
+ BB    STZ COUNT                                                        TUKS 185
+       STZ J                                                            TUKS 186
+       STZ SUM               SET TALLIES = 0                            TUKS 187
+       STZ SUM+1                                                        TUKS 188
+       REM R  E  A  D   D  A  T  A                                      TUKS 189
+ RB    LXA ZERO,1                                                       TUKS 190
+       LXA ZERO,2                                                       TUKS 191
+ RDAT  TSX RBCD,4                                                       TUKS 192
+       CAL BUFFER                                                       TUKS 193
+       SBM BCD99                                                        TUKS 194
+       TZE ERR1                                                         TUKS 195
+       TSX FILE,4            TRANSLATE A DATA CARD                      TUKS 196
+       MTW DAT+0,2,0106      01-06                                      TUKS 197
+       MTW DAT+1,2,0712      07-12                                      TUKS 198
+       MTW DAT+2,2,1318      13-18                                      TUKS 199
+       MTW DAT+3,2,1924      19-24                                      TUKS 200
+       MTW DAT+4,2,2530      25-30                                      TUKS 201
+       MTW DAT+5,2,3136      31-36                                      TUKS 202
+       MTW DAT+6,2,3742      37-42                                      TUKS 203
+       MTW DAT+7,2,4348      43-48                                      TUKS 204
+       MTW DAT+8,2,4954      49-54                                      TUKS 205
+       MTW DAT+9,2,5560      55-60                                      TUKS 206
+       MTW DAT+10,2,6166     61-66                                      TUKS 207
+       MTW DAT+11,2,6772     67-72                                      TUKS 208
+       TSX ERR1,4                                                       TUKS 209
+       LXA LNWPC,4                                                      TUKS 210
+ SID   CLA DAT,2                                                        TUKS 211
+       TNZ SID1                                                         TUKS 212
+       PXD 0,4                                                          TUKS 213
+       ARS 18                                                           TUKS 214
+       CHS                                                              TUKS 215
+       ADD LNWPC                                                        TUKS 216
+       ADD J                                                            TUKS 217
+       SUB FXN                                                          TUKS 218
+       TZE ADD                                                          TUKS 219
+       CAL SMALL                                                        TUKS 220
+ SID1  LRS 35                                                           TUKS 221
+       FMP ALPHA                                                        TUKS 222
+       STO DAT,2                                                        TUKS 223
+       TXI SID2,2,-1                                                    TUKS 224
+ SID2  TIX SID,4,1                                                      TUKS 225
+       CLA J                                                            TUKS 226
+       ADD LNWPC                                                        TUKS 227
+       STO J                                                            TUKS 228
+       SUB N1                                                           TUKS 229
+       SUB FXN                                                          TUKS 230
+       TPL ERR3                                                         TUKS 231
+       TXH RDAT,2,-MBLK                                                 TUKS 232
+       REM S  U  M  M  A  R  Y   O  F   D  A  T  A                      TUKS 233
+ ADD   CLA DAT,1             DOUBLE PRECISION SUM                       TUKS 234
+       TZE RITE                                                         TUKS 235
+       FAD SUM                                                          TUKS 236
+       STO SUM                                                          TUKS 237
+       CLA SUM+1                                                        TUKS 238
+       STQ SUM+1                                                        TUKS 239
+       FAD SUM+1                                                        TUKS 240
+       FAD SUM                                                          TUKS 241
+       STO SUM               HIGH ORDER                                 TUKS 242
+       STQ SUM+1             LOW ORDER                                  TUKS 243
+       CLA N1                                                           TUKS 244
+       ADD COUNT                                                        TUKS 245
+       STO COUNT                                                        TUKS 246
+       TXI ADD1,1,-1                                                    TUKS 247
+ ADD1  TXH ADD,1,-MBLK                                                  TUKS 248
+       REM W  R  I  T  E   T  A  P  E  S                                TUKS 249
+ RITE  TSX WRITE,4           TAPE WRITE SEQUENCE                        TUKS 250
+       PZE TAPEC                TAPE UNIT                               TUKS 251
+       PZE DAT                  ORIGIN                                  TUKS 252
+       PZE MMAX                 RECORD SIZE                             TUKS 253
+       PZE MBLK                 BLOCK SIZE                              TUKS 254
+       TRA ET                EXIT ON ZERO                               TUKS 255
+       TRA RB                EXIT AT END BLOCK                          TUKS 256
+ ET    CLA TAPDN             TEST TAPE NO.                              TUKS 257
+       LDQ RITE+1                                                       TUKS 258
+       TLQ ET+4                                                         TUKS 259
+       TRA ETB                                                          TUKS 260
+       STO RITE+1            SET TAPE 6 FOR VS                          TUKS 261
+       WEF TAPEC                                                        TUKS 262
+       CLA SUM               STORE SUM AND COUNT U S                    TUKS 263
+       STO SU                                                           TUKS 264
+       CLA SUM+1                                                        TUKS 265
+       STO SU+1                                                         TUKS 266
+       CLA COUNT                                                        TUKS 267
+       SUB FXN                                                          TUKS 268
+       TNZ ERR3              INCONSISTENT COUNT                         TUKS 269
+       CLA Q                                                            TUKS 270
+       TZE PT2                                                          TUKS 271
+       TRA BB                START V, S                                 TUKS 272
+ ETB   CLA SUM               END OF VS                                  TUKS 273
+       STO SV                STORE SUM OF VS                            TUKS 274
+       CLA SUM+1             TEST COUNT U S = VS                        TUKS 275
+       STO SV+1                                                         TUKS 276
+       WEF TAPED                                                        TUKS 277
+       CLA COUNT                                                        TUKS 278
+       SUB FXN                                                          TUKS 279
+       TNZ ERR3              INCONSISTENT COUNT                         TUKS 280
+       REM C O M P U T E   S U M S                                      TUKS 281
+ PT2   REW TAPEC                                                        TUKS 282
+       REW TAPED                                                        TUKS 283
+       STZ J                                                            TUKS 284
+ CL    LXA ZERO,1            CLEAR M + 2 CELLS BEFORE                   TUKS 285
+       TXI CL+2,1,2*MMAX+2      X (0) AND Y (0)                         TUKS 286
+       STZ X+MMAX+1,1                                                   TUKS 287
+       STZ Y+MMAX+1,1                                                   TUKS 288
+       TIX CL+2,1,1                                                     TUKS 289
+       LXA ZERO,1            CLEAR STORAGE CELLS                        TUKS 290
+       TXI CL+7,1,8*MMAX+8                                              TUKS 291
+       STZ S1+8*MMAX+8,1                                                TUKS 292
+       TIX CL+7,1,1                                                     TUKS 293
+       LXA ZERO,1                                                       TUKS 294
+       TXI CL+11,1,-MMAX-1                                              TUKS 295
+       SXD TUJ,1                                                        TUKS 296
+       REM C  O  M  P  U  T  E   M  E  A  N                             TUKS 297
+ AVE   CLA SU                                                           TUKS 298
+       FDP N                                                            TUKS 299
+       STQ UB                                                           TUKS 300
+       CLA SV                                                           TUKS 301
+       FDP N                                                            TUKS 302
+       STQ VB                                                           TUKS 303
+       LTM                                                              TUKS 304
+       REM R  E  A  D   1   R  E  C  O  R  D   U,S                      TUKS 305
+ RU    STZ COUNT             READ 1 RECORD OF U,S                       TUKS 306
+       LXA N3,2                                                         TUKS 307
+       RTB TAPEC                                                        TUKS 308
+       LXA ZERO,1                                                       TUKS 309
+       CPY X,1                                                          TUKS 310
+       TRA RU+8                                                         TUKS 311
+       TRA ERR5              END OF FILE                                TUKS 312
+       TRA RU+13             END OF RECORD                              TUKS 313
+       CLA X,1                                                          TUKS 314
+       TZE RU+13                                                        TUKS 315
+       TXI RU+11,1,-1                                                   TUKS 316
+       TXH RU+4,1,-MMAX-2                                               TUKS 317
+       TRA ERR6              RECORD TO LONG                             TUKS 318
+       LXA N15,4                                                        TUKS 319
+       TIX RU+14,4,1                                                    TUKS 320
+       RTT                                                              TUKS 321
+       TRA RU+18                                                        TUKS 322
+       TRA RU1                                                          TUKS 323
+       BST TAPEC             TAPE CHECK                                 TUKS 324
+       TIX RU+2,2,1                                                     TUKS 325
+       TRA ERR7              RECORD ILLEGIBLE                           TUKS 326
+ RU1   PXD 0,1                                                          TUKS 327
+       CHS                                                              TUKS 328
+       ADD CORE                                                         TUKS 329
+       STO J                                                            TUKS 330
+       ARS 18                                                           TUKS 331
+       ADD COUNT                                                        TUKS 332
+       STO COUNT                                                        TUKS 333
+       REM D  E  V  I  A  T  I  O  N   X                                TUKS 334
+ DEVX  CLA X-1,1             X = U - UBAR                               TUKS 335
+       TZE DEVX+4                                                       TUKS 336
+       FSB UB                                                           TUKS 337
+       STO X-1,1                                                        TUKS 338
+       TXI DEVX+5,1,1                                                   TUKS 339
+       TXH DEVX,1,0                                                     TUKS 340
+ TY    CLA Q                                                            TUKS 341
+       TZE PICK                                                         TUKS 342
+       LTM                                                              TUKS 343
+       REM R  E  A  D   1   R  E  C  O  R  D   V,S                      TUKS 344
+ RV    LXA N3,2              READ IN ONE RECORD OF V,S                  TUKS 345
+       RTB TAPED                                                        TUKS 346
+       LXA ZERO,1                                                       TUKS 347
+       CPY Y,1                                                          TUKS 348
+       TRA RV+7                                                         TUKS 349
+       TRA ERR5              END OF FILE                                TUKS 350
+       TRA RV+12             END OF RECORD                              TUKS 351
+       CLA Y,1                                                          TUKS 352
+       TZE RV+12                                                        TUKS 353
+       TXI RV+10,1,-1                                                   TUKS 354
+       TXH RV+3,1,-MMAX-2                                               TUKS 355
+       TRA ERR6              RECORD TOO LONG                            TUKS 356
+       LXA N15,4                                                        TUKS 357
+       TIX RV+13,4,1                                                    TUKS 358
+       RTT                                                              TUKS 359
+       TRA RV+17                                                        TUKS 360
+       TRA RV1                                                          TUKS 361
+       BST TAPED                                                        TUKS 362
+       TIX RV+1,2,1                                                     TUKS 363
+       TRA ERR7              NOT READABLE                               TUKS 364
+ RV1   PXD 0,1                                                          TUKS 365
+       ADD J                                                            TUKS 366
+       SUB CORE                                                         TUKS 367
+       TNZ ERR8                                                         TUKS 368
+       REM D  E  V  I  A  T  I  O  N   Y                                TUKS 369
+ DEVY  CLA Y-1,1             Y = V - VBAR                               TUKS 370
+       TZE DEVY+4                                                       TUKS 371
+       FSB VB                                                           TUKS 372
+       STO Y-1,1                                                        TUKS 373
+       TXI DEVY+5,1,1                                                   TUKS 374
+       TXH DEVY,1,0                                                     TUKS 375
+       REM Q  U  O   V  A  D  I  S                                      TUKS 376
+ PICK  CLA COUNT             TEST FOR 1ST RECORD                        TUKS 377
+       LDQ LMMAX                                                        TUKS 378
+       TLQ PICK1                                                        TUKS 379
+       TRA PT2A                                                         TUKS 380
+ PICK1 CLA COUNT             TEST FOR INTERMEDIATE RECORDS              TUKS 381
+       SUB FXN                                                          TUKS 382
+       TMI PT2B                                                         TUKS 383
+       TNZ ERR3              TEST FOR LAST RECORD                       TUKS 384
+       TRA PT2C                                                         TUKS 385
+ NBL   CLA COUNT             TEST END OF JOB                            TUKS 386
+       SUB FXN                                                          TUKS 387
+       TZE PT2D              FINISHED WITH TAPES                        TUKS 388
+       TPL ERR3                                                         TUKS 389
+       REM BLK TRANS LAST M NO,S TO FIRST M NEXT BLOCK                  TUKS 390
+       REM S  A  V  E   L  A  S  T   X,S   A  N  D   Y,S                TUKS 391
+ TRANX LXA ZERO,2            BLOCK TRANSFER X,S                         TUKS 392
+       CLA X+MMAX-1,2                                                   TUKS 393
+       STO X-1,2                                                        TUKS 394
+       TXI TRANX+4,2,1                                                  TUKS 395
+       TXL TRANX+1,2,MMAX                                               TUKS 396
+       CLA Q                                                            TUKS 397
+       TZE RU+1                                                         TUKS 398
+ TRANY LXA ZERO,2            BLOCK TRANSFER Y,S                         TUKS 399
+       CLA Y+MMAX-1,2                                                   TUKS 400
+       STO Y-1,2                                                        TUKS 401
+       TXI TRANY+4,2,1                                                  TUKS 402
+       TXL TRANY+1,2,MMAX                                               TUKS 403
+       TRA RU+1              READ IN NEXT RECORDS                       TUKS 404
+       REM SUMMATIONS OVER FIRST M TERMS                                TUKS 405
+       REM SUM X(J), (J=L+1,N) = SUM -X(J),(J=1,L)                      TUKS 406
+ PT2A  CLA FXM                                                          TUKS 407
+       COM                                                              TUKS 408
+       PAX 0,4               -M -1                                      TUKS 409
+       SXD SXI+5,4                                                      TUKS 410
+       SXD SYI+5,4                                                      TUKS 411
+       SXD SXE+6,4                                                      TUKS 412
+       SXD SYE+7,4                                                      TUKS 413
+       SXD TUL,4                                                        TUKS 414
+       SXD TNOR,4                                                       TUKS 415
+       SXD TAL,4                                                        TUKS 416
+       SXD TAM,4                                                        TUKS 417
+       SXD TEK,4                                                        TUKS 418
+       ADD N2                                                           TUKS 419
+       PAX 0,4                                                          TUKS 420
+       SXD TEL,4             -M +1                                      TUKS 421
+ SXI   LXA ZERO,4                                                       TUKS 422
+       PXD                                                              TUKS 423
+       FSB X-1,4                                                        TUKS 424
+       STO S1,4              SUM X (J)                                  TUKS 425
+       TXI SXI+5,4,-1                                                   TUKS 426
+       TXH SXI+2,4,*         * = -M-1                                   TUKS 427
+       CLA Q                                                            TUKS 428
+       TZE PICK1                                                        TUKS 429
+ SYI   LXA ZERO,4                                                       TUKS 430
+       PXD                                                              TUKS 431
+       FSB Y-1,4                                                        TUKS 432
+       STO S5,4              SUM Y (J)                                  TUKS 433
+       TXI SYI+5,4,-1                                                   TUKS 434
+       TXH SYI+2,4,*         * = -M - 1                                 TUKS 435
+       TRA PICK1                                                        TUKS 436
+       REM SUMMATIONS OF CORRELATION TERMS                              TUKS 437
+       REM SUM OVER (J=1,N) (L=0,M)                                     TUKS 438
+ PT2B  LXA ZERO,1            INDEX 1 = -J = 0                           TUKS 439
+       LXA ZERO,2            INDEX 2 = -J + L = 0                       TUKS 440
+       LXA ZERO,4            INDEX 4 = -L = 0                           TUKS 441
+ SXYM  LDQ X,2               COMPUTE SUMS OVER J AND L                  TUKS 442
+       FMP X,1                                                          TUKS 443
+       FAD S4,4                                                         TUKS 444
+       STO S4,4              SUM X(J-L) * X(J)                          TUKS 445
+       CLA Q                                                            TUKS 446
+       TZE SUL                                                          TUKS 447
+       LDQ X,2                                                          TUKS 448
+       FMP Y,1                                                          TUKS 449
+       FAD S3,4                                                         TUKS 450
+       STO S3,4              SUM X(J-L) * Y(J)                          TUKS 451
+       LDQ Y,2                                                          TUKS 452
+       FMP X,1                                                          TUKS 453
+       FAD S7,4                                                         TUKS 454
+       STO S7,4              SUM Y(J-L) * X(J)                          TUKS 455
+       LDQ Y,2                                                          TUKS 456
+       FMP Y,1                                                          TUKS 457
+       FAD S8,4                                                         TUKS 458
+       STO S8,4              SUM Y(J-L) * Y(J)                          TUKS 459
+ SUL   TXI TUL,4,-1          STEP L                                     TUKS 460
+ TUL   TXL SUJ,4,*           * = -M - 1                                 TUKS 461
+       TXI SXYM,2,1                                                     TUKS 462
+ SUJ   TXI TUJ,1,-1                                                     TUKS 463
+ TUJ   TXL NBL,1,*           * = -MMAX-1 OR -J-1 ON LAST RECORD         TUKS 464
+       PXD 0,1                                                          TUKS 465
+       PDX 0,2                                                          TUKS 466
+       TRA PT2B+2                                                       TUKS 467
+       REM SUMMATIONS OVER LAST M TERMS                                 TUKS 468
+       REM SUM X(J-L),(J=L+1,N) = SUM -X(J),(J=N-L+1,N)                 TUKS 469
+ PT2C  CLA J                 NO. OF WORDS IN LAST RECORD                TUKS 470
+       COM                                                              TUKS 471
+       ADD N1                                                           TUKS 472
+       PDX 0,1                                                          TUKS 473
+       SXD T,1                                                          TUKS 474
+       SXD TUJ,1                                                        TUKS 475
+ SXE   LXA ZERO,4                                                       TUKS 476
+       PXD                                                              TUKS 477
+       FSB X,1                                                          TUKS 478
+       STO S2,4              SUM X(J-L)                                 TUKS 479
+       TXI SXE+5,4,-1                                                   TUKS 480
+       TXI SXE+6,1,1                                                    TUKS 481
+       TXH SXE+2,4,*         *= -M-1                                    TUKS 482
+       CLA Q                                                            TUKS 483
+       TZE SYE+8                                                        TUKS 484
+ SYE   LXD T,1                                                          TUKS 485
+       LXA ZERO,4                                                       TUKS 486
+       PXD                                                              TUKS 487
+       FSB Y,1                                                          TUKS 488
+       STO S6,4              SUM (Y (J - L)                             TUKS 489
+       TXI SYE+6,4,-1                                                   TUKS 490
+       TXI SYE+7,1,1                                                    TUKS 491
+       TXH SYE+3,4,*         *= -M-1                                    TUKS 492
+       TRA PT2B                                                         TUKS 493
+       REM N O R M A L I Z E   S U M S                                  TUKS 494
+ PT2D  PXD                   L (0) = 0                                  TUKS 495
+       PAX 0,4               INDEX 4 = -L = 0                           TUKS 496
+       TRA PNOR+2                                                       TUKS 497
+ PNOR  CLA L                                                            TUKS 498
+       FAD F1                                                           TUKS 499
+       STO L                                                            TUKS 500
+       CLA N                                                            TUKS 501
+       FSB L                                                            TUKS 502
+       STO T                                                            TUKS 503
+       CLA F1                                                           TUKS 504
+       FDP T                                                            TUKS 505
+       STQ INML              1/(N-L)                                    TUKS 506
+ NOR   LDQ S1,4              DIVIDE SUMS BY N - L                       TUKS 507
+       FMP INML                                                         TUKS 508
+       STO S1,4                 INDEX 4 = -L                            TUKS 509
+       LDQ S2,4                                                         TUKS 510
+       FMP INML                                                         TUKS 511
+       STO S2,4                                                         TUKS 512
+       LDQ S4,4                                                         TUKS 513
+       FMP INML                                                         TUKS 514
+       STO S4,4                                                         TUKS 515
+       CLA Q                                                            TUKS 516
+       TZE SNOR                                                         TUKS 517
+       LDQ S3,4                                                         TUKS 518
+       FMP INML                                                         TUKS 519
+       STO S3,4                                                         TUKS 520
+       LDQ S5,4                                                         TUKS 521
+       FMP INML                                                         TUKS 522
+       STO S5,4                                                         TUKS 523
+       LDQ S6,4                                                         TUKS 524
+       FMP INML                                                         TUKS 525
+       STO S6,4                                                         TUKS 526
+       LDQ S7,4                                                         TUKS 527
+       FMP INML                                                         TUKS 528
+       STO S7,4                                                         TUKS 529
+       LDQ S8,4                                                         TUKS 530
+       FMP INML                                                         TUKS 531
+       STO S8,4                                                         TUKS 532
+ SNOR  TXI TNOR,4,-1                                                    TUKS 533
+ TNOR  TXH PNOR,4,*          * = -M - 1                                 TUKS 534
+       REM C O M P U T E   A  B  C  D  E  +  F                          TUKS 535
+ PT3   LXA ZERO,4                                                       TUKS 536
+ ABEF  LDQ S1,4              COMPUTE A(L)                               TUKS 537
+       FMP S2,4                 INDEX 4 = -L                            TUKS 538
+       CHS                                                              TUKS 539
+       FAD S4,4                                                         TUKS 540
+       STO A,4               A                                          TUKS 541
+       CLA Q                                                            TUKS 542
+       TZE STAL                                                         TUKS 543
+       LDQ S5,4                                                         TUKS 544
+       FMP S6,4                                                         TUKS 545
+       CHS                                                              TUKS 546
+       FAD S8,4                                                         TUKS 547
+       STO B,4               B                                          TUKS 548
+       LDQ S5,4                                                         TUKS 549
+       FMP S2,4                                                         TUKS 550
+       CHS                                                              TUKS 551
+       FAD S3,4                                                         TUKS 552
+       STO C                 C                                          TUKS 553
+       LDQ S1,4                                                         TUKS 554
+       FMP S6,4                                                         TUKS 555
+       CHS                                                              TUKS 556
+       FAD S7,4                                                         TUKS 557
+       STO D                 D                                          TUKS 558
+       FAD C                                                            TUKS 559
+       FDP F2                                                           TUKS 560
+       STQ E,4               E                                          TUKS 561
+       CLA E,4                                                          TUKS 562
+       FSB C                                                            TUKS 563
+       STO F,4               F                                          TUKS 564
+ STAL  TXI TAL,4,-1                                                     TUKS 565
+ TAL   TXH ABEF,4,*          * = -M - 1                                 TUKS 566
+       REM S  I  N  E   C  O  S  I  N  E   T  A  B  L  E  S             TUKS 567
+ PT4   CLA PI                                                           TUKS 568
+       FDP M                                                            TUKS 569
+       STQ T                                                            TUKS 570
+       PXD                                                              TUKS 571
+       PAX 0,1               INDEX 1 0 TO-M                             TUKS 572
+       STZ T+1                                                          TUKS 573
+       TRA TAB+3                                                        TUKS 574
+ TAB   CLA T+1                                                          TUKS 575
+       FAD T                                                            TUKS 576
+       STO T+1                                                          TUKS 577
+       TSX COS,4                                                        TUKS 578
+       STO COST,1                                                       TUKS 579
+       CLA T+1                                                          TUKS 580
+       TSX SIN,4                                                        TUKS 581
+       STO SINT,1                                                       TUKS 582
+       TXI TAM,1,-1                                                     TUKS 583
+ TAM   TXH TAB,1,*           *=-M-1                                     TUKS 584
+       STZ K                                                            TUKS 585
+       REM S E T U P S  F O R   X  Y  Z  W                              TUKS 586
+ PT5   LXA ZERO,1                                                       TUKS 587
+       STZ FXK                                                          TUKS 588
+       CLA A                                                            TUKS 589
+       STO XK                                                           TUKS 590
+       CLA B                                                            TUKS 591
+       STO YK                                                           TUKS 592
+       CLA E                                                            TUKS 593
+       STO ZK                                                           TUKS 594
+       STZ WK                                                           TUKS 595
+       LXA ZERO,2                                                       TUKS 596
+       STZ FXL                                                          TUKS 597
+ SKL1  CLA FXL                                                          TUKS 598
+       ADD N1                                                           TUKS 599
+       STO FXL                                                          TUKS 600
+       TXI UL,2,-1           INDEX 2 = -L = -1                          TUKS 601
+ UL    CLA COST,2            COS L/M PI                                 TUKS 602
+       FAD F1                                                           TUKS 603
+       STO 2EL               2 E (L)                                    TUKS 604
+       LDQ FXK               REDUCE KL/M PI TO                          TUKS 605
+       MPY FXL                  LESS 2 PI                               TUKS 606
+       DVP FXM                                                          TUKS 607
+       STQ T+1                                                          TUKS 608
+       COM                                                              TUKS 609
+       ADD N1                                                           TUKS 610
+       PAX 0,4                                                          TUKS 611
+       CLA T+1                                                          TUKS 612
+       LBT                   TEST ANGLE                                 TUKS 613
+       TRA EVEN                 LESS THAN PI                            TUKS 614
+ ODD   LDQ COST,4               GREATER THAN PI                         TUKS 615
+       FMP 2EL                                                          TUKS 616
+       CHS                                                              TUKS 617
+       STO 2ELC                                                         TUKS 618
+       LDQ SINT,4                                                       TUKS 619
+       FMP 2EL                                                          TUKS 620
+       CHS                                                              TUKS 621
+       STO 2ELS                                                         TUKS 622
+       TRA XYZW                                                         TUKS 623
+ EVEN  LDQ COST,4            COS KL/M PI                                TUKS 624
+       FMP 2EL                                                          TUKS 625
+       STO 2ELC              2E L SIN KL/M PI                           TUKS 626
+       LDQ SINT,4            SIN KL/M PI                                TUKS 627
+       FMP 2EL                                                          TUKS 628
+       STO 2ELS              2E (L) SIN KL/M PI                         TUKS 629
+       REM C O M P U T E   X  Y  Z  W                                   TUKS 630
+ XYZW  LDQ A,2                                                          TUKS 631
+       FMP 2ELC                                                         TUKS 632
+       FAD XK                                                           TUKS 633
+       STO XK                SUM 2E(L) COS KL/M PI*A (L) + A (0)        TUKS 634
+       CLA Q                                                            TUKS 635
+       TZE TEL                                                          TUKS 636
+       LDQ B,2                                                          TUKS 637
+       FMP 2ELC                                                         TUKS 638
+       FAD YK                                                           TUKS 639
+       STO YK                SUM 2E(L) COS KL/M PI*B (L) + B (0)        TUKS 640
+       LDQ E,2                                                          TUKS 641
+       FMP 2ELC                                                         TUKS 642
+       FAD ZK                                                           TUKS 643
+       STO ZK                SUM 2E(L) COS KL/M PI*E(L) + E (0)         TUKS 644
+       LDQ F,2                                                          TUKS 645
+       FMP 2ELS                                                         TUKS 646
+       FAD WK                                                           TUKS 647
+       STO WK                SUM 2E(L) SIN KL/M PI*F(L)                 TUKS 648
+ TEL   TXH SKL1,2,*                                                     TUKS 649
+       REM N O R M A L I Z E   X, Y, Z, W,                              TUKS 650
+ EL    CLA XK                DIVIDE BY MG (K)                           TUKS 651
+       FDP M                                                            TUKS 652
+       STQ XK                X                                          TUKS 653
+       CLA YK                                                           TUKS 654
+       FDP M                                                            TUKS 655
+       STQ YK                Y                                          TUKS 656
+       CLA ZK                                                           TUKS 657
+       FDP M                                                            TUKS 658
+       STQ ZK                Z                                          TUKS 659
+       CLA WK                                                           TUKS 660
+       FDP M                                                            TUKS 661
+       STQ WK                W                                          TUKS 662
+       CLA FXK                                                          TUKS 663
+       TZE HAF                                                          TUKS 664
+       SUB FXM                                                          TUKS 665
+       TZE HAF                                                          TUKS 666
+       TRA PUNA                                                         TUKS 668
+ HAF   CLA XK                HALVE IF K = 0 OR M                        TUKS 669
+       FDP F2                                                           TUKS 670
+       STQ XK                                                           TUKS 671
+       CLA Q                                                            TUKS 672
+       TZE PUNA                                                         TUKS 673
+       CLA YK                                                           TUKS 674
+       FDP F2                                                           TUKS 675
+       STQ YK                                                           TUKS 676
+       CLA ZK                                                           TUKS 677
+       FDP F2                                                           TUKS 678
+       STQ ZK                                                           TUKS 679
+       CLA WK                                                           TUKS 680
+       FDP F2                                                           TUKS 681
+       STQ WK                                                           TUKS 682
+ PUNA  CLA A,1                                                          TUKS 683
+       STO PU+2                                                         TUKS 684
+       CLA B,1                                                          TUKS 685
+       STO PU+4                                                         TUKS 686
+       CLA E,1                                                          TUKS 687
+       STO PU+6                                                         TUKS 688
+       CLA F,1                                                          TUKS 689
+       STO PU+8                                                         TUKS 690
+       REM COMPUTATIONS PRIOR TO OUTPUT                                 TUKS 691
+ PUN   SXD T+2,1                                                        TUKS 692
+       LXA S,1               ALIASING                                   TUKS 693
+       LXA R,2               INSTR. PARAMETERS                          TUKS 694
+       STZ J                                                            TUKS 695
+       TXL SSS,2,0                                                      TUKS 696
+       TSX RBCD,4            READ IN INSTRUMENT CORRECTIONS             TUKS 697
+       CAL BUFFER                                                       TUKS 698
+       SBM BCD99                                                        TUKS 699
+       TZE ERR1                                                         TUKS 700
+       TSX FILE,4                                                       TUKS 701
+       MTW LNA,,0110                                                    TUKS 702
+       MTW LNB,,1120                                                    TUKS 703
+       MTW LNC,,2130                                                    TUKS 704
+       MTW LND,,3140                                                    TUKS 705
+       MTW PHIE,,4150                                                   TUKS 706
+       MTW EFF,,5160                                                    TUKS 707
+       MTW PHIG,,6170                                                   TUKS 708
+       TSX ERR1,4                                                       TUKS 709
+       REM C O .  O R   Q U A .                                         TUKS 710
+ SSS   CLA XK                                                           TUKS 711
+       TSX LN,4                                                         TUKS 712
+       TRA SSS+9                                                        TUKS 713
+       FDP EXP                                                          TUKS 714
+       STQ T                                                            TUKS 715
+       CLA T                                                            TUKS 716
+       FAD F20                                                          TUKS 717
+       STO LNX                                                          TUKS 718
+       TRA SSS+11                                                       TUKS 719
+       STZ T                                                            TUKS 720
+       STZ LNX               LOG (X) + 20                               TUKS 721
+ STS   TXL TSS,2,0           NO INSTR. PARAMETERS.                      TUKS 722
+       REM C O .  O R   Q U A .   WITH INSTR. PARAMETERS                TUKS 723
+ SHS   CLA T                                                            TUKS 724
+       FAD LNA                                                          TUKS 725
+       STO LNXA              LOG (X) + A                                TUKS 726
+       CLA T                                                            TUKS 727
+       FAD LNC                                                          TUKS 728
+       STO LNXC                                                         TUKS 729
+ TSS   CLA Q                                                            TUKS 730
+       TZE PRINT             NO QUADRITURE                              TUKS 731
+       REM Q U A D R I T U R E                                          TUKS 732
+ HSS   CLA YK                                                           TUKS 733
+       TSX LN,4                                                         TUKS 734
+       TRA HSS+9                                                        TUKS 735
+       FDP EXP                                                          TUKS 736
+       STQ T+1                                                          TUKS 737
+       CLA T+1                                                          TUKS 738
+       FAD F20                                                          TUKS 739
+       STO LNY                                                          TUKS 740
+       TRA HSS+11                                                       TUKS 741
+       STZ T+1                                                          TUKS 742
+       STZ LNY               LOG (Y) + 20                               TUKS 743
+       CLA XK                                                           TUKS 744
+       TMI HSS1                                                         TUKS 745
+       LDQ XK                                                           TUKS 746
+       FMP YK                                                           TUKS 747
+       TSX SQRT,4                                                       TUKS 748
+       TRA HSS1                                                         TUKS 749
+       TZE HSS1                                                         TUKS 750
+       STO T                                                            TUKS 751
+       CLA ZK                                                           TUKS 752
+       FDP T                                                            TUKS 753
+       STQ NCS               Z/((X*Y)**1/2)                             TUKS 754
+       CLA WK                                                           TUKS 755
+       FDP T                                                            TUKS 756
+       STQ NQS               W/W/((X*Y)**1/2)                           TUKS 757
+       FMP NQS                                                          TUKS 758
+       STO T                                                            TUKS 759
+       LDQ NCS                                                          TUKS 760
+       FMP NCS                                                          TUKS 761
+       FAD T                                                            TUKS 762
+       STO CHS               (Z**2+W**2) / (X*Y)                        TUKS 763
+       TSX SQRT,4                                                       TUKS 764
+       NOP                                                              TUKS 765
+       STO CH                ((Z**2+W**2)/(X*Y))**1/2                   TUKS 766
+       TRA HSS2                                                         TUKS 767
+ HSS1  STZ NCS               X AND / OR Y NEG.                          TUKS 768
+       STZ NQS                                                          TUKS 769
+       STZ CHS                                                          TUKS 770
+       STZ CH                                                           TUKS 771
+ HSS2  CLA WK                                                           TUKS 772
+       FDP ZK                                                           TUKS 773
+       STQ T                                                            TUKS 774
+       CLA T                                                            TUKS 775
+       TSX ATAN,4                                                       TUKS 776
+       FDP RADEG                                                        TUKS 777
+       STQ PHI2              ARCTAN W/Z                                 TUKS 778
+       CLA ZK                                                           TUKS 779
+       TZE HSS2+18                                                      TUKS 780
+       TMI HSS2+12                                                      TUKS 781
+       CLA PHI2                                                         TUKS 782
+       TRA HSS3+1                                                       TUKS 783
+       CLA PHI2                                                         TUKS 784
+       TMI HSS2+16                                                      TUKS 785
+       FSB F180                                                         TUKS 786
+       TRA HSS3+1                                                       TUKS 787
+       FAD F180                                                         TUKS 788
+       TRA HSS3+1                                                       TUKS 789
+       CLA WK                                                           TUKS 790
+       CLM                                                              TUKS 791
+ HSS3  ORA F90                                                          TUKS 792
+       STO PHI2              PHASE                                      TUKS 793
+ HTS   TXL PRINT,2,0         NO INSTR. PARAMETERS                       TUKS 794
+       REM Q U A D R I T U R E    WITH INSTR. PARAMETERS                TUKS 795
+ HHS   CLA T+1                                                          TUKS 796
+       FAD LNB                                                          TUKS 797
+       STO LNYB              LOG (Y) + B                                TUKS 798
+       CLA T+1                                                          TUKS 799
+       FAD LND                                                          TUKS 800
+       STO LNYD              LOG (Y) + D                                TUKS 801
+       CLS CHS                                                          TUKS 802
+       TZE HHS1                                                         TUKS 803
+       FAD F1                                                           TUKS 804
+       TMI HHS1                                                         TUKS 805
+       TSX SQRT,4                                                       TUKS 806
+       NOP                                                              TUKS 807
+       STO T                                                            TUKS 808
+       LDQ T                                                            TUKS 809
+       FMP EFF                                                          TUKS 810
+       STO T                                                            TUKS 811
+       LDQ T                                                            TUKS 812
+       FMP F912              9.12                                       TUKS 813
+       STO DEL                                                          TUKS 814
+       TRA HHS2                                                         TUKS 815
+ HHS1  STZ DEL                                                          TUKS 816
+       TRA HHS2                                                         TUKS 817
+ HHS2  LDQ K                                                            TUKS 818
+       FMP PHIG                                                         TUKS 819
+       FAD PHIE                                                         TUKS 820
+       STO T                                                            TUKS 821
+       CLA PHI2                                                         TUKS 822
+       FSB T                                                            TUKS 823
+       STO PHI3                                                         TUKS 824
+       LDQ F180                                                         TUKS 825
+       TLQ HHS2+14                                                      TUKS 826
+       TPL HHS3                                                         TUKS 827
+       FAD F180                                                         TUKS 828
+       TPL HHS2+16                                                      TUKS 829
+       FAD F180                                                         TUKS 830
+       TRA HHS3                                                         TUKS 831
+       FSB F360                                                         TUKS 832
+       TRA HHS3                                                         TUKS 833
+       CLA PHI3                                                         TUKS 834
+ HHS3  STO PHI4                                                         TUKS 835
+ HHS4  CLA PHI4                                                         TUKS 836
+       FDP F360                                                         TUKS 837
+       FMP EFF                                                          TUKS 838
+       STO T+1                                                          TUKS 839
+       CLA T+1                                                          TUKS 840
+       TSX ARSIN,4                                                      TUKS 841
+       PXD                                                              TUKS 842
+       FDP RADEG                                                        TUKS 843
+       STQ RHO+3             ARCSINE (F*THETA 4/360)                    TUKS 844
+       CLA T+1                                                          TUKS 845
+       FSB EFF                                                          TUKS 846
+       STO T                                                            TUKS 847
+       TSX ARSIN,4                                                      TUKS 848
+       PXD                                                              TUKS 849
+       FDP RADEG                                                        TUKS 850
+       STQ RHO+2             ARCSINE (F*THETA/360-F)                    TUKS 851
+       CLA T                                                            TUKS 852
+       FSB EFF                                                          TUKS 853
+       STO T                                                            TUKS 854
+       TSX ARSIN,4                                                      TUKS 855
+       PXD                                                              TUKS 856
+       FDP RADEG                                                        TUKS 857
+       STQ RHO+1             ARCSINE (F*THETA/360-2*F)                  TUKS 858
+       CLA T                                                            TUKS 859
+       FSB EFF                                                          TUKS 860
+       TSX ARSIN,4                                                      TUKS 861
+       PXD                                                              TUKS 862
+       FDP RADEG                                                        TUKS 863
+       STQ RHO               ARCSINE(F*THETA/360-3*F)                   TUKS 864
+       CLA T+1                                                          TUKS 865
+       FAD EFF                                                          TUKS 866
+       STO T                                                            TUKS 867
+       TSX ARSIN,4                                                      TUKS 868
+       PXD                                                              TUKS 869
+       FDP RADEG                                                        TUKS 870
+       STQ RHO+4             ARCSINE(F*THETA/360 + F)                   TUKS 871
+       CLA T                                                            TUKS 872
+       FAD EFF                                                          TUKS 873
+       STO T                                                            TUKS 874
+       TSX ARSIN,4                                                      TUKS 875
+       PXD                                                              TUKS 876
+       FDP RADEG                                                        TUKS 877
+       STQ RHO+5             ARCSINE(F*THETA/360+2*F)                   TUKS 878
+       CLA T                                                            TUKS 879
+       FAD EFF                                                          TUKS 880
+       TSX ARSIN,4                                                      TUKS 881
+       PXD                                                              TUKS 882
+       FDP RADEG                                                        TUKS 883
+       STQ RHO+6             ARCSINE(F*THETA/360+3*F)                   TUKS 884
+       REM P R I N T  R E S U L T S                                     TUKS 885
+ PRINT CLA Q                                                            TUKS 886
+       TZE PR1SN                                                        TUKS 887
+       CLA FXK                                                          TUKS 888
+       ADD J                                                            TUKS 889
+       TNZ PR1                                                          TUKS 890
+       TSX OUT,4                                                        TUKS 891
+       PTH TITLE,,9055                                                  TUKS 892
+       PON TAPEB,,1SKIP                                                 TUKS 893
+       TSX OUT,4                                                        TUKS 894
+       PTH ID,,12073                                                    TUKS 895
+       PON TAPEB,,2SPACE                                                TUKS 896
+       TSX OUT,4                                                        TUKS 897
+       PTH HD1,,20120                                                   TUKS 898
+       PON TAPEB,,2SPACE                                                TUKS 899
+       TXL PR1S,2,0                                                     TUKS 900
+       TSX OUT,4                                                        TUKS 901
+       PTH HD2,,20120                                                   TUKS 902
+       PON TAPEB,,2SPACE                                                TUKS 903
+ PR1S  TSX OUT,4                                                        TUKS 904
+       PTH BLANK,,1007                                                  TUKS 905
+       PON TAPEB,,1SPACE                                                TUKS 906
+       REM P R I N T  L I N E  1 - QUA STANDARD                         TUKS 907
+ PR1   TSX OUT,4                                                        TUKS 908
+       MZE J,,2              J                                          TUKS 909
+       MZE FXK,,5            K                                          TUKS 910
+       MTW PU+2,,4014        A                                          TUKS 911
+       MTW XK,,4023          X                                          TUKS 912
+       MTW PU+4,,4038        B                                          TUKS 913
+       MTW YK,,4047          Y                                          TUKS 914
+       MTW PU+6,,4062        E                                          TUKS 915
+       MTW ZK,,4071          Z                                          TUKS 916
+       MTW PU+8,,4080        F                                          TUKS 917
+       MTW WK,,4089          W                                          TUKS 918
+       MTH LNX,,2029         LOGX                                       TUKS 919
+       MTH LNY,,2053         LOGY                                       TUKS 920
+       MTH NCS,,2095         P                                          TUKS 921
+       MTH NQS,,2101         Q                                          TUKS 922
+       MTH CH,,2107          R                                          TUKS 923
+       MTH CHS,,2113         R**2                                       TUKS 924
+       MTH PHI2,,1120        PHI2                                       TUKS 925
+       PON TAPEB,,1SPACE                                                TUKS 926
+       TXL PR2S,2,0                                                     TUKS 927
+       REM P R I N T  L I N E  2 - QUA INSTR.                           TUKS 928
+ PR2   TSX OUT,4                                                        TUKS 929
+       MTH LNXA,,2021                                                   TUKS 930
+       MTH LNXC,,2029                                                   TUKS 931
+       MTH LNYB,,2045                                                   TUKS 932
+       MTH LNYD,,2053                                                   TUKS 933
+       MTH RHO,,1063                                                    TUKS 934
+       MTH RHO+1,,1070                                                  TUKS 935
+       MTH RHO+2,,1077                                                  TUKS 936
+       MTH RHO+3,,1084                                                  TUKS 937
+       MTH RHO+4,,1091                                                  TUKS 938
+       MTH RHO+5,,1098                                                  TUKS 939
+       MTH RHO+6,,1105                                                  TUKS 940
+       MTH DEL,,2113                                                    TUKS 941
+       MTH PHI4,,1120                                                   TUKS 942
+       PON TAPEB,,1SPACE                                                TUKS 943
+ PR2S  CLA J                                                            TUKS 944
+       TNZ PR3               ALIASING COMPLETE                          TUKS 945
+       TXH SAL,1,0           SET UP ALIASING                            TUKS 946
+       TXL TAK,2,0           NEITHER INSTR. NOR ALIAS                   TUKS 947
+       REM P R I N T  L A S T  L I N E - INSTR. ALIAS                   TUKS 948
+ PR3   TSX OUT,4                                                        TUKS 949
+       PTH HD3,,1014                                                    TUKS 950
+       PTH HD3+1,,1076                                                  TUKS 951
+       MTH LNA,,2021                                                    TUKS 952
+       MTH LNB,,2028                                                    TUKS 953
+       MTH LNC,,2035                                                    TUKS 954
+       MTH LND,,2042                                                    TUKS 955
+       MTH PHIE,,1050                                                   TUKS 956
+       MTH EFF,,3056                                                    TUKS 957
+       MTH PHIG,,3062                                                   TUKS 958
+       MTW XA,,4086                                                     TUKS 959
+       MTW YA,,4095                                                     TUKS 960
+       MTW ZA,,4104                                                     TUKS 961
+       MTW WA,,4113                                                     TUKS 962
+       PON TAPEB,,1SPACE                                                TUKS 963
+       TSX OUT,4                                                        TUKS 964
+       PTH BLANK,,1007                                                  TUKS 965
+       PON TAPEB,,1SPACE                                                TUKS 966
+       REM S T E P   K                                                  TUKS 967
+ TAK   CLA FXK                                                          TUKS 968
+       ADD N1                                                           TUKS 969
+       STO FXK                                                          TUKS 970
+       CLA K                                                            TUKS 971
+       FAD F1                                                           TUKS 972
+       STO K                                                            TUKS 973
+       LXD T+2,1                                                        TUKS 974
+       TXI TEK,1,-1                                                     TUKS 975
+ TEK   TXH PT5+2,1,*         * = -M-1                                   TUKS 976
+ NC    LXA ZERO,4            PREPNEXT CASE                              TUKS 977
+       TXI NC+2,4,11                                                    TUKS 978
+       STZ IC+11,4                                                      TUKS 979
+       TIX NC+2,4,1                                                     TUKS 980
+       TSX RBCD,4                                                       TUKS 981
+       CAL BUFFER                                                       TUKS 982
+       SBM BCD99                                                        TUKS 983
+       TNZ ERR1                                                         TUKS 984
+       TRA PT1               NEXT CASE                                  TUKS 985
+       REM A L I A S I N G   COR.                                       TUKS 986
+ SAL   TSX RBCD,4            READ IN ALIASING PARAMETERS                TUKS 987
+       CAL BUFFER                                                       TUKS 988
+       SBM BCD99                                                        TUKS 989
+       TZE ERR1                                                         TUKS 990
+       TSX FILE,4                                                       TUKS 991
+       MTW XA,,0110                                                     TUKS 992
+       MTW YA,,1120                                                     TUKS 993
+       MTW ZA,,2130                                                     TUKS 994
+       MTW WA,,3140                                                     TUKS 995
+       TSX ERR1,4                                                       TUKS 996
+       CLA XK                                                           TUKS 997
+       FSB XA                                                           TUKS 998
+       STO XK                                                           TUKS 999
+       CLA Q                                                            TUKS1000
+       TZE SAL1                                                         TUKS1001
+       CLA YK                                                           TUKS1002
+       FSB YA                                                           TUKS1003
+       STO YK                                                           TUKS1004
+       CLA ZK                                                           TUKS1005
+       FSB ZA                                                           TUKS1006
+       STO ZK                                                           TUKS1007
+       CLA WK                                                           TUKS1008
+       FAD WA                                                           TUKS1009
+       STO WK                                                           TUKS1010
+ SAL1  CLA N1                                                           TUKS1011
+       STO J                                                            TUKS1012
+       TRA SSS                                                          TUKS1013
+       REM P R I N T  S I N G L E  S P E C T R U M                      TUKS1014
+ PR1SN CLA FXK                                                          TUKS1015
+       ADD J                                                            TUKS1016
+       TNZ PRS1                                                         TUKS1017
+       TSX OUT,4                                                        TUKS1018
+       PTH TITLE,,9055                                                  TUKS1019
+       PON TAPEB,,1SKIP                                                 TUKS1020
+       TSX OUT,4                                                        TUKS1021
+       PTH ID,,12073                                                    TUKS1022
+       PON TAPEB,,2SPACE                                                TUKS1023
+       TSX OUT,4                                                        TUKS1024
+       PTH HD1,,5030                                                    TUKS1025
+       PON TAPEB,,2SPACE                                                TUKS1026
+       TXL PRS1S,2,0                                                    TUKS1027
+       TSX OUT,4                                                        TUKS1028
+       PTH HD2,,5054                                                    TUKS1029
+       PON TAPEB,,0SPACE                                                TUKS1030
+ PRS1S TSX OUT,4                                                        TUKS1031
+       PTH BLANK,,1007                                                  TUKS1032
+       PON TAPEB,,1SPACE                                                TUKS1033
+       REM P R I N T  S I N G L E  S P E C T R U M                      TUKS1034
+ PRS1  TSX OUT,4                                                        TUKS1035
+       MZE J,,2                                                         TUKS1036
+       MZE FXK,,5                                                       TUKS1037
+       MTW PU+2,,4014                                                   TUKS1038
+       MTW XK,,4023                                                     TUKS1039
+       MTH LNX,,2029                                                    TUKS1040
+       PON TAPEB,,1SPACE                                                TUKS1041
+       TXL PRS2S,2,0                                                    TUKS1042
+       REM P R I N T  L I N E  2  - SINGLE INSTR.                       TUKS1043
+ PRS2  TSX OUT,4                                                        TUKS1044
+       MTH LNXA,,2045                                                   TUKS1045
+       MTH LNXC,,2053                                                   TUKS1046
+       PON TAPEB,,0SPACE                                                TUKS1047
+ PRS2S CLA J                                                            TUKS1048
+       TNZ PRS3                                                         TUKS1049
+       TXH SAL,1,0                                                      TUKS1050
+       TXL TAK,2,0                                                      TUKS1051
+       REM P R I N T  L A S T  L I N E - INSTR.-ALIAS                   TUKS1052
+ PRS3  TSX OUT,4                                                        TUKS1053
+       PTH HD3,,1014                                                    TUKS1054
+       PTH HD3+1,,1045                                                  TUKS1055
+       MTH LNA,,2022                                                    TUKS1056
+       MTH LNC,,2029                                                    TUKS1057
+       MTW XA,,4053                                                     TUKS1058
+       PON TAPEB,,1SPACE                                                TUKS1059
+       TSX OUT,4                                                        TUKS1060
+       PTH BLANK,,1007                                                  TUKS1061
+       PON TAPEB,,1SPACE                                                TUKS1062
+       TRA TAK                                                          TUKS1063
+       REM E R R O R   R O U T I N E S                                  TUKS1064
+ ERR1  TSX OUT,4             BAD PARAMETERS                             TUKS1065
+       PTH BD,,4025                                                     TUKS1066
+       PON TAPEB,,2SPACE                                                TUKS1067
+       MON SPACE2                                                       TUKS1068
+       TSX RBCD,4            SEARCH FOR NEST CASE                       TUKS1069
+       CAL BUFFER                                                       TUKS1070
+       SBM BCD99                                                        TUKS1071
+       TNZ ERR1+4                                                       TUKS1072
+       TRA PT1                                                          TUKS1073
+ BD    BCD 4RUN DELETED BAD DATA                                        TUKS1074
+ ERR2  TSX OUT,4             M TOO LARGE                                TUKS1075
+       PTH MTL,,2013                                                    TUKS1076
+       MZE FXM,,20                                                      TUKS1077
+       PON TAPEB,,2SPACE                                                TUKS1078
+       MON SPACE2                                                       TUKS1079
+ MTL   BCD 2M TOO LARGE                                                 TUKS1080
+ ERR3  TSX OUT,4             INCONSISTANT COUNT                         TUKS1081
+       PTH INC,,3019                                                    TUKS1082
+       PON TAPEB,,2SPACE                                                TUKS1083
+       MON SPACE2                                                       TUKS1084
+       TRA NC                                                           TUKS1085
+ INC   BCD 3INCONSISTENT COUNT                                          TUKS1086
+ ERR5  TSX OUT,4             REACHES E O F                              TUKS1087
+       PTH EOF,,2013                                                    TUKS1088
+       PON TAPEB,,2SPACE                                                TUKS1089
+       MON SPACE2                                                       TUKS1090
+       TRA NC                                                           TUKS1091
+ EOF   BCD 2REACHED EOF                                                 TUKS1092
+ ERR6  TSX OUT,4             RECORD TOO LONG                            TUKS1093
+       PTH RTL,,3019                                                    TUKS1094
+       PON TAPEB,,2SPACE                                                TUKS1095
+       MON SPACE2                                                       TUKS1096
+       TRA NC                                                           TUKS1097
+ RTL   BCD 3RECORD TOO LONG                                             TUKS1098
+ ERR7  TSX OUT,4             RECORD ILLEGIBLE                           TUKS1099
+       PTH RLG,,3019                                                    TUKS1100
+       PON TAPEB,,2SPACE                                                TUKS1101
+       MON SPACE2                                                       TUKS1102
+       TRA NC                                                           TUKS1103
+ RLG   BCD 3RECORD ILLEGIBLE                                            TUKS1104
+ ERR8  TSX OUT,4             SIZE U,S NOT = V,S                         TUKS1105
+       PTH RSE,,3019                                                    TUKS1106
+       PON TAPEB,,2SPACE                                                TUKS1107
+       MON SPACE2                                                       TUKS1108
+       TRA NC                                                           TUKS1109
+ RSE   BCD 3REC SIZE U NOT = V                                          TUKS1110
+ EOJ   TSX OUT,4                                                        TUKS1111
+       PTH END,,2013                                                    TUKS1112
+       PON TAPEB,,1SKIP                                                 TUKS1113
+       MON SPACE2                                                       TUKS1114
+       WEF TAPEB                                                        TUKS1115
+       REW TAPEA                                                        TUKS1116
+       REW TAPEB                                                        TUKS1117
+       REW TAPEC                                                        TUKS1118
+       REW TAPED                                                        TUKS1119
+       HTR 0                 EOF-STOP                                   TUKS1120
+ END   BCD 2END OF JOB                                                  TUKS1121
+ RBCD  LTM                   READ A BCD RECORD                          TUKS1122
+       SXD T,4                  FROM TAPE 2                             TUKS1123
+       RTD TAPEA                                                        TUKS1124
+       LXA N15,4                                                        TUKS1125
+       CPY BUFFER+15,4                                                  TUKS1126
+       TIX RBCD+4,4,1                                                   TUKS1127
+       TRA EOJ                                                          TUKS1128
+       LXA N15,4             EOR                                        TUKS1129
+       TIX RBCD+8,4,1                                                   TUKS1130
+       RTT                                                              TUKS1131
+       TRA RBCD+13                                                      TUKS1132
+       LXD T,4                                                          TUKS1133
+       TRA 1,4                                                          TUKS1134
+       TSX OUT,4                                                        TUKS1135
+       PTH RTT,,3019                                                    TUKS1136
+       PON TAPEB,,2SPACE                                                TUKS1137
+       MON SPACE2                                                       TUKS1138
+       HPR                                                              TUKS1139
+       BST TAPEA                                                        TUKS1140
+       TRA RBCD+2                                                       TUKS1141
+ RTT   BCD 3INPUT TAPE RTT                                              TUKS1142
+ WRITE LTM                                                              TUKS1143
+       SXD T+1,1                                                        TUKS1144
+       SXD T+2,2                                                        TUKS1145
+       CLA 1,4               SET TAPE NO                                TUKS1146
+       ADD N144                                                         TUKS1147
+       STA WRITE+11                                                     TUKS1148
+       CLA 4,4               BLOCK SIZE                                 TUKS1149
+       PAX 0,1                                                          TUKS1150
+       ADD 2,4               ORIGIN                                     TUKS1151
+       STA WRITE+14                                                     TUKS1152
+       STA WRITE+15                                                     TUKS1153
+       WRS *                                                            TUKS1154
+       CLA 3,4               RECORD SIZE                                TUKS1155
+       PAX 0,2                                                          TUKS1156
+       CPY *,1                                                          TUKS1157
+       CLA *,1                                                          TUKS1158
+       TZE WRITE+22          ZERO EXIT                                  TUKS1159
+       TXI WRITE+18,1,-1                                                TUKS1160
+       TIX WRITE+14,2,1                                                 TUKS1161
+       WRS 219                                                          TUKS1162
+       TXH WRITE+11,1,0                                                 TUKS1163
+       TXI WRITE+22,4,-1     END OF BLOCK                               TUKS1164
+       LXD T+1,1                                                        TUKS1165
+       LXD T+2,2                                                        TUKS1166
+       WRS 219                                                          TUKS1167
+       TRA 5,4                                                          TUKS1168
+H      HED                                                              TUKS1169
+       REM GL FILE  COMPOSITE INPUT PROGRAM                             TUKS1170
+ FILE  SXD X1,1                                                         TUKS1171
+       SXD X2,2                                                         TUKS1172
+ F1    SXD S4,4                                                         TUKS1173
+       CLA 1,4                 GET WORD.                                TUKS1174
+       TPL F11                                                          TUKS1175
+ F4    STA F41                                                          TUKS1176
+       LRS 18                                                           TUKS1177
+       PZE COMMON+7,,24576                                              TUKS1178
+       STA COMMON+7                                                     TUKS1179
+       ALS 3                                                            TUKS1180
+       PDX ,1                                                           TUKS1181
+       PXD                                                              TUKS1182
+       LLS 3                                                            TUKS1183
+ F41   PAX ,2                                                           TUKS1184
+       CLA G2,2                                                         TUKS1185
+       ARS 18                                                           TUKS1186
+       ADD F41                                                          TUKS1187
+       STA ST1                                                          TUKS1188
+       STA ST11                                                         TUKS1189
+       TXH ERROR,1,2                                                    TUKS1190
+       CAL G1,1                                                         TUKS1191
+       LDQ G2,1                                                         TUKS1192
+       PDX ,4                                                           TUKS1193
+       SLW GT1                                                          TUKS1194
+       STQ GT2                                                          TUKS1195
+       CLA PBIT                                                         TUKS1196
+       LXA C2+1,2                                                       TUKS1197
+ F5    LDQ COMMON+7                                                     TUKS1200
+       DVH (100)                                                        TUKS1201
+       LXA C2,2                                                         TUKS1202
+       PAX ,1                                                           TUKS1203
+       TXH ERROR,1,80                                                   TUKS1204
+       SXD F8,1                                                         TUKS1205
+ F6    TXI F7,2,-1                                                      TUKS1206
+ F7    TIX F6,1,6              E/6                                      TUKS1207
+       SXD C5,2                                                         TUKS1208
+       SXD C6,1                                                         TUKS1209
+       LLS 35                                                           TUKS1210
+       LXA C2,2                                                         TUKS1211
+       PAX ,1                                                           TUKS1212
+ F8    TXH ERROR,1                                                      TUKS1213
+ F9    TXI F10,2,-1                                                     TUKS1214
+ F10   TIX F9,1,6              B/6                                      TUKS1215
+ C1    SXD C4,1                                                         TUKS1216
+       LXD C3,1                                                         TUKS1217
+       LDQ BUFFER-1,2                                                   TUKS1218
+ C2    PXD                                                              TUKS1219
+       LGL 6                                                            TUKS1220
+ C3    TXI C4,1,1                                                       TUKS1221
+ C4    TXL C2,1                                                         TUKS1222
+       TOV GT1                                                          TUKS1223
+ GT1                           GATE 1.                                  TUKS1224
+       TXL NUM,,4                                                       TUKS1225
+       TXL NUM,,3                                                       TUKS1226
+ G1    TXL H1,,6                                                        TUKS1227
+ X2    TXL FLT                                                          TUKS1228
+ X1    TXL INT                                                          TUKS1229
+ G2    TXL HOLL                                                         TUKS1230
+ HOLL  TXH I1,4,5                                                       TUKS1231
+       CAL LORBL                                                        TUKS1232
+ H1    ACL COMMON+5                                                     TUKS1233
+       TNX ST1,4,1                                                      TUKS1234
+       ALS 6                                                            TUKS1235
+ H2    SLW COMMON+5                                                     TUKS1236
+ S4    TXL C5                                                           TUKS1237
+ ST1   SLW                                                              TUKS1238
+       CAL ST1                                                          TUKS1239
+       ADD (1)                                                          TUKS1240
+       STA ST1                                                          TUKS1241
+       PXD                                                              TUKS1242
+       TXI H2,4,5                                                       TUKS1243
+ NUM   SLW COMMON+6                                                     TUKS1244
+       SUB (10)                                                         TUKS1245
+       TPL T1+1,4                                                       TUKS1246
+       TNX N1,4,2                                                       TUKS1247
+       STP COMMON+4,4                                                   TUKS1248
+ N1    CLA COMMON+6,4                                                   TUKS1249
+       ALS 2                                                            TUKS1250
+       ADD COMMON+6,4                                                   TUKS1251
+       ALS 1                                                            TUKS1252
+       ADD COMMON+6                                                     TUKS1253
+       TOV OV                                                           TUKS1254
+       STO COMMON+6,4                                                   TUKS1255
+       CLA COMMON+1                                                     TUKS1256
+       TXL OV+3                                                         TUKS1257
+ OV    TXL ERR,4,1                                                      TUKS1258
+       CLA COMMON+1                                                     TUKS1259
+       ADD (1)                                                          TUKS1260
+       ADD COMMON                                                       TUKS1261
+       STO COMMON+1                                                     TUKS1262
+ C5    TXH C7,2                                                         TUKS1263
+ C6    TXH T1,1                                                         TUKS1264
+ C7    TNX C2,1,6                                                       TUKS1265
+ C8    TXI C1,2,-1                                                      TUKS1266
+ T4    CLA COMMON+6                                                     TUKS1267
+       SUB POINT                                                        TUKS1268
+       TNZ T3                                                           TUKS1269
+       CLS (1)                                                          TUKS1270
+       STO COMMON                                                       TUKS1271
+ T3    CLA COMMON+6                                                     TUKS1272
+       SUB MINSS                                                        TUKS1273
+       TNZ C5                                                           TUKS1274
+       TXI C5,4,-2                                                      TUKS1275
+ T2    CLA COMMON+6                                                     TUKS1276
+       SUB POINT                                                        TUKS1277
+       TZE T3-2                                                         TUKS1278
+       PXD                                                              TUKS1279
+       TXI T3-1,4,1                                                     TUKS1280
+       TXL T4                                                           TUKS1281
+       TXL T3                                                           TUKS1282
+       TXL T2                                                           TUKS1283
+ T1    CLA COMMON+5                                                     TUKS1284
+       LDQ COMMON+3                                                     TUKS1285
+ GT2                                                                    TUKS1286
+ FLT   LLS                                                              TUKS1287
+       ADD COMMON+1                                                     TUKS1288
+       STO COMMON+1                                                     TUKS1289
+       LXA COMMON+1,1                                                   TUKS1290
+       TXH ERR,1,48                                                     TUKS1291
+       LXD ZD,2                                                         TUKS1292
+ A     TXI B,2,1                                                        TUKS1293
+ B     TIX A,1,8                                                        TUKS1294
+       CLA TBTEN+8,1                                                    TUKS1295
+       ORA FLOAT                                                        TUKS1296
+       FAD FLOAT                                                        TUKS1297
+ C     TXL D,2,1                                                        TUKS1298
+       LRS 35                                                           TUKS1299
+       FMP 10TO8                                                        TUKS1300
+       RQL 8                                                            TUKS1301
+       RND                                                              TUKS1302
+       TXI C,2,-1                                                       TUKS1303
+ D     STO COMMON+3                                                     TUKS1304
+       TOV START-1                                                      TUKS1305
+       TQO START                                                        TUKS1306
+ START CLA COMMON+4                                                     TUKS1307
+       TZE INT-1                                                        TUKS1308
+       STA FL1                                                          TUKS1309
+       ARS 15                                                           TUKS1310
+       ORA FL2                                                          TUKS1311
+       FAD FL2                                                          TUKS1312
+       FAD FL1                                                          TUKS1313
+       LDQ COMMON+1                                                     TUKS1314
+       TQP E                                                            TUKS1315
+       FDH COMMON+3                                                     TUKS1316
+       PXD                                                              TUKS1317
+       LLS 35                                                           TUKS1318
+       ACL CM35                                                         TUKS1319
+       PBT                                                              TUKS1320
+ ZD    TXL ERR                                                          TUKS1321
+       TQO ERR                                                          TUKS1322
+       LDQ COMMON+2                                                     TUKS1323
+ INT   LLS                                                              TUKS1324
+ ST11  STO                                                              TUKS1325
+ I1    LXD S4,4                                                         TUKS1326
+       TXI F1,4,-1                                                      TUKS1327
+ E     LRS 35                                                           TUKS1328
+       FMP COMMON+3                                                     TUKS1329
+       ACL TR35                                                         TUKS1330
+       PBT                                                              TUKS1331
+       TNO INT                                                          TUKS1332
+ ERR   LXD S4,4                                                         TUKS1333
+       CLA 2,4                                                          TUKS1334
+       TPL F11                                                          TUKS1335
+       TXI ERR+1,4,-1                                                   TUKS1336
+ F11   LXD X1,1                                                         TUKS1337
+       LXD X2,2                                                         TUKS1338
+       TRA 2,4                                                          TUKS1339
+ ERROR HTR I1                                                           TUKS1340
+ LORBL OCT 60                                                           TUKS1341
+ POINT OCT 33                                                           TUKS1342
+ MINSS OCT 40                                                           TUKS1343
+ FLOAT OCT 170000000000                                                 TUKS1344
+ FL1   DEC 155B8                                                        TUKS1345
+ FL2   DEC 170B8                                                        TUKS1346
+ TR35  DEC 35B8                                                         TUKS1347
+ CM35  DEC 221B8                                                        TUKS1348
+ 10TO8 DEC 1E8                                                          TUKS1349
+ PBIT  MZE                                                              TUKS1350
+ TBTEN DEC 100000000                                                    TUKS1351
+       DEC 10000000                                                     TUKS1352
+       DEC 1000000                                                      TUKS1353
+       DEC 100000                                                       TUKS1354
+       DEC 10000                                                        TUKS1355
+       DEC 1000                                                         TUKS1356
+ (100) DEC 100                                                          TUKS1357
+ (10)  DEC 10                                                           TUKS1358
+ (1)   DEC 1                                                            TUKS1359
+I      HED                                                              TUKS1360
+       REM GENERAL PURPOSE OUTPUT PROGRAM 397 CARDS                     TUKS1361
+ OUT   SXD SAVEX,1                                                      TUKS1362
+       SXD SAVEX-1,2                                                    TUKS1363
+       SXD SAVEX+2,4                                                    TUKS1364
+ OUT1  CAL BLANK                                                        TUKS1365
+ OUT2  LXD PRT10,2                                                      TUKS1366
+       SXD BIN,2               SET FOR ONE CYCLE PRINT                  TUKS1367
+       SXD ZD,2                                                         TUKS1368
+       LXD 20D,1                                                        TUKS1369
+ OUT3  SLW COMMON+51,1         L+20                                     TUKS1370
+  +    4-8 X54492 2                                                     TUKS1371
+ OUT4  CAL 1,4                 NEXT CALLING SEQUENCE WORD               TUKS1372
+       SXD S4,4                                                         TUKS1373
+       STA PRT2                STORE PRINT INSTRUCTION 1                TUKS1374
+       LRS 18                                                           TUKS1375
+       STA PP                  STORE 1000N + PP                         TUKS1376
+       STA PRT3                STORE PRINT INSTRUCTION 2                TUKS1377
+       ALS 3                                                            TUKS1378
+       PDX ,2                  PSUEDO-OP INTO I.R.2                     TUKS1379
+       CLM                                                              TUKS1380
+       LLS 3                                                            TUKS1381
+       PAX ,1                  TAG INTO I.R.1                           TUKS1382
+       CLA SAVEX+1,1           CONTENTS OF SPECIFIED I.R.               TUKS1383
+       ARS 18                                                           TUKS1384
+       ADD PRT2                MODIFIED ADDRESS                         TUKS1385
+       STA LOC                                                          TUKS1386
+       SUB CON1                                                         TUKS1387
+       STA HTH4                                                         TUKS1388
+       LDQ PP                  1000N+PP                                 TUKS1389
+       PXD                                                              TUKS1390
+       DVP TEN-2               DIVIDE BY 1000                           TUKS1391
+       STQ COMMON+1                                                     TUKS1392
+       SLW PP                                                           TUKS1393
+ LOC   CLA                                                              TUKS1394
+       TNZ LOC+3                                                        TUKS1395
+       SSP                                                              TUKS1396
+       LXD PRT10,1                                                      TUKS1397
+       STO COMMON+5            SIGNR                                    TUKS1398
+       SSP                                                              TUKS1399
+       TRA BIN,2                                                        TUKS1400
+       TXL FTX                                                          TUKS1401
+ SAVEX TXL FTF                                                          TUKS1402
+       TXL PRT                                                          TUKS1403
+       TXL FTX4                                                         TUKS1404
+ 14D   TXL HTH,,14                                                      TUKS1405
+ 16D   TXL XTX,,16                                                      TUKS1406
+ 19D   TXL TPW,,19                                                      TUKS1407
+ BIN   TXL ERROR               U.T.                                     TUKS1408
+ PRT   LXD 20D,4               LOAD FOR 20 WORDS                        TUKS1409
+ PRT1  WPR                                                              TUKS1410
+ PRT2  SPR                     INSTRUCTION 1                            TUKS1411
+ PRT3  SPR                     INSTRUCTION 2                            TUKS1412
+       LXD BIN,2                                                        TUKS1413
+       TNX PRT4,2,1                                                     TUKS1414
+ PRT4  SXD BIN,2                                                        TUKS1415
+       SXD GATE,2              SET GATE TO MOVE                         TUKS1416
+ PRT5  LXD 16D,2                                                        TUKS1417
+       PXD                     CLEAR ACCUMULATOR                        TUKS1418
+ PRT6  SLW COMMON+31,2         CLEAR RT. HALF CARD IMAGE                TUKS1419
+       TIX PRT6,2,1                                                     TUKS1420
+       CAL MZE                 BIT                                      TUKS1421
+ PRT7  LDQ COMMON+51,4         LOAD MQ WITH NEXT WORD                   TUKS1422
+       TXI PRT8,4,100                                                   TUKS1423
+ PRT8  TNZ GO                                                           TUKS1424
+ HALFC LXD PRT10,1             ZERO INTO I.R. 1                         TUKS1425
+ PRT9  CAL COMMON+16,1         CIR-2                                    TUKS1426
+       ORS COMMON+19           CIR+1 TAKE CARE OF                       TUKS1427
+       ORS COMMON+24,1         CIR+6 8-3 AND 8-4                        TUKS1428
+       SLW COMMON+17,1         CIR-1 COMBINATIONS                       TUKS1429
+ PRT10 TXH PRT11,1                                                      TUKS1430
+       TXI PRT9,1,1                                                     TUKS1431
+ PRT11 TIX GATE,4,100                                                   TUKS1432
+ GATE  TXL PRINT-3,4                                                    TUKS1433
+       LXD 14D,1                                                        TUKS1434
+ MOVE  LDQ COMMON+30,1         CIR+12 MOVE R IMAGE                      TUKS1435
+       STQ COMMON+14,1         CIL+12 TO L IMAGE                        TUKS1436
+       TIX MOVE,1,1                                                     TUKS1437
+       SXD GATE,4              SET GATE TO PRINT                        TUKS1438
+ S4    TXL PRT5                U.T.                                     TUKS1439
+       LXD BIN,2                                                        TUKS1440
+       TXL PRINT,2,1                                                    TUKS1441
+ CZ    STO COMMON+6,2              CLEAR N,N-1,S,S-1,DPS,DELEX.         TUKS1198
+       TIX CZ,2,1                                                       TUKS1199
+       SPR 9                                                            TUKS1442
+ PRINT LXD 19D,2               19 COPY LOOPS                            TUKS1443
+ PRT12 TXL PRT13,2,7                                                    TUKS1444
+       CPY COMMON+21,2         CIL+19                                   TUKS1445
+       CPY COMMON+37,2         CIR+19                                   TUKS1446
+ PRT13 TXH PRT15,2,0         NO ECHO                                    TUKS1447
+       TXH FIX,2,11                                                     TUKS1448
+       TXI PRT14,2,16                                                   TUKS1449
+ PRT14 CPY COMMON+30           READ ECHO IMPULSES                       TUKS1450
+       CLA COMMON+30                                                    TUKS1451
+       SUB COMMON+27,2         CIR+9                                    TUKS1452
+       TNZ ECERR               ECHO CHECK ERROR                         TUKS1453
+       TIX PRT14,2,16                                                   TUKS1454
+ PRT15 TIX PRT12,2,1                                                    TUKS1455
+       LXD BIN,2                                                        TUKS1456
+       TXH PRT1,2,1                                                     TUKS1457
+ ZD    TXH ZD+2,1                                                       TUKS1458
+       HPR                                                              TUKS1459
+       LXD S4,4                                                         TUKS1460
+       LXD SAVEX,1                                                      TUKS1461
+       LXD SAVEX-1,2                                                    TUKS1462
+       TRA 2,4                 RETURN TO MAIN PROGRAM                   TUKS1463
+ FIX   LXD 2D,1                                                         TUKS1464
+ FIX1  TXI FIX2,2,16                                                    TUKS1465
+ FIX2  CAL COMMON+30,3                                                  TUKS1466
+       COM                                                              TUKS1467
+       ANS COMMON+31,2                                                  TUKS1468
+       ANS COMMON+37,3                                                  TUKS1469
+       TIX FIX2,2,16                                                    TUKS1470
+       TIX FIX1,1,1                                                     TUKS1471
+ 2D    TXL PRT15,,2                                                     TUKS1472
+ GO    SLW COMMON+14           BIT                                      TUKS1473
+       PXD                                                              TUKS1474
+       LGL 2                                                            TUKS1475
+       PAX ,2                                                           TUKS1476
+       PXD                                                              TUKS1477
+       LGL 4                                                            TUKS1478
+       PAX ,1                                                           TUKS1479
+       CAL COMMON+14           BIT                                      TUKS1480
+       TXH NHERR,1,12          NON-HOLLERITH CHARACTER                  TUKS1481
+       TXH ORSD,1                                                       TUKS1482
+       TXH BITRS,2,2                                                    TUKS1483
+       TXH ORSZ,2                                                       TUKS1484
+ ORSD  ORS COMMON+27,1                                                  TUKS1485
+ ORSZ  ORS COMMON+30,2                                                  TUKS1486
+ BITRS ARS 1                                                            TUKS1487
+ 20D   TIX PRT8,4,20                                                    TUKS1488
+       TIX PRT7,4,1                                                     TUKS1489
+       TXL HALFC               U.T.                                     TUKS1490
+ NHERR SXD ZD,1                                                         TUKS1491
+       TXL BITRS                                                        TUKS1492
+ ERROR CAL S4                                                           TUKS1493
+       COM                     ADDRESS OF WORD IN ERROR                 TUKS1494
+       ACL PRT15               TWOS COMPLEMENT                          TUKS1495
+       LRS 30                                                           TUKS1496
+       LXD 4D,4                                                         TUKS1497
+       CAL BLANK                                                        TUKS1498
+ ERR2  ALS 3                                                            TUKS1499
+       LLS 3                                                            TUKS1500
+       TIX ERR2,4,1                                                     TUKS1501
+       SLW ERIND+2             ADDRESS IN BCD                           TUKS1502
+       TSX OUT,4                                                        TUKS1503
+       PTH ERIND,,3018         HTH CODE                                 TUKS1504
+       FVE 244                 PRT CODE                                 TUKS1505
+ PP    HTR                                                              TUKS1506
+ ECERR CAL XXXXX                                                        TUKS1507
+       TSX OUT2,4                                                       TUKS1508
+       FVE 245                 PRT CODE                                 TUKS1509
+       LXD SAVEX+2,4                                                    TUKS1510
+ 3D    TXL OUT1,,3             U.T.                                     TUKS1511
+ SETPP LXD 19D,1                                                        TUKS1512
+       LXA PP,2                                                         TUKS1513
+       TXH ERROR,2,120         PP GREATER THAN 120                      TUKS1514
+       TNX SET2,2,72                                                    TUKS1515
+       CAL 3D                                                           TUKS1516
+       STD BIN                 ALLOWS 2 PRINT CYCLES                    TUKS1517
+       TXI SET2,1,-12                                                   TUKS1518
+ SET2  TNX SET3,2,6                                                     TUKS1519
+       TXI SET2,1,-1                                                    TUKS1520
+ SET3  PXD                                                              TUKS1521
+ SET4  ADD CON6                REMAINDER TIMES                          TUKS1522
+       TIX SET4,2,1            SIX                                      TUKS1523
+       PAX ,2                                                           TUKS1524
+       TRA 1,4                                                          TUKS1525
+ ENTNO STO COMMON                                                       TUKS1526
+       CAL COMMON+50,1         L+19                                     TUKS1527
+       LRS 36,2                                                         TUKS1528
+       ARS 6                                                            TUKS1529
+       ALS 6                                                            TUKS1530
+       ACL COMMON                                                       TUKS1531
+ ENT2  LLS 36,2                                                         TUKS1532
+       SLW COMMON+50,1         L+19                                     TUKS1533
+       TIX ENT4,2,6                                                     TUKS1534
+       TXI ENT3,1,1                                                     TUKS1535
+ ENT3  LXA ENT2,2                                                       TUKS1536
+ ENT4  TRA 1,4                                                          TUKS1537
+ FTX   LRS 35                                                           TUKS1538
+       LLS 8                                                            TUKS1539
+       SUB CO128                                                        TUKS1540
+       TPL FTX1                                                         TUKS1541
+       ORA FTF2                SET UP A RIGHT SHIFT                     TUKS1542
+ 4D    TXL FTX2,,4             U.T.                                     TUKS1543
+ FTX1  ORA FTX6                SET UP A LEFT SHIFT                      TUKS1544
+ FTX2  SLW FTX3                                                         TUKS1545
+       CAL DECPT                                                        TUKS1546
+       SLW COMMON+6            BLANK, MINUS OR DEC. POINT               TUKS1547
+       PXD                                                              TUKS1548
+       STO COMMON+11                                                    TUKS1549
+       TOV FTX3                                                         TUKS1550
+ FTX3  PZE                     PROPER SHIFT                             TUKS1551
+       TOV FTF                 NUMBER TOO LARGE                         TUKS1552
+ FTX4  LXA COMMON+1,4          DEC. PLACES INTO I.R. 4                  TUKS1553
+ FTX5  SLW COMMON+7            STORE INTEGRAL PART                      TUKS1554
+       MPR TBTEN+8,4           ROUND TO N DEC. PLACES                   TUKS1555
+       CAS TBTEN+8,4                                                    TUKS1556
+ FTX6  LLS 0                                                            TUKS1557
+ FTX7  TXL RC                  ROUNDING CAUSED CARRY                    TUKS1558
+ FTX8  STO COMMON+8            FRACTIONAL PART                          TUKS1559
+ FTX8A SXD SA4,4                                                        TUKS1560
+       TSX SETPP,4                                                      TUKS1561
+       LXD SA4,4                                                        TUKS1562
+       TXL FTX13,4             NO FRACTIONAL PART                       TUKS1563
+ FTX9  CLA COMMON+8                                                     TUKS1564
+ FTX10 TXL FTX11,4,8                                                    TUKS1565
+       TZE FTX14                                                        TUKS1566
+ FTX11 LRS 35                                                           TUKS1567
+       DVP TEN                                                          TUKS1568
+       STQ COMMON+8            FRAPT                                    TUKS1569
+       SXD SA4,4                                                        TUKS1570
+       TSX ENTNO,4             ENTER DIGIT                              TUKS1571
+       LXD SA4,4                                                        TUKS1572
+       TIX FTX9,4,1                                                     TUKS1573
+       CLA COMMON+6            BMORP                                    TUKS1574
+ FTX12 TSX ENTNO,4             ENTER BLANK, MINUS OR POINT              TUKS1575
+ FTX13 CLA COMMON+7            INTEGRAL PART                            TUKS1576
+       TXI FTX10,4,FTX12+20                                             TUKS1577
+ FTX14 CLA COMMON+5            SIGNR                                    TUKS1578
+       TPL FTX15                                                        TUKS1579
+       CLA MINUS                                                        TUKS1580
+       TSX ENTNO,4             ENTER MINUS SIGN                         TUKS1581
+ FTX15 LXD S4,4                                                         TUKS1582
+       TXI OUT4,4,-1           EXIT                                     TUKS1583
+ RC    CLA CON1                                                         TUKS1584
+       ADD COMMON+7,1                                                   TUKS1585
+       STO COMMON+7,1                                                   TUKS1586
+       SLW COMMON+7                                                     TUKS1587
+       CLA COMMON+11,1                                                  TUKS1588
+ SA4   TXL FTX8                U.T.                                     TUKS1589
+ FTF   LDQ COMMON+5            SIGNR                                    TUKS1590
+       CAL LORBL                                                        TUKS1591
+       TQP FTF1                                                         TUKS1592
+       ARS 2                                                            TUKS1593
+ FTF1  SLW COMMON+6            BLANK, MINUS OR POINT                    TUKS1594
+       PXD                                                              TUKS1595
+ FTF2  LRS 0                                                            TUKS1596
+       LLS 8                                                            TUKS1597
+       SUB CO128                                                        TUKS1598
+       STQ COMMON                                                       TUKS1599
+       LRS 35                                                           TUKS1600
+       MPY LOG2                                                         TUKS1601
+       STO COMMON+5            SIGNR                                    TUKS1602
+       TPL FTF3                                                         TUKS1603
+       SUB CON1                                                         TUKS1604
+       STO COMMON+5                                                     TUKS1605
+       LLS 35                                                           TUKS1606
+       COM                                                              TUKS1607
+       SSP                                                              TUKS1608
+       LRS 35                                                           TUKS1609
+ FTF3  MPY LOG10                                                        TUKS1610
+       LRS 33                                                           TUKS1611
+       PAX ,4                                                           TUKS1612
+       STQ COMMON+8                                                     TUKS1613
+ FTF4  LXD PRT12,2                                                      TUKS1614
+       LDQ 2TOXC                                                        TUKS1615
+ FTF5  MPY COMMON+8                                                     TUKS1616
+       ADD 2TOXC+8,2                                                    TUKS1617
+       LRS 35                                                           TUKS1618
+       TIX FTF5,2,1                                                     TUKS1619
+       MPY COMMON                                                       TUKS1620
+       LRS 34,4                                                         TUKS1621
+       TZE FTF6                                                         TUKS1622
+       DVP TEN                                                          TUKS1623
+       CLA COMMON+5                                                     TUKS1624
+       ADD CON1                                                         TUKS1625
+       STO COMMON+5            SIGNR                                    TUKS1626
+ FTF6  LXA COMMON+1,4                                                   TUKS1627
+       TXH FTF7,4                                                       TUKS1628
+       TXI FTF7,4,8                                                     TUKS1629
+ FTF7  CLA TBTEN+9,4                                                    TUKS1630
+       STO COMMON+9                                                     TUKS1631
+       LLS 37                  OMIT CHARACTERISTIC                      TUKS1632
+       TZE FTF8                FOR                                      TUKS1633
+       LRS 37                  ZERO                                     TUKS1634
+       CLA COMMON+5                                                     TUKS1635
+       TNZ FTF8+1              OMIT SIGN OF ZERO                        TUKS1636
+ FTF8  SLW COMMON+5            CHARACTERISTIC                           TUKS1637
+       TXI FTX5,1,2                                                     TUKS1638
+ HTH   TSX SETPP,4                                                      TUKS1639
+       CLS COMMON+1                                                     TUKS1640
+       ADD 2TOXC+7                                                      TUKS1641
+       PAX ,4                                                           TUKS1642
+ HTH3  TXL FTX15,4             ALL WORDS FINISHED                       TUKS1643
+ HTH4  LDQ ,4                                                           TUKS1644
+       SXD COMMON+2,4                                                   TUKS1645
+       LXA HTH6,4              SET FOR 6 CHARACTERS                     TUKS1646
+ HTH5  RQL 30                                                           TUKS1647
+       STQ COMMON+3                                                     TUKS1648
+       CLM                                                              TUKS1649
+ HTH6  LGL 6                                                            TUKS1650
+       SXD SA4,4                                                        TUKS1651
+       TSX ENTNO,4             ENTER BCD CHARACTER                      TUKS1652
+       LXD SA4,4                                                        TUKS1653
+       LDQ COMMON+3                                                     TUKS1654
+       TIX HTH5,4,1            NEXT CHARACTER                           TUKS1655
+       LXD COMMON+2,4                                                   TUKS1656
+       TXI HTH3,4,1            NEXT WORD                                TUKS1657
+ XTX   LRS 35                                                           TUKS1658
+       TXI XTX1,4,-1           BUMP I.R. TO SKIP BIN                    TUKS1659
+ XTX1  SXD S4,4                                                         TUKS1660
+       CAL 1,4                 CLEAR ADD BINARY PLACES                  TUKS1661
+       STA XTX2                                                         TUKS1662
+       SUB CON36                                                        TUKS1663
+       TPL ERROR               B OUTSIDE RANGE 0-35                     TUKS1664
+       ARS 33                                                           TUKS1665
+       TNZ ERROR               BIN DOES NOT FOLLOW XTX                  TUKS1666
+       CAL XTX2                                                         TUKS1668
+       TXL FTX2                U.T.                                     TUKS1669
+ XTX2  LLS                                                              TUKS1670
+ TPW   CLA 2TOXC+7             TWOS COMPLEMENT OF                       TUKS1671
+       SUB LOC                 TAPE NO. INTO                            TUKS1672
+       PAX ,2                  I.R.2                                    TUKS1673
+ TPW1  WTD ,2                                                           TUKS1674
+       LDQ COMMON+31                                                    TUKS1675
+       STQ COMMON+3            SAVE 1ST WORD OF RECORD                  TUKS1676
+       LGL 6                   SET UP PRINT                             TUKS1677
+       CLA PP                  CONTROL CHARACTER                        TUKS1678
+       LGL 30                  IN                                       TUKS1679
+       SLW COMMON+31           COLUMN 1                                 TUKS1680
+       LXD 20D,4                                                        TUKS1681
+ TPW2  CPY COMMON+51,4         COPY                                     TUKS1682
+       TIX TPW2,4,1            LOOP                                     TUKS1683
+       BST ,2                  BACKSPACE TO                             TUKS1684
+       RTD ,2                  READ RECORD                              TUKS1685
+ TPW3  CPY COMMON                                                       TUKS1686
+       TRA TPW3                                                         TUKS1687
+ CON36 DEC 36                                                           TUKS1688
+       LDQ COMMON+3            RESTORE FIRST WORD                       TUKS1689
+       STQ COMMON+31           OF RECORD                                TUKS1690
+       LXD S4,4                                                         TUKS1691
+       CAL 2,4                 NEXT CALLING SEQUENCE WORD               TUKS1692
+       ARS 32                                                           TUKS1693
+       SUB TEN                                                          TUKS1694
+       RQL 180                 DELAY                                    TUKS1695
+       RTT                                                              TUKS1696
+       TXL TPW4                TAPE ERROR                               TUKS1697
+       TZE FTX15+1             PRT FOLLOWS                              TUKS1698
+       TXL PRT15+5             NO PRINTING                              TUKS1699
+ TPW4  BST ,2                                                           TUKS1700
+       TXL TPW1                REWRITE RECORD                           TUKS1701
+ CO128 DEC 128                                                          TUKS1702
+ BLANK OCT -206060606060                                                TUKS1703
+ LORBL OCT 60                                                           TUKS1704
+ MINUS OCT 14                                                           TUKS1705
+ DECPT OCT 33                                                           TUKS1706
+ XXXXX BCD 1XXXXXX                                                      TUKS1707
+ MZE   MZE                                                              TUKS1708
+ TBTEN DEC 100000000                                                    TUKS1709
+       DEC 10000000                                                     TUKS1710
+       DEC 1000000                                                      TUKS1711
+       DEC 100000                                                       TUKS1712
+       DEC 10000                                                        TUKS1713
+       DEC 1000                                                         TUKS1714
+       DEC 100                                                          TUKS1715
+ TEN   DEC 10                                                           TUKS1716
+ CON1  DEC 1                                                            TUKS1717
+ CON6  DEC 6                                                            TUKS1718
+ LOG2  OCT 115040465025        LOG BASE 10 OF 2                         TUKS1719
+ LOG10 OCT 324464741127        LOG BASE 2 OF 10/4                       TUKS1720
+ 2TOXC OCT 1601225             C7                                       TUKS1721
+       OCT 7762664             C6                                       TUKS1722
+       OCT 132240566           C5                                       TUKS1723
+       OCT 1164125106          C4                                       TUKS1724
+       OCT 7066267024          C3                                       TUKS1725
+       OCT 36577252307         C2                                       TUKS1726
+       OCT 130562064437        C1                                       TUKS1727
+       OCT 200000000000        C0                                       TUKS1728
+ ERIND BCD 3ERROR IN LOC                                                TUKS1729
+SPACE1 EQU 0                                                            TUKS1730
+ SKIP1 EQU 247                                                          TUKS1731
+ SKIP2 EQU 242                                                          TUKS1732
+ EXTRA EQU 243                                                          TUKS1733
+SPACE2 EQU 244                                                          TUKS1734
+SPACE0 EQU 245                                                          TUKS1735
+ SKIP3 EQU 246                                                          TUKS1736
+ SUPSK EQU 248                                                          TUKS1737
+0SPACE EQU 16                                                           TUKS1738
+1SPACE EQU 48                                                           TUKS1739
+2SPACE EQU 0                                                            TUKS1740
+ 1SKIP EQU 1                                                            TUKS1741
+ 2SKIP EQU 2                                                            TUKS1742
+ 3SKIP EQU 3                                                            TUKS1743
+ 4SKIP EQU 4                                                            TUKS1744
+ 5SKIP EQU 5                                                            TUKS1745
+ 6SKIP EQU 6                                                            TUKS1746
+ 7SKIP EQU 7                                                            TUKS1747
+ 8SKIP EQU 8                                                            TUKS1748
+ 9SKIP EQU 9                                                            TUKS1749
+ 1SHSK EQU 33                                                           TUKS1750
+ 2SHSK EQU 34                                                           TUKS1751
+ 3SHSK EQU 35                                                           TUKS1752
+ 4SHSK EQU 36                                                           TUKS1753
+ 5SHSK EQU 37                                                           TUKS1754
+ 6SHSK EQU 38                                                           TUKS1755
+ 7SHSK EQU 39                                                           TUKS1756
+ 8SHSK EQU 40                                                           TUKS1757
+ 9SHSK EQU 41                                                           TUKS1758
+       HED                                                              TUKS1759
+ FILE  EQU H$FILE                                                       TUKS1760
+ OUT   EQU I$OUT                                                        TUKS1761
+0SPACE EQU I$SPACE                                                      TUKS1762
+ 1SKIP EQU I$1SKIP                                                      TUKS1763
+BUFFER BSS 14                                                           TUKS1764
+COMMON BSS 51                                                           TUKS1765
+       REM SQUARE ROOT SUBROUTINE NA 34.1                               TUKS1766
+  SQRT STO SQRT+24                      STORE ARGUMENT                  TUKS1767
+       SXD SQRT+23,1                    SAVE IR A                       TUKS1768
+       TZE 2,4                          RETURN TO MAIN ROUTINE          TUKS1769
+       TMI 1,4                          ERROR FORWARD                   TUKS1770
+       ANA SQRT+20                      CHARACTERISTIC OF 1             TUKS1771
+       LRS 1                                                            TUKS1772
+       ADD SQRT+24                      ADD ARUMENT                     TUKS1773
+       LRS 1                                                            TUKS1774
+       ADD SQRT+21                                                      TUKS1775
+       LXA SQRT+22,1                    SET IR A EQUAL 3                TUKS1776
+       STO SQRT+25                                                      TUKS1777
+       CLA SQRT+24                                                      TUKS1778
+       FDP SQRT+25                                                      TUKS1779
+       STQ SQRT+26                                                      TUKS1780
+       CLA SQRT+26                                                      TUKS1781
+       FAD SQRT+25                                                      TUKS1782
+       SUB SQRT+20                                                      TUKS1783
+       TIX SQRT+10,1,1                  CONTINUE LOOP                   TUKS1784
+       LXD SQRT+23,1                    RESTORE IR A                    TUKS1785
+       TRA 2,4                          RETURN TO MAIN ROUTINE          TUKS1786
+       HTR 0,0,512                      CHARACTERISTIC OF 1             TUKS1787
+       TXI 0,0,256                                                      TUKS1788
+       HTR 3                                                            TUKS1789
+       HTR                              STORAGE FOR IR A                TUKS1790
+       HTR                              TEMPORARY STORAGE               TUKS1791
+       HTR                              TEMPORARY STORAGE               TUKS1792
+       HTR                              TEMPORARY STORAGE               TUKS1793
+       REM SINE COSINE SUBROUTINE NA 30.1                               TUKS1794
+   COS FAD SIN+57                       ADD PI OVER 2                   TUKS1795
+   SIN STO SIN+56                       STORE ARGUMENT                  TUKS1796
+       SXD SIN+58,1                     SAVE IR A                       TUKS1797
+       SSP                                                              TUKS1798
+       FDP SIN+49                       2 PI                            TUKS1799
+       STQ SIN+59                       STORE I + F                     TUKS1800
+       CLA SIN+59                                                       TUKS1801
+       SUB SIN+47                       CHARACTERISTIC OF 128           TUKS1802
+       ARS 27                                                           TUKS1803
+       TPL SIN+11                                                       TUKS1804
+       CLA SIN+59                       I EQ 0, F LESS THAN .5          TUKS1805
+       TRA SIN+17                                                       TUKS1806
+       ADM SIN+15                       ADD 10 TO ADDRESS               TUKS1807
+       STA SIN+14                       STORE SHIFTS ELIMINATE 2        TUKS1808
+       CLA SIN+59                                                       TUKS1809
+       ALS *                                                            TUKS1810
+       ARS 10                                                           TUKS1811
+       ADD SIN+47                       CHARACTERISTIC OF 128           TUKS1812
+       FSB SIN+48                       +.25                            TUKS1813
+       TMI SIN+28                       FIRST QUADRANT                  TUKS1814
+       FSB SIN+48                       +.25                            TUKS1815
+       TMI SIN+29                       SECOND QUADRANT                 TUKS1816
+       STO SIN+60                                                       TUKS1817
+       CLS SIN+56                       CHANGE SIGN OF ARGUMENT         TUKS1818
+       STO SIN+56                                                       TUKS1819
+       CLA SIN+60                                                       TUKS1820
+       FSB SIN+48                       +.25                            TUKS1821
+       TMI SIN+28                       THIRD QUADRANT                  TUKS1822
+       TXI SIN+19,0,4                                                   TUKS1823
+       FAD SIN+48                       +.25                            TUKS1824
+       SSP                                                              TUKS1825
+       ADD SIN+50                       MULTIPLY BY 4                   TUKS1826
+       STO SIN+59                       STORE F                         TUKS1827
+       LDQ SIN+59                                                       TUKS1828
+       FMP SIN+59                                                       TUKS1829
+       STO SIN+60                       STORE F SQUARED                 TUKS1830
+       LXD SIN+27,1                     SET IR A EQ 4                   TUKS1831
+       LDQ SIN+51                       C9                              TUKS1832
+       FMP SIN+60                       F SQUARED                       TUKS1833
+       FAD SIN+56,1                                                     TUKS1834
+       LRS 35                                                           TUKS1835
+       TIX SIN+37,1,1                   CONTINUE LOOP                   TUKS1836
+       FMP SIN+59                       F                               TUKS1837
+       LDQ SIN+56                                                       TUKS1838
+       TQP SIN+45                       SET SIGN OF ANSWER              TUKS1839
+       CHS                                                              TUKS1840
+       LXD SIN+58,1                     RESTORE IR A                    TUKS1841
+       TRA 1,4                          RETURN TO MAIN ROUTINE          TUKS1842
+       TIX 0                            CHARACTERISTIC OF 128           TUKS1843
+       DEC +.25                         +.25                            TUKS1844
+       DEC +6.283185307                 2PI                             TUKS1845
+       TRA                              CHARACTERISTIC OF 2             TUKS1846
+       DEC +.00015148419                C9                              TUKS1847
+       DEC -.00467376557                C7                              TUKS1848
+       DEC +.07968967928                C5                              TUKS1849
+       DEC -.64596371106                C3                              TUKS1850
+       DEC +1.57079631847               C1                              TUKS1851
+       HTR                              TEMPORARY STORAGE               TUKS1852
+       DEC +1.5707963268                PI OVER 2                       TUKS1853
+       HTR                              STORAGE FOR IR A                TUKS1854
+       HTR                              TEMPORARY STORAGE               TUKS1855
+       HTR                              TEMPORARY STORAGE               TUKS1856
+       REM NATURAL LOGARITHM ROUTINE   NA 31.5                          TUKS1857
+    LN STO LN+44                   STORE ARGUMENT                       TUKS1858
+       SXD LN+40,1                 SAVE IR 1                            TUKS1859
+       TZE 1,4                     ERROR FORWARD                        TUKS1860
+       TMI 1,4                     DITTO                                TUKS1861
+       LRS 27                      SEP CHARAC FROM FRACTION             TUKS1862
+       SUB LN+38                   SUB 129 FROM CHARAC                  TUKS1863
+       ALS 20                                                           TUKS1864
+       STQ LN+44                   STORE FRACTION WITHOUT CHARAC        TUKS1865
+       ACL LN+43                   ADD CHARAC OF 135                    TUKS1866
+       FAD LN+43                   NORMALIZE EXPONENT                   TUKS1867
+       LRS 35                      SHIFT TO MQ                          TUKS1868
+       FMP LN+39                   LN 2                                 TUKS1869
+       STO LN+45                   STORE EXP X LN2                      TUKS1870
+       CLA LN+38                   CHARAC OF 129                        TUKS1871
+       LDQ LN+44                   PUT FRACTION IN MQ                   TUKS1872
+       LLS 27                      FRACTION BETWEEN 1 AND 2             TUKS1873
+       FAD LN+41                   SQRT OF 2                            TUKS1874
+       STO LN+44                                                        TUKS1875
+       FSB LN+42                   2 SQRT OF 2                          TUKS1876
+       FDP LN+44                                                        TUKS1877
+       STQ LN+46                   STORE Y                              TUKS1878
+       FMP LN+46                                                        TUKS1879
+       STO LN+44                   STORE Y SQUARED                      TUKS1880
+       LXA LN+40,1                 SET IR 1 EQ 3                        TUKS1881
+       LDQ LN+34                   C7                                   TUKS1882
+       FMP LN+44                   Y SQUARED                            TUKS1883
+       FAD LN+38,1                 ADD CONSTANT                         TUKS1884
+       LRS 35                      SHIFT TO MQ                          TUKS1885
+       TIX LN+25,1,1               CONTINUE LOOP                        TUKS1886
+       FMP LN+46                   Y                                    TUKS1887
+       FAD LN+47                   ADD CO                               TUKS1888
+       FAD LN+45                   ADD EXP X LN 2                       TUKS1889
+       LXD LN+40,1                 RELOAD IR 1                          TUKS1890
+       TRA 2,4                     EXIT                                 TUKS1891
+       DEC .3010059223             C7                                   TUKS1892
+       DEC .3996578111             C5                                   TUKS1893
+       DEC .6666694867             C3                                   TUKS1894
+       DEC 1.999999999             C1                                   TUKS1895
+       DEC 129                                                          TUKS1896
+       DEC .6931471806             LN2                                  TUKS1897
+       DEC 3                                                            TUKS1898
+       DEC 1.414213562             SQRT OF 2                            TUKS1899
+       DEC 2.828427124             2 SQRT OF 2                          TUKS1900
+       OCT 207000000000            CHARACTERISTIC OF 135                TUKS1901
+       HTR *                       TEMPORARY STORAGE                    TUKS1902
+       HTR *                       X                                    TUKS1903
+       HTR *                       X                                    TUKS1904
+       DEC .3465735903             C0                                   TUKS1905
+       REM ARCTANGENT SUBROUTINE NA 33.1                                TUKS1906
+  ATAN STO ATAN+26                      STORE ARGUMENT                  TUKS1907
+       SXD ATAN+38,1                    SAVE IR A                       TUKS1908
+       SSP                                                              TUKS1909
+       FAD ATAN+23                      +1.0                            TUKS1910
+       STO ATAN+27                      STORE X+1                       TUKS1911
+       FSB ATAN+24                      +2.0                            TUKS1912
+       FDP ATAN+27                                                      TUKS1913
+       STQ ATAN+27                      STORE X-1 OVER X+1 EQ Z         TUKS1914
+       FMP ATAN+27                                                      TUKS1915
+       STO ATAN+28                      STORE Z SQUARED                 TUKS1916
+       LXA ATAN+25,1                    SET IR A EQUAL 7                TUKS1917
+       LDQ ATAN+29                      C15                             TUKS1918
+       FMP ATAN+28                      Z SQUARED                       TUKS1919
+       FAD ATAN+37,1                                                    TUKS1920
+       LRS 35                                                           TUKS1921
+       TIX ATAN+12,1,1                  CONTINUE LOOP                   TUKS1922
+       FMP ATAN+27                      Z                               TUKS1923
+       FAD ATAN+37                      PI OVER 4                       TUKS1924
+       LDQ ATAN+26                      SET SIGN OF ANSWER              TUKS1925
+       TQP ATAN+21                                                      TUKS1926
+       CHS                                                              TUKS1927
+       LXD ATAN+38,1                    RESTORE IR A                    TUKS1928
+       TRA 1,4                          RETURN TO MAIN ROUTINE          TUKS1929
+       DEC +1.0                                                         TUKS1930
+       DEC +2.0                                                         TUKS1931
+       HTR 7                                                            TUKS1932
+       HTR                              TEMPORARY STORAGE-ARG           TUKS1933
+       HTR                              DITTO-Z                         TUKS1934
+       HTR                              DITTO-Z SQUARED                 TUKS1935
+       DEC -.0040540580                 C15                             TUKS1936
+       DEC +.0218612288                 C13                             TUKS1937
+       DEC -.0559098861                 C11                             TUKS1938
+       DEC +.0964200441                 C9                              TUKS1939
+       DEC -.1390853351                 C7                              TUKS1940
+       DEC +.1994653599                 C5                              TUKS1941
+       DEC -.3332985605                 C3                              TUKS1942
+       DEC +.9999993329                 C1                              TUKS1943
+       DEC +.7853981634                 PI OVER 4                       TUKS1944
+       HTR                              STORAGE OFR IR A                TUKS1945
+       REM ARCOSINE SUBROUTINE  NA 35.3    77 CARDS                     TUKS1946
+ ARCOS CHS                                                              TUKS1947
+       SXD ARSIN+67,2              SAVE IR2                             TUKS1948
+       LXA ARCOS,2                 SET IR2 EQUAL 2                      TUKS1949
+       TXI ARSIN+2,0,7                                                  TUKS1950
+ ARSIN SXD ARSIN+67,2              SAVE IR2                             TUKS1951
+       LXA ARSIN+13,2              SET IR2 EQUAL 1                      TUKS1952
+       STO ARSIN+60                STORE ARGUMENT                       TUKS1953
+       SXD ARSIN+66,1              SAVE IR1                             TUKS1954
+       SSP                                                              TUKS1955
+       STO ARSIN+61                                                     TUKS1956
+       SUB ARSIN+59                CHARACTERISTIC OF 117                TUKS1957
+       TMI ARSIN+42                ARG LESS THAN .001 -TRANSFER         TUKS1958
+       CLA ARSIN+45                1.0                                  TUKS1959
+       FSB ARSIN+61                SUB X                                TUKS1960
+       TMI ARSIN+71                ERROR FORWARD                        TUKS1961
+       STO ARSIN+68                STORE 1-X FOR CALCULATING            TUKS1962
+       ANA ARSIN+58                SQUARE ROOT                          TUKS1963
+       LRS 1                                                            TUKS1964
+       ADD ARSIN+68                ADD 1-X                              TUKS1965
+       LRS 1                                                            TUKS1966
+       ADD ARSIN+48                                                     TUKS1967
+       LXA ARSIN+26,1              SET IR1 EQUAL 3                      TUKS1968
+       STO ARSIN+69                                                     TUKS1969
+       CLA ARSIN+68                                                     TUKS1970
+       FDP ARSIN+69                                                     TUKS1971
+       STQ ARSIN+70                                                     TUKS1972
+       CLA ARSIN+70                                                     TUKS1973
+       FAD ARSIN+69                                                     TUKS1974
+       SUB ARSIN+58                DIVIDE BY 2                          TUKS1975
+       TIX ARSIN+18,1,1            CONTINUE LOOP                        TUKS1976
+       SSM                                                              TUKS1977
+       STO ARSIN+68                STORE MINUS SQRT OF 1-X              TUKS1978
+       LXD ARCOS+3,1               SET IR1 EQUAL 7                      TUKS1979
+       LDQ ARSIN+49                C7                                   TUKS1980
+       FMP ARSIN+61                X                                    TUKS1981
+       FAD ARSIN+57,1              ADD NEXT CONSTANT                    TUKS1982
+       LRS 35                                                           TUKS1983
+       TIX ARSIN+30,1,1            CONTINUE LOOP                        TUKS1984
+       FMP ARSIN+68                -SQRT 1-X                            TUKS1985
+       FAD ARSIN+48,2              ADD PI OVER 2 OR ZERO                TUKS1986
+       LDQ ARSIN+60                TEST FOR PROPER QUADRANT             TUKS1987
+       TQP ARSIN+64                                                     TUKS1988
+       CHS                                                              TUKS1989
+       LXD ARSIN+66,1              RELOAD IR1                           TUKS1990
+       LXD ARSIN+67,2              RELOAD IR2                           TUKS1991
+       TRA 2,4                     EXIT                                 TUKS1992
+       CLA ARSIN+61                CLEAR ADD ARGUMENT                   TUKS1993
+       FSB ARSIN+58,2              SUB ZERO OR PI OVER 2                TUKS1994
+       TRA ARSIN+36                                                     TUKS1995
+       DEC 1.0                                                          TUKS1996
+       MZE 0                       MINUS ZERO                           TUKS1997
+       DEC 1.570796327             PI OVER 2                            TUKS1998
+       OCT 100400000000                                                 TUKS1999
+       DEC -.0012624911            C7                                   TUKS2000
+       DEC +.0066700901            C6                                   TUKS2001
+       DEC -.0170881256            C5                                   TUKS2002
+       DEC +.0308918810            C4                                   TUKS2003
+       DEC -.0501743046            C3                                   TUKS2004
+       DEC +.0889789874            C2                                   TUKS2005
+       DEC -.2145988016            C1                                   TUKS2006
+       DEC +1.570796327            C0                                   TUKS2007
+       PZE 0                                                            TUKS2008
+       OCT 001000000000                                                 TUKS2009
+       OCT 165000000000            CHARACTERISTIC OF 117                TUKS2010
+       PZE                         TEMP STORAGE                         TUKS2011
+       PZE                         X                                    TUKS2012
+       DEC 3.141592654             PI                                   TUKS2013
+       PZE 0                                                            TUKS2014
+       FAD ARSIN+64,2              ADD PI OR ZERO                       TUKS2015
+       TRA ARSIN+39                                                     TUKS2016
+       PZE *                       STORAGE FOR IR1                      TUKS2017
+       PZE *                       STORAGE FOR IR2                      TUKS2018
+       PZE                         TEMP STORAGE                         TUKS2019
+       PZE                         X                                    TUKS2020
+       PZE                         X                                    TUKS2021
+       TXI ARSIN+40,4,1                                                 TUKS2022
+ B     END BEGIN                                                        TUKS2023

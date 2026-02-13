@@ -1,0 +1,186 @@
+C     MIHDI3, FORTRAN II DIAGONALIZATION OF A REAL SYMMETRIC MATRIX BY  HDI30000
+C        THE JACOBI METHOD.                                             HDI30001
+C     MAY 19, 1959                                                      HDI30002
+C     CALLING SEQUENCE FOR DIAGONALIZATION                              HDI30003
+C           CALL  HDIAG( H, N, IEGEN, U, NR)                            HDI30004
+C            WHERE H IS THE ARRAY TO BE DIAGONALIZED.                   HDI30005
+C     N IS THE ORDER OF THE MATRIX, H.                                  HDI30006
+C                                                                       HDI30007
+C     IEGEN MUST BE SET UNEQUAL TO ZERO IF ONLY EIGENVALUES ARE         HDI30008
+C            TO BE COMPUTED.                                            HDI30009
+C     IEGEN MUST BE SET EQUAL TO ZERO IF EIGENVALUES AND EIGENVECTORS   HDI30010
+C            ARE TO BE COMPUTED.                                        HDI30011
+C                                                                       HDI30012
+C     U IS THE UNITARY MATRIX USED FOR FORMATION OF THE EIGENVECTORS.   HDI30013
+C                                                                       HDI30014
+C     NR IS THE NUMBER OF ROTATIONS.                                    HDI30015
+C                                                                       HDI30016
+C     A DIMENSION STATEMENT MUST BE INSERTED IN THE SUBROUTINE.         HDI30017
+C     DIMENSION H(N,N), U(N,N), X(N), IQ(N)                             HDI30018
+C                                                                       HDI30019
+C     SUBROUTINE PLACES COMPUTER IN THE FLOATING TRAP MODE              HDI30020
+C                                                                       HDI30021
+C     THE SUBROUTINE OPERATES ONLY ON THE ELEMENTS OF H THAT ARE TO THE HDI30022
+C            RIGHT OF THE MAIN DIAGONAL.  THUS, ONLY A TRIANGULAR       HDI30023
+C            SECTION NEED BE STORED IN THE ARRAY H.                     HDI30024
+C                                                                       HDI30025
+C                                                                       HDI30026
+      SUBROUTINE   HDIAG (H,N,IEGEN,U,NR)                               HDI30027
+C                                                                       HDI30028
+C                                                                       HDI30029
+      CALL EFM                                                          HDI30030
+      IF (IEGEN) 15,10,15                                               HDI30031
+ 10   DO 14 I=1,N                                                       HDI30032
+      DO 14 J=1,N                                                       HDI30033
+      IF(I-J)12,11,12                                                   HDI30034
+ 11   U(I,J)=1.0                                                        HDI30035
+      GO TO 14                                                          HDI30036
+ 12   U(I,J)=0.                                                         HDI30037
+ 14   CONTINUE                                                          HDI30038
+C                                                                       HDI30039
+ 15   NR = 0                                                            HDI30040
+      IF (N-1) 1000,1000,17                                             HDI30041
+C                                                                       HDI30042
+C     SCAN FOR LARGEST OFF DIAGONAL ELEMENT IN EACH ROW                 HDI30043
+C     X(I) CONTAINS LARGEST ELEMENT IN ITH ROW                          HDI30044
+C     IQ(I) HOLDS SECOND SUBSCRIPT DEFINING POSITION OF ELEMENT         HDI30045
+C                                                                       HDI30046
+ 17   NMI1=N-1                                                          HDI30047
+      DO 30 I=1,NMI1                                                    HDI30048
+      X(I) = 0.                                                         HDI30049
+      IPL1=I+1                                                          HDI30050
+      DO 30 J=IPL1,N                                                    HDI30051
+      IF ( X(I) - ABSF( H(I,J))) 20,20,30                               HDI30052
+ 20   X(I)=ABSF(H(I,J))                                                 HDI30053
+      IQ(I)=J                                                           HDI30054
+ 30   CONTINUE                                                          HDI30055
+C                                                                       HDI30056
+C     SET INDICATOR FOR SHUT-OFF.RAP=2**-27,NR=NO. OF ROTATIONS         HDI30057
+      RAP=7.450580596E-9                                                HDI30058
+      HDTEST=1.0E38                                                     HDI30059
+C                                                                       HDI30060
+C     FIND MAXIMUM OF X(I) S FOR PIVOT ELEMENT AND                      HDI30061
+C     TEST FOR END OF PROBLEM                                           HDI30062
+C                                                                       HDI30063
+ 40   DO  70  I=1,NMI1                                                  HDI30064
+      IF (I-1) 60,60,45                                                 HDI30065
+ 45   IF ( XMAX- X(I)) 60,70,70                                         HDI30066
+ 60   XMAX=X(I)                                                         HDI30067
+      IPIV=I                                                            HDI30068
+      JPIV=IQ(I)                                                        HDI30069
+ 70   CONTINUE                                                          HDI30070
+C                                                                       HDI30071
+C     IS MAX. X(I) EQUAL TO ZERO, IF LESS THAN HDTEST, REVISE HDTEST    HDI30072
+      IF ( XMAX) 1000,1000,80                                           HDI30073
+ 80   IF (HDTEST) 90,90,85                                              HDI30074
+ 85   IF (XMAX - HDTEST) 90,90,148                                      HDI30075
+ 90   HDIMIN = ABSF( H(1,1) )                                           HDI30076
+      DO 110  I= 2,N                                                    HDI30077
+      IF (HDIMIN- ABSF( H(I,I))) 110,110,100                            HDI30078
+ 100  HDIMIN=ABSF(H(I,I))                                               HDI30079
+ 110  CONTINUE                                                          HDI30080
+C                                                                       HDI30081
+      HDTEST=HDIMIN*RAP                                                 HDI30082
+C                                                                       HDI30083
+C     RETURN IF MAX.H(I,J)LESS THAN(2**-27)ABSF(H(K,K)-MIN)             HDI30084
+      IF (HDTEST- XMAX) 148,1000,1000                                   HDI30085
+ 148  NR = NR+1                                                         HDI30086
+C                                                                       HDI30087
+C     COMPUTE TANGENT, SINE AND COSINE,H(I,I),H(J,J)                    HDI30088
+ 150  TANG=SIGNF(2.0,(H(IPIV,IPIV)-H(JPIV,JPIV)))*H(IPIV,JPIV)/(ABSF(H(IHDI30089
+     1PIV,IPIV)-H(JPIV,JPIV))+SQRTF((H(IPIV,IPIV)-H(JPIV,JPIV))**2+4.0*HHDI30090
+     2(IPIV,JPIV)**2))                                                  HDI30091
+      COSINE=1.0/SQRTF(1.0+TANG**2)                                     HDI30092
+      SINE=TANG*COSINE                                                  HDI30093
+      HII=H(IPIV,IPIV)                                                  HDI30094
+      H(IPIV,IPIV)=COSINE**2*(HII+TANG*(2.*H(IPIV,JPIV)+TANG*H(JPIV,JPIVHDI30095
+     1)))                                                               HDI30096
+      H(JPIV,JPIV)=COSINE**2*(H(JPIV,JPIV)-TANG*(2.*H(IPIV,JPIV)-TANG*H HDI30097
+     1II))                                                              HDI30098
+      H(IPIV,JPIV)=0.                                                   HDI30099
+C                                                                       HDI30100
+C      PSEUDO RANK THE EIGENVALUES                                      HDI30101
+C      ADJUST SINE AND COS FOR COMPUTATION OF H(IK) AND U(IK)           HDI30102
+      IF ( H(IPIV,IPIV) -  H(JPIV,JPIV)) 152,153,153                    HDI30103
+ 152  HTEMP = H(IPIV,IPIV)                                              HDI30104
+      H(IPIV,IPIV) = H(JPIV,JPIV)                                       HDI30105
+      H(JPIV,JPIV) = HTEMP                                              HDI30106
+C       RECOMPUTE SINE AND COS                                          HDI30107
+      HTEMP = SIGNF (1.0, -SINE) * COSINE                               HDI30108
+      COSINE = ABSF (SINE)                                              HDI30109
+      SINE = HTEMP                                                      HDI30110
+ 153  CONTINUE                                                          HDI30111
+C                                                                       HDI30112
+C     INSPECT THE IQS BETWEEN I+1 AND N-1 TO DETERMINE                  HDI30113
+C     WHETHER A NEW MAXIMUM VALUE SHOULD BE COMPUTED SINCE              HDI30114
+C     THE PRESENT MAXIMUM IS IN THE I OR J ROW.                         HDI30115
+C                                                                       HDI30116
+      DO 350 I=1,NMI1                                                   HDI30117
+      IF(I-IPIV)210,350,200                                             HDI30118
+ 200  IF(I-JPIV)210,350,210                                             HDI30119
+ 210  IF(IQ(I)-IPIV)230,240,230                                         HDI30120
+ 230  IF(IQ(I)-JPIV)350,240,350                                         HDI30121
+ 240  K=IQ(I)                                                           HDI30122
+ 250  HTEMP=H(I,K)                                                      HDI30123
+      H(I,K)=0.                                                         HDI30124
+      IPL1=I+1                                                          HDI30125
+      X(I) =0.                                                          HDI30126
+C                                                                       HDI30127
+C     SEARCH IN DEPLETED ROW FOR NEW MAXIMUM                            HDI30128
+C                                                                       HDI30129
+      DO 320 J=IPL1,N                                                   HDI30130
+      IF ( X(I)- ABSF( H(I,J)) ) 300,300,320                            HDI30131
+ 300  X(I) = ABSF(H(I,J))                                               HDI30132
+      IQ(I)=J                                                           HDI30133
+ 320  CONTINUE                                                          HDI30134
+      H(I,K)=HTEMP                                                      HDI30135
+ 350  CONTINUE                                                          HDI30136
+C                                                                       HDI30137
+      X(IPIV) =0.                                                       HDI30138
+      X(JPIV) =0.                                                       HDI30139
+C                                                                       HDI30140
+C     CHANGE THE OTHER ELEMENTS OF H                                    HDI30141
+C                                                                       HDI30142
+      DO 530 I=1,N                                                      HDI30143
+C                                                                       HDI30144
+      IF(I-IPIV)370,530,420                                             HDI30145
+ 370  HTEMP = H(I,IPIV)                                                 HDI30146
+      H(I,IPIV) = COSINE*HTEMP + SINE*H(I,JPIV)                         HDI30147
+      IF ( X(I) -  ABSF( H(I,IPIV)) )380,390,390                        HDI30148
+ 380  X(I) = ABSF(H(I,IPIV))                                            HDI30149
+      IQ(I) = IPIV                                                      HDI30150
+ 390  H(I,JPIV) = -SINE*HTEMP + COSINE*H(I,JPIV)                        HDI30151
+      IF ( X(I) -  ABSF( H(I,JPIV)) ) 400,530,530                       HDI30152
+ 400  X(I) = ABSF(H(I,JPIV))                                            HDI30153
+      IQ(I) = JPIV                                                      HDI30154
+      GO TO 530                                                         HDI30155
+C                                                                       HDI30156
+ 420  IF(I-JPIV)430,530,480                                             HDI30157
+ 430  HTEMP = H(IPIV,I)                                                 HDI30158
+      H(IPIV,I) = COSINE*HTEMP + SINE*H(I,JPIV)                         HDI30159
+      IF ( X(IPIV) -  ABSF( H(IPIV,I)) ) 440,450,450                    HDI30160
+ 440  X(IPIV) = ABSF(H(IPIV,I))                                         HDI30161
+      IQ(IPIV) = I                                                      HDI30162
+ 450  H(I,JPIV) = -SINE*HTEMP + COSINE*H(I,JPIV)                        HDI30163
+      IF ( X(I) -  ABSF( H(I,JPIV)) ) 400,530,530                       HDI30164
+C                                                                       HDI30165
+ 480  HTEMP = H(IPIV,I)                                                 HDI30166
+      H(IPIV,I) = COSINE*HTEMP + SINE*H(JPIV,I)                         HDI30167
+      IF ( X(IPIV) -  ABSF( H(IPIV,I)) ) 490,500,500                    HDI30168
+ 490  X(IPIV) = ABSF(H(IPIV,I))                                         HDI30169
+      IQ(IPIV) = I                                                      HDI30170
+ 500  H(JPIV,I) = -SINE*HTEMP + COSINE*H(JPIV,I)                        HDI30171
+      IF ( X(JPIV) -  ABSF( H(JPIV,I)) ) 510,530,530                    HDI30172
+ 510  X(JPIV) = ABSF(H(JPIV,I))                                         HDI30173
+      IQ(JPIV) = I                                                      HDI30174
+ 530  CONTINUE                                                          HDI30175
+C                                                                       HDI30176
+C     TEST FOR COMPUTATION OF EIGENVECTORS                              HDI30177
+C                                                                       HDI30178
+      IF(IEGEN)40,540,40                                                HDI30179
+ 540  DO 550 I=1,N                                                      HDI30180
+      HTEMP=U(I,IPIV)                                                   HDI30181
+      U(I,IPIV)=COSINE*HTEMP+SINE*U(I,JPIV)                             HDI30182
+ 550  U(I,JPIV)=-SINE*HTEMP+COSINE*U(I,JPIV)                            HDI30183
+      GO TO 40                                                          HDI30184
+ 1000 RETURN                                                            HDI30185

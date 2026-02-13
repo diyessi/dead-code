@@ -1,0 +1,951 @@
+M      HED                                                              MUSH001 
+ ORG   EQU 565                                                          MUSH002 
+ LEX   EQU 565                                                          MUSH003 
+ ORG2  EQU 4095                                                         MUSH004 
+ MMAX  EQU 54                                                           MUSH005 
+ NMAX  EQU 128                                                          MUSH006 
+       REM                                                              MUSH007 
+       REM  THIS IS THE MONITOR FOR MUSH    IT IS ALWAYS IN CORE.       MUSH008 
+       ORG ORG                                                          MUSH009 
+ HELPS SLN 1                 TURN ON SENSE LIGHT 1 IF OFLOW IN SIMPLEX  MUSH010 
+       TXL OFLOW,0,0                                                    MUSH011 
+ HELP  SLF                   TURN OFF ALL SENSE LIGHTS IF OFLOW IN PURIFMUSH012 
+ OFLOW CLA MON9                                                         MUSH013 
+ ERROR STA MON2                                                         MUSH014 
+       LXA MON1,1            SET REG A TO LENGTH OF EXECUTIVE           MUSH015 
+       RDR 2                 COPY EXECUTIVE FROM DRUM 2 INTO CORES      MUSH016 
+ MON1  CPY LEX,1             FROM 0 TO LEX-1                            MUSH017 
+       TIX MON1,1,1                                                     MUSH018 
+ SETRC LXD REGC,4            RESTORE ALPHA                              MUSH019 
+ MON2  TRA 14,4              TRANSFER TO CALLING SEQUENCE               MUSH020 
+ REST3 LXA ONE,2             THE CAUSES RESTART WITH                    MUSH021 
+       CLA MON14             A FORCED ONE SHOT PURIFICATION + FORCES PI MUSH022 
+ SLDA  TXL MON4,0,-MON1+1                                               MUSH023 
+ REST1 LXD LIP,2             IPR IN REG B                               MUSH024 
+       CLS MON14             NEGATIVE RESTART PURIFICATION CONSTANT     MUSH025 
+ VOUT  TXL MON4,0,-T         INDEX OF VECTOR KICKED OUT IS STORED HERE  MUSH026 
+ REST2 LXA ZERO,2                                                       MUSH027 
+ MON4  LXD MON8,1                                                       MUSH028 
+       RDR 1                 READ C VECTOR BACK INTO CORE               MUSH029 
+       LDA MON13                                                        MUSH030 
+ MON5  CPY C+NMAX,1                                                     MUSH031 
+       TIX MON5,1,1                                                     MUSH032 
+       TXL READS,2,0                                                    MUSH033 
+ READP TSX RDR2,4            TRANSFER TO READ PURIFICATION              MUSH034 
+ REGC  PZE LEX+SLAST+1,0,-ALPHA                                         MUSH035 
+ READF TSX RDR2,4            TRANSFER TO REAL FINAL SOLUTION            MUSH036 
+ VECT  PZE LEX+SLAST+PLAST+2,0,-K                                       MUSH037 
+ READS LXD SLDA,4            PREPARE TO READ SIMPLEX                    MUSH038 
+ RDR2  RDR 2                                                            MUSH039 
+       LDA 1,4               LOCATE PROPER CODE ON DRUM 2               MUSH040 
+ MON6  LXA MON7,1                                                       MUSH041 
+ MON7  CPY SLAST+1,1                                                    MUSH042 
+       TIX MON7,1,1                                                     MUSH043 
+ MON8  TXL 0,0,NMAX                                                     MUSH044 
+ MON9  HTR 19                                                           MUSH045 
+ MON10 TXH P1,0,0                                                       MUSH046 
+ MON13 HTR C-MTX                                                        MUSH047 
+ MON14 TXH P1,0,1            RESTART PURIFICATION CONSTANT (FORCES PI)  MUSH048 
+ ONE   DEC 1                                                            MUSH049 
+ FPONE DEC 1.                                                           MUSH050 
+ ZERO  PZE                                                              MUSH051 
+ INFIN OCT 377777777777                                                 MUSH052 
+ SMALL OCT 101400000000                                                 MUSH053 
+ DELTA OCT 165400000000                                                 MUSH054 
+ MASK1 OCT 777777700000                                                 MUSH055 
+ SWICH PZE 1                                                            MUSH056 
+ ITER  MZE 1                                                            MUSH057 
+ COM   BSS 4                                                            MUSH058 
+       REM                                                              MUSH059 
+       REM  THE FOLLOWING STORAGE WILL INITALLY CONTAIN THE FIRST       MUSH060 
+       REM  STEPS OF THE PRE-EDIT ROUTINE. THIS ROUTINE WILL            MUSH061 
+       REM  THEN OVERLAY ITSELF WITH THE CALLING SEQUENCE DATA          MUSH062 
+       REM AND A FEW OTHER CONSTANTS.                                   MUSH063 
+ LEB   BSS 1                                                            MUSH064 
+ LW    BSS 1                                                            MUSH065 
+ LEA   BSS 1                                                            MUSH066 
+ LEG   BSS 1                                                            MUSH067 
+ LEI   BSS 1                                                            MUSH068 
+ LP0   BSS 1                                                            MUSH069 
+ LDELP BSS 1                                                            MUSH070 
+ LI0   BSS 1                                                            MUSH071 
+ LIP   BSS 1                                                            MUSH072 
+ LM    BSS 1                                                            MUSH073 
+ LNPRM BSS 1                                                            MUSH074 
+ LMM   BSS 1                                                            MUSH075 
+ LN    BSS 1                                                            MUSH076 
+       ORG ORG2-3*NMAX-3*MMAX-MMAX*MMAX                                 MUSH077 
+ BI    BSS MMAX                                                         MUSH078 
+ INV   BSS MMAX*MMAX+MMAX                                               MUSH079 
+       REM                                                              MUSH080 
+       REM  THE PRE EDIT ROUTINE FOR MUSH   BEGINS HERE                 MUSH081 
+       ORG LEB                                                          MUSH082 
+ MUSH  SXD REGC,4            SAVE-ALPHA                                 MUSH083 
+       CLA 10,4              M IN AC                                    MUSH084 
+       PAX 0,1               M IN RA                                    MUSH085 
+       TXL PE10,1,MMAX       TRANSFER IF M WITHIN BOUNDS                MUSH086 
+       TRA 12,4              M TOO BIG-                                 MUSH087 
+ PE10  CLA 11,4              N PRIME IN AC                              MUSH088 
+       PAX 0,2               N PRIME IN RB                              MUSH089 
+       TXL PE20,2,NMAX       TRANSFER IF N PRIME WITHIN BOUNDS          MUSH090 
+       TRA 13,4              N PRIME TOO BIG                            MUSH091 
+ PE20  LDQ 10,4              M IN MQ                                    MUSH092 
+       MPY 10,4              M SQUARED IN MQ                            MUSH093 
+ LMM   STQ LMM               STORE M SQUARED                            MUSH094 
+       LXA PE10,2            11 INTO REG B                              MUSH095 
+ PE21  CLA 1,4               TRANSFER CALLING SEQUENCE                  MUSH096 
+       STO MUSH+11,2         PARAMETERS TO MONITOR STORAGE              MUSH097 
+       TXI PE30,4,-1         INCREASE ALPHA REGISTER                    MUSH098 
+ PE30  TIX PE21,2,1          LEAVE WHEN 11 PARAMETERS STORED            MUSH099 
+       CLA LMM                                                          MUSH100 
+       ADD LM                                                           MUSH101 
+       ALS 18                                                           MUSH102 
+       STD LMM                                                          MUSH103 
+       REM  INITIALIZE ALL ADDRESSES IN MUSH   WHICH ARE FUNCTIONS OF   MUSH104 
+       REM  M AND N PRIME                                               MUSH105 
+       CAL X9.1+INC2                                                    MUSH106 
+       ADD LM                B+M                                        MUSH107 
+       STA X1.2+INC2                                                    MUSH108 
+       STA X6.1+INC2                                                    MUSH109 
+       ADM PE101             BUFF +M  IN AC                             MUSH110 
+       STA P39+INC3                                                     MUSH111 
+       STA P42+INC3                                                     MUSH112 
+       STA P44+INC3                                                     MUSH113 
+       ADM PE12A             PJ + M IN AC                               MUSH114 
+       STA P11+INC3                                                     MUSH115 
+       STA P17+INC3                                                     MUSH116 
+       STA P20+INC3                                                     MUSH117 
+       STA P25+INC3                                                     MUSH118 
+       STA P26+INC3                                                     MUSH119 
+       STA P27+INC3                                                     MUSH120 
+       STA P29+INC3                                                     MUSH121 
+       STA P31+INC3                                                     MUSH122 
+       STA P37+INC3                                                     MUSH123 
+       STA P40+INC3                                                     MUSH124 
+       STA P44.5+INC3                                                   MUSH125 
+       STA P46+INC3                                                     MUSH126 
+       STA P47+INC3                                                     MUSH127 
+       STA PI2.1+INC3                                                   MUSH128 
+       STA PI3.1+INC3                                                   MUSH129 
+       STA AK4+INC2          SAME AS APRME+M                            MUSH130 
+       STA AK8+INC2                                                     MUSH131 
+       STA AK10+INC2                                                    MUSH132 
+       STA R1.6+INC2                                                    MUSH133 
+       STA V1.1+INC2                                                    MUSH134 
+       STA V5.1+INC2                                                    MUSH135 
+       STA V5.2+INC2                                                    MUSH136 
+       ADM ONE               APRME+M+1                                  MUSH137 
+       STA V6.1+INC2                                                    MUSH138 
+       STA V7.1+INC2                                                    MUSH139 
+       ADM PE160             BI+M IN AC                                 MUSH140 
+       STA PE211                                                        MUSH141 
+       STA R9+INC2                                                      MUSH142 
+       STA R10+INC2                                                     MUSH143 
+       STA P7+INC3                                                      MUSH144 
+       STA PI2+INC3                                                     MUSH145 
+       ADM PE191             X+M IN AC                                  MUSH146 
+       STA R1+INC2                                                      MUSH147 
+       CAL V10P+INC1                                                    MUSH148 
+       ADM LMM               INV+M*M IN AC                              MUSH149 
+       STA X1.3+INC2                                                    MUSH150 
+       STA X6+INC2                                                      MUSH151 
+       STA P32.2+INC3                                                   MUSH152 
+       ADM LM                INV+M*M+M IN AC                            MUSH153 
+       STA G9.1+INC2                                                    MUSH154 
+       STA V9+INC2                                                      MUSH155 
+       STA V11+INC2                                                     MUSH156 
+       STA PI2.2+INC3                                                   MUSH157 
+       STA PI6+INC3                                                     MUSH158 
+       STA PI8+INC3                                                     MUSH159 
+       STA V35P+INC1                                                    MUSH160 
+       CAL PE140             CW1-1 IN AC                                MUSH161 
+       ADM LNPRM             CW1+N*-1 IN AC                             MUSH162 
+       STA PE109                                                        MUSH163 
+       ADM PE212             CW2+N*-1 IN AC                             MUSH164 
+       STA PE100                                                        MUSH165 
+       ADM ONE               CW2+N* IN AC                               MUSH166 
+       STA PE12B                                                        MUSH167 
+       LXA LM,1              M IN REG A                                 MUSH168 
+       SXD V5.3+INC2,1                                                  MUSH169 
+       SXD P32.1+INC3,1                                                 MUSH170 
+       SXD P35+INC3,1                                                   MUSH171 
+       SXD P50+INC3,1                                                   MUSH172 
+       CLA LM                                                           MUSH173 
+       COM                   4096-(M+1) IN AC                           MUSH174 
+       PAX 0,1               -(M+1) IN REG A                            MUSH175 
+       SXD V16P+INC1,1                                                  MUSH176 
+       TXI PE30A,1,1         -M IN REG A                                MUSH177 
+ PE30A SXD PE90,1                                                       MUSH178 
+       SXD AK11+INC2,1                                                  MUSH179 
+       SXD V6.3+INC2,1                                                  MUSH180 
+       SXD P21+INC3,1                                                   MUSH181 
+       SXD PI8.1+INC3,1                                                 MUSH182 
+       CLA LNPRM                                                        MUSH183 
+       COM                   4096-(N*+1) IN AC                          MUSH184 
+       PAX 0,1               -(N*+1) IN REG A                           MUSH185 
+       SXD F3.1+INC4,1                                                  MUSH186 
+       TXI PE30B,1,1         -N* IN REG A                               MUSH187 
+ PE30B SXD PE62,1                                                       MUSH188 
+       SXD PE170,1                                                      MUSH189 
+       REM  REVERSE SIGN OF ANY EQUATION WHOSE RIGHT HAND               MUSH190 
+       REM  SIDE WAS NEGATIVE                                           MUSH191 
+       REM                                                              MUSH192 
+ PE31  TOV PE40              TURN OFF AC INDECATOR                      MUSH193 
+ PE40  LXD PE42,1            SET -C TO -1 IN RA                         MUSH194 
+ PE40A CLA X-1,1             SIGNED B ELEMENT IN AC                     MUSH195 
+ PE40C SLW B-1+INC2,1        STORE POSITIVE B IN B AREA                 MUSH196 
+       SLW X-1,1             STORE POSITIVE B IN X AREA                 MUSH197 
+       TPL PE80              TRANSFER IF B WAS POSITIVE                 MUSH198 
+       LXD PE42,4            SET -J TO -1 IN RC                         MUSH199 
+       SXD PE43,1            SAVE -I FROM RA                            MUSH200 
+       SXD PE161,2           SAVE I FROM RB                             MUSH201 
+ PE40B CLA CW1-1,4           CW1-4 IN AC                                MUSH202 
+       LDQ CW2-1,4           CW2-4 IN MQ                                MUSH203 
+       LXA ONE,1             SET -K+1 TO 1 IN RA                        MUSH204 
+ PE41  LLS 1                 SHIFT BIT TO P                             MUSH205 
+       TNO PE42A             TRANSFER IF NO ELEMENT                     MUSH206 
+ PE42  TXI PE42A,1,-1        INCREASE K COUNT IN REG A                  MUSH207 
+ PE42A TIX PE41,2,1          IS I-TH BIT IN P                           MUSH208 
+       PBT                   TEST IF I-TH BIT IS PRESENT                MUSH209 
+ PE43  TXL PE61,0,-I         TRANSFER IF C-TH ELEMENT=0                 MUSH210 
+       CLA CW2-1,4           CW2-4 IN AC                                MUSH211 
+       STA PE50              STORE VECTOR ADDRESS                       MUSH212 
+       STA PE60                                                         MUSH213 
+ PE50  CLS *,1               K-TH ELEMENT OF J-TH COLUMN IN AC          MUSH214 
+ PE60  STO *,1               RESTORE ELEMENT WITH REVERSED SIGN         MUSH215 
+ PE61  LXD PE161,2           RESTORE I TO REG B                         MUSH216 
+ PE62  TXL PE70,4,-N*        TRANSFER WHEN -J =-N PRIME                 MUSH217 
+       TXI PE40B,4,-1        INCREASE J IN REG C                        MUSH218 
+ PE70  LXD PE43,1            RESTORE -I TO REG A                        MUSH219 
+ PE80  TXI PE90,2,1          INCREASE I IN REG B                        MUSH220 
+ PE90  TXL PE100,1,-M        TRANSFER OUT IF -I =-M IN RA               MUSH221 
+       TXI PE40A,1,-1        INCREASE I IN REG A                        MUSH222 
+ PE100 CLA CW2+N*-1          LAST CW2 IN AC                             MUSH223 
+ PE101 PAX BUFF-B,2          ADDRESS OF LAST VECTOR IN RB               MUSH224 
+       LXA LM,5              M INTO REGS A AND C                        MUSH225 
+       LRS 35                MOVE CW2 TO MQ                             MUSH226 
+ PE109 CLA CW1+N*-1          LAST CW1 IN AC                             MUSH227 
+ PE110 LLS 1                 SHIFT AN INDICATOR BIT TO P                MUSH228 
+       TNO PE120             TRANSFER IF NO ELEMENT                     MUSH229 
+       TXI PE120,2,1         INCREASE CW2 ADDRESS BY 1 IN RB            MUSH230 
+ CW1I  MZE                   FORMAT FOR I-TH CW1                        MUSH231 
+ PE120 TIX PE110,1,1         COUNT OFF M BIT TESTS                      MUSH232 
+ PE12A PXD PJ-BUFF,2         CW2 ADDRESS + LENGTH OF VECTOR IN AC       MUSH233 
+       ARS 18                                                           MUSH234 
+       SSM                   GIVE NON BASIS SIGN TO IT                  MUSH235 
+ PE12B STO CW2+N*            STORE IT AS CW2 FOR N PRIME +1             MUSH236 
+       STO CW2N              STORE IT IN A VARIABLE COUNTER             MUSH237 
+       REM  SET UP BASIS INDICATORS. SUPPLY NECESSARY ARTIFICIALS       MUSH238 
+       LXD PE62,1            SET-N+1 TO -N PRIME IN RA                  MUSH239 
+       LDQ ZERO              INITIALIZE CW2 FORMAT IN MQ                MUSH240 
+ PE130 CAL CW1I              CONTROL WORD 1 FORMAT FOR(I-1)TH CW1       MUSH241 
+       LXD PE171,2           SET-J TO -1 IN REG B                       MUSH242 
+       LRS 1                 CONTROL WORDS FOR I-TH UNIT POSITIVE       MUSH243 
+       STO CW1I              STORE THE CW1 FOR I-TH UP                  MUSH244 
+       STQ CW2I              STORE THE CW2 FOR I-TH UP                  MUSH245 
+ PE140 SBM CW1-1,2           SUBTRACT J-TH CW1                          MUSH246 
+       TNZ PE170             TRANSFER IF J-TH CW1 NOT CONDIDATE         MUSH247 
+       ADM CW2-1,2           J-TH CW2 IN AC                             MUSH248 
+       STA PE150                                                        MUSH249 
+       ANA MASK1             MASK OUT THE ADDRESS FROM J-TH CW2         MUSH250 
+       SUB CW2I              SUBTRACT CW2 FORMAT FOR THE I-TH UP        MUSH251 
+       TNZ PE170             TRANSFER IF J-TH CW2 NOT CANDIDATE         MUSH252 
+ PE150 CLA *                 SINGLETON ELEMENT FROM COLUMN J IN AC      MUSH253 
+       SUB FPONE             SUBTRACT FLOATING ONE                      MUSH254 
+       TNZ PE170             TRANSFER IF NOT UNIT POSITIVE              MUSH255 
+       CLA CW1I              STORE POSITIVE CW1 IN J-TH SLOT            MUSH256 
+       STO CW1-1,2                                                      MUSH257 
+ PE160 PXD BI-PJ-1,2         -J FROM REG B IN AC DECREMENT              MUSH258 
+ PE161 TXL PE211,0,I         TRANSFER TO STORE J IN BI REGION           MUSH259 
+ PE170 TXL PE180,2,-N*       TRANSFER WHEN -J=-N PRIME                  MUSH260 
+       CLA CW1I              RESTORE I-TH CW1 FORMAT TO AC              MUSH261 
+ PE171 TXI PE140,2,-1        INCREADE J IN RB                           MUSH262 
+ PE180 TXH PE190,1,-NMAX     TRANSFER IF N STILL WITHIN BOUNDS          MUSH263 
+ PE181 LXD REGC,4            RESTORE ALPHA AND                          MUSH264 
+       TRA 13,4              RETURN TO C. S. IF N TOO BIG               MUSH265 
+ PE190 CLA CW2N              ADDRESS FOR N-TH VECTOR IN AC              MUSH266 
+       SUB ONE               INCREASE VALUE BY 1                        MUSH267 
+ PE191 PAX X-BI,2            PLACE UPDATED ADDRESS IN REG B             MUSH268 
+       TXH SETRC,2,C         TRANSFER IF MATRIX SIZE EXCEEDED           MUSH269 
+       STO CW2N              RESTORE ADDRESS FORM (N+1) TH VECTOR       MUSH270 
+       STO CW2+1,1           STORE IT AS TENTATIVE DUMMY CW2            MUSH271 
+       ADD ONE               RESTORE ADDRESS FOR N-TH VECTOR            MUSH272 
+       SUB CW2I              CW2 FOR N-TH VECTOR IN AC                  MUSH273 
+       STO CW2,1             STORE COMPLETE CW2 IN N-TH SLOT            MUSH274 
+       STA PE200             STORE ADDRESS OF N-TH VECTOR               MUSH275 
+       CLA FPONE             UNIT POSITIVE ELEMENT IN AC                MUSH276 
+ PE200 STO *                 STORE UNIT POSITIVE ELEMENT IN MTX         MUSH277 
+       CLA LW                ARTIFICIAL FUNCTIONAL COEFF IN AC          MUSH278 
+       STO C,1               STORE AS N-TH C VALUE                      MUSH279 
+       CLA CW1I              RESTORE CW1 FOR N-TH VECTOR                MUSH280 
+       STO CW1,1             STORE IN N-TH CW1 SLOT                     MUSH281 
+       TXI PE210,1,-1        -N IN RA                                   MUSH282 
+ PE210 PXD 0,1               -N IN AC DECREMENT                         MUSH283 
+ PE211 STD BI+M,4            STORE COLUMN INDEX IN ITH BI               MUSH284 
+       TIX PE130,4,1         COUNT OFF M BAIS INDICATORS                MUSH285 
+ PE212 PXD CW2-CW1,1         COMPLEMENT OF N IN AC                      MUSH286 
+       SXD G18+INC2,1        SAVE -N IN DECREMENT                       MUSH287 
+       COM                   N-1 IN AC DECREMENT                        MUSH288 
+       PDX 0,1               N-1 IN REG A                               MUSH289 
+       TXI PE220,1,1         N IN REG A                                 MUSH290 
+ PE220 PXD 0,1               N IN AC                                    MUSH291 
+       ARS 18                N IN AC ADDRESS                            MUSH292 
+       STO LN                STORE FINAL N                              MUSH293 
+       TXI PE250,1,1         INCREASE RA TO N+1                         MUSH294 
+ PE250 LXA ZERO,2            SET J-1 TO 3 IN RB                         MUSH295 
+ PE251 CAL CW2,2             J TH CW2 IN AC                             MUSH296 
+       SUB LMTX              CONVERT TO DRUM ADDRESS                    MUSH297 
+       STA CW2,2             STORE DRUM ADDRESS                         MUSH298 
+       TXI PE260,2,-1        INCREASE J IN RB                           MUSH299 
+ PE260 TIX PE251,1,1         COUNT OFF J=N+1                            MUSH300 
+       STA G11.0+INC2        SAVE MATRIX SIZE                           MUSH301 
+       TXI PE265,1,X-MTX-1   LENGTH OF MATRIX PLUS C VECTOR             MUSH302 
+ PE265 WDR 1                 COPY MATRIX AND C                          MUSH303 
+ PE270 CPY X,1               VECTOR ONTO DRUM 1                         MUSH304 
+       TIX PE270,1,1                                                    MUSH305 
+ PE280 WDR 2                                                            MUSH306 
+       LXA PE281,1           LENGHT OF EXEC 1 A IN REG A                MUSH307 
+ PE281 CPY LEX,1                                                        MUSH308 
+       TIX PE281,1,1         COPY EXECUTIVE ONTO DRUM 2                 MUSH309 
+       WDR 2                                                            MUSH310 
+       TXI PE282,1,2047-LEX  LENGTH OF DRUM 2 PROGRAMS IN REG A         MUSH311 
+ PE282 LDA PE281                                                        MUSH312 
+ PE283 CPY INC2-LEX+2048,1   CPY SIMP, PURIF, FINAL                     MUSH313 
+       TIX PE283,1,1         SOLUTION AND EXECUTIVE 2 ON DRUM 2         MUSH314 
+       LXA VPROG,1           LENGTH OF V PROGRAM IN REG A               MUSH315 
+ MOVEV LDQ VLAST+INC1+1,1    TRANSFER THE INVERSE SET UP                MUSH316 
+ VPROG STQ VLAST-VFRST+1,1   PROGRAM TO LOWER CORES                     MUSH317 
+       TIX MOVEV,1,1                                                    MUSH318 
+       TXL 0,0,0             TRANSFER TO SET UP INVERSE                 MUSH319 
+ LMTX  HTR MTX                                                          MUSH320 
+       ORG 3                                                            MUSH321 
+ INC1  SYN LMTX+1                                                       MUSH322 
+       HTR -INC1             LOADING INCREMENT FOR PRE EDIT PART 3      MUSH323 
+       ORG 0                                                            MUSH324 
+ VFRST LXA LMM,2             M SQUARED TO REG B                         MUSH325 
+       LXA ZERO,5            0 INTO REG A AND REG C                     MUSH326 
+ V10P  STZ INV,1             SET THE M SQUARED INVERSE                  MUSH327 
+       TXI V11P,1,-1         LOCATIONS TO 0                             MUSH328 
+ V11P  TIX V10P,2,1                                                     MUSH329 
+       LXA LM,3              M INTO REG B AND REG A                     MUSH330 
+       CLA FPONE             +1 IN AC                                   MUSH331 
+ V15P  STO INV,4             SET TRACE TO 1                             MUSH332 
+ V16P  TXI V20P,4,-M-1       SET REG C FOR NEXT DIAGONAL PROSITION      MUSH333 
+ V20P  TIX V15P,2,1          COUNT M ELEMENTS                           MUSH334 
+ V30P  CLA BI+1,2            I-TH BI IN AC                              MUSH335 
+       PDX 0,4               -J FOR ROW I IN REG C                      MUSH336 
+       CLA C-1,4             J-TH C IN AC                               MUSH337 
+ V35P  STO INV+M*M+M,1       STORE AS I-TH PI NOUGHT                    MUSH338 
+       TXI V40P,2,-1         INCREASE I IN REG B                        MUSH339 
+ V40P  TIX V30P,1,1          INCREASE I IN REG A                        MUSH340 
+ VLAST TRA READS             TRANSFER TO READ SIMPLEX                   MUSH341 
+       ORG 3-INC1            SETS LOADING ORIGIN BACK TO 3              MUSH342 
+ INC2  SYN INC1+VLAST+1                                                 MUSH343 
+       HTR -INC2             LOADING INCREMENT FOR SIMPLEX              MUSH344 
+       REM                                                              MUSH345 
+       REM  THE SIMPLEX ALGORITHM BEGINS HERE                           MUSH346 
+       REM  THIS ROUTINE BEGINS BY COMPUTING THE X VECTOR               MUSH347 
+       ORG 0                                                            MUSH348 
+ SMPLX CLA ITER              UPDATE ITERATION COUNTER                   MUSH349 
+       ADD SWICH             ADD 0 OR 1 TO ITERATION COUNTER            MUSH350 
+       STO ITER                                                         MUSH351 
+ MSWT2 NOP 114               THIS WILL BE A  SENSE SWITCH WITH MAP3     MUSH352 
+       SUB LI0               TEST ITERATION COUNT AGAINST LIMIT         MUSH353 
+       TMI TOV               TRANSFER IF ITERATION COUNT IS O.K.        MUSH354 
+       CLA V8.1              RETURN TO EXECUTIVE IF ITERATION COUNT     MUSH355 
+       TXL ERROR             IS TOO GREAT (OR SENSE SWITCH 2 DOWN       MUSH356 
+ TOV   TOV SIM1              TURN OFF AC OVERFLOW                       MUSH357 
+ SIM1  LXA ZERO,2            SET REG B TO COUNT X ELEMENTS              MUSH358 
+ X1    LXA LMM,4             M*M TO REG C                               MUSH359 
+ X1.1  LXA LM,1              SET M-J+1 TO M IN REG A                    MUSH360 
+       STZ X,2               SET X-I TO 0                               MUSH361 
+ X1.2  CLA B+M,1                                                        MUSH362 
+ X1.3  ANA INV+MM,4          SKIP CONPUTATION IF EITHER                 MUSH363 
+       TZE X5.1              ELEMENT IS 0                               MUSH364 
+ X6    LDQ INV+MM,4          V-IJ TO MQ                                 MUSH365 
+ X6.1  FMP B+M,1             V-IJ XB-I                                  MUSH366 
+       TQO X2                TURN OFF MQ OVERFLOW                       MUSH367 
+ X2    TNO X3                                                           MUSH368 
+       ARS 1                 MOVE Q BIT TO P POSITION                   MUSH369 
+       PBT                   IF Q BIT PRESENT, A TRUE                   MUSH370 
+       TSX HELPS,2           OVERFLOW EXISTS-GET OUT OF HERE            MUSH371 
+ X9.1  PXD B,0               SET TO 0 ON TRUE UNDERFLOW                 MUSH372 
+ X3    FAD X,2               UPDATE PARTIAL X                           MUSH373 
+       TNO X5                TEST FOR UNDER OR OVERFLOW                 MUSH374 
+       TQO X4                IF ON, TRUE UNDERFLOW                      MUSH375 
+       TSX HELPS,2           IF MQ OFF, TRUE OVERFLOW                   MUSH376 
+ X4    PXD 17,0              SET TO 0 ON UNDERFLOW                      MUSH377 
+ X5    STO X,2               STORE UPDATED X                            MUSH378 
+ X5.1  TNX G1,4,1            INCREASE INDEX FOR INVERSE                 MUSH379 
+       TIX X1.2,1,1          TEST IF J=M. INCREASE J IF NO              MUSH380 
+       TXI X1.1,2,-1         INCREASE I IN RB                           MUSH381 
+       REM  THE G COMPUTATION BEGINS HERE. REG A CONTAINS A1            MUSH382 
+ G1    STZ GKCOM             SET MAXIMUM GO TO 0                        MUSH383 
+       PXD 0,0               SET ADDRESS OF DRUM LOCATION               MUSH384 
+       STA G4                COUNTER TO FIRST MATRIX ELEMENT            MUSH385 
+       LXD G18.1,2           SET -J TO -1 IN RB                         MUSH386 
+ G2    STZ GJCOM             SET GJ TO0                                 MUSH387 
+       CAL CW2,2             (J+1) TH CW2 IN AC WITH P BIT              MUSH388 
+       SBM CW2-1,2           DELTA J IN AC ADDRESS                      MUSH389 
+ G4    PAX *,4               DELTA J IN RC                              MUSH390 
+       SXD G20,4             SAVE DELTA J                               MUSH391 
+ G6    CLA CW1-1,2           J-TH CW1 IN AC                             MUSH392 
+       TPL G20               TRANSFER IF J A BASIS INDEX                MUSH393 
+       LDQ CW2-1,2           J-TH CW2 IN MQ                             MUSH394 
+       SXD AK7.1,2           SAVE J FROM RB                             MUSH395 
+       LXA LM,2              M-I+1 IN RB                                MUSH396 
+ G15   LLS 1                 SHIFT A ROW INDICATOR BIT TO P             MUSH397 
+       TNO G13.1             TRANSFER IF NO I-TH ELEMENT                MUSH398 
+       STO CW1CM             STORE SHIFTED CONTROL WORDS                MUSH399 
+       STQ CW2CM                                                        MUSH400 
+       TIX G9,1,1            TRANSFER IF R+1 GREATER THAN 1. REDUCE R   MUSH401 
+       TXI G7,1,L-1          L IN REG A                                 MUSH402 
+ G7    RDR 1                 SELECT MATRIX DRUM                         MUSH403 
+       LDA G4                LOCATE NEXT ELEMENT FOR BUFFER             MUSH404 
+ G8    CPY BUFF+L,1          FILL THE BUFFER WITH L MATRIX              MUSH405 
+       TIX G8,1,1            ELEMENTS                                   MUSH406 
+       TXI G8.1,1,L-1        SET R TO L-1 IN RA                         MUSH407 
+ G8.1  CAL G4                INCREASE LDA COUNTER BY L FOR              MUSH408 
+       ADM G12               NEXT MATRIX ELEMENT ADDRESS                MUSH409 
+       STA G4                                                           MUSH410 
+ G9    LDQ BUFF+L,1          A-IJ IN MQ                                 MUSH411 
+ G9.1  FMP INV+M*M+M,2       A-IJ XTT-I IN AC                           MUSH412 
+       TQO G10               TURN OFF MQ INDICATOR                      MUSH413 
+ G10   TNO G11.1             TEST FOR UNDER OR OVERFLOW                 MUSH414 
+       ARS 1                 IF UNDERFLOW, THERE WILL BE                MUSH415 
+       PBT                   A Q BIT                                    MUSH416 
+       TSX HELPS,2           IF OVERFLOW, TRANSFER OUT                  MUSH417 
+ G11.0 PXD *,0               SET TO 0 ON UNDERFLOW                      MUSH418 
+ G11.1 FAD GJCOM             ADD PARTIAL G SUM                          MUSH419 
+       TNO G13               TRANSFER IF NO LIGHTS                      MUSH420 
+       TQO G12               BOTH ON IF UNDERFLOW                       MUSH421 
+       TSX HELPS,2           TRANSFER IF TRUE OVERFLOW                  MUSH422 
+ G12   PXD L,0               FORCE 0 IF TRUE UNDERFLOW                  MUSH423 
+ G13   STO GJCOM             STORE UPDATED G                            MUSH424 
+       TNX G14,4,1           TEST IF DELTA ELEMENTS USED UP             MUSH425 
+       CLA CW1CM             RESTORE CONTROL WORDS                      MUSH426 
+       LDQ CW2CM                                                        MUSH427 
+ G13.1 TIX G15,2,1           TEST IF I=M. INCREASE I FI NO              MUSH428 
+ G14   LXD AK7.1,2           RESTORE J TO REG B                         MUSH429 
+       FSB C-1,2             PI X A(J) - C(J) = G(J                     MUSH430 
+       TNO G16               TRANSFER IF NO UNDER OR OVERFLOW           MUSH431 
+       TQO G18               TREAT UNDERFLOW G AS ZERO                  MUSH432 
+       ORA INFIN                                                        MUSH433 
+ G16   TMI G18               TRANSFER IF G IS MINUS OR MINUS 0          MUSH434 
+       LRS 35                MOVE POSITIVE OR PLUS ZERO G(J) TO MQ      MUSH435 
+       CLA LEG               EG TO AC                                   MUSH436 
+       TLQ G18               IF G LESS THAN EG, TREAT IT AS 0           MUSH437 
+       CLA GKCOM             TENTATIVE G MAXIMUM IN AC                  MUSH438 
+       TLQ G18               TRANSFER IF OLD MAX STILL LARGER           MUSH439 
+       STQ GKCOM             STORE NEW MAXIMUM G                        MUSH440 
+       SXD VECT,2            SAVE -K FROM RB                            MUSH441 
+       CLA G20               SAVE DELTA OF K TH COLUMN                  MUSH442 
+       STD AK14                                                         MUSH443 
+ G18   TXL G25,2,-N          TRANSFER WHEN J=N                          MUSH444 
+ G18.1 TXI G2,2,-1           INCREASE J IN REG B                        MUSH445 
+ G20   TIX G24,1,*           REDUCE R+1 BY DELTA IF POSSIBLE            MUSH446 
+       TXI G21,1,-1          R IN REG A. NOW DELTA IS DEFINITELY LARGER MUSH447 
+ G21   SXD G22,1             INSERT R IN DECREMENT                      MUSH448 
+ G22   TIX G23,4,*           REDUCE DELTA BY R IN REG C                 MUSH449 
+ G23   PXD INV,4             PLACE DELTA J MINUS R IN AC                MUSH450 
+       ARS 18                DELTA -R IN AC ADDRESS                     MUSH451 
+       ADM G4                INCREASE LDA COUNTER BY                    MUSH452 
+       STA G4                DELTA-R                                    MUSH453 
+       LXA ONE,1             SET R+1 TO 1 IN REG A                      MUSH454 
+ G24   TXL G18,0,0           GO TEST J                                  MUSH455 
+ G25   CLA GKCOM             TEST G-K TO SEE IF MAXIMUM                 MUSH456 
+       TZE SIM3              G IS ZERO. IF YES, TEST SWITCH             MUSH457 
+ AK1   RDR 1                 SELECT MATRIX DRUM                         MUSH458 
+       LXD AK14,6            DELTA OF K-TH COLUMN IN REG B+C            MUSH459 
+       LXD VECT,1            -K IN REG A.                               MUSH460 
+ AK2   PXD BUFF,4            DELTA IN AC                                MUSH461 
+       ARS 18                MOVE DELTA TO ADDRESS                      MUSH462 
+       ADM AK2               DEVELOP AND                                MUSH463 
+       STA AK3               STORE COPY ADDRESS                         MUSH464 
+       STA AK5.1             STORE FMP ADDRESS                          MUSH465 
+       LDA CW2-1,1           LOCATE DRUM ADDRESS OF K-TH COLUMN         MUSH466 
+ AK3   CPY *,2               COPY THE PIVOTAL COLUMN INTO               MUSH467 
+       TIX AK3,2,1           THE FIRST PART OF THE BUFFER               MUSH468 
+       CLA G23               INITIALIZE ADDRESS OF INVERSE              MUSH469 
+       STA AK5               ELEMENTS TO COLUMN 1                       MUSH470 
+       CLA CW1-1,1           CONTROL WORDS FOR COLUMN K                 MUSH471 
+       LDQ CW2-1,1                                                      MUSH472 
+       LXA LM,3              SET REGS A,B, TO M                         MUSH473 
+ AK4   STZ APRME+M,2         SET A PRIME AREA TO 0                      MUSH474 
+       TIX AK4,2,1                                                      MUSH475 
+ AK4.1 LXA ZERO,2            SET REG B TO 0 FOR INVERSE ELEMENTS        MUSH476 
+       LLS 1                 SHIFT J-TH BIT FO CONTROLS TO P            MUSH477 
+       STO CW1CM             SAVE AC PART OF CONTROL WORD               MUSH478 
+       TNO AK13              TRANSFER IF J-TH BIT IS 0                  MUSH479 
+       STQ CW2CM             SAVE MQ PART OF CONTROLS                   MUSH480 
+ AK5   LDQ *,2               V-IJ IN MQ                                 MUSH481 
+ AK5.1 FMP *,4               V-IJ XA-JK                                 MUSH482 
+       TQO AK6               TURN OFF MQ INDICATOR                      MUSH483 
+ AK6   TNO AK8               TRANSFER IF AC O.K.                        MUSH484 
+       ARS 1                 TEST Q BIT TO SEE IF                       MUSH485 
+       PBT                   AC HAS                                     MUSH486 
+       TSX HELPS,2           OVERFLOW OR                                MUSH487 
+ AK7.1 TXL AK11,0,(J)        UNDERFLOW                                  MUSH488 
+ AK8   FAD APRME+M,1         ADD PARTIAL A PRIME SUM                    MUSH489 
+       TNO AK10              TRANSFER IF AC O.K.                        MUSH490 
+       TQO AK9               TEST FOR UNDER OR OVERFLOW                 MUSH491 
+       TSX HELPS,2           OVERFLOW HERE                              MUSH492 
+ AK9   PXD 0,0               SET UNDERFLOW SUM TO 3                     MUSH493 
+ AK10  STO APRME+M,1         STORE UPDATED PARTIAL SUM                  MUSH494 
+ AK11  TXI AK12,2,-M         INCREASE I BY M FOR INVERSE                MUSH495 
+ AK12  TIX AK5,1,1           TEST IF I=M RA. INCREASE I IF NO           MUSH496 
+       LDQ CW2CM             RESTORE MQ PART OF CONTROLS                MUSH497 
+       LXA LM,1              RESET REG A TO COUNT M COLUMNS             MUSH498 
+       TNX R0,4,1            INCREASE RC FOR NEXT NON ZERO ELEMENT      MUSH499 
+ AK13  CAL AK5               INCREASE I BY 1 FOR INVERSE ELEMENTS       MUSH500 
+       ADD ONE                                                          MUSH501 
+       STA AK5               STORE UPDATED INVERSE ADDRESS              MUSH502 
+       CLA CW1CM             RESTORE AC CONTROLS                        MUSH503 
+ AK14  TXL AK4.1,0,DELK                                                 MUSH504 
+ R0    STZ THETA             SET THETA MAX TO 0                         MUSH505 
+       STZ R                 SET R TO 0                                 MUSH506 
+       TQO R1                TURN OFF MQ INDICATOR                      MUSH507 
+ R1    CLA X+M,1             COMPARE X(I) AGAINST                       MUSH508 
+       LDQ LEB               NEGATIVE TOLERANCE                         MUSH509 
+       TLQ R1.2                                                         MUSH510 
+       CLA X4                TRANSFER IF INFEASIBILITY WITH             MUSH511 
+       TXL ERROR             RESPECT TO GIVEN TOLERANCE                 MUSH512 
+ R1.2  TZE R1.4                                                         MUSH513 
+       TPL R1.5                                                         MUSH514 
+ R1.4  CLA SMALL             USE EPSILON FOR 0 OR SMALL NEG X           MUSH515 
+ R1.5  STO COM+3             IN THE THETA COMPUTATION                   MUSH516 
+ R1.6  CLA APRME+M,1         I-TH A PRIME IN AC                         MUSH517 
+       SUB DELTA             COMPARE AGAINST DELTA                      MUSH518 
+       TMI R5                TRANSFER IF A PRIME NOT A CANDIDATE        MUSH519 
+       ADD DELTA             RESTORE A PRIME                            MUSH520 
+       FDP COM+3             A PRIME (I) OVER X(I)=THETA (I)            MUSH521 
+       TQO R2                TEST FOR QUOTIENT SIZE                     MUSH522 
+ R4    TXL R3,0,F(R)         TRANSFER IF MQ O.K.                        MUSH523 
+ R2    TOV R5                IF BOTH ON DEFINITE UNDERFLOW              MUSH524 
+ R4.1  PXD 18,0              CLEAR AC                                   MUSH525 
+       LLS 8                 MQCHARACTERISTIC TO AC                     MUSH526 
+ R4.2  PAX INV,2             CHARACTERISTIC IN REG B                    MUSH527 
+       TXH R5,2,128          TRANSFER IF CHARACTERISTIC OVER 128        MUSH528 
+ R4.3  LDQ INFIN             IF OVERFLOW, SET THETA VERY LARGE          MUSH529 
+ R3    CLA THETA             OLD MAXIMUM THETA IN AC                    MUSH530 
+       TLQ R5                TRANSFER IF NEW THETA LESS THAN MAX        MUSH531 
+       STQ THETA             STORE NEW MAXIMUM THETA                    MUSH532 
+       SXD R,4               SAVE INDEX FROM REG C                      MUSH533 
+       SXD R4,1              SAVE M-R+1 FROM RA                         MUSH534 
+ R5    TXI R6,4,1            INCREASE I IN REG C                        MUSH535 
+ R6    TOV R7                RESET POSSIBLE OVERLFOW LIGHT              MUSH536 
+ R7    TIX R1,1,1            INCREASE I IN RA LEAVE IF I=M              MUSH537 
+       CLA THETA                                                        MUSH538 
+       TNZ R8                                                           MUSH539 
+       CLA R4.1              TRANSFER TO ERROR IF UNBOUNDED             MUSH540 
+       TRA ERROR             SOLUTION                                   MUSH541 
+ R8    LDQ R                 R IN MQ DECREMENT                          MUSH542 
+       MPY LM                MULTIPLY BY M ELEMENTS PER ROW             MUSH543 
+       LLS 17                TO GET ADDRESS OF (R+1) TH ROW             MUSH544 
+       ADM R4.2              OF INVERSE                                 MUSH545 
+       STA V1                                                           MUSH546 
+       STA V4                                                           MUSH547 
+       STA V7                                                           MUSH548 
+       STA V6.4                                                         MUSH549 
+       LXD R4,1              M-R+1 INTO RA                              MUSH550 
+       LDQ VECT              -K IN MQ DECREMENT                         MUSH551 
+ R9    CLA BI+M,1            R TH BI IN AC                              MUSH552 
+ R10   STQ BI+M,1            STORE -K IN R-TH BI                        MUSH553 
+       LXD VECT,2            -K INTO RB (VECTOR IN)                     MUSH554 
+       PDX 0,4               -T INTO RC (VECTOR OUT)                    MUSH555 
+       SXD VOUT,4            SAVE INDEX OF VECTOR LEAVING BASIS         MUSH556 
+       CLS CW1-1,2           K-TH CW1 IN AC                             MUSH557 
+       STO CW1-1,2           SET K-TH CW1 POSITIVE                      MUSH558 
+       CLS CW1-1,4           T-TH CW1 IN AC                             MUSH559 
+       STO CW1-1,4           SET T-TH CW1 NEGATIVE                      MUSH560 
+       LXA LM,2              M INTO REG B                               MUSH561 
+ V1    CLA INV+RM,2          V-RJ IN AC                                 MUSH562 
+ V1.1  FDH APRME+M,1         V-R,J/A PRIME - R,5                        MUSH563 
+       TQO V2                TEST FOR MQ TROUBLE                        MUSH564 
+       TXL V4,0,0            MQ O.K. -                                  MUSH565 
+ V2    TOV V3                TRANSFER IF UNDERFLOW                      MUSH566 
+       PXD 0,0               CLEAR AC                                   MUSH567 
+       LLS 8                 MQ CHARACTERISTIC TO AC                    MUSH568 
+       PAX 0,4               CHARACTERISTIC IN REG C                    MUSH569 
+       TXH V3,4,128          TRANSFER TO ERROR IF LWSS THAN OR=200      MUSH570 
+       TSX HELPS,2                                                      MUSH571 
+ V3    LDQ ZERO              CLEAR MQ TO GET ZERO QUOTIENT              MUSH572 
+ V4    STQ INV+RM,2          STORE V PRIME - R,4                        MUSH573 
+       TOV V5                TURN OFF POSSIBLE AC INDICATOR             MUSH574 
+ V5    TIX V1,2,1            COUNT OFF M COUMNS OF R-TH ROW             MUSH575 
+ V5.1  STZ APRME+M,1         SET A PRIME-R,5 TO 0                       MUSH576 
+       CLA GKCOM             G SUB K IN AC                              MUSH577 
+ V5.2  STO APRME+M           STORE G SUB K AS (M+1) THE A PRIME         MUSH578 
+       LXD LMM,4             M(M+1) INTO REG C                          MUSH579 
+ V5.3  TXI V6,2,M            M+1 INTO REG B TO COUNT I                  MUSH580 
+ V6    LXA LM,1              M INTO REG A TO COUNT J                    MUSH581 
+ V6.1  CLA APRME+M+1,2       TEST IF A PRIME (I,K)=0                    MUSH582 
+       TNZ V6.4                                                         MUSH583 
+ V6.3  TXI V12.1,4,-M        SKIP I-TH ROW IF YES                       MUSH584 
+ V6.4  CLA INV+RM,1          TEST V PRIME (R,J)                         MUSH585 
+       TZE V11.1             SKIP UPDATING IF 0                         MUSH586 
+ V7    LDQ INV+RM,1          V PRIME - R,4                              MUSH587 
+ V7.1  FMP APRME+M+1,2       TIEMS A PRIME - I,5                        MUSH588 
+       TQO V8                WHAT A PAIN IN THE NECK THIS IS            MUSH589 
+ V8    CHS                   SET PRODUCT NEGATIVE                       MUSH590 
+       TNO V9                TRANSFER IF AC O.K.                        MUSH591 
+       ARS 1                 SHIFT Q BIT FOR FURTHER INVESTIGATION      MUSH592 
+       PBT                   TEST FOR UNDRE VS OVERFLOW                 MUSH593 
+       TSX HELPS,2           OVERFLOW-GET OUT OF HERE                   MUSH594 
+ V8.1  PXD 15,0              SET UNDERFLOW PRODUCT TO 0                 MUSH595 
+ V9    FAD INV+M*M+M,4       ADD V-I,4                                  MUSH596 
+       TNO V11               TRANSFER IF AC O.K.                        MUSH597 
+       TQO V10               IF MQ ON, TRUE UNDERFLOW                   MUSH598 
+       TSX HELPS,2           OTHERWISE, SNAFU                           MUSH599 
+ V10   PXD 0,0               SET V PRIME-I,J TO 0                       MUSH600 
+ V11   STO INV+M*M+M,4       STORE V PRIME ELEMENT                      MUSH601 
+ V11.1 TIX V12,4,1           COUNT V ELEMENTS                           MUSH602 
+ V12   TIX V7,1,1            TEST FOR COMPLETION OF ONE ROW             MUSH603 
+ V12.1 TIX V6,2,1            COUNT ROWS. LEAVE IF I=M+1                 MUSH604 
+       CLA ONE               SET SWITCH BOX TO A TO INDICATE            MUSH605 
+       STO SWICH             COMPLETED ITERATION. (A=1)                 MUSH606 
+ SIM2  CLA LP0               ITERATION NUMBER FOR PURIFICATION IN AC    MUSH607 
+       CAS ITER              COMPARE AGAINST THIS ITERATION NUMBER      MUSH608 
+       TXL SMPLX             TRANSFER TO REPEAT SIMPLEX                 MUSH609 
+       ADD LDELP             PURIF. REQUIRED ON THIS ITERATION UPDATE   MUSH610 
+       STO LP0               NEXT PURIFICATION COUNT                    MUSH611 
+       CLA MON10             POSITIVE PURIFICATION CONSTANT             MUSH612 
+       TXL READP             TRANSFER TO PURIFY                         MUSH613 
+ SIM3  CLA SWICH             TEST SWITCH BOX                            MUSH614 
+       TZE READF             IF ON B, TRANSFER TO FINAL SOLUTION        MUSH615 
+       STZ SWICH             IF ON A, SET TO B                          MUSH616 
+       LXA LIP,2             TEST IF TERMINAL PURIFICATION IS REQUIRED  MUSH617 
+       TXL READF,2,0         IF NOT, TRANSFER TO FINAL SOLUTION         MUSH618 
+       CLS MON10             THIS IS NEGATIVE CONSTANT INDICATING       MUSH619 
+       TRA READP             MULTIPLE PURIFICATION                      MUSH620 
+ B     BSS MMAX              THE B VECTOR IS STORED HERE                MUSH621 
+ SLAST SYN B+MMAX-1                                                     MUSH622 
+ L     SYN LEX-SLAST-1                                                  MUSH623 
+ BUFF  BSS L                                                            MUSH624 
+       ORG 3-INC2                                                       MUSH625 
+ INC3  SYN INC2+SLAST+1                                                 MUSH626 
+       HTR -INC3             LOADING INCREMENT FOR PURIFICATION         MUSH627 
+       REM                                                              MUSH628 
+       REM  THIS ROUTINE PURIFIES THE INVERSE AND RECOMPUTES THE        MUSH629 
+       REM  PI VECTOR BY MULTIPLYING THE BASIS C TIMES THE INVERSE      MUSH630 
+       ORG 0                                                            MUSH631 
+       STD PISW              SET SWITCH FOR PI COMPUTATION              MUSH632 
+       STO P52               STORE CONSTANT FOR SINGLE OR MULTIPLE PURIFMUSH633 
+       SXD P2,2              SAVE MAXIMUM PURIFICATION COUNT            MUSH634 
+       SXD PCNT,0            SET PURIFICATION COUNTER TO 0              MUSH635 
+       TPL P5                TRANSFER IF FORCED ONE SHOT PURIFICATION   MUSH636 
+ P1    LXD PCNT,1            PURIFICATION COUNT IN REG A                MUSH637 
+ P2    TXL P3,1,IP           TRANSFER IF COUNT NOT HIGHER THAN LIMIT    MUSH638 
+       CLA P19               COUNT IS HIGHER THAN LIMIT-                MUSH639 
+ PCNT  TXL ERROR,0,*         RETURN TO CALLING SEQUENCE                 MUSH640 
+ P3    TXI P4,1,1            INCREASE COUNT                             MUSH641 
+ P4    SXD PCNT,1            SAVE INCREASED COUNT                       MUSH642 
+ P5    SXD PSW,0             SET PURIFICATION SWITCH OFF                MUSH643 
+       CLA PSEL3             INITIALIZE ALL INTERMEDIATE                MUSH644 
+       STA SEL1              DRUM SELECTIONS TO DRUM 3                  MUSH645 
+       STA SEL2                                                         MUSH646 
+       STA SEL3                                                         MUSH647 
+       STA SEL4                                                         MUSH648 
+       STA SEL5                                                         MUSH649 
+       STA SEL6                                                         MUSH650 
+       STZ REF               SET DRUM REFERENCE TO 0                    MUSH651 
+       LXA LM,1              SET M- I+1 TO M IN REG A                   MUSH652 
+ P6    RDR 1                 SELECT MATRIX DRUM                         MUSH653 
+ P7    CLA BI+M,1            I-TH BI IN AC OR -J(I)                     MUSH654 
+ PSEL3 PDX 195,4             -J(I) IN REG C                             MUSH655 
+       SXD P23.1,1           SAVE M-I+1 FROM REG A                      MUSH656 
+       CAL CW2,4             (J+1) TH CW2 IN AC WITH A P BIT            MUSH657 
+       SBM CW2-1,4           DELTA J IN ADDRESS OF AC                   MUSH658 
+ P8    PAX BUFF,3            DELTA J IN REG A AND REG B                 MUSH659 
+       ADM P8                BUFF + DELTA J IN AC ADDRESS               MUSH660 
+       STA P10               STORE ADDRESS FOR COPYINY                  MUSH661 
+       STA P13                                                          MUSH662 
+       TOV P9                TURN OFF AC OVERFLOW                       MUSH663 
+ P9    LDA CW2-1,4           LOCATE J-TH VECTOR ON DRUM 1               MUSH664 
+ P10   CPY *,1               COPY DELTA J ELEMENTS OF                   MUSH665 
+       TIX P10,1,1           J-TH COLUMN INTO CORE                      MUSH666 
+       CLA P16               INITIALIZE INVERSE COLUMN TO               MUSH667 
+       STA P14               K=1                                        MUSH668 
+       CLA CW1-1,4           J-TH CW1 IN AC                             MUSH669 
+       LDQ CW2-1,4           J-TH CW2 IN MQ                             MUSH670 
+       LXA LM,4              SET REG C TO M                             MUSH671 
+ P11   STZ PJ+M,4            SET PRODUCT AREA TO 0                      MUSH672 
+       TIX P11,4,1                                                      MUSH673 
+ P12   LXA ZERO,4            SET INDEC FOR ROW T=1 IN REG C             MUSH674 
+       LLS 1                 SHIFT K-TH INDEICATOR TO P POSITION        MUSH675 
+       STO CW1CM             STORE AC CONTROL                           MUSH676 
+       TNO P23               TRANSFER IF ELEMENT MISSING                MUSH677 
+       STQ CW2CM             STORE MQ CONTROL                           MUSH678 
+       LXA LM,1              SET M-T+1 TO M IN RA                       MUSH679 
+ P13   LDQ *,2               A-K,J IN MQ                                MUSH680 
+ P14   FMP INV,4             V-T,K TIMES A-K,J                          MUSH681 
+       TQO P15                                                          MUSH682 
+ P15   TNO P17                                                          MUSH683 
+       ARS 1                                                            MUSH684 
+       PBT                                                              MUSH685 
+       TSX HELP,2                                                       MUSH686 
+ P16   PXD INV,0                                                        MUSH687 
+ P17   FAD PJ+M,1                                                       MUSH688 
+       TNO P20                                                          MUSH689 
+       TQO P19                                                          MUSH690 
+ P19   PXD 16,0                                                         MUSH691 
+ P20   STO PJ+M,1                                                       MUSH692 
+ P21   TXI P22,4,-M          INCREASE T FOR COL K IN REG C              MUSH693 
+ P22   TIX P13,1,1           INCREASE T IN RA LEAVE IF T=M              MUSH694 
+       LDQ CW2CM             RESTORE CONTROLS TO M0                     MUSH695 
+       TNX P24,2,1           REDUCE DELTA J IN REG B                    MUSH696 
+ P23   CLA P14               INCREASE K FOR COLUMN                      MUSH697 
+       ADD ONE               ELEMENTS OF INVERSE                        MUSH698 
+       STA P14                                                          MUSH699 
+       CLA CW1CM             RESTORE CONTROLS TO AC                     MUSH700 
+ P23.1 TXL P12,0,*           RETURN FOR NEXT NON ZERO A                 MUSH701 
+ P24   LXD P23.1,1           RESTORE M-I +1 TO REG A                    MUSH702 
+ P25   CLA PJ+M,1            P-I,J(I) IN AC                             MUSH703 
+       FSB FPONE             CONVERT TO DIAGONAL                        MUSH704 
+ P26   STO PJ+M,1            STORE BACK-PJ NOW HAS ERROR COLUMN         MUSH705 
+       CLA LEI               ERROR TOLERANCE IN AC                      MUSH706 
+       LXA LM,6              SET M-T+1 TO M IN REG C. MIN RB            MUSH707 
+ P27   LDQ PJ+M,4            -E (T,J) IN MQ                             MUSH708 
+       LRS 0                 /E (T,J)/ IN MQ                            MUSH709 
+       TLQ P28               TRANSFER IF ELEMENT UNDER TOLERANCE        MUSH710 
+       SXD PSW,4             SET PRUIDICATION SWITCH ON                 MUSH711 
+ P28   TIX P27,4,1           UNCREASE T IN RC LEAVE IF T=M              MUSH712 
+ SEL1  WDR *                                                            MUSH713 
+       LDA REF               WRITE THE M ELEMENTS OF THE                MUSH714 
+ P29   CPY PJ+M,2            J(I)-TH ERROR COLUMN ONTO A                MUSH715 
+       TIX P29,2,1           DRUM (3 OR 4)                              MUSH716 
+       CLA REF               INCREASE DRUM REFERENCE BY                 MUSH717 
+       ADD LM                M FOR J(I+1) TH ERROR COLUMN               MUSH718 
+       STO REF                                                          MUSH719 
+       ADD LM                COMPUTE DRUM LOCATION FOR THE              MUSH720 
+ PSEL4 PAX 196,2             J (I+2)TH ERROR COLUMN                     MUSH721 
+       TXL P30,2,2048        TRANSFER IF PRESENT DRUM O.K.              MUSH722 
+       CLA PSEL4             CHANGE TO DRUM 4 FOR                       MUSH723 
+       STA SEL1              REMAINDER OF ERROR MATRIX                  MUSH724 
+       STZ REF               SET DRUM REF BACK TO 0                     MUSH725 
+ P30   TIX P6,1,1            INCREASE I CONTINUE IF I=M                 MUSH726 
+       STZ REF               SET DRUM REF BACK TO 0                     MUSH727 
+ PSW   TXH PISW,1,*          IF SW IS OFF, DECREMENT WILL BE 0          MUSH728 
+       SXD PISW,1            SET SWITCH TO FORCE PI COMPUTATION         MUSH729 
+       LXA LM,1              SET M-I+1 TO M IN REG A                    MUSH730 
+       CLA P32.2             INITIALIZE COLUMN ADDRESS FOR INVERSE      MUSH731 
+       STA P49                                                          MUSH732 
+ P30.1 STA P32               (SET I TO 1)                               MUSH733 
+       STA P34                                                          MUSH734 
+ SEL2  RDR *                 SELECT ERROR MATRIX DRUM                   MUSH735 
+       LXA LM,2              SET REG B FOR M COPIES                     MUSH736 
+       LDA REF               LOCATE J(I) TH COLUMN OF ERROR MATRIX      MUSH737 
+ P31   CPY PJ+M,2            COPY THE J(I)TH COLUMN OF                  MUSH738 
+       TIX P31,2,1           ERROR MATRIX                               MUSH739 
+       LXA LMM,6             M.M IN REG B AND C                         MUSH740 
+ SEL3  WDR *                 WRITE THE I-TH COLUMN OF THE               MUSH741 
+       LDA REF               INVERSE IN THE LOCATIONS JUST              MUSH742 
+ P32   CPY *,4               VOCATED BY THE I-TH COLUMN OF              MUSH743 
+ P32.1 TIX P32,4,M           THE ERROR MATRIX                           MUSH744 
+       CLA REF               INCREASE FRUM REFERENCE FOR                MUSH745 
+       ADD LM                J(I+1)TH COLUMN                            MUSH746 
+       STO REF                                                          MUSH747 
+       ADD LM                DRUM REFERENCE FOR (I+2)TH COLUMN          MUSH748 
+ P32.2 PAX INV+M*M,4                                                    MUSH749 
+       TXL P33,4,2048        TRANSFER IF PRESENT DRUM O.K.              MUSH750 
+       CLA PSEL4             CHANGE TO DRUM 4                           MUSH751 
+       STA SEL2                                                         MUSH752 
+       STA SEL3                                                         MUSH753 
+       STZ REF               SET FRUM REFERENCE BACK TO 0               MUSH754 
+ P33   LXA ZERO,4            SET -T+1 TO 0 IN RC                        MUSH755 
+ P33.1 CLA PJ,4              INSERT E-T, J(I) INTO T-TH POSITION        MUSH756 
+ P34   STO *,2               OF I-TH COLUMN OF INVERSE                  MUSH757 
+       TXI P35,4,-1          INCREASE T IN REG C                        MUSH758 
+ P35   TIX P33.1,2,M         INCREASE TM IN RB CONTINUE IF TM=M2        MUSH759 
+       CAL P32               INCREASE COLUMN ADDRESS                    MUSH760 
+       ADD ONE               FOR INVERSE REFERENCES                     MUSH761 
+       TIX P30.1,1,1         INCREASE I IN RA CONTINUE IF I=M           MUSH762 
+       LXA LM,2              SET M-I+1 TO M IN RB                       MUSH763 
+       STZ REF               SET DRUM REFERENCE BACK TO 0               MUSH764 
+ P36   LXA LM,5              M-T+1=M IN RA, M IN RC FOR COPIES          MUSH765 
+ SEL4  RDR *                 SELECT INVERSE DRUM                        MUSH766 
+       LDA REF               COPY M ELEMENTS OF I-TH                    MUSH767 
+ P37   CPY PJ+M,4            COLUMN OF INVERSE INTO                     MUSH768 
+       TIX P37,4,1           CORES                                      MUSH769 
+       SXD PLAST,2           SAVE M-I+1 FOOM REG B                      MUSH770 
+ P38   LXA LM,2              SET M-K+1 TO M IN REG B                    MUSH771 
+ P39   STZ BUFF+M,1          SET -F(T,I)= -E(T) X V(I) TO 0             MUSH772 
+ P39.1 TXI P40,4,-1          INCREASE K FOR ERROR TERMS IN RC           MUSH773 
+ P40   LDQ PJ+M,2            V (K,I) IN MQ                              MUSH774 
+       FMP INV,4             -E(T,K) TIMES V(K,I)                       MUSH775 
+       TQO P41               TURN OFF MQ INDICATOR                      MUSH776 
+ P41   TNO P42                                                          MUSH777 
+       ARS 1                                                            MUSH778 
+       PBT                                                              MUSH779 
+       TSX HELP,2                                                       MUSH780 
+       PXD 0,0               SET UNDERFLOW PRODUCT TO 0                 MUSH781 
+ P42   FAD BUFF+M,1          ADD PARTIAL SUM                            MUSH782 
+       TNO P44                                                          MUSH783 
+       TQO P43                                                          MUSH784 
+       TSX HELP,2                                                       MUSH785 
+ P43   PXD 0,0               SET PARTIAL SUM TO 0 IF UNDERFLOW          MUSH786 
+ P44   STO BUFF+M,1          STORE PARTIAL SUM                          MUSH787 
+       TIX P39.1,2,1         INCREASE K OR CONTINUE IF K=M              MUSH788 
+       CHS                   +VE(T,J) IN AC                             MUSH789 
+ P44.5 FAD PJ+M,1            NEW V(T,J) IN AC                           MUSH790 
+       TNO P46               TRANSFER IF AC O.K.                        MUSH791 
+       TQO P45                                                          MUSH792 
+       TSX HELP,2                                                       MUSH793 
+ P45   PXD 0,0               SET UNDERFLOW V TO 0                       MUSH794 
+ P46   STO PJ+M,1            STORE NEW V(T,I)                           MUSH795 
+       TIX P38,1,1           INCREASE T IN RA CONTINUE IF T=M           MUSH796 
+       LXD PLAST,2           RESTORE M=I+1 TO RB                        MUSH797 
+       LXA LM,5              SET M-I+1 TO M IN A FOR NEXT LOOP. M IN RC MUSH798 
+ SEL5  WDR *                                                            MUSH799 
+       LDA REF               WRITE A COLUMN OF PURIFIED                 MUSH800 
+ P47   CPY PJ+M,4            INVERSE ONTO DRUM IN LOCATIONS             MUSH801 
+       TIX P47,4,1           VACATED BY OLD INVERSE COLUMN              MUSH802 
+       CLA REF               INCREASE DRUM REFERENCE BY M               MUSH803 
+       ADD LM                                                           MUSH804 
+       STO REF                                                          MUSH805 
+       ADD LM                COMPUTE LOCATION OF (I+2)TH COLUMN         MUSH806 
+       PAX 0,4                                                          MUSH807 
+       TXL P48,4,2048        TRANSFER IF (I+1) TH COLUMN ON PRESENT DRUMMUSH808 
+       CLA PSEL4             CHANGE TO DRUM 4                           MUSH809 
+       STA SEL4                                                         MUSH810 
+       STA SEL5                                                         MUSH811 
+       STZ REF               RESET DRUM REFERENCE TO 0                  MUSH812 
+ P48   TIX P36,2,1           INCREASE I IN RB CONTINUE IF I=M           MUSH813 
+       STZ REF               RESET DRUM REFERENCE BACK TO 0             MUSH814 
+ P48.1 LXA LMM,2                                                        MUSH815 
+ SEL6  RDR *                 SELECT PURIFIED INVERSE DRUM               MUSH816 
+       LDA REF               WRITE A COLUMN OF PURIFIED INVERSE BACK    MUSH817 
+ P49   CPY *,2               INTO CORES DISTRIVUTING THE ELEMENTS       MUSH818 
+ P50   TIX P49,2,M           ROW WISE                                   MUSH819 
+       CAL P49               INCREASE COLUMN ADDRESS FOR                MUSH820 
+       ADD ONE               INVERSE ELEMENTS TO                        MUSH821 
+       STA P49               (I+1)TH COLUMN                             MUSH822 
+       CLA REF               COMPUTE DRUM REFERENCE FOR                 MUSH823 
+       ADD LM                (I+1) TH COLUMN                            MUSH824 
+       STO REF                                                          MUSH825 
+       ADD LM                ADDRESS FOR (I+2) TH COLUMN IN RB          MUSH826 
+       PAX 0,2                                                          MUSH827 
+       TXL P51,2,2048        TRANSFER IF PRESENT DRUM O.K.              MUSH828 
+       CLA PSEL4             CHANGE TO DRUM 4                           MUSH829 
+       STA SEL6                                                         MUSH830 
+       STZ REF               SET DRUM REFERENCE BACK TO 0               MUSH831 
+ P51   TIX P48.1,1,1         INCREASE I IN RA CONTINUE IF I=M           MUSH832 
+ P52   TXL P1,0,0            IF MULTIPLE PURIFICATION, GO TO P1         MUSH833 
+       REM                                                              MUSH834 
+       REM  THE FOLLOWING ROUTINE RECOMPUTES THE PI VECTOR              MUSH835 
+       REM AS THE BASIS C ELEMENTS TIMES THE CURRENT INVERSE            MUSH836 
+ PISW  TXH READS,1,*    IF SW IS OFF DECREMENT WILL BE 0 IF ON IT IS 1  MUSH837 
+ PI1   LXA LM,5         M-K+1 IN RA FOR NEXT LOOP M-I+1 IN RC FOR THIS  MUSH838 
+ PI2   CLA BI+M,4            -J(I) IN AC                                MUSH839 
+       PDX 0,2               -J(I) IN RB                                MUSH840 
+       LDQ C-1,2             J(I)-TH C IN MQ                            MUSH841 
+ PI2.1 STQ PJ+M,4            STORE I-TH BASIS C IN WORK AREA            MUSH842 
+ PI2.2 STZ INV+M*M+M,4       SET I-TH PI VALUE TO 0                     MUSH843 
+       TIX PI2,4,1           INCREASE I OR CONTINUE IF I=M              MUSH844 
+ PI3   LXA LM,2              M-I+1 IN RB                                MUSH845 
+       LXA ZERO,4            0 IN RC FOR INVERSE ROW INDEXING           MUSH846 
+ PI3.1 LDQ PJ+M,2            I-TH C IN MQ                               MUSH847 
+ PI4   FMP INV,4             C(I) TIMES V(I,K) IN AC                    MUSH848 
+       TQO PI5                                                          MUSH849 
+ PI5   TNO PI6                                                          MUSH850 
+       ARS 1                                                            MUSH851 
+       PBT                                                              MUSH852 
+       TSX HELP,2                                                       MUSH853 
+       PXD 0,0                                                          MUSH854 
+ PI6   FAD INV+M*M+M,1       ADD PARTIAL PI (K)                         MUSH855 
+       TNO PI8                                                          MUSH856 
+       TQO PI7                                                          MUSH857 
+       TSX HELP,2                                                       MUSH858 
+ PI7   PXD 0,0                                                          MUSH859 
+ PI8   STO INV+M*M+M,1       STORE PARTICAL PI (K)                      MUSH860 
+ PI8.1 TXI PI9,4,-M          INCREASE I FOR INVERSE ROW                 MUSH861 
+ PI9   TIX PI3.1,2,1         INCREASE I FOR C OR CONTINUE               MUSH862 
+       CAL PI4               INCREASE K BY 1 FOR                        MUSH863 
+       ADD ONE               INVERSE COLUMN INDEX                       MUSH864 
+       STA PI4                                                          MUSH865 
+       TIX PI3,1,1           INCREAS K FOR PI INDEX OR CONTINUE         MUSH866 
+ PLAST TXL READS,0,*         TRANSFER TO READ SIMPLEX                   MUSH867 
+       ORG 3-INC3            SETS LOADING ORIGIN BACK TO 3              MUSH868 
+ INC4  SYN INC3+PLAST+1                                                 MUSH869 
+       HTR -INC4             LOADING INCREMENT FOR FINAL SOLUTION       MUSH870 
+       REM                                                              MUSH871 
+       REM  THIS ROUTINE TESTS FRO FEASIBLE SOLUTION, EXPANDS THE       MUSH872 
+       REM SOLUTION IN THE C REGION AND COMPUTES THE FUNCTIONAL         MUSH873 
+       ORG 0                                                            MUSH874 
+       SXD TEST,0            SET SWITCH TO TRANSFER                     MUSH875 
+       STZ FUNCT                                                        MUSH876 
+       LXD FLASTT1           MOVE FUNCTIONAL COEFFICIENTS               MUSH877 
+ F0    CLS C+NMAXT1          TO BUFFER NEGATIVELY AND SET               MUSH878 
+       STO BUFF+NMAX,1       THE VACATED C REGION TO ZERO               MUSH879 
+       STZ C+NMAX,1                                                     MUSH880 
+       TIX F0,1,1                                                       MUSH881 
+       LXA LM,2                                                         MUSH882 
+ F1    CLA BI+1,1            I-TH BI IN AC OR -J SUB I                  MUSH883 
+ F2    PDX 21,4              -J(I) IN REG C                             MUSH884 
+ F3    LDQ X+1,1             I-TH X IN MQ                               MUSH885 
+       TQP F3.1              TRANSFER IF POSITIVE                       MUSH886 
+       LDQ ZERO              SET SMALL NEGATIVE X TO 0                  MUSH887 
+ F3.1  TXH F4,4,-1-N*        TRANSFER IF NON ARTIFICIAL                 MUSH888 
+       CLA LEA               ARTIFICIAL TOLERANCE IN AC                 MUSH889 
+       TLQ F4                TRANSFER IF ARTIFICIAL LESS THAN TOLERANCE MUSH890 
+       SXD TEST,2            OTHERWISE, SET TEST DECREMENT TO NON ZERO  MUSH891 
+ F4    STQ C-1,4             STORE X IN EXPANSION AREA                  MUSH892 
+       FMP BUFF-1,4          MULTIPLY X BY PROPER C                     MUSH893 
+       TQO F5                                                           MUSH894 
+ F5    TNO F5.2              TEST FOR AC OVERFLOW                       MUSH895 
+       ARS 1                                                            MUSH896 
+       PBT                                                              MUSH897 
+       TRA F9                FUNCTIONAL OVERFLOW                        MUSH898 
+ F5.1  PXD 20,0              LET PRODUCT TERM TO 0                      MUSH899 
+ F5.2  FAD FUNCT             UPDATE FUNCTIONAL                          MUSH900 
+       TNO F7                                                           MUSH901 
+       CLM                   SET PARTIAL FUNTIONAL TO SIGNED ZERO       MUSH902 
+       TQO F7                TRANSFER IF UNDERFLOW                      MUSH903 
+       ORA INFIN             SET PARTIAL FUNCTIONAL TO SIGNED INFINITY  MUSH904 
+ F7    STO FUNCT             STORE UPDATED FUNCTIONAL                   MUSH905 
+       TXI F7.1,1,-1         INCREASE I IN REG A                        MUSH906 
+ F7.1  TIX F1,2,1            COUNT OFF TO I=M IN REG B                  MUSH907 
+ TEST  TXH F8,2,**           TRANSFER IF DECREMENT IS 0                 MUSH908 
+       CLA F5.1                                                         MUSH909 
+       TRA ERROR                                                        MUSH910 
+ F8    CLA F2                                                           MUSH911 
+       TRA ERROR                                                        MUSH912 
+ F9    ORA INFIN             SET OVERFLOW TERM TO SIGNED INFINITY       MUSH913 
+ FLAST TXL F5.2,0,NMAX                                                  MUSH914 
+ INC5  SYN INC4+FLAST+1                                                 MUSH915 
+       ORG ORG2-2048-2*NMAX-MMAX                                        MUSH916 
+ MTX   BSS 2048-NMAX                                                    MUSH917 
+ C     BSS NMAX                                                         MUSH918 
+ X     BSS MMAX                                                         MUSH919 
+ CW1   BSS NMAX                                                         MUSH920 
+ CW2   BSS NMAX+1                                                       MUSH921 
+       REM  SYMBOL DEFINITION FOR MUSH                                  MUSH922 
+ GKCOM SYN COM                                                          MUSH923 
+ GJCOM SYN COM+1                                                        MUSH924 
+ CW1CM SYN COM+2                                                        MUSH925 
+ CW2CM SYN COM+3                                                        MUSH926 
+ CW2I  SYN COM+1                                                        MUSH927 
+ CW2N  SYN COM+2                                                        MUSH928 
+ FUNCT SYN ITER+1                                                       MUSH929 
+ REF   SYN COM                                                          MUSH930 
+ THETA SYN COM+1                                                        MUSH931 
+ R     SYN COM+2                                                        MUSH932 
+ PJ    SYN BUFF+MMAX                                                    MUSH933 
+ APRME SYN PJ                                                           MUSH934 
+ VTEST SYN GKCOM                                                        MUSH935 
+ (J)   SYN 0                                                            MUSH936 
+ F(K)  SYN 0                                                            MUSH937 
+ F(R)  SYN 0                                                            MUSH938 
+ I     SYN 0                                                            MUSH939 
+ M     SYN 0                                                            MUSH940 
+ N     SYN 0                                                            MUSH941 
+ IP    EQU 0                                                            MUSH942 
+ DELK  EQU 0                                                            MUSH943 
+ RM    EQU 0                                                            MUSH944 
+ K     EQU 0                                                            MUSH945 
+ MM    EQU 0                                                            MUSH946 
+ T     EQU 0                                                            MUSH947 
+ ALPHA SYN 0                                                            MUSH948 
+       TCD X$EXEC2                                                      MUSH949 
+       REM THE ABOVE TCD SHOULD BE REPLACED BY A TRANSFER CONTROL CARD          
+       REM VALID FOR THE PROGRAM USING MUSH.  OR IT CAN BE LEFT OUT.            

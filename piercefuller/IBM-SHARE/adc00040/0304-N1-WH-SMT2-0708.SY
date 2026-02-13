@@ -1,0 +1,951 @@
+WHSMT2 REM 0951 04309 704                                               SMT20001
+WHSMT  REM WESTINGHOUSE ANALYTICAL DEPT - E. PITTSBURGH               WHSMT20002
+       REM SELECTIVE MONITOR TRACE PROGRAM -                            SMT20003
+WHSMT2 REM REVISED TRACE FOR TRAPPING MODE  F.ENGEL,JR  2.9.59          SMT20004
+       REM                                                              SMT20005
+       REL                                                              SMT20006
+       ORG 0                                                            SMT20007
+ TRACE SXD STRIC,4      BEGIN TRACE HERE - SAVE IR4                     SMT20008
+       STQ STRMQ        SAVE MQ AND WORDS 0 AND 1                       SMT20009
+       LDQ 0              *                                             SMT20010
+       STQ C(0)           *                                             SMT20011
+       LDQ 1              *                                             SMT20012
+       STQ C(1)           *                                             SMT20013
+       LDQ TRAPT        SET TRAP MODE                                   SMT20014
+       STQ 1              RETURN                                        SMT20015
+       TXI *+2          TEST FOR TRAP MODE                              SMT20016
+ TRAPN LDQ L0           SET TO 0 IF IN TRAPPING MODE                    SMT20017
+       STQ FFTRP        SET INDICATOR FOR TRAP MODE - OFF IS NOT ZERO   SMT20018
+       LTM                                                              SMT20019
+       LDQ C(0)         RESTORE LOW STORAGE                             SMT20020
+       STQ 0              *                                             SMT20021
+       LDQ C(1)           *                                             SMT20022
+       STQ 1              *                                             SMT20023
+       LXA LCOM,4                                                       SMT20024
+ STZ   STZ STRMQ,4      CLEAR COMMON STORAGE                            SMT20025
+       TIX *-1,4,1        *                                             SMT20026
+       TSX STRGR+1,4    SAVE AC, ETC, BUT NOT MQ                        SMT20027
+       CLS STRMQ        ENSURE PRINTING                                 SMT20028
+       STO MQR            OF INITIAL VALUES                             SMT20029
+       CLS STRAC          *                                             SMT20030
+       STO ACR            *                                             SMT20031
+       CLA LONE         INITIALIZE                                      SMT20032
+       STO EX             INCREMENT                                     SMT20033
+       CAL STROB0       INITIALIZE STROBE                               SMT20034
+       SLW STROBE       PUT 1 IN BIT 1                                  SMT20035
+       LXA LONE,1         *                                             SMT20036
+       CLA INTAB+3,1    LOOK FOR ENTRY POINT                            SMT20037
+       TZE *+2            FIRST ZERO WORD                               SMT20038
+       TXI *-2,1,-4       *                                             SMT20039
+ ACLOP ACL STZ          RESTORE ENTRY POINT                             SMT20040
+       STD INTAB+3,1      OP TO STORE ZERO                              SMT20041
+       LDQ INTAB+2,1    PUT INSTRUCTION FOR                             SMT20042
+       STQ EXEC           EXECUTION - TRACE                             SMT20043
+       STQ EXECU          OR EXIT                                       SMT20044
+       CAL INTAB+1,1    SET FF FROM CONTROL WORD                        SMT20045
+       STA LOC          INITIALIZE LOCATION COUNTER                     SMT20046
+       STA ENT.           *                                             SMT20047
+       ANA FFMASK         *                                             SMT20048
+       SLW FF             *                                             SMT20049
+ ENT.  CAL **           RESTORE ENTRY POINT                             SMT20050
+       STA INTAB+3,1      ADDRESS PART                                  SMT20051
+       CAL BTMASK       TEST BY-PASS TALLY                              SMT20052
+       ANA INTAB+1,1      *                                             SMT20053
+       TZE WPR            GO ON IF NOT BY-PASSED                        SMT20054
+       CAL INTAB+1,1    DECREMENT TALLY                                 SMT20055
+       SUB BT1            *                                             SMT20056
+       SLW INTAB+1,1      *                                             SMT20057
+LVTRAC CLA LOC          PREPARE TO LEAVE TRACING MODE                   SMT20058
+       LXA L3,1                                                         SMT20059
+ SETEX ADD LONE         SET EXIT ADDRESSES                              SMT20060
+       STA EXECU+4,1                                                    SMT20061
+       TIX *-2,1,1                                                      SMT20062
+       TSX RSTRGR,4     RESTORE REGISTERS                               SMT20063
+       LXA FFTRP,4      RESET                                           SMT20064
+       TXH *+2,4,0        TRAPPING MODE                                 SMT20065
+       ETM                INDICATOR                                     SMT20066
+       LXD STRIC,4        *                                             SMT20067
+ EXECU                  EXECUTE INSTRUCTION HERE TO LEAVE TRACING MODE  SMT20068
+ EXX   SYN EXECU                                                        SMT20069
+       TTR -              *                                             SMT20070
+       TTR -              *                                             SMT20071
+       TTR -              *                                             SMT20072
+OTHSE  CLA FFMASK                                                       SMT20073
+       ANS FF                                                           SMT20074
+       CLA STRAC                                                        SMT20075
+       STO ACR                                                          SMT20076
+       CLA STRMQ                                                        SMT20077
+       STO MQR                                                          SMT20078
+OTHSE1 CLA **           ADDRESS SET IN ETA BLOCK - SET NEXT INSTRUCT FORSMT20079
+       STO EXECU        EXECUTION                                       SMT20080
+       STO EXEC                                                         SMT20081
+       SUB LTTRT        TEST CURRENT INSTRUCTION                        SMT20082
+       LXD INTBSZ,1       FOR FWA - INTAB SIZE TO IR1                   SMT20083
+       ADD LFOUR        INCREMENT BY FOUR                               SMT20084
+       TZE TAU          IF FWA, GO TO TAU TO PRINT AND EXIT NORMALLY    SMT20085
+       TXI *+1,1,4        INCREMENT COUNTER AND TRY AGAIN               SMT20086
+       TXH *-3,1,3        IF NOT FWA, CONTINUE TRACE AT WPR             SMT20087
+ WPR   LDQ LOC                                                          SMT20088
+       SWT 6                                                            SMT20089
+       HPR              STOP AND DISPLAY LOC IF SW.6 IS UP              SMT20090
+       SWT 6                                                            SMT20091
+       TXI TAU,,-       LEAVE TRACE IF SW6 IS UP , PRINTING WAITING INFOSMT20092
+ TYPEA CLA FF             CORRECTION 8-13-56                            SMT20093
+       ANA FMSK2          TO BYPASS WPR IF                              SMT20094
+       TNZ TY             TRA OR STORES ONLY                            SMT20095
+       WPR                                                              SMT20096
+ TY    CLA EXEC                                                         SMT20097
+       STA ADDR           SET ADDRESS                                   SMT20098
+       LRS 33                                                           SMT20099
+       TZE SPLIT          TRANSFER IF TYPE B INSTRUCTION                SMT20100
+       STA OP                                                           SMT20101
+       STO OPER           STORE OPER IF TYPE A.                         SMT20102
+       CAL BIT9                                                         SMT20103
+       ORS FF             SET FF VI                                     SMT20104
+ PXD   PXD                                                              SMT20105
+       TXI DON                                                          SMT20106
+SPLIT  LLS 9                                                            SMT20107
+       STA OP             STORE OP IF TYPE B INSTR                      SMT20108
+INDEX  LXD STRIA,1        COMPUTE LOGICAL OR OF INDEX REGISTERS USED    SMT20109
+       LXD STRIB,2                                                      SMT20110
+       LXD STRIC,4                                                      SMT20111
+       CLA TMSK                                                         SMT20112
+       ANA EXEC                                                         SMT20113
+       TZE SXDST2                                                       SMT20114
+ DON   ORA PXD                                                          SMT20115
+       SLW SXDSTG                                                       SMT20116
+       CLA BIT11                                                        SMT20117
+       ORS FF             SET FF UIII                                   SMT20118
+SXDSTG PXD                                                              SMT20119
+       ARS 18                                                           SMT20120
+SXDST2 STA INDPR        OR COMBINATION OF INDEX REG.                    SMT20121
+ TOM   SUB BT1          COMPUTE EFF ADDR PREPARE FOR                    SMT20122
+       SUB ADDR           COMPLEMENT ARITHMETIC                         SMT20123
+       STA PRADD  EFF ADDR                                              SMT20124
+       CLA OP                                                           SMT20125
+       TZE LAMDA          TEST FOR HTR OP                               SMT20126
+       SUB OPTAB+1                                                      SMT20127
+       TZE PETE3                                                        SMT20128
+       SUB OPTAB+8                                                      SMT20129
+       TZE ABC3                                                         SMT20130
+       SUB OPTAB                                                        SMT20131
+       TNZ FLPT.        TEST FOR FDH                                    SMT20132
+ ABC   CAL BIT8                                                         SMT20133
+       ORS FF             SET FFV                                       SMT20134
+ ABC3  CLA EXEC                                                         SMT20135
+       ADD BIT11        CHANGE OP TO DVP OR FDP  IN EXEC                SMT20136
+       STO EXEC                                                         SMT20137
+       CLA FF10         TURN ON FFVII  FOR DIVIDE                       SMT20138
+       ORS FF           OR HALT                                         SMT20139
+       TRA NU                                                           SMT20140
+ FLPT. TMI TOM10                                                        SMT20141
+.FLPT. SUB OPTAB3       FL PT OP TEST                                   SMT20142
+       TPL TOM10        JUMP IF NOT FL PT OP                            SMT20143
+ CBA4  CLA FF8          SET FFV FL PT OP                                SMT20144
+       ORS FF             SET FFV                                       SMT20145
+       TRA NU                                                           SMT20146
+ TOM10 SUB OPTAB+6                                                      SMT20147
+       TZE LAMDA          TEST FOR HPR                                  SMT20148
+       SUB OPTAB+2                                                      SMT20149
+       TZE PI             TEST FOR LDA                                  SMT20150
+ ABC11 SUB OPTAB+7                                                      SMT20151
+       SUB LONE                                                         SMT20152
+       LXA OP,4                                                         SMT20153
+       TXH ABC19,4,447                                                  SMT20154
+       TXL ABC..,4,383                                                  SMT20155
+ ABC15 CLA LONE                                                         SMT20156
+       ALS 28                                                           SMT20157
+       ORS FF             SET FF IV                                     SMT20158
+       TRA NU0                                                          SMT20159
+ ABC.. TXH ABC19,4,208  JUMP IF OP IS NOT AN-                           SMT20160
+       TXL ABC19,4,207                                                  SMT20161
+       LDQ EXEC         TEST OP FOR ANS                                 SMT20162
+       TQP ABC15        JUMP IF OP IS ANS                               SMT20163
+ ABC19 SUB OPTAB+5                                                      SMT20164
+       TNZ ABC20        JUMP IF NOT CPY OR CAD                          SMT20165
+       CLA EXEC                                                         SMT20166
+       LDQ *            SET EXEC OP TO LDQ TO                           SMT20167
+       SLQ EXEC           SIMULATE CPY                                  SMT20168
+       TPL NU1          TEST FOR CAD OP                                 SMT20169
+       STO EXECAD       TAG AND ADDRESS TO ACL SIMULATION               SMT20170
+       LDQ ACLOP        *                                               SMT20171
+       SLQ EXECAD       ACL OP TO ACL SIMULATION                        SMT20172
+       TXI NU1,,-       NU1 MUST CORRECT ADDRESS FOR REF TO LOW STORAGE SMT20173
+ ABC20 SUB OPTAB+4      TEST OP FOR 0760...                             SMT20174
+       TNZ MESS3        JUMP IF NOT 0760 OP                             SMT20175
+       CAL BTM          BIT 12                                          SMT20176
+       ORS FF           SET FF IX ... FOR 760 OP FLAG                   SMT20177
+       CLA PRADD                                                        SMT20178
+       SUB LSVN                                                         SMT20179
+ ABC28 TNZ *+6          TRANS IF OP IS NOT 760...07                     SMT20180
+       LDQ EXEC                                                         SMT20181
+       TQP *+2          TRANS IF OP IS ETM                              SMT20182
+       CLA EXEC           LTM , SET AC NOT 0                            SMT20183
+       STO FFTRP        SET TRAP MODE FF - 0 IS ON                      SMT20184
+       TXI PI,,-        GO ON, BY-PASSING ACTUAL EXECUTION              SMT20185
+ MESS3 SUB LTWO                                                         SMT20186
+       TZE UPS            TEST FOR RDS OP                               SMT20187
+       SUB LTWO                                                         SMT20188
+       TZE UPS            TEST FOR BST OP                               SMT20189
+       SUB LTWO                                                         SMT20190
+       TZE UPS            TEST FOR WRS OP                               SMT20191
+       SUB LTWO                                                         SMT20192
+       TZE UPS            TEST FOR WEF OP                               SMT20193
+       SUB LTWO                                                         SMT20194
+       TZE UPS            TEST FOR REW OP                               SMT20195
+TOM10. LXA OP,1           FILTER OUT TSX                                SMT20196
+       TXL NU,1,59                                                      SMT20197
+       TXL SX,1,60                                                      SMT20198
+ NU0   CLA OPMASK SEPERATE OUT TYPE                                     SMT20199
+       ANA OP B NON INDEXABLE                                           SMT20200
+       SUB LFOUR COMMANDS.                                              SMT20201
+       TNZ NU                                                           SMT20202
+       STA INDPR                                                        SMT20203
+       CLA ADDR                                                         SMT20204
+       STA PRADD                                                        SMT20205
+ NU    LXA OP,1                                                         SMT20206
+       TXH IOTA,1,475   BYPASS IF E OF INSTR DOES NOT REFER TO LOC      SMT20207
+ NU1   LXA PRADD,1      TEST EFF ADDR FOR LOW STORAGE                   SMT20208
+       TXH IOTA,1,1     JUMP IF 0 OR 1 NOT INVOLVED                     SMT20209
+       PXD 0,1                                                          SMT20210
+       ARS 18                                                           SMT20211
+       ADD LEO                                                          SMT20212
+       STA EXEC                                                         SMT20213
+       STA EXECAD       SET ADDRESS FOR CAD SIMULATION                  SMT20214
+       CAL PDAMSK       CLEAR TAG FIELDS OF EXEC AND EXECAD             SMT20215
+       ANS EXEC         IF EFF ADDRESS                                  SMT20216
+       ANS EXECAD       IS 0 OR 1 TO SIMULATE LOW STORAGE               SMT20217
+ IOTA  LXA *+1,1                                                        SMT20218
+ IOTA7 CLA 2,1          SAVE LOW STORAGE 0,1                            SMT20219
+       STO E1+1,1       *                                               SMT20220
+       TIX IOTA7,1,1                                                    SMT20221
+       CAL TTRPET                                                       SMT20222
+       SLW 1            PUT TRACE INSTR IN 00001                        SMT20223
+ETM    TSX RSTRGR,4                                                     SMT20224
+       LXD STRIC,4        RESTORE INDEX C                               SMT20225
+EXECAD TXH -,0,-        SIMULATE ACL HERE IF CAD OP - OTHERWISE TXH,,-  SMT20226
+       ETM                                                              SMT20227
+EXEC                      STORAGE WHERE INSTR ARE OBEYED.               SMT20228
+       TTR SIGMA                                                        SMT20229
+       TTR MUSH                                                         SMT20230
+LTMOP  LTM                                                              SMT20231
+       SXD STRIC,4                                                      SMT20232
+       TSX STRGR,4                                                      SMT20233
+       CLA LTHREE                                                       SMT20234
+       TRA MUSH4                                                        SMT20235
+MUSH   LTM                                                              SMT20236
+       SXD STRIC,4                                                      SMT20237
+       TSX STRGR,4                                                      SMT20238
+       CLA LTWO                                                         SMT20239
+ MUSH4 STO EX           SET INCREMENT FOR LOC                           SMT20240
+       TXL SIGMA3       UT                                              SMT20241
+SIGMA  LTM                                                              SMT20242
+       SXD STRIC,4                                                      SMT20243
+       TSX STRGR,4        TRANSFER TO STORE REGISTERS                   SMT20244
+       CAL TXH0         RESTORE EXECAD TO TXH    (SET BY ABC19 IF CAD)  SMT20245
+       SLW EXECAD       FOR NORMAL MODE (NOP)                           SMT20246
+SIGMA3 CLA FF10         TEST FFVIII FOR DIV OR                          SMT20247
+       ANA FF           HALT OP                                         SMT20248
+       TZE RHO          YES                                             SMT20249
+       CLS BIT11                                                        SMT20250
+       ADM EXEC         DVH OP                                          SMT20251
+       STD EXEC                                                         SMT20252
+       DCT              TEST DCI IF DIV/HALT OP                         SMT20253
+       TXL DCON         DCI ON                                          SMT20254
+       TXL RHO          DCI OFF                                         SMT20255
+ DCON  DVP LMZE         TURN ON DCI                                     SMT20256
+ LAMDA CAL TSXPRI                                                       SMT20257
+       SLW TSW1                                                         SMT20258
+       CLA OP                                                           SMT20259
+       TZE PETE2        IF OPERATION IS HTR, GO TO PETE2                SMT20260
+       SUB LHPR         IF OPERATION IS HPR, GO TO PI                   SMT20261
+       TZE PI           IF OPERATION NOT HTR NOR HPR, GO ON             SMT20262
+ RHO   LXA *+2,1        RESTORE LOW STORAGE                             SMT20263
+       CLA E1+1,1       ZERO AND ONE                                    SMT20264
+       STO 2,1          ONLY                                            SMT20265
+       TIX RHO+1,1,1                                                    SMT20266
+ PI    PXD              PREPARE TO TEST IF CURRENT                      SMT20267
+       LDQ FF             INSTRUCTION SHOULD BE TRACED                  SMT20268
+       RQL 3              *                                             SMT20269
+       LLS 1            FFI BIT4 - TRACE STORES MODE                    SMT20270
+       ALS 5              *                                             SMT20271
+       LGL 1            FF0 BIT3 - TRACE TRANSFERS MODE                 SMT20272
+       TZE EPSI         JUMP IF TRACE ALL MODE, NEITHER FF0 NOR FF1     SMT20273
+       ALS 22             *                                             SMT20274
+       ANA FF           FF0 AND FF10  OR FF1 AND FF7                    SMT20275
+       TZE ETA          JUMP IF NEITHER IS TRUE TO CONTINUE WITHOUT TRACSMT20276
+       ANA BIT7         STORE OP AND FF1                                SMT20277
+       TZE EPSI         JUMP TO NOT TRACE OR                            SMT20278
+       TQP EPSI         JUMP TO TRACE IF NOT SPEC STORE MODE FF2        SMT20279
+TBLTST LXD AWRD,1         TEST SPECIFIED STORE TABLE.                   SMT20280
+       CLA INTAB,1                                                      SMT20281
+       TZE ETA            NOT THERE                                     SMT20282
+       LRS 18                                                           SMT20283
+       SUB LOC                                                          SMT20284
+       TZE EPSI           TEST DECREMENT PART.                          SMT20285
+       PXD 0,0          CLEAR AC                                        SMT20286
+       LLS 18                                                           SMT20287
+       SUB LOC                                                          SMT20288
+       TZE EPSI           TEST ADDRESS PART.                            SMT20289
+       TXI TBLTST+1,1,-1                                                SMT20290
+EPSI   LDQ LOC            CONVERT LOCATION TO OCTAL                     SMT20291
+       LLS 23                                                           SMT20292
+       LXA LFOUR,1                                                      SMT20293
+       TSX BONE,4         TRANS TO OCTAL CONVERSION ROUTINE             SMT20294
+       LDQ FF                                                           SMT20295
+       RQL 9            FFVI                                            SMT20296
+       TQP EPSI2        JUMP IF NOT TYPE A OP                           SMT20297
+PREDEC CLA OPER                                                         SMT20298
+       TPL *+2                                                          SMT20299
+       SUB LTWO                                                         SMT20300
+       PAX -,1                                                          SMT20301
+       LDQ PTAB+5,1     SET UP PREFIX                                   SMT20302
+       TRA OUT            FOR MNEMONIC CONVERSION.                      SMT20303
+MEM25  CAL STRMQ        TEST C(MQ) FOR CHANGE                           SMT20304
+       COM              CHANGE                                          SMT20305
+       ACL MQR                                                          SMT20306
+       COM                                                              SMT20307
+       TZE MQSKP                                                        SMT20308
+ OOG7  CLA STRMQ                                                        SMT20309
+       TSX MEMCN,2                                                      SMT20310
+       TXI CONIR3,,-    GO ON TO TEST FF5                               SMT20311
+ ABCD3 CLA EXEC         START TABLE LOOKUP FOR MNEMONIC CONVERSION      SMT20312
+       ARS 24                                                           SMT20313
+       STO OPER                                                         SMT20314
+ ABCD  LXD LOPS,1                                                       SMT20315
+       CLA ALPTAB+OPS,1                                                 SMT20316
+       LRS 24                                                           SMT20317
+       CAS OPER           COMPARE CURRENT OP WITH TABLE                 SMT20318
+       TRA ABCD+7                                                       SMT20319
+ LOPS  TXL OUT,0,760TAB-ALPTAB  NO. OF ALPTABLE ENTRIES                 SMT20320
+       TIX ABCD+1,1,1                                                   SMT20321
+ OUT2  LDQ LOC          LOC TO MQ                                       SMT20322
+       HTR OUT            STOP IF OP IS NOT IN TABLE                    SMT20323
+ MEMCN STO SEXP         FULL WORD OCTAL CONVERSION SUBROUTINE           SMT20324
+       SSP                                                              SMT20325
+       LRS 33                                                           SMT20326
+       LXA L12,1        NO. OF OCTAL DIGITS                             SMT20327
+       TSX BONE4,4      JUMP TO OCTAL CONV  S-R                         SMT20328
+       LDQ FF                                                           SMT20329
+       TRA 1,2                                                          SMT20330
+ EPSI2 RQL 3            FFIX                                            SMT20331
+       TQP ABCD3        JUMP IF NOT 760 TYPE OP                         SMT20332
+       LDQ EXEC                                                         SMT20333
+       CLA PRADD                                                        SMT20334
+       ANA MASK9                                                        SMT20335
+       LLS 0                                                            SMT20336
+       STO OPER                      STORE OPERATION CODE               SMT20337
+       ADD L12                       PREPARE TO TEST FOR MINUS 12       SMT20338
+       TMI MSE1         JUMP IF MINUS SENSE OP                          SMT20339
+       LXA L12,1                                                        SMT20340
+ EPSI1 CLA 760TAB+12,1  LOOKUP 760 OPS                                  SMT20341
+       LRS 24                                                           SMT20342
+       CAS OPER                                                         SMT20343
+       TRA OUT2                                                         SMT20344
+       TRA OUT                                                          SMT20345
+       TIX EPSI1,1,1                                                    SMT20346
+       CLA PSEOP                                                        SMT20347
+       TXI *+2,,-                                                       SMT20348
+ MSE1  CLA MSEOP                                                        SMT20349
+       LRS 24                                                           SMT20350
+OUT    LXA LTHREE,2                                                     SMT20351
+ OUT1  PXD -                                                            SMT20352
+       LRS 0                                                            SMT20353
+       LLS 4                                                            SMT20354
+       ADD BONE32       REPLACE ALCON WITH ALTERNATOR                   SMT20355
+       SUB LTWO           FOR RT AND L CDI IN OUT BLOCK                 SMT20356
+       STA HIPUN                                                        SMT20357
+       CLA LZERO                                                        SMT20358
+       LLS 4                                                            SMT20359
+       ADD BONE32       FOR XFR AND STORES                              SMT20360
+       SUB LTWO                                                         SMT20361
+       STA LOPUN                                                        SMT20362
+       CLA STROBE                                                       SMT20363
+HIPUN  ORS                                                              SMT20364
+LOPUN  ORS                                                              SMT20365
+       ARS 1                                                            SMT20366
+       STO STROBE                                                       SMT20367
+       TIX OUT1,2,1                                                     SMT20368
+EFADD  LDQ PRADD          SET UP SR FOR CONVERSION OF EFFECTIVE ADDRESS SMT20369
+       LLS 23                                                           SMT20370
+       LXA LFOUR,1                                                      SMT20371
+       TSX BONE,4         TRANSFER TO OCTAL CONVERSION SUBROUTINE       SMT20372
+       LDQ FF                                                           SMT20373
+       RQL 3                                                            SMT20374
+       TQP MEMCON       JUMP IF NOT TRA MODE, FF0 =0                    SMT20375
+       RQL 1                                                            SMT20376
+       TQP ZETA         JUMP IF TRA BUT NOT STORE MODE, FF1=0           SMT20377
+MEMCON CLA PRADD          SET UP FOR CONVERSION OF MEMORY               SMT20378
+       STA *+1                                                          SMT20379
+       CLA                                                              SMT20380
+       TSX MEMCN,2                                                      SMT20381
+       RQL 4                                                            SMT20382
+       TQP MEMCO5       TEST FF I - JUMP IF NOT TRANSFER MODE           SMT20383
+ KAPPA LDQ STROBE       TEST POSITION OF STROBE FOR                     SMT20384
+       RQL 1              STORE AND TRANSFER MODE                       SMT20385
+       TQP KAPPA6         JUMP IF LINE NOT COMPLETE                     SMT20386
+       WPR                KAPPA+4                                       SMT20387
+       PSE 243            TRANSFER AND STORE PRINT FORMAT.              SMT20388
+       TXL ETAM1,,-     GO TO COPY LOOP AND PREPARE FOR NEXT INSTR      SMT20389
+KAPPA6 RQL 23           TEST STROBE POSITION FOR                        SMT20390
+       TQP ETA            INSERTION OF EXTRA SPACE-JUMP IF NOT REQD.    SMT20391
+       TXI ZETA7,,-       JUMP TO ADD SPACE                             SMT20392
+MEMCO5 CAL STRAC                                                        SMT20393
+       COM              CHANGE                                          SMT20394
+       ACL ACR                                                          SMT20395
+       COM                                                              SMT20396
+       TZE ACSKP          TEST AC FOR CHANGE                            SMT20397
+       CLA STRAC          SET UP FOR OCTAL CONVERSION OF AC             SMT20398
+       TSX MEMCN,2                                                      SMT20399
+MEMC23 RQL 11                                                           SMT20400
+       TQP MEM25        JUMP IF FF VIII NOT ON - NO IR TAG              SMT20401
+ CONIR LXD STRIA,1      INDEX REGISTER CONVERSION BLOCK                 SMT20402
+       TSX CONIR4,4     CONV IR 1                                       SMT20403
+       LXD STRIB,1                                                      SMT20404
+       TSX CONIR4,4     CONV IR 2                                       SMT20405
+       LXD STRIC,1                                                      SMT20406
+       TSX CONIR4,4     CONV IR 4                                       SMT20407
+       SPR 4            SET IR PRINT FORMAT                             SMT20408
+CONIR3 CLA STRAC        TEST AC FOR CHANGE                              SMT20409
+       STO FRACT                                                        SMT20410
+       SUB ACR                                                          SMT20411
+       TZE OL1                                                          SMT20412
+       TSX FLTPC,4                                                      SMT20413
+ OL1   TSX SHIFT,4                                                      SMT20414
+       CLA STRMQ                                                        SMT20415
+       STO FRACT                                                        SMT20416
+       SUB MQR                                                          SMT20417
+       TZE AB                                                           SMT20418
+       TSX FLTPC,4                                                      SMT20419
+AB     TSX SHIFT,4                                                      SMT20420
+ PQ    CLS STRIP                                                        SMT20421
+       LBT                                                              SMT20422
+       TXL PQ1                                                          SMT20423
+       SPR 1                                                            SMT20424
+ PQ1   ARS 33                                                           SMT20425
+       ADD ALCON                                                        SMT20426
+       ADD LTWO                                                         SMT20427
+       STA PQA                                                          SMT20428
+       CAL LMZE                                                         SMT20429
+ PQA   ORS                                                              SMT20430
+ TAG   CAL EXEC         CONVERT TAG                                     SMT20431
+       ANA TMSK                                                         SMT20432
+       ARS 15                                                           SMT20433
+       ADD OROWR                                                        SMT20434
+       STA XX                                                           SMT20435
+       CLA STROBE                                                       SMT20436
+XX     ORS                                                              SMT20437
+       ARS 1                                                            SMT20438
+       STO STROBE                                                       SMT20439
+       LDQ FF           CONVERT DECREMENT IF NOT                        SMT20440
+       RQL 9              TYPE B INSTRUCTION.                           SMT20441
+       TQP ETAM1                                                        SMT20442
+       CLA EXEC                                                         SMT20443
+       SSP                                                              SMT20444
+       TSX DECR,4                                                       SMT20445
+ ETAM1 TSX CPYPRT,4     TO COPY LOOP                                    SMT20446
+ETA    CLA LOC            SET NEW LOCATION.                             SMT20447
+       ADD EX                                                           SMT20448
+       STO LOC                                                          SMT20449
+       STA OTHSE1                                                       SMT20450
+       CLA LONE           RESET EX TO ONE.                              SMT20451
+       STO EX                                                           SMT20452
+ TSW1  TSX OTHSE,4                                                      SMT20453
+       CAL STOP                                                         SMT20454
+       STA TSW1         RESTORE EXIT SWITCH FOR CONTINUATION            SMT20455
+       CAL EXEC         CURRENT INSTR TO AC                             SMT20456
+       LDQ LOC          CURRENT LOC TO MQ                               SMT20457
+ STOP  HTR OTHSE        NORMAL STOP FOR HPR, HTR, FDH, DVH -PRESS START SMT20458
+ FMSK3 OCT 060000000000 FF1 AND FF2 MASK                                SMT20459
+FLTPT  LDQ LZERO          FLOATING POINT EXPONENT CONVERSION AND        SMT20460
+       CLA FRACT        *                                               SMT20461
+       LRS 27             FRACTION SEPARATION.                          SMT20462
+       STQ ABAR           STORE BINARY FRACTION.                        SMT20463
+ L25   PDX 25,1                                                         SMT20464
+       SSP                                                              SMT20465
+       SUB L128                                                         SMT20466
+       LRS 35                                                           SMT20467
+       MPY LOG102         LOG BASE 10 OF 2 MULTIPLICAND.                SMT20468
+       STO SEXP                                                         SMT20469
+       MPY LOG210         LOG BASE 2 OF 10 MULTIPLICAND.                SMT20470
+       LRS 33                                                           SMT20471
+LCOM   PAX STRMQ-COMMON,2  CONSTANT FOR CLEARING COMMON STORAGE         SMT20472
+       TPL YY                                                           SMT20473
+       TXI YY,1,-1                                                      SMT20474
+YY     CLA ALS,1                                                        SMT20475
+       STO ACSFT                                                        SMT20476
+       PXD 0,2                                                          SMT20477
+       ARS 18                                                           SMT20478
+       STA ACSFT                                                        SMT20479
+       MPR LN2                                                          SMT20480
+       STO EXX            SET EXX EQUAL ALPHA F PRIME TIMES NATURAL     SMT20481
+       CLA BTM                                                          SMT20482
+       STO N                                                            SMT20483
+       ARS 21                                                           SMT20484
+       STO ERROR                                                        SMT20485
+       ALS 29                                                           SMT20486
+       STO UN             INITIALIZE SERIES LOOP.                       SMT20487
+       STO SGMA                                                         SMT20488
+LP     LDQ UN                                                           SMT20489
+       MPY EXX                                                          SMT20490
+       LRS 12                                                           SMT20491
+       DVH N                                                            SMT20492
+       STQ UN             STORE U SUB N OF SERIES.                      SMT20493
+       CLA ERROR                                                        SMT20494
+       LRS 0                                                            SMT20495
+       TLQ LVE                                                          SMT20496
+       CLA SGMA                                                         SMT20497
+       ADD UN                                                           SMT20498
+       STO SGMA                                                         SMT20499
+       CLA N                                                            SMT20500
+       ADD BTM                                                          SMT20501
+       STO N                                                            SMT20502
+       TRA LP             RECYCLE.                                      SMT20503
+LVE    CLA SGMA                                                         SMT20504
+ACSFT  NOP                                                              SMT20505
+       LRS 35             PARTS OF EXP 10.                              SMT20506
+       MPY ABAR           A ZERO                                        SMT20507
+       LRS 31                                                           SMT20508
+       STQ FRACT                                                        SMT20509
+       TZE EXPC                                                         SMT20510
+       DVH LTEN                                                         SMT20511
+       STQ FRACT                                                        SMT20512
+       CLA SEXP                                                         SMT20513
+       ADD LONE                                                         SMT20514
+       STO SEXP                                                         SMT20515
+EXPC   CLA SEXP                                                         SMT20516
+       SSP                                                              SMT20517
+       LRS 35                                                           SMT20518
+       DVH LTEN                                                         SMT20519
+       ADD OROWR                                                        SMT20520
+       STA LORDR                                                        SMT20521
+       LLS 35                                                           SMT20522
+       ADD OROWR                                                        SMT20523
+       STA HORDR                                                        SMT20524
+       CLA STROBE                                                       SMT20525
+HORDR  ORS                X-HIGH ORDER STROBE SET ABOVE.                SMT20526
+       ARS 1                                                            SMT20527
+LORDR  ORS                X-LOW ORDER STROBE SET ABOVE.                 SMT20528
+       ARS 1                                                            SMT20529
+       STO STROBE                                                       SMT20530
+       CLA SEXP                                                         SMT20531
+       TPL TT                                                           SMT20532
+       CLA OROWR                                                        SMT20533
+       SUB LONE                                                         SMT20534
+       STA TT1                                                          SMT20535
+       CLA STROBE                                                       SMT20536
+       ALS 1                                                            SMT20537
+TT1    ORS                                                              SMT20538
+TT     PSE 245                                                          SMT20539
+FRTCN  LXA CONTAL,1       CONVERT FIXED DECIMAL FRACTION SUBROUTINE.    SMT20540
+       CLA FRACT                                                        SMT20541
+       SSP                                                              SMT20542
+       LRS 35                                                           SMT20543
+FRTCN4 MPY LTEN         DIGIT TO AC                                     SMT20544
+       ADD OROWR                                                        SMT20545
+       STA FRTCN8                                                       SMT20546
+       CLA STROBE                                                       SMT20547
+FRTCN8 ORS **           SET BY PRECEDING STA                            SMT20548
+       ARS 1                                                            SMT20549
+       STO STROBE                                                       SMT20550
+       CLA LZERO                                                        SMT20551
+       TIX FRTCN4,1,1   COUNT DIGITS CONVERTED                          SMT20552
+       CLA FRACT                                                        SMT20553
+       TPL FRTC21                                                       SMT20554
+       CLA OROWR                                                        SMT20555
+       SUB LONE                                                         SMT20556
+       STA FRTC20                                                       SMT20557
+       CLA STROBE                                                       SMT20558
+       ALS 1                                                            SMT20559
+FRTC20 ORS **           SIGN TO CARD IMAGE OVER UNITS DIGIT             SMT20560
+FRTC21 TRA 1,4          EXIT                                            SMT20561
+ALS    ALS 0                                                            SMT20562
+ARS    ARS 0                                                            SMT20563
+UPS    LXA EXEC,1                                                       SMT20564
+       TXL UPS+3,1,218                                                  SMT20565
+       TXL PI,1,219                                                     SMT20566
+       LDQ FF                                                           SMT20567
+       RQL 6            FF                                              SMT20568
+       TQP PI           JUMP IF I/O IGNORED OR GO ON TO                 SMT20569
+ TAU   TSX PRI,4        PRINT WAITING INFO OR BLANK LINE AND            SMT20570
+TSXPRI SYN TAU                                                          SMT20571
+       TXI LVTRAC,,-    LEAVE TRACE                                     SMT20572
+ STRGR STQ STRMQ        STORE REGISTERS SUBROUTINE                      SMT20573
+       STO STRAC                                                        SMT20574
+       SXD STRIA,1        CALLING SEQUENCE IS THE FOLLOWING-            SMT20575
+       SXD STRIB,2                                                      SMT20576
+       ARS 2              SXD TO STRIC WITH INDEX C TAGGED.             SMT20577
+       ORA LMZE                                                         SMT20578
+       STP STRIP          TSX TO STRGR WITH INDEX C TAGGED.             SMT20579
+       CLA LONE                                                         SMT20580
+       TOV STRGR9                                                       SMT20581
+       ARS 1                                                            SMT20582
+STRGR9 STA STRIP                                                        SMT20583
+       TRA 1,4            EXIT.                                         SMT20584
+RSTRGR LXD STRIA,1        RESTORE REGISTERS SUBROUTINE FOR SMT.         SMT20585
+       CAL STRIP                                                        SMT20586
+       LRS 1                                                            SMT20587
+       ALS 3              RESTORE P-Q                                   SMT20588
+       RQL 1                                                            SMT20589
+ TQP   TQP TOV            TO TURN OFF OVI                               SMT20590
+       ADM STRAC                                                        SMT20591
+       LDQ STRAC                                                        SMT20592
+       LLS 0                                                            SMT20593
+       LDQ STRMQ                                                        SMT20594
+       LXD STRIB,2                                                      SMT20595
+       TRA 1,4            EXIT.                                         SMT20596
+ TOV   TOV TQP+1                                                        SMT20597
+ PRI   WPR              TO PRINT WAITING INFO                           SMT20598
+       CAL FF           TEST FOR TRACING MODE                           SMT20599
+       ARS 31             FF0 -FF1 TO BITS 34-35                        SMT20600
+       TZE CPYPRT                                                       SMT20601
+       PAX -,1            1 OR 3 IF TRACING STORES                      SMT20602
+       TIX *+1,1,2      SET TO 1 IF STORES, 2 IF TRA ONLY               SMT20603
+       SPR 4,1            SPR3 FOR STORES, SPR2 FOR TRANSFER FORMAT     SMT20604
+CPYPRT LXA LZERO,1        PRINTER COPY LOOP AND RESTORE                 SMT20605
+       LXA L12,2           CARD IMAGE.                                  SMT20606
+CPYPR2 CPY LHF,1        COPY LEFT CARD IMAGE                            SMT20607
+       STZ LHF,1        CLEAR CARD IMAGE                                SMT20608
+       CPY RHF,1        COPY RIGHT CARD IMAGE                           SMT20609
+       STZ RHF,1        *                                               SMT20610
+       TNX *+2,2,1      COUNT ROWS                                      SMT20611
+       TXI CPYPR2,1,1   INCREMENT                                       SMT20612
+       CAL BIT1                                                         SMT20613
+       SLW STROBE                                                       SMT20614
+       CAL ALCON        RESET CARD IMAGE                                SMT20615
+       ADD LTWO           *                                             SMT20616
+       STA BONE32         ALTERNATOR                                    SMT20617
+       CLA OROWR          *                                             SMT20618
+       STA BONE33         *                                             SMT20619
+       TRA 1,4            EXIT                                          SMT20620
+ ZETA  LDQ STROBE       TEST FOR TRANSFER PRINT TIME                    SMT20621
+       RQL 1                                                            SMT20622
+       TQP ZETA5        JUMP IF NOT NOW                                 SMT20623
+       CLA BONE32                                                       SMT20624
+       SUB BONE33                                                       SMT20625
+       TPL ETA                                                          SMT20626
+       WPR                ZETA+3                                        SMT20627
+       PSE 242            TRANSFER ONLY PRINT FORMAT.                   SMT20628
+       TXL ETAM1,,-     GO TO COPY LOOP AND PREPARE FOR NEXT INSTR      SMT20629
+ ZETA5 CAL STST1                                                        SMT20630
+       ORA STST2                                                        SMT20631
+       ANA STROBE                                                       SMT20632
+       TZE ETA                                                          SMT20633
+ ZETA7 CAL STROBE                                                       SMT20634
+       ARS 1                                                            SMT20635
+       SLW STROBE                                                       SMT20636
+       TXL ETA                                                          SMT20637
+CONIR4 PXD -,1          4 DIGIT OCTAL CONVERSION -ADDRESS USED          SMT20638
+CONTAL SYN CONIR4       ADDRESS PART FOR NO. OF DEC DIGITS TO BE CONVERTSMT20639
+ DECR  LXA LFOUR,1      FOR IR                                          SMT20640
+       LRS 30           *                                               SMT20641
+BONE   STQ SEXP           CALLING SEQUENCE-                             SMT20642
+       CLA LZERO             1. LDQ WITH WORD TO BE CONVERTED           SMT20643
+       LRS 0                 2. LLS SO THAT WORD IS AT EXTREME LEFT     SMT20644
+       LLS 3                    OF MQ                                   SMT20645
+ BONE4 ADD BONE32                                                       SMT20646
+       STA *+2                                                          SMT20647
+       CLA STROBE            4. TSX /INDEX C/ TO BONE                   SMT20648
+       ORS                                                              SMT20649
+       ARS 1                                                            SMT20650
+       TNZ BONE10       JUMP IF HALF CD IMAGE NOT COMPLETED             SMT20651
+       CAL BONE32       ALTERNATE RIGHT                                 SMT20652
+       LDQ BONE33         AND LEFT                                      SMT20653
+       SLW BONE33         CARD                                          SMT20654
+       STQ BONE32         IMAGE                                         SMT20655
+       CAL BIT1         RESET STROBE                                    SMT20656
+BONE10 STO STROBE                                                       SMT20657
+       TIX BONE+1,1,1                                                   SMT20658
+       CLA SEXP                                                         SMT20659
+       TPL BONE41                                                       SMT20660
+       CLA BONE32                                                       SMT20661
+       SUB LONE                                                         SMT20662
+       STA BONE27                                                       SMT20663
+       CLA STROBE                                                       SMT20664
+       ALS 1                                                            SMT20665
+       PBT                                                              SMT20666
+       TXI BONE27,,-                                                    SMT20667
+       CLA ALCON                                                        SMT20668
+       ADD LONE                                                         SMT20669
+       STA BONE27                                                       SMT20670
+       CLA LONE                                                         SMT20671
+BONE27 ORS **           SIGN OVER UNITS DIGIT                           SMT20672
+BONE41 TRA 1,4          EXIT                                            SMT20673
+BONE32 HTR COMMON+2     OCTAL CONERSION CARD IMAGE LOC OF 0ROW          SMT20674
+BONE33 HTR COMMON+14                                                    SMT20675
+PETE   SXD STRIC,4      TRANSFER INSTRUCTION ENTRY AFTER EXECUTION      SMT20676
+       LTM                SAVE IR4 AND                                  SMT20677
+       TSX STRGR,4        OTHER REGISTERS                               SMT20678
+ PETE2 CLA LONE         SET INCREMENT FOR LOC IF IN TRAPPING MODE       SMT20679
+       LXA FFTRP,4      TEST TRAP MODE                                  SMT20680
+       TXL *+2,4,0        0 IF ON                                       SMT20681
+ PETE3 CLA PRADD          SET LOC INCREMENT TO E-LOC IF NOT TRAP MODE   SMT20682
+       SUB LOC            *                                             SMT20683
+       STO EX             LOC INCREMENT USED AT ETA                     SMT20684
+       CAL BIT13                                                        SMT20685
+       ORS FF                                                           SMT20686
+       TXI SIGMA3                                                       SMT20687
+ FLTPC CLA LSVN         TEST FOR FL PT OPS                              SMT20688
+       STA CONTAL       SET DIGIT COUNT FOR FL PT                       SMT20689
+       TXI FLTPT,4,-1   MAKE THIS TXI *+1,4,-1 IF NOT FL PT ALWAYS      SMT20690
+       CAL FF8          BIT8  FF V                                      SMT20691
+       ANA FF           ON FOR FLOATING PT  OPS                         SMT20692
+       TNZ FLTPT        JUMP IF FLT PT                                  SMT20693
+       CLA LNINE                                                        SMT20694
+       STA CONTAL       SET DIGIT COUNT FOR FRACT CONVERSION            SMT20695
+       TXI FRTCN        FIXED PT FRACTION CONV                          SMT20696
+SHIFT  CLA STROBE                                                       SMT20697
+       ARS 9                                                            SMT20698
+       STO STROBE                                                       SMT20699
+       TRA 1,4                                                          SMT20700
+ ACSKP CAL BIT1         ACCUMULATOR HAS NOT CHANGED FROM                SMT20701
+       SLW STROBE         PRECEDING INSTRUCTION. RESET STROBE           SMT20702
+       CAL BONE32                                                       SMT20703
+       LDQ BONE33                                                       SMT20704
+       SLW BONE33                                                       SMT20705
+       STQ BONE32                                                       SMT20706
+       LDQ FF                                                           SMT20707
+ STRIA TXI MEMC23,,-    DECREMENT USED FOR IR A                         SMT20708
+MQSKP  CLA STROBE         MQ HAS NOT CHANGED FROM PRECEDING             SMT20709
+       ARS 12             COMMAND.                                      SMT20710
+       STO STROBE         SHIFT STROBE.                                 SMT20711
+ STRIB TXI CONIR3,,-    DECREMENT USED FOR IR B                         SMT20712
+ SX    CAL PDAMSK       PUT COMPLEMENT IN                               SMT20713
+       ANS XS                                                           SMT20714
+       COM                                                              SMT20715
+       ANA EXEC           PROPER INDEX                                  SMT20716
+       ORS XS             REGISTER FOR                                  SMT20717
+       CLA LOC            TSX COMMAND.                                  SMT20718
+       COM                                                              SMT20719
+       ADD LONE                                                         SMT20720
+       LXD STRIA,1                                                      SMT20721
+       LXD STRIB,2                                                      SMT20722
+       LXD STRIC,4                                                      SMT20723
+XS     PAX 0                                                            SMT20724
+       SXD STRIA,1                                                      SMT20725
+       SXD STRIB,2                                                      SMT20726
+       SXD STRIC,4                                                      SMT20727
+       CLA ADDR                                                         SMT20728
+       STA PRADD                                                        SMT20729
+ STRIC TXI PETE2,,-     DECREMENT USED FOR IR C                         SMT20730
+ LMZE  MZE                                                              SMT20731
+LZERO  HTR                                                              SMT20732
+ L0    SYN LZERO                                                        SMT20733
+LONE   HTR 1                                                            SMT20734
+LTWO   HTR 2                                                            SMT20735
+LTHREE HTR 3                                                            SMT20736
+LFOUR  HTR 4                                                            SMT20737
+LSVN   HTR 7                                                            SMT20738
+LNINE  HTR 9                                                            SMT20739
+LTEN   HTR 10                                                           SMT20740
+L12    HTR 12                                                           SMT20741
+L67    HTR 67                                                           SMT20742
+L128   HTR 128                                                          SMT20743
+LOG210 OCT 324464741135   LOG BASE 2 OF 10                              SMT20744
+LOG102 OCT 115040465024   LOG BASE 10 OF 2                              SMT20745
+ LN2   DEC 0.6931471806B0                                               SMT20746
+ BIT1  OCT 200000000000                                                 SMT20747
+STROB0 SYN BIT1         INITIAL POSITION OF STROBE                      SMT20748
+ BIT7  OCT 2000000000                                                   SMT20749
+ FF8   OCT 001000000000 MASK FFV BIT 8                                  SMT20750
+ BIT8  SYN FF8                                                          SMT20751
+ BIT9  OCT 400000000                                                    SMT20752
+ FF10  OCT 000200000000 MASK FOR FFVIII BIT 10                          SMT20753
+ BIT11 OCT 100000000                                                    SMT20754
+BTM    OCT 40000000     BIT 12                                          SMT20755
+ BIT13 OCT 20000000                                                     SMT20756
+BT1    OCT 100000       TAG 1                                           SMT20757
+STST1  OCT 40000000                                                     SMT20758
+STST2  DEC 2048                                                         SMT20759
+OPMASK SYN LSVN                                                         SMT20760
+ MASK9 OCT 377          8 BIT ADDRESS MASK                              SMT20761
+TMSK   OCT -700000                                                      SMT20762
+BTMASK OCT 003777700000 BY-PASS TALLY MASK                              SMT20763
+ FMSK2 OCT 070000000000                                                 SMT20764
+FFMASK DEC 8053063680                                                   SMT20765
+PDAMSK SVN -1,0,-1                                                      SMT20766
+AWRD   HTR                                                              SMT20767
+LEO    HTR EO                                                           SMT20768
+OROWR  HTR COMMON+14                                                    SMT20769
+ALCON  HTR COMMON                                                       SMT20770
+LHPR   HTR 272                                                          SMT20771
+ STRIP PZE                                                              SMT20772
+ FFTRP                                                                  SMT20773
+ TXH0  TXH -,,-         CONSTANT FOR NOP                                SMT20774
+TTRPET TTR PETE                                                         SMT20775
+LTTRT  TTR INTAB+2      TTR OP CODE                                     SMT20776
+TRNSFR SYN LTTRT                                                        SMT20777
+ TRAPT TTR TRAPN        WORD TO 1 FOR TRAP MODE TEST                    SMT20778
+OPTAB  DEC 16,17,32,35,48,63,77,80,127,230,498,16777216                 SMT20779
+ PTAB  OCT 045122124000 TXL   TABLE OF MNEMONICS                        SMT20780
+       OCT 045056244000 TNX   FOR PREFIX                                SMT20781
+       OCT 045122050000 TXH   CONVERSION                                SMT20782
+       OCT 045026244000 TIX                                             SMT20783
+       OCT 045122054000 TXI                                             SMT20784
+ALPTAB DEC -8507824661    RQL                                           SMT20785
+       DEC -8373209365    LGL                                           SMT20786
+       DEC -8256039174    PXD                                           SMT20787
+       DEC -7987594793    PDX                                           SMT20788
+       OCT -070001201406  CAD                                           SMT20789
+       OCT -063411024406  SXD                                           SMT20790
+       DEC -6713251098    SLQ                                           SMT20791
+       DEC -6477585188    ORS                                           SMT20792
+       DEC -6444819738    STQ                                           SMT20793
+       DEC -5839857926    LXD                                           SMT20794
+       DEC -5387066115    ORA                                           SMT20795
+       DEC -5369037589    CAL                                           SMT20796
+       DEC -4297327638    SBM                                           SMT20797
+       DEC -3489863427    ANA                                           SMT20798
+       DEC -3257272356    UFS                                           SMT20799
+       DEC -3223717891    UFA                                           SMT20800
+       DEC -2955282454    UFM                                           SMT20801
+       OCT -020005414433  MNR                                           SMT20802
+       DEC -1613043480    TNO                                           SMT20803
+       DEC -1344607755    TMI                                           SMT20804
+       DEC -1076172587    TNZ                                           SMT20805
+       OCT 000002422433   HTR                                           SMT20806
+       OCT 002011215403   TRA                                           SMT20807
+       DEC 287647003      TTR                                           SMT20808
+       DEC 539301146      TLQ                                           SMT20809
+       DEC 1009067049     TSX                                           SMT20810
+       OCT 010011225407   TRE                                           SMT20811
+       DEC 1344608533     TPL                                           SMT20812
+       OCT 014011214047   TOV                                           SMT20813
+       DEC 1898256920     TQO                                           SMT20814
+       OCT 016211215031   TQP                                           SMT20815
+       OCT 020005414452   MPY                                           SMT20816
+       DEC 2416322314     DVH                                           SMT20817
+       DEC 2433099545     DVP                                           SMT20818
+       DEC 2684880394     FDH                                           SMT20819
+       DEC 2701657625     FDP                                           SMT20820
+       DEC 2953319961     FMP                                           SMT20821
+       DEC 3221750534     FAD                                           SMT20822
+       DEC 3255313412     FSB                                           SMT20823
+       OCT 032000613444   ANS                                           SMT20824
+       DEC 3758424868     CAS                                           SMT20825
+       DEC 4043506965     ACL                                           SMT20826
+       DEC 4295165446     ADD                                           SMT20827
+       OCT 040100603026   ADM                                           SMT20828
+       DEC 4330890756     SUB                                           SMT20829
+       DEC 4564064539     HPR                                           SMT20830
+       DEC 5101651459     LDA                                           SMT20831
+       DEC 5369042179     CLA                                           SMT20832
+       OCT 050201212444   CLS                                           SMT20833
+       OCT 053405224403   LXA                                           SMT20834
+       DEC 6175393306     LDQ                                           SMT20835
+       OCT +060011022453  STZ                                           SMT20836
+       OCT 060111022430   STO                                           SMT20837
+       DEC 6478370088     SLW                                           SMT20838
+       DEC 6730032387     STA                                           SMT20839
+       OCT 062211022406   STD                                           SMT20840
+       OCT 063011022431   STP                                           SMT20841
+       DEC 7516526890     CPY                                           SMT20842
+       DEC 7987594025     PAX                                           SMT20843
+       OCT 076105614031   NOP                                           SMT20844
+       DEC 8356824612     RDS                                           SMT20845
+       DEC 8373212452     LLS                                           SMT20846
+       DEC 8388879397     BST                                           SMT20847
+       DEC 8406768420     LRS                                           SMT20848
+       DEC 8424790820     WRS                                           SMT20849
+       DEC 8439141668     ALS                                           SMT20850
+       DEC 8458340104     WEF                                           SMT20851
+       DEC 8472697636     ARS                                           SMT20852
+       DEC 8491042600     REW                                           SMT20853
+760TAB DEC -169551141     RTT                                           SMT20854
+       DEC -118826262     LTM                                           SMT20855
+       DEC -52700182      SSM                                           SMT20856
+       DEC -18416677      PBT                                           SMT20857
+       DEC 333078         CLM                                           SMT20858
+       DEC 18154533       LBT                                           SMT20859
+       DEC 33884708       CHS                                           SMT20860
+       DEC 52700185       SSP                                           SMT20861
+       DEC 100997142      COM                                           SMT20862
+       DEC 117908758      ETM                                           SMT20863
+       DEC 135993094      RND                                           SMT20864
+       DEC 168166693      DCT                                           SMT20865
+PSEOP  OCT 6222007                                                      SMT20866
+MSEOP  OCT 5422007                                                      SMT20867
+ OPS   EQU 760TAB-ALPTAB      NO. OF ALPTABLE ENTRIES                   SMT20868
+       SKP 1                                                            SMT20869
+       REM STARTS HERE TO LOAD CONTROL CARDS AND SET TRAP ENTRIES       SMT20870
+       REM                                                              SMT20871
+ START LXA L0,7                                                         SMT20872
+ RCD   RCD                                                              SMT20873
+       PXD                                                              SMT20874
+       CAD INTAB,1                                                      SMT20875
+       STA PKFW                                                         SMT20876
+       STA STINTR                                                       SMT20877
+       RQL 2                                                            SMT20878
+       TQP NOCTRL                                                       SMT20879
+SPSTT  RQL 3                                                            SMT20880
+       TQP PKFW                                                         SMT20881
+       CLA LONE                                                         SMT20882
+       CPY SPSTAB,2                                                     SMT20883
+       TLQ PKFW                                                         SMT20884
+       TXI *-2,2,-1                                                     SMT20885
+       STZ SPSTAB,2                                                     SMT20886
+ PKFW  CAL -                                                            SMT20887
+       SLW INTAB+1,1                                                    SMT20888
+       CAL ENTRN                                                        SMT20889
+       SLW INTAB+2,1                                                    SMT20890
+       CAL ENTRF                                                        SMT20891
+       SLW INTAB+3,1                                                    SMT20892
+       CAL TRNSFR                                                       SMT20893
+STINTR SLW -                                                            SMT20894
+       STA INTAB+2,1                                                    SMT20895
+       ACL LFOUR                                                        SMT20896
+       STA TRNSFR                                                       SMT20897
+ EXIT2 TXI RCD,1,-4                                                     SMT20898
+ EXIT3 SXD AWRD,1                                                       SMT20899
+       CAL SPSTAB-1,2                                                   SMT20900
+       STO INTAB,1                                                      SMT20901
+       TXI *+1,1,-1                                                     SMT20902
+       TIX *-3,2,1                                                      SMT20903
+       STZ INTAB,1                                                      SMT20904
+ EXIT1 TXI -                                                            SMT20905
+NOCTRL STA EXIT1                                                        SMT20906
+       CAL TXH                                                          SMT20907
+       STA EXIT2        SET EXIT SWITCH TO GO OUT                       SMT20908
+ TXH   TXH EXIT3,1,0    IF OTHER CONTROL CARDS EXIST, IGNORE REST OF CD.SMT20909
+ TXL   TXL SPSTT,,-     NO OTHER CNTRL CARDS- TREAT TRANSFER CD AS ONE  SMT20910
+       HTR -                                                            SMT20911
+INTAB                                                                   SMT20912
+       HTR              INTAB+1                                         SMT20913
+ ENTRN STZ *                                                            SMT20914
+ ENTRF TTR TRACE                                                        SMT20915
+       ORG 63*4+INTAB+1                                                 SMT20916
+SPSTAB                                                                  SMT20917
+COMMON SYN START                                                        SMT20918
+ LHF   SYN COMMON+11                                                    SMT20919
+ RHF   SYN COMMON+23                                                    SMT20920
+FF     SYN COMMON+24                                                    SMT20921
+STRAC  SYN COMMON+25                                                    SMT20922
+INDPR  SYN COMMON+26                                                    SMT20923
+ UN    SYN INDPR                                                        SMT20924
+ACR    SYN COMMON+27                                                    SMT20925
+ N     SYN ACR                                                          SMT20926
+MQR    SYN COMMON+28                                                    SMT20927
+ADDR   SYN COMMON+29                                                    SMT20928
+LOC    SYN COMMON+30                                                    SMT20929
+PRADD  SYN COMMON+31                                                    SMT20930
+ ERROR SYN PRADD                                                        SMT20931
+EX     SYN COMMON+32                                                    SMT20932
+STROBE SYN COMMON+33                                                    SMT20933
+OPER   SYN COMMON+34                                                    SMT20934
+OP     SYN COMMON+35                                                    SMT20935
+FRACT  SYN COMMON+36                                                    SMT20936
+ ABAR  SYN FRACT                                                        SMT20937
+EO     SYN COMMON+37                                                    SMT20938
+ C(0)  SYN EO                                                           SMT20939
+ SEXP  SYN EO                                                           SMT20940
+E1     SYN COMMON+38                                                    SMT20941
+ C(1)  SYN E1                                                           SMT20942
+ SGMA  SYN E1                                                           SMT20943
+STRMQ  SYN COMMON+39                                                    SMT20944
+INTBSZ SYN AWRD                                                         SMT20945
+ L3    SYN LTHREE                                                       SMT20946
+OPTAB3 SYN OPTAB+3                                                      SMT20947
+       SKP 1                                                            SMT20948
+       ORG FLTPC+2                                                      SMT20949
+       TXI *+1,4,-1     CONTINUE TO TEST FOR FL PT CONV AC AND MQ       SMT20950
+       END COMMON                                                       SMT20951

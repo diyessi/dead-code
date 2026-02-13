@@ -1,0 +1,208 @@
+*      TWO-HEADED 704-709 LOADER FOR STANDARD 704 ROW-                  RWTMLU01
+*              BINARY CARDS.                                            RWTMLU02
+*                                                                       RWTMLU03
+*      THIS 6-CARD LOADER WILL LOAD ITSELF ON EITHER THE 704            RWTMLU04
+* OR 709 AND THEN LOAD THE ROW-BINARY AND/OR OCTAL CARDS                RWTMLU05
+* WHICH FOLLOW, TO THE FIRST TRANSFER CARD. THE LOADER                  RWTMLU06
+* OPERATES ONLY ON-LINE (CHANNEL A ON THE 709). IT IS                   RWTMLU07
+* PATTERNED AFTER (AND IN FACT INCLUDES) AS50.                          RWTMLU08
+*                                                                       RWTMLU09
+*      PROCEDURE--PLACE THIS DECK, FOLLOWED BY BINARY                   RWTMLU10
+* AND/OR OCTAL DECK IN CARD READER HOPPER, RESET, AND LOAD              RWTMLU11
+* CARDS.                                                                RWTMLU12
+*      ON THE 709 THE LOADER USES 18 CELLS BEGINNING AT -9              RWTMLU13
+* PLUS 66 CELLS BEGINNING AT LOAD-24. (NOTE THAT THESE MAY              RWTMLU14
+* OVERLAP.)                                                             RWTMLU15
+*      ON THE 704 THE LOADER USES THE STORAGE DEFINED FOR               RWTMLU16
+* AS50. IT DESTROYS THE FIRST 24 WORDS OF CORE BUT THESE                RWTMLU17
+* MAY BE LOADED SUBSEQUENTLY BY BINARY OR OCTAL CARDS, IF               RWTMLU18
+* THE UPPER VERSION IS USED.                                            RWTMLU19
+       ORG     0                                                        TMLU0020
+ 9ORG  EQU     -9                TO SET ORIGIN ON 709                   TMLU0021
+       FUL                       TO PRODUCE SELF-LOADING CARD           TMLU0022
+       TXH     9ORG,0,18 = IORT 9ORG,0,18     704 AND DSC START HERE    TMLU0023
+       CPY     2,4               709 STARTS HERE. COPY LOOP FOR 704,    TMLU0024
+*                                DELAY FOR 709.                         TMLU0025
+       TXI     1,4,-1                                                   TMLU0026
+       NOP     3                 SPACER FOR EOF ON 704                  TMLU0027
+       LXA     *-1,4             EOR                                    TMLU0028
+       RDS     209               BY-PASS 709 LOADER                     TMLU0029
+       TIX     *-1,4,1                                                  TMLU0030
+       CPY     0                 SIMULATE 704 LOAD BUTTON               TMLU0031
+       CPY     1                                                        TMLU0032
+       TRA     0                 END OF 704 PORTION                     TMLU0033
+ M2    IOCP    9L,0,24           COMMAND TO READ 709 OCTAL LOADER       TMLU0034
+ M1    IOCDN   0,0,48            COMMAND TO SKIP 704 LOADER             TMLU0035
+ L0    IOCT    LOAD-3,0,24       COMMAND TO LOAD 709 BINARY LOADER      TMLU0036
+ L1    LCHA    0     ON THE 709 THIS WORD REPLACES CPY AT 1 AND CONTINUETMLU0037
+       IOT                       THE DSC PROGRAM. TURN OFF I-O CHECK    TMLU0038
+       NOP                                                              TMLU0039
+       LCHA    -2                LOAD COMMAND TO READ OCTAL LOADER      TMLU0040
+       TRA     LOAD+2            GO TO PROCESS OCTAL LOADER AS          TMLU0041
+*                                FIRST BINARY CARD                      TMLU0042
+*      709 BINARY-OCTAL BOOTSTRAP LOADER                                TMLU0043
+       ORG     -45               TO POSITION LOAD AT -42                TMLU0044
+       IOCD    LOAD,0,21         COMMAND TO LOAD REMAINDER OF LOADER    TMLU0045
+       TCOA    1                 DELAY TILL LOADER IN                   TMLU0046
+       TRA     LOAD                                                     TMLU0047
+ LOAD  RCDA                      INITIATE NEXT CARD                     TMLU0048
+       RCHA    LOAD5                                                    TMLU0049
+       TCOA    *                 DELAY TILL CARD IS IN                  TMLU0050
+       CAL     9L                                                       TMLU0051
+       TZE     LOAD8             ZERO IMPLIES OCTAL CARD                TMLU0052
+       PDX     ,6                SET WORD COUNT                         TMLU0053
+       STP     LOAD4             SET TO CHECK OR IGNORE SUM             TMLU0054
+       STA     LOAD2             SET CARD ORIGIN                        TMLU0055
+ LOAD2 TXL     ****,4,0          OUT IF TRANSFER CARD                   TMLU0056
+       AXT     0,4               SET I4 TO ZERO                         TMLU0057
+ LOAD3 LDQ     9R+1,4            PICK UP WORD                           TMLU0058
+       STQ*    LOAD2             STORE WORD                             TMLU0059
+       ACL*    LOAD2             ADD TO CHECK SUM                       TMLU0060
+       TXI     *+1,4,-1          ADVANCE FOR NEXT WORD                  TMLU0061
+       TIX     LOAD3,2,1         COUNT WORDS TO BE STORED               TMLU0062
+       ERA     9R                COMPARE CHECK SUMS                     TMLU0063
+       TZE     LOAD AGREE-LOAD NEXT CARD                                TMLU0064
+ LOAD4 HTR     LOAD              ERROR-START TO READ NEXT CARD          TMLU0065
+ LOAD5 IOCD    9L,0,24           COMMAND TO BRING IN BINARY IMAGE       TMLU0066
+ LOAD8 AXT     14,5              14 TO IR1 AND IR 4                     TMLU0067
+       HTR     LOAD              OCTAL LOADER ABSENT                    TMLU0068
+       ORG     LOAD8+1                                                  TMLU0069
+       ABS                       RESUME STANDARD PUNCHING               TMLU0070
+ LOAD9 AXT     2,2               SET TO COUNT FIELD PAIRS               TMLU0071
+       CAL     9L+18,4           ROW                                    TMLU0072
+       ORS     9L+14,1           ROW UNION                              TMLU0073
+       LDQ     9L+14,1                                                  TMLU0074
+       TXI     LOD11,2,22        SET TO PEEL OFF SIX BITS               TMLU0075
+ LOD10 TXH     *+2,4,2           SKIP STORE TILL AFTER ONE-ROW          TMLU0076
+       SLW     ****              STORE OCTAL CORRECTION                 TMLU0077
+       TIX     *-3,2,1           ADVANCE TO NEXT PAIR, THIS HALF        TMLU0078
+       TIX     LOAD9,4,2         ADVANCE TO NEXT ROW                    TMLU0079
+       TNX     LOAD+1,5,13       OUT AFTER RIGHT HALF                   TMLU0080
+       RCDA                      START NEXT CARD                        TMLU0081
+       TXI     LOAD9,5,12        ADVANCE TO RIGHT HALF CARD             TMLU0082
+LOD11  CLM                       CLEAR AC                               TMLU0083
+       ALS     2                                                        TMLU0084
+       LGL     1                 PEEL OFF BITS                          TMLU0085
+       TIX     LOD11+1,2,4       COUNT COLUMNS PER FIELD                TMLU0086
+       TXH     *+2,4,12          USE 7-ROW AS FIRST SUM                 TMLU0087
+       ACL     11L+4,2           ADD PREVIOUS SUM                       TMLU0088
+       SLW     11L+4,2           NEW PARTIAL SUM                        TMLU0089
+       TNX     LOD10,2,2         OUT IF SECOND FIELD OF PAIR            TMLU0090
+       STA     LOD10+1           STORE ADDRESS OF CORRECTION            TMLU0091
+       TXI     LOD11,2,44        RETURN TO PEEL OFF 12 BITS             TMLU0092
+       ORG     LOAD-24                                                  TMLU0093
+ 9L    BSS     24                INPUT BUFFER                           TMLU0094
+ 9R    SYN     9L+1              CARD CHECK SUM                         TMLU0095
+ 11L   SYN     9L+20             TEMPORARY FOR OCTAL                    TMLU0096
+*              INSERT AS50X000 HERE                                     TMLU0097
+*              INSERT AS50X00A HERE                                     TMLU0098
+       ORG     0                                                        TMLU0099
+*              THE FOLLOWING CARD WIPES OUT THE TWO-HEADED              TMLU0100
+*              RESIDUE IN LOWER CORE                                    TMLU0101
+       OCT     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0  22 ZEROS    TMLU0102
+*                                                                       TMLU0103
+       END                                                              TMLU0104
+*      TWO-HEADED 704-709 LOADER FOR STANDARD 704 ROW-                  RWTMLL01
+*              BINARY CARDS.                                            RWTMLL02
+*                                                                       RWTMLL03
+*      THIS 6-CARD LOADER WILL LOAD ITSELF ON EITHER THE 704            RWTMLL04
+* OR 709 AND THEN LOAD THE ROW-BINARY AND/OR OCTAL CARDS                RWTMLL05
+* WHICH FOLLOW, TO THE FIRST TRANSFER CARD. THE LOADER                  RWTMLL06
+* OPERATES ONLY ON-LINE (CHANNEL A ON THE 709). IT IS                   RWTMLL07
+* PATTERNED AFTER (AND IN FACT INCLUDES) AS50.                          RWTMLL08
+*                                                                       RWTMLL09
+*      PROCEDURE--PLACE THIS DECK, FOLLOWED BY BINARY                   RWTMLL10
+* AND/OR OCTAL DECK IN CARD READER HOPPER, RESET, AND LOAD              RWTMLL11
+* CARDS.                                                                RWTMLL12
+*      ON THE 709 THE LOADER USES 18 CELLS BEGINNING AT -9              RWTMLL13
+* PLUS 66 CELLS BEGINNING AT LOAD-24. (NOTE THAT THESE MAY              RWTMLL14
+* OVERLAP.)                                                             RWTMLL15
+*      ON THE 704 THE LOADER USES THE STORAGE DEFINED FOR               RWTMLL16
+* AS50. IT DESTROYS THE FIRST 24 WORDS OF CORE BUT THESE                RWTMLL17
+* MAY BE LOADED SUBSEQUENTLY BY BINARY OR OCTAL CARDS, IF               RWTMLL18
+* THE UPPER VERSION IS USED.                                            RWTMLL19
+       ORG     0                                                        TMLL0020
+ 9ORG  EQU     -9                TO SET ORIGIN ON 709                   TMLL0021
+       FUL                       TO PRODUCE SELF-LOADING CARD           TMLL0022
+       TXH     9ORG,0,18 = IORT 9ORG,0,18     704 AND DSC START HERE    TMLL0023
+       CPY     2,4               709 STARTS HERE. COPY LOOP FOR 704,    TMLL0024
+*                                DELAY FOR 709.                         TMLL0025
+       TXI     1,4,-1                                                   TMLL0026
+       NOP     3                 SPACER FOR EOF ON 704                  TMLL0027
+       LXA     *-1,4             EOR                                    TMLL0028
+       RDS     209               BY-PASS 709 LOADER                     TMLL0029
+       TIX     *-1,4,1                                                  TMLL0030
+       CPY     0                 SIMULATE 704 LOAD BUTTON               TMLL0031
+       CPY     1                                                        TMLL0032
+       TRA     0                 END OF 704 PORTION                     TMLL0033
+ M2    IOCP    9L,0,24           COMMAND TO READ 709 OCTAL LOADER       TMLL0034
+ M1    IOCDN   0,0,48            COMMAND TO SKIP 704 LOADER             TMLL0035
+ L0    IOCT    LOAD-3,0,24       COMMAND TO LOAD 709 BINARY LOADER      TMLL0036
+ L1    LCHA    0     ON THE 709 THIS WORD REPLACES CPY AT 1 AND CONTINUETMLL0037
+       IOT                       THE DSC PROGRAM. TURN OFF I-O CHECK    TMLL0038
+       NOP                                                              TMLL0039
+       LCHA    -2                LOAD COMMAND TO READ OCTAL LOADER      TMLL0040
+       TRA     LOAD+2            GO TO PROCESS OCTAL LOADER AS          TMLL0041
+*                                FIRST BINARY CARD                      TMLL0042
+*      709 BINARY-OCTAL BOOTSTRAP LOADER                                TMLL0043
+       ORG     21                TO POSITION LOAD AT 24                 TMLL0044
+       IOCD    LOAD,0,21         COMMAND TO LOAD REMAINDER OF LOADER    TMLL0045
+       TCOA    1                 DELAY TILL LOADER IN                   TMLL0046
+       TRA     LOAD                                                     TMLL0047
+ LOAD  RCDA                      INITIATE NEXT CARD                     TMLL0048
+       RCHA    LOAD5                                                    TMLL0049
+       TCOA    *                 DELAY TILL CARD IS IN                  TMLL0050
+       CAL     9L                                                       TMLL0051
+       TZE     LOAD8             ZERO IMPLIES OCTAL CARD                TMLL0052
+       PDX     ,6                SET WORD COUNT                         TMLL0053
+       STP     LOAD4             SET TO CHECK OR IGNORE SUM             TMLL0054
+       STA     LOAD2             SET CARD ORIGIN                        TMLL0055
+ LOAD2 TXL     ****,4,0          OUT IF TRANSFER CARD                   TMLL0056
+       AXT     0,4               SET I4 TO ZERO                         TMLL0057
+ LOAD3 LDQ     9R+1,4            PICK UP WORD                           TMLL0058
+       STQ*    LOAD2             STORE WORD                             TMLL0059
+       ACL*    LOAD2             ADD TO CHECK SUM                       TMLL0060
+       TXI     *+1,4,-1          ADVANCE FOR NEXT WORD                  TMLL0061
+       TIX     LOAD3,2,1         COUNT WORDS TO BE STORED               TMLL0062
+       ERA     9R                COMPARE CHECK SUMS                     TMLL0063
+       TZE     LOAD AGREE-LOAD NEXT CARD                                TMLL0064
+ LOAD4 HTR     LOAD              ERROR-START TO READ NEXT CARD          TMLL0065
+ LOAD5 IOCD    9L,0,24           COMMAND TO BRING IN BINARY IMAGE       TMLL0066
+ LOAD8 AXT     14,5              14 TO IR1 AND IR 4                     TMLL0067
+       HTR     LOAD              OCTAL LOADER ABSENT                    TMLL0068
+       ORG     LOAD8+1                                                  TMLL0069
+       ABS                       RESUME STANDARD PUNCHING               TMLL0070
+ LOAD9 AXT     2,2               SET TO COUNT FIELD PAIRS               TMLL0071
+       CAL     9L+18,4           ROW                                    TMLL0072
+       ORS     9L+14,1           ROW UNION                              TMLL0073
+       LDQ     9L+14,1                                                  TMLL0074
+       TXI     LOD11,2,22        SET TO PEEL OFF SIX BITS               TMLL0075
+ LOD10 TXH     *+2,4,2           SKIP STORE TILL AFTER ONE-ROW          TMLL0076
+       SLW     ****              STORE OCTAL CORRECTION                 TMLL0077
+       TIX     *-3,2,1           ADVANCE TO NEXT PAIR, THIS HALF        TMLL0078
+       TIX     LOAD9,4,2         ADVANCE TO NEXT ROW                    TMLL0079
+       TNX     LOAD+1,5,13       OUT AFTER RIGHT HALF                   TMLL0080
+       RCDA                      START NEXT CARD                        TMLL0081
+       TXI     LOAD9,5,12        ADVANCE TO RIGHT HALF CARD             TMLL0082
+LOD11  CLM                       CLEAR AC                               TMLL0083
+       ALS     2                                                        TMLL0084
+       LGL     1                 PEEL OFF BITS                          TMLL0085
+       TIX     LOD11+1,2,4       COUNT COLUMNS PER FIELD                TMLL0086
+       TXH     *+2,4,12          USE 7-ROW AS FIRST SUM                 TMLL0087
+       ACL     11L+4,2           ADD PREVIOUS SUM                       TMLL0088
+       SLW     11L+4,2           NEW PARTIAL SUM                        TMLL0089
+       TNX     LOD10,2,2         OUT IF SECOND FIELD OF PAIR            TMLL0090
+       STA     LOD10+1           STORE ADDRESS OF CORRECTION            TMLL0091
+       TXI     LOD11,2,44        RETURN TO PEEL OFF 12 BITS             TMLL0092
+       ORG     LOAD-24                                                  TMLL0093
+ 9L    BSS     24                INPUT BUFFER                           TMLL0094
+ 9R    SYN     9L+1              CARD CHECK SUM                         TMLL0095
+ 11L   SYN     9L+20             TEMPORARY FOR OCTAL                    TMLL0096
+*              INSERT AS50X000 HERE                                     TMLL0097
+*              INSERT AS50X00A HERE                                     TMLL0098
+       ORG     9ORG                                                     TMLL0099
+*              THE FOLLOWING CARD WIPES OUT THE TWO-HEADED              TMLL0100
+*              RESIDUE FROM THE 709.                                    TMLL0101
+       OCT     0,0,0,0,0,0,0,0,0    9 CONSECUTIVE ZEROES                TMLL0102
+*                                                                       TMLL0103
+       END                                                              TMLL0104

@@ -1,0 +1,42 @@
+000100140014 000000000014 001400000000 001400000014 001400140000 000100170014 000000140000 000000000014
+001400000000 001400140014 000000020000 000000120006 000000010000 000000010001 000000000001 000000010001
+000100000001 000100010000 000100000000 000000010001 000000000001 000100010000 000100000011 001400100001
+440020201001 100004000200 100004000004 000500053764 214014201400 754400000002 000421440006 000500000002
+000500014000 000400060000 000000020000 000400060004 000000000004 004601000010 411204302004 000600043365
+220213400204 060602010000 000702050014 000400110010 001500000041 000500050000 000100000000 000400040005
+000000110014 061400100011 133011514400 202010011000 040002001000 020000000000 000000000000 000000000000
+000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
+000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000 000000000000
+Z0 AN Z012 03-23-59 0637         SY 0032                   FORTRAN PROGRAM      
+ANZ012 REM   32 02049                                                   Z0120001
+       FUL                                                              Z0120002
+  Z012 FOR 0,0,6      PROGRAM CARD FOR SUBROUTINE (ONE CARD)            Z0120003
+       OCT 231356431651   CHECK SUM                                     Z0120004
+       PZE 19,0,2     LENGTH OF SUBROUTINE AND OF TRA.LIST              Z0120005
+       PZE 0          NO COMMON STORAGE NEEDED                          Z0120006
+       BCD 1INTAP1                                                      Z0120007
+       PZE 4          ENTRY POINT OF INTAP1                             Z0120008
+       BCD 1INTAP2                                                      Z0120009
+       PZE 14         ENTRY POINT OF INTAP2                             Z0120010
+       REL            SUBROUTINE STARTS HERE (ONE CARD)                 Z0120011
+       ORG 0                                                            Z0120012
+       BCD 1(CSH)     FORTRAN II BSS LOADER WILL INSERT TTR TO ABS.     Z0120013
+       BCD 1(TSH)        LOCATIONS OF SUBROUTINES                       Z0120014
+       OCT 7          REL.LOC.OF WRS IN (TSH)                           Z0120015
+       HTR 127,0,46                                                     Z0120016
+       CLA Z012+1     GET ADDR.OF WRS INSTR.                            Z0120017
+       ADD Z012+2        TO BE MODIFIED                                 Z0120018
+       STA Z012+16       AND PLANT                                      Z0120019
+       CLA 1,4        GET ADDR.OF TAPE UNIT TO BE USED                  Z0120020
+       STA Z012+10       AND PLANT                                      Z0120021
+       CLA Z012+3     46+                                               Z0120022
+       ADD **            TAPE UNIT TO BE SELECTED                       Z0120023
+       ARS 18            INTO ADDR.PART OF AC                           Z0120024
+       LDQ Z012+1     TTR (TSH) INTO MQ                                 Z0120025
+       TRA Z012+16                                                      Z0120026
+       LDQ Z012       LOAD MQ AND AC                                    Z0120027
+       CLA Z012+3        FOR RESTORING                                  Z0120028
+       STA **         CHANGE ADDR.PORTION OF WRS ORDER                  Z0120029
+       STQ **         INSERT ABS.ADDR.OF TTR(CSH) IN MAIN PROG.TRA.LIST Z0120030
+       TRA 2,4        EXIT                                              Z0120031
+       END 0                                                            Z0120032
