@@ -1,0 +1,995 @@
+C THERMAL NETWORK ANALYZER PROGRAM-LOCKHEED MISSILE SYSTEMS VERSION        0001 
+C                                                                          0002 
+C APRIL 18 1961                                                            0003 
+C                                                                          0004 
+C PROGRAMMER- J.L.FICK WITH MODIFICATIONS BY R.ABRAHAMS, DEPT 59-24,       0005 
+C                                                                          0006 
+C  BLDG. 102B, LOCKHEED SUNNYVALE                                          0007 
+C                                                                          0008 
+       DIMENSION T(700), R(700), C(700), TR(700), RI(700), RC(700)         0009 
+      DIMENSION I2V(700),I3V(700),K(100),Q(700)                            0010 
+      DIMENSION KC(100),KR(50),EKR(50),                                    0011 
+     1        IPH(50),PHT1(50),PHH1(50),PHT2(50),PHH2(50),ICON(50),        0012 
+     2EXCON(50),ACON(50),IRB(50),ARB(50),AER(51),IAER(50),IAF2(50),        0013 
+     3 IAF3(50),IAF4(50),IPR1(400),IPR2(400),TABLE(104,30),                0014 
+     4 KIND(30),KDEP(30), CO(20), QDEL(50),                                0015 
+     5 PRINT(700,4),PRUNT(400),TDEL(700),                                  0016 
+     6INSTR(10000),TPREV(50)                                               0017 
+      DIMENSION FIAF5(50)                                                  0018 
+      DIMENSION  I2AER(50),ALLOC(50)                                       0019 
+      EQUIVALENCE                               (PRINT(1),R),              0020 
+     1 (PRINT(701),T),(PRINT(1401),C),(PRINT(2101),Q)                      0021 
+      COMMON T,R,C,TR,RI,RC,I2V,I3V,Q                                      0022 
+C     CLEAR CORE LOCATIONS                                                 0023 
+      ICATH=0                                                              0024 
+      IRAD=0                                                               0025 
+      IPHK=0                                                               0026 
+      ICONK=0                                                              0027 
+      IRB1=0                                                               0028 
+      IAERK=0                                                              0029 
+      IKF=0                                                                0030 
+      IPK=0                                                                0031 
+      PRTST=0.                                                             0032 
+      DO15J=1,2800                                                         0033 
+ 15   PRINT(J)=0.                                                          0034 
+      MAXNOR=0                                                             0035 
+      MAXNO=0                                                              0036 
+C READ IN RESISTOR, TEMPERATURE AND CAPACITOR DATA                         0037 
+C                                                                          0038 
+      CALLTRCIN(  MAXNOR,I2V,I3V,R,MAXNO,T,C,IORG,INSTR,RI,TR,K)           0039 
+C                                                                          0040 
+C READ IN FUNCTION DATA                                                    0041 
+C                                                                          0042 
+      CALLFIN(  KC,ICATH,IRAD,KR,EKR,IPHK,IPH,PHT1,PHH1,PHT2,PHH2,         0043 
+     1ICONK,ICON,EXCON,ACON,IRB3,IRB1,IRB,ARB,IAER1,IAER2,IAERK,AER,       0044 
+     2IAER,IKF,IAF2,IAF3,IAF4,IPK,IPR1,IPR2,CO,I2AER,ALLOC,FIAF5)          0045 
+C                                                                          0046 
+C READ IN TABLES                                                           0047 
+C                                                                          0048 
+      CALL TABIN(TABLE,KDEP,KIND)                                          0049 
+C                                                                          0050 
+C                                                                          0051 
+C SET UP BRANCHES FOR FUNCTION CALCULATIONS                                0052 
+C                                                                          0053 
+  108 IF (IRAD)120,120,121                                                 0054 
+  121 ASSIGN 202 TO NU2                                                    0055 
+      GO TO 122                                                            0056 
+  120 ASSIGN 220 TO NU2                                                    0057 
+  122 IF (ICONK)123,123,124                                                0058 
+  124 ASSIGN204TONU3                                                       0059 
+      GO TO 125                                                            0060 
+  123 ASSIGN 221 TO NU3                                                    0061 
+  125 IF (IRB3)126,126,127                                                 0062 
+  127 ASSIGN 206 TO NU4                                                    0063 
+      GO TO 128                                                            0064 
+  126 ASSIGN 222 TO NU4                                                    0065 
+  128 IF (IAERK)129,129,130                                                0066 
+  130 IAERK=IAERK-1                                                        0067 
+      IF (IAER1)131,131,132                                                0068 
+  131 ASSIGN 209 TO NU5                                                    0069 
+      ASSIGN 225 TO NU6                                                    0070 
+      GO TO 133                                                            0071 
+  132 ASSIGN 223 TO NU5                                                    0072 
+      ASSIGN 211 TO NU6                                                    0073 
+      GO TO 133                                                            0074 
+  129 ASSIGN 225 TO NU5                                                    0075 
+  133 IF (IKF)134,134,135                                                  0076 
+  135 ASSIGN 213 TO NU7                                                    0077 
+      GO TO 136                                                            0078 
+ 134  ASSIGN 224 TO NU7                                                    0079 
+  136 IF (ICATH)137,137,138                                                0080 
+  138 ASSIGN 200 TO NU1                                                    0081 
+      GO TO 139                                                            0082 
+  137 ASSIGN 226 TO NU1                                                    0083 
+  139 IF (IPHK)140,140,141                                                 0084 
+  141 ASSIGN 300 TO NU8                                                    0085 
+      DO 142I=1,IPHK                                                       0086 
+      K=IPH(I)                                                             0087 
+  142 TPREV(I)=T(K)                                                        0088 
+      GO TO 143                                                            0089 
+  140 ASSIGN305TONU8                                                       0090 
+  143 T2ME=CO(9)                                                           0091 
+C TERMINATE BLOCK OF INSTRUCTIONS FOR SUMMING 1/R AND T/R FOR ALL NODES    0092 
+C                                                                          0093 
+      NODE=0                                                               0094 
+      ASSIGN 49 TO N                                                       0095 
+      ASSIGN60TON2                                                         0096 
+      CALL COMPIL (IORG,R,T,RI,TR,NODE,N,K,L)                              0097 
+C                                                                          0098 
+C GO TO ROUTINE FOR PRINTING MAP OF OUTPUT BLOCK                           0099 
+C                                                                          0100 
+      CALLOUTPUT(IPR1,IPK,IPR2)                                            0101 
+      CALL TIME                                                            0102 
+       PRINT3                                                              0103 
+   3   FORMAT(14H+END OF INPUT.///)                                        0104 
+      JTIME=4.+CO(10)                                                      0105 
+      PRINT 2,JTIME                                                        0106 
+    2 FORMAT(50H0IF NEXT ON LINE PRINT MESSAGE DOES NOT APPEAR FORI5,46H   0107 
+     1 MINUTES AFTER METER ON, TAKE JOB OFF COMPUTER/////)                 0108 
+       ASSIGN 5 TO NUT                                                     0109 
+C                                                                          0110 
+C GO TO BLOCK TO DO 1/R AND T/R SUMMATION                                  0111 
+C                                                                          0112 
+  217  CALL TRA (INSTR(10000))                                             0113 
+      GOTON,(49)                                                           0114 
+C                                                                          0115 
+C     COMPUTE DELTA THETA AND TEMPERATURES AT END OF INTERVAL              0116 
+C                                                                          0117 
+   49 GO TO N2,(60,61,427)                                                 0118 
+60    DO62J=1,MAXNO                                                        0119 
+      IF(T(J))63,62,63                                                     0120 
+63    IF(C(J))62,64,62                                                     0121 
+64    T(J)=TR(J)/RI(J)                                                     0122 
+62    CONTINUE                                                             0123 
+      ASSIGN61TON2                                                         0124 
+      GOTO227                                                              0125 
+   61 RCMIN=1.E36                                                          0126 
+      DO 50J=1,MAXNO                                                       0127 
+      IF(C(J))50,50,51                                                     0128 
+   51 RC(J)=C(J)/RI(J)                                                     0129 
+      IF(RCMIN-RC(J)) 50,50,653                                            0130 
+  653 RCMIN=RC(J)                                                          0131 
+      MINND=J                                                              0132 
+   50 CONTINUE                                                             0133 
+      IF(RCMIN)650,650,652                                                 0134 
+  650 WRITE OUTPUT TAPE 6,651                                              0135 
+  651 FORMAT(11H0RCMIN ZERO)                                               0136 
+      X=EXITF(1)                                                           0137 
+  652 IF (CO(2)) 57,57,58                                                  0138 
+   58 DELTAT=CO(2)                                                         0139 
+      GO TO 59                                                             0140 
+   57 DELTAT=RCMIN                                                         0141 
+      IF(CO(3))59,59,48                                                    0142 
+   48 DELTAT=CO(3)*DELTAT                                                  0143 
+  59  PRTST=PRTST+DELTAT                                                   0144 
+      IF(CO(11)-DELTAT) 66,66,800                                          0145 
+  800 WRITE OUTPUT TAPE 6,801,MINND                                        0146 
+  801 FORMAT (25H0COMPUTING INTERVAL SMALLI8)                              0147 
+      X=DUMPF(1)                                                           0148 
+   66 IF(PRTST-CO(1)) 67,69,68                                             0149 
+  68  DELTAT=CO(1)-PRTST+DELTAT                                            0150 
+  69  PRTST=0.                                                             0151 
+   67 TFLAG=1.                                                             0152 
+      DO 52 J=1,MAXNO                                                      0153 
+      IF(T(J))54,52,54                                                     0154 
+  54  IF(C(J))71,47,53                                                     0155 
+   47 TFLAG=0.                                                             0156 
+      GO TO 52                                                             0157 
+   71 TDEL(J)=T(J)                                                         0158 
+      GOTO52                                                               0159 
+   53 TDEL(J)=DELTAT/C(J)*(Q(J)+TR(J)-T(J)*RI(J))+T(J)                     0160 
+   56 IF(TDEL(J))52,55,52                                                  0161 
+   55 TDEL(J)=.0001                                                        0162 
+  52  CONTINUE                                                             0163 
+      DO70J=1,MAXNO                                                        0164 
+      IF (C(J))70,70,470                                                   0165 
+  470 T(J)=TDEL(J)                                                         0166 
+   70 CONTINUE                                                             0167 
+      IF (TFLAG) 425,425,420                                               0168 
+  425 ASSIGN 427 TO N2                                                     0169 
+C                                                                          0170 
+C GO TO INSTR BLOCK TO DO I/R AND T/R SUMMATION FOR SECOND PASS THIS       0171 
+C  INTERVAL TO RELAX ZERO CAPACITANCE NODES.                               0172 
+C                                                                          0173 
+      CALL TRA(INSTR(10000))                                               0174 
+  427 DO 430 J=1,MAXNO                                                     0175 
+      IF (T(J))426,430,426                                                 0176 
+  426 IF (C(J))430,428,430                                                 0177 
+  428 T(J)=(Q(J)+TR(J))/RI(J)                                              0178 
+      IF (T(J)) 430,429,430                                                0179 
+  429 T(J)=.0001                                                           0180 
+  430 CONTINUE                                                             0181 
+      ASSIGN 61 TO N2                                                      0182 
+  420 T2ME=T2ME+DELTAT                                                     0183 
+C                                                                          0184 
+C     EVALUATION OF ALL VARIABLE QS,TS,RS AND CS AT EACH TIME INCREM.      0185 
+C                                                                          0186 
+  227  GO TO NU7, (213,224)                                                0187 
+C                                                                          0188 
+C     PERFORM ARBITRARY FUNCTIONS INTERPOLATIONS                           0189 
+C                                                                          0190 
+  213 DO 612 I=1,IKF                                                       0191 
+      J=IAF2(I)                                                            0192 
+      L=IAF3(I)                                                            0193 
+      K=IAF4(I)                                                            0194 
+      M=KIND(K)                                                            0195 
+      N=KDEP(K)                                                            0196 
+       MA = (N-1) * 700 + J                                                0197 
+       MB = (M-1) * 700 + L                                                0198 
+      MC=(K-1)*104+1                                                       0199 
+      IF (M)215,215,216                                                    0200 
+  216 PRINT(MA)=ENTERP(PRINT(MB),TABLE(MC))                                0201 
+      GO TO 214                                                            0202 
+  215 PRINT(MA)=ENTERP(T2ME,TABLE(MC))                                     0203 
+  214 IF(FIAF5(I)) 610,612,610                                             0204 
+  610 PRINT(MA)=FIAF5(I)*PRINT(MA)                                         0205 
+  612 CONTINUE                                                             0206 
+  224 GO TO NU2,                                                           0207 
+     1(202,220)                                                            0208 
+C                                                                          0209 
+C COMPUTE RADIATION RESISTORS                                              0210 
+C                                                                          0211 
+  202 DO 203I=1,IRAD                                                       0212 
+      K=KR(I)                                                              0213 
+      K2=I2V(K)                                                            0214 
+      K3=I3V(K)                                                            0215 
+  203 R(K)=1./(EKR(I)*((T(K2)+459.69)**2+(T(K3)+459.69)                    0216 
+     1**2)*((T(K2)+459.69)+(T(K3)+459.69)))                                0217 
+  220 GO TO NU3,(204,221)                                                  0218 
+C                                                                          0219 
+C COMPUTE CONVECTION RESISTORS                                             0220 
+C                                                                          0221 
+  204 G=ENTERP(T2ME,TABLE(1,2))                                            0222 
+      DO 205I=1,ICONK                                                      0223 
+      K=ICON(I)                                                            0224 
+      K2=I2V(K)                                                            0225 
+      K3=I3V(K)                                                            0226 
+      EX=EXCON(I)                                                          0227 
+  205 R(K)=1./(G*ENTERP((T(K2)+T(K3))/2.,TABLE(1,1))*ACON(I                0228 
+     1)*ABSF(T(K2)-T(K3))**EX)                                             0229 
+  221 GO TO NU4,(206,222)                                                  0230 
+C                                                                          0231 
+C COMPUTE ARBITRARY HEAT INPUTS                                            0232 
+C                                                                          0233 
+  206 DO 207I=1,IRB3,10                                                    0234 
+      QA=QF(ARB(I),ARB(I+1),ARB(I+2),ARB(I+3),ARB(I+4),ARB(I+5),ARB(I      0235 
+     1+6),ARB(I+7),ARB(I+8),ARB(I+9),T2ME)                                 0236 
+      DO 208I2=1,10                                                        0237 
+      K=I-1+I2                                                             0238 
+      K2=IRB(K)                                                            0239 
+      IF (K2)207,207,208                                                   0240 
+  208 Q(K2)=QA                                                             0241 
+  207 CONTINUE                                                             0242 
+  222 GO TO NU5,(209,223,225)                                              0243 
+C                                                                          0244 
+C COMPUTE AERODYNAMIC HEATING USING THE ECKERT METHOD                      0245 
+C                                                                          0246 
+  209 FLAG=0.                                                              0247 
+      DO 210I=1,IAERK                                                      0248 
+      K=IAER(I)                                                            0249 
+  210 Q(K)=QECK(T2ME,FLAG,T(K),TABLE(1,3),TABLE(1,4),TABLE(1,11),          0250 
+     1TABLE(1,12),TABLE(1,5),TABLE(1,8),IAER2,I2AER(I),ALLOC(I),           0251 
+     2TABLE(1,9),TABLE(1,10),TABLE(1,6),CO(5),CO(6),CO(7),CO(8),           0252 
+     3TABLE(1,7),AER(I))                                                   0253 
+  223 GO TO NU6,(211,225)                                                  0254 
+C                                                                          0255 
+C COMPUTE AERO HEATING USING RAMO-WOOLDRIDGE METHOD                        0256 
+C                                                                          0257 
+  211 FLAG=0.                                                              0258 
+      DO 212I=1,IAERK                                                      0259 
+      K=IAER(I)                                                            0260 
+  212 Q(K)=QRW(T2ME,FLAG,IAER2,T(K),TABLE(1,3),TABLE(1,4),TABLE(1,11),     0261 
+     1CO(5),CO(6),CO(7),CO(8),AER(I),TABLE(1,5),                           0262 
+     2  I2AER(I),ALLOC(I),                                                 0263 
+     3TABLE(1,6),TABLE(1,12))                                              0264 
+  225 GO TO NU1,(200,226)                                                  0265 
+C                                                                          0266 
+C PERFORM CATHODE FOLLOWER COMPUTATION                                     0267 
+C                                                                          0268 
+  200 DO 201I=2,ICATH,2                                                    0269 
+      K1=KC(I-1)                                                           0270 
+      K2=KC(I)                                                             0271 
+  201 T(K1)=T(K2)                                                          0272 
+  226 GO TO NU8,(300,305)                                                  0273 
+C                                                                          0274 
+C COMPUTE LATENT HEAT EFFECTS                                              0275 
+C                                                                          0276 
+  300 DO301I=1,IPHK                                                        0277 
+      K=IPH(I)                                                             0278 
+  301 CALL LAT(PHT1(I),PHH1(I),PHT2(I),PHH2(I),QDEL(I),T(K),TPREV(I),      0279 
+     1Q(K),RI(K),TR(K),DELTAT,T2ME,K)                                      0280 
+ 305  IF(PRTST)307,304,307                                                 0281 
+C                                                                          0282 
+C     SET UP PRINT BLOCK FOR OUTPUT                                        0283 
+C                                                                          0284 
+  304 DO 302I=1,IPK                                                        0285 
+      J=IPR1(I)                                                            0286 
+      K=IPR2(I)                                                            0287 
+       M = (J-1) * 700 + K                                                 0288 
+  302 PRUNT(I)=PRINT(M)                                                    0289 
+      WRITE OUTPUT TAPE 6,303,T2ME,RCMIN,MINND,(PRUNT(I),I=1,IPK)          0290 
+  303 FORMAT (1H0//F12.2,E20.5,I10/(7E16.5))                               0291 
+       GO TO NUT,(5,307)                                                   0292 
+C                                                                          0293 
+C TEST FOR END OF JOB                                                      0294 
+C                                                                          0295 
+    5  IF(T2ME-CO(9))217,217,4                                             0296 
+    4 CALL TIME                                                            0297 
+      PRINT 1                                                              0298 
+    1 FORMAT(16H0FIRST PRINT OUT)                                          0299 
+       ASSIGN 307 TO NUT                                                   0300 
+  307 IF(T2ME-CO(4))217,308,308                                            0301 
+  308 X=EXITF(1)                                                           0302 
+      END                                                                  0303 
+C                                                                          0304 
+C THIS SUBROUTINE PRINTS THE MAP OF THE OUTPUT PRINT BLOCK.                0305 
+C                                                                          0306 
+      SUBROUTINEOUTPUT(IPR1,IPK,IPR2)                                      0307 
+      DIMENSIONIPR1(400),IPR2(400)                                         0308 
+  402 FORMAT(6H0   R(I4,1H))                                               0309 
+  403 FORMAT(6H0   T(I4,1H))                                               0310 
+  404 FORMAT(6H0   C(I4,1H))                                               0311 
+  405 FORMAT(6H0   Q(I4,1H))                                               0312 
+  406 FORMAT(21H+                  R(I4,1H))                               0313 
+  407 FORMAT(21H+                  T(I4,1H))                               0314 
+  408 FORMAT(21H+                  C(I4,1H))                               0315 
+  409 FORMAT(21H+                  Q(I4,1H))                               0316 
+  410 FORMAT(36H+                                 R(I4,1H))                0317 
+  411 FORMAT(36H+                                 T(I4,1H))                0318 
+  412 FORMAT(36H+                                 C(I4,1H))                0319 
+  413 FORMAT(36H+                                 Q(I4,1H))                0320 
+  414 FORMAT(51H+                                                R(I4,1H   0321 
+     1))                                                                   0322 
+  415 FORMAT(51H+                                                T(I4,1H   0323 
+     1))                                                                   0324 
+  416 FORMAT(51H+                                                C(I4,1H   0325 
+     1))                                                                   0326 
+  417 FORMAT(51H+                                                Q(I4,1H   0327 
+     1))                                                                   0328 
+  418 FORMAT(66H+                                                          0329 
+     1        R(I4,1H))                                                    0330 
+  419 FORMAT(66H+                                                          0331 
+     1        T(I4,1H))                                                    0332 
+  420 FORMAT(66H+                                                          0333 
+     1        C(I4,1H))                                                    0334 
+  421 FORMAT(66H+                                                          0335 
+     1        Q(I4,1H))                                                    0336 
+  422 FORMAT(81H+                                                          0337 
+     1                       R(I4,1H))                                     0338 
+  423 FORMAT(81H+                                                          0339 
+     1                       T(I4,1H))                                     0340 
+  424 FORMAT(81H+                                                          0341 
+     1                       C(I4,1H))                                     0342 
+  425 FORMAT(81H+                                                          0343 
+     1                       Q(I4,1H))                                     0344 
+  426 FORMAT(96H+                                                          0345 
+     1                                      R(I4,1H))                      0346 
+  427 FORMAT(96H+                                                          0347 
+     1                                      T(I4,1H))                      0348 
+  428 FORMAT(96H+                                                          0349 
+     1                                      C(I4,1H))                      0350 
+  429 FORMAT(96H+                                                          0351 
+     1                                      Q(I4,1H))                      0352 
+      WRITE OUTPUT TAPE 6,400                                              0353 
+  400 FORMAT(27H1          OUTPUT FORMAT IS/)                              0354 
+      J=1                                                                  0355 
+      DO 401I=1,IPK                                                        0356 
+      K=IPR1(I)                                                            0357 
+      GO TO (431,432,433,434,435,436,437),J                                0358 
+  431 GO TO (438,439,440,441),K                                            0359 
+  438 WRITE OUTPUT TAPE 6,402,IPR2(I)                                      0360 
+      GO TO 430                                                            0361 
+  439 WRITE OUTPUT TAPE 6,403,IPR2(I)                                      0362 
+      GO TO 430                                                            0363 
+  440 WRITE OUTPUT TAPE 6,404,IPR2(I)                                      0364 
+      GO TO 430                                                            0365 
+  441 WRITE OUTPUT TAPE 6,405,IPR2(I)                                      0366 
+      GO TO 430                                                            0367 
+  432 GO TO (442,443,444,445),K                                            0368 
+  442 WRITE OUTPUT TAPE 6,406,IPR2(I)                                      0369 
+      GO TO 430                                                            0370 
+  443 WRITE OUTPUT TAPE 6,407,IPR2(I)                                      0371 
+      GO TO 430                                                            0372 
+  444 WRITE OUTPUT TAPE 6,408,IPR2(I)                                      0373 
+      GO TO 430                                                            0374 
+  445 WRITE OUTPUT TAPE 6,409,IPR2(I)                                      0375 
+      GO TO 430                                                            0376 
+  433 GO TO (446,447,448,449),K                                            0377 
+  446 WRITE OUTPUT TAPE 6,410,IPR2(I)                                      0378 
+      GO TO 430                                                            0379 
+  447 WRITE OUTPUT TAPE 6,411,IPR2(I)                                      0380 
+      GO TO 430                                                            0381 
+  448 WRITE OUTPUT TAPE 6,412,IPR2(I)                                      0382 
+      GO TO 430                                                            0383 
+  449 WRITE OUTPUT TAPE 6,413,IPR2(I)                                      0384 
+      GO TO 430                                                            0385 
+  434 GO TO (450,451,452,453),K                                            0386 
+  450 WRITE OUTPUT TAPE 6,414,IPR2(I)                                      0387 
+      GO TO 430                                                            0388 
+  451 WRITE OUTPUT TAPE 6,415,IPR2(I)                                      0389 
+      GO TO 430                                                            0390 
+  452 WRITE OUTPUT TAPE 6,416,IPR2(I)                                      0391 
+      GO TO 430                                                            0392 
+  453 WRITE OUTPUT TAPE 6,417,IPR2(I)                                      0393 
+      GO TO 430                                                            0394 
+  435 GO TO (454,455,456,457),K                                            0395 
+  454 WRITE OUTPUT TAPE 6,418,IPR2(I)                                      0396 
+      GO TO 430                                                            0397 
+  455 WRITE OUTPUT TAPE 6,419,IPR2(I)                                      0398 
+      GO TO 430                                                            0399 
+  456 WRITE OUTPUT TAPE 6,420,IPR2(I)                                      0400 
+      GO TO 430                                                            0401 
+  457 WRITE OUTPUT TAPE 6,421,IPR2(I)                                      0402 
+      GO TO 430                                                            0403 
+  436 GO TO (458,459,460,461),K                                            0404 
+  458 WRITE OUTPUT TAPE 6,422,IPR2(I)                                      0405 
+      GO TO 430                                                            0406 
+  459 WRITE OUTPUT TAPE 6,423,IPR2(I)                                      0407 
+      GO TO 430                                                            0408 
+  460 WRITE OUTPUT TAPE 6,424,IPR2(I)                                      0409 
+      GO TO 430                                                            0410 
+  461 WRITE OUTPUT TAPE 6,425,IPR2(I)                                      0411 
+      GO TO 430                                                            0412 
+  437 GO TO (462,463,464,465),K                                            0413 
+  462 WRITE OUTPUT TAPE 6,426,IPR2(I)                                      0414 
+      GO TO 430                                                            0415 
+  463 WRITE OUTPUT TAPE 6,427,IPR2(I)                                      0416 
+      GO TO 430                                                            0417 
+  464 WRITE OUTPUT TAPE 6,428,IPR2(I)                                      0418 
+      GO TO 430                                                            0419 
+  465 WRITE OUTPUT TAPE 6,429,IPR2(I)                                      0420 
+  430 J=J+1                                                                0421 
+      IF (J-8)401,466,466                                                  0422 
+  466 J=1                                                                  0423 
+  401 CONTINUE                                                             0424 
+      RETURN                                                               0425 
+      END                                                                  0426 
+C THIS SUBROUTINE READS IN ALL FUNCTION DATA                               0427 
+C                                                                          0428 
+      SUBROUTINEFIN(  KC,ICATH,IRAD,KR,EKR,IPHK,IPH,                       0429 
+     1PHT1,PHH1,PHT2,PHH2,ICONK,ICON,EXCON,ACON,IRB3,IRB                   0430 
+     21,IRB,ARB,IAER1,IAER2,IAERK,AER,IAER,IKF,IAF2,IAF3,                  0431 
+     3IAF4,IPK,IPR1,IPR2,CO,I2AER,ALLOC,FIAF5)                             0432 
+      DIMENSION FIAF5(50)                                                  0433 
+      DIMENSION ALLOC(50),I2AER(50)                                        0434 
+      DIMENSIONI(3),KC(50),KR(50),EKR(50),IPH(50),PHT1(50),PHH1            0435 
+     1(50),PHT2(50),PHH2(50),ICON(50),EXCON(50),ACON(50),IRB               0436 
+     2 (50),ARB(50),AER(51),IAER(50),IAF2(50),IAF3(50),IAF4(50),           0437 
+     3 IPR1(400),IPR2(400), CO(20)                                         0438 
+      EQUIVALENCE(I(1),I1),(I(2),I2),(I(3),I3)                             0439 
+  60  CALLREAD(I,FD)                                                       0440 
+      IF (I1)106,106,61                                                    0441 
+  61  IF(I1-1)62,62,63                                                     0442 
+C                                                                          0443 
+C READ IN CATHODE FOLLOWER DATA, FUNCTION 1                                0444 
+C                                                                          0445 
+   62 KC(ICATH+1)=I2                                                       0446 
+      KC(ICATH+2)=I3                                                       0447 
+      ICATH=ICATH+2                                                        0448 
+      CALL READ (I,FD)                                                     0449 
+      IF(I1)60,62,61                                                       0450 
+   63 IF(I1-2)64,64,65                                                     0451 
+C                                                                          0452 
+C READ IN RADIATION RESISTOR DATA, FUNCTION 2                              0453 
+C                                                                          0454 
+   64 IRAD=IRAD+1                                                          0455 
+      KR(IRAD)=I3                                                          0456 
+      EKR(IRAD)=FD                                                         0457 
+      CALL READ (I,FD)                                                     0458 
+      IF(I1)60,64,61                                                       0459 
+   65 IF (I1-3)80,80,81                                                    0460 
+C                                                                          0461 
+C READ IN LATENT HEAT DATA, FUNCTION 3                                     0462 
+C                                                                          0463 
+   80 IPHK=IPHK+1                                                          0464 
+      IPH(IPHK)=I3                                                         0465 
+      PHT1(IPHK)=FD                                                        0466 
+      CALL READ (I,PHH1(IPHK))                                             0467 
+      IF(I1)82,831,82                                                      0468 
+831   CALL READ (I,PHT2(IPHK))                                             0469 
+      IF(I1)82,832,82                                                      0470 
+832   CALL READ (I,PHH2(IPHK))                                             0471 
+      IF(I1)82,83,82                                                       0472 
+   82 WRITE OUTPUT TAPE 6,84                                               0473 
+   84 FORMAT (80H0YOU HAVE LESS THAN FOUR PIECES OF INFORMATION FOR PHA    0474 
+     1SE TRANSITION AT ONE NODE.)                                          0475 
+      X=DUMPF(1)                                                           0476 
+   83 CALL READ (I,FD)                                                     0477 
+      IF(I1)60,80,61                                                       0478 
+   81 IF(I1-4)85,85,86                                                     0479 
+C                                                                          0480 
+C READ IN CONVECTION RESISTOR DATA, FUNCTION 4                             0481 
+C                                                                          0482 
+   85 ICONK=ICONK+1                                                        0483 
+      ICON(ICONK)=I3                                                       0484 
+      EXCON(ICONK)=FD                                                      0485 
+      CALL READ (I,ACON(ICONK))                                            0486 
+      IF(I1)87,88,87                                                       0487 
+   88 CALL READ (I,FD)                                                     0488 
+      IF(I1)60,85,61                                                       0489 
+   87 WRITE OUTPUT TAPE 6,89                                               0490 
+   89 FORMAT (74H0YOU HAVE LESS THAN TWO PIECES OF INFORMATION FOR A CON   0491 
+     1VECTION RESISTANCE.)                                                 0492 
+      X=DUMPF(1)                                                           0493 
+   86 IF (I1-5)90,90,91                                                    0494 
+C                                                                          0495 
+C READ IN ARBITRARY HEAT INPUT DATA, FUNCTION 5                            0496 
+C                                                                          0497 
+   90 IRB1=IRB1+1                                                          0498 
+      IRB2=(IRB1-1)*10+1                                                   0499 
+      IRB(IRB2)=I3                                                         0500 
+      ARB(IRB2)=FD                                                         0501 
+      IRB2=IRB2+1                                                          0502 
+      IRB3=IRB2+8                                                          0503 
+      DO 92IK=IRB2,IRB3                                                    0504 
+      CALL READ (I,ARB(IK))                                                0505 
+      IRB(IK)=I3                                                           0506 
+      IF(I1)93,92,93                                                       0507 
+   92 CONTINUE                                                             0508 
+      CALL READ (I,FD)                                                     0509 
+      IF(I1)60,90,61                                                       0510 
+   93 WRITE OUTPUT TAPE 6,94                                               0511 
+   94 FORMAT(72H0YOU HAVE NOT FILLED IN ALL TEN COEFFICIENTS IN AN ARBIT   0512 
+     1RARY HEAT INPUT.)                                                    0513 
+      X=DUMPF(1)                                                           0514 
+   91 IF (I1-6)95,95,96                                                    0515 
+C                                                                          0516 
+C READ IN AERO HEATING DATA, FUNCTION 6                                    0517 
+C                                                                          0518 
+   95 IAER1=I2                                                             0519 
+      IAER2=I3                                                             0520 
+   97 IAERK=IAERK+1                                                        0521 
+      CALL READ(I,FD)                                                      0522 
+      AER(IAERK)=FD                                                        0523 
+      IAER(IAERK)=I3                                                       0524 
+      IF(I1)60,21,61                                                       0525 
+   21 IF(IAER2)97,22,97                                                    0526 
+   22 CALL READ(I,FD)                                                      0527 
+      IF(I1)23,24,23                                                       0528 
+   23 WRITE OUTPUT TAPE6,25                                                0529 
+   25 FORMAT(74H0YOU HAVE ENTERED THE DATA FOR THE AERODYNAMIC HEATING R   0530 
+     1OUTINE INCORRECTLY.)                                                 0531 
+      X=DUMPF(1)                                                           0532 
+   24 I2AER(IAERK)=I3                                                      0533 
+      ALLOC(IAERK)=FD                                                      0534 
+      GO TO97                                                              0535 
+   96 IF (I1-7)98,98,99                                                    0536 
+C                                                                          0537 
+C READ IN TABULAR FUNCTION DATA, FUNCTION 7                                0538 
+C                                                                          0539 
+   98 CALL READ (I,FD)                                                     0540 
+      IF (I1)60,60,100                                                     0541 
+  100 IKF=IKF+1                                                            0542 
+      IAF2(IKF)=I1                                                         0543 
+      IAF3(IKF)=I2                                                         0544 
+      IAF4(IKF)=I3                                                         0545 
+      FIAF5(IKF)=FD                                                        0546 
+      GO TO 98                                                             0547 
+   99 IF (I1-8)101,101,102                                                 0548 
+C                                                                          0549 
+C READ IN PRINT SPECIFICATION, FUNCTION 8                                  0550 
+C                                                                          0551 
+  101 IPK=IPK+1                                                            0552 
+      IPR1(IPK)=I2                                                         0553 
+      IPR2(IPK)=I3                                                         0554 
+      CALL READ (I,FD)                                                     0555 
+      IF(I1)60,101,61                                                      0556 
+  102 IF (I1-9)103,103,104                                                 0557 
+C                                                                          0558 
+C READ IN PROBLEM CONSTANTS, FUNCTION 9                                    0559 
+C                                                                          0560 
+  104 WRITE OUTPUT TAPE 6,105,I1                                           0561 
+  105 FORMAT (51H0YOU ARE CALLING FOR A NON EXISTENT FUNCTION NUMBER I5)   0562 
+      X=DUMPF(1)                                                           0563 
+ 103  M=I3                                                                 0564 
+      CO(M)=FD                                                             0565 
+      CALL READ (I,FD)                                                     0566 
+      IF(I1)60,103,61                                                      0567 
+  106 RETURN                                                               0568 
+      END                                                                  0569 
+C THIS SUBROUTINE READS IN ALL RESISTOR, TEMPERATURE, CAPACITOR DATA       0570 
+C                                                                          0571 
+      SUBROUTINETRCIN(  MAXNOR,I2V,I3V,R,MAXNO,T,C,IORG,                   0572 
+     1INSTR,RI,TR,K)                                                       0573 
+       DIMENSION I(3), I2V(700), I3V(700), R(700), T(700),       C(700),   0574 
+     1 INSTR(10000), RI(700),TR(700),K(100)                                0575 
+     2,L(100)                                                              0576 
+      EQUIVALENCE(I(1),I1),(I(2),I2),(I(3),I3)                             0577 
+C                                                                          0578 
+C READ RESISTOR DATA                                                       0579 
+C                                                                          0580 
+    1 CALL READ (I,RIN)                                                    0581 
+      MAXNOR=XMAX0F(MAXNOR,I1)                                             0582 
+      IF(I1)3,3,4                                                          0583 
+    4 M=I1                                                                 0584 
+      I2V(M )=I2                                                           0585 
+      I3V(M )=I3                                                           0586 
+      R(M )=RIN                                                            0587 
+      GO TO1                                                               0588 
+C                                                                          0589 
+C READ TEMPERATURE DATA                                                    0590 
+C                                                                          0591 
+    3 CALL READ (I,TIN)                                                    0592 
+C                                                                          0593 
+C     TEST FOR ZERO INPUT T AND CHANGE TO .0001                            0594 
+C                                                                          0595 
+      IF (TIN)17,18,17                                                     0596 
+   18 TIN=.0001                                                            0597 
+   17 MAXNO=XMAX0F(MAXNO,I1)                                               0598 
+      IF(I1)5,5,6                                                          0599 
+    6 M=I1                                                                 0600 
+      T(M )=TIN                                                            0601 
+      GO TO3                                                               0602 
+C                                                                          0603 
+C READ CAPACITOR DATA                                                      0604 
+C                                                                          0605 
+    5 CALL READ (I,CIN)                                                    0606 
+      IF(I1)7,7,8                                                          0607 
+    8 M=I1                                                                 0608 
+      C(M )=CIN                                                            0609 
+      GO TO5                                                               0610 
+C                                                                          0611 
+C SET UP THE FLAGS AND COUNTERS FOR USE IN THE COMPIL SUBROUTINE.          0612 
+C                                                                          0613 
+    7  IORG = XLOCF (INSTR(10000))                                         0614 
+      DO9J1=1,MAXNO                                                        0615 
+      N=0                                                                  0616 
+      DO10J2=1,MAXNOR                                                      0617 
+      IF(T(J1))11,9,11                                                     0618 
+   11 IF(I2V(J2)-J1)12,13,12                                               0619 
+   13 N=N+1                                                                0620 
+      L(N)=J2                                                              0621 
+      K(N)=I3V(J2)                                                         0622 
+   12 IF(I3V(J2)-J1)10,14,10                                               0623 
+   14 N=N+1                                                                0624 
+      L(N)=J2                                                              0625 
+      K(N)=I2V(J2)                                                         0626 
+   10 CONTINUE                                                             0627 
+      IF(N)9,9,16                                                          0628 
+   16 CALL COMPIL(IORG,R,T,RI,TR,J1,N,K,L)                                 0629 
+      IF (IORG-XLOCF(INSTR)) 9,19,19                                       0630 
+   19 WRITE OUTPUT TAPE 6,20                                               0631 
+   20 FORMAT(114H0COMPILED INSTRUCTIONS FOR SUMMING INVERSE RS AND T 0VE   0632 
+     1R RS EXCEEDS ALLOTTED SPACE, NETWORK CONNECTIVITY TOO LARGE.)        0633 
+      X=EXITF(1)                                                           0634 
+    9 CONTINUE                                                             0635 
+      RETURN                                                               0636 
+      END                                                                  0637 
+C     ARBITRARY HEATING FUNCTION                                           0638 
+C                                                                          0639 
+C COMPUTE THE ARBITRARY HEAT INPUT USING THE EXPRESSION-                   0640 
+C  Q= A* SINF(W +EK * TIME/ 6.2832 ) + B + C* TIME + D * TIME **2 +        0641 
+C  E * EXPF (F * TIME) + G * TIME * EXPF (H* TIME **2).  ANY COEFFICIENT   0642 
+C  NOT APPLICABLE MAY BE ZERO.                                             0643 
+      FUNCTION QF(A,B,C,D,E,F,G,H,EK,W,TIME)                               0644 
+      IF(A)1,2,1                                                           0645 
+    2 T1=0.                                                                0646 
+      GO TO 5                                                              0647 
+    1 IF(EK)3,4,3                                                          0648 
+    3 T1=A*SINF(W+EK*TIME/6.2832)                                          0649 
+      GO TO 5                                                              0650 
+    4 T1=A*SINF(W)                                                         0651 
+    5 IF(D)6,7,6                                                           0652 
+    7 T4=0.                                                                0653 
+      GO TO 8                                                              0654 
+    6 T4=D*TIME**2                                                         0655 
+    8 IF(E)9,10,9                                                          0656 
+   10 T5=0.                                                                0657 
+      GO TO 13                                                             0658 
+    9 IF(F)11,12,11                                                        0659 
+   12 T5=E                                                                 0660 
+      GO TO 13                                                             0661 
+   11 T5=E*EXPF(F*TIME)                                                    0662 
+   13 IF(G)14,15,14                                                        0663 
+   15 T6=0.                                                                0664 
+      GO TO 18                                                             0665 
+   14 IF(H)16,17,16                                                        0666 
+   17 T6=G*TIME                                                            0667 
+      GO TO 18                                                             0668 
+   16 T6=G*TIME*EXPF(H*TIME**2)                                            0669 
+   18 QF=T1+B+C*TIME+T4+T5+T6                                              0670 
+      RETURN                                                               0671 
+      END                                                                  0672 
+*     FAP                                                                  0673 
+*      THIS ROUTINE ALLOWS TRANSFER OF CONTROL FROM A FORTRAN PROGRAM      0674 
+*      TO THE LOCATION OF THE ARGUMENT IN THE CALL TRA (ARG) STATEMENT.    0675 
+       ENTRY   TRA                                                         0676 
+   TRA CLA     1,4                                                         0677 
+       STA     *+1                                                         0678 
+       TRA     **                                                          0679 
+      END                                                                  0680 
+C                                                                          0681 
+C THIS ROUTINE READS THE CARDS IN THE FORMAT FOR RESISTOR, TEMPERATURE,    0682 
+C  CAPACITOR AND FUNCTION DATA                                             0683 
+C                                                                          0684 
+      SUBROUTINE READ (I,X)                                                0685 
+      DIMENSION I(3)                                                       0686 
+      READ INPUT TAPE 5,2,I,X                                              0687 
+      WRITEOUTPUTTAPE6,2,I,X                                               0688 
+    2 FORMAT (3I5,E15.5,42H                                          )     0689 
+      RETURN                                                               0690 
+      END                                                                  0691 
+*     FAP                                                                  0692 
+*                                                                          0693 
+*      THIS ROUTINE SETS UP A BLOCK OF INSTRUCTIONS WITH PERMANENT, NON-   0694 
+*      INDEXED ADDRESSES FOR SUMMING THE 1/R AND T/R VALUES FOR ALL        0695 
+*      NEIGHBORS OF EACH NODE IN THE NETWORK.                              0696 
+*                                                                          0697 
+       ENTRY   COMPIL                                                      0698 
+       HTR     0                                                           0699 
+       HTR     0                                                           0700 
+       HTR     0                                                           0701 
+COMPIL SXD     COMPIL-3,4                                                  0702 
+       SXD     COMPIL-2,2                                                  0703 
+       SXD     COMPIL-1,1                                                  0704 
+       CLA     1,4                                                         0705 
+       STA     A             ORG                                           0706 
+       CLA     2,4                                                         0707 
+       STA     A+1           R ORG                                         0708 
+       CLA     3,4                                                         0709 
+       STA     A+2           T ORG                                         0710 
+       CLA     4,4                                                         0711 
+       STA     A+3           1/R ORG                                       0712 
+       CLA     5,4                                                         0713 
+       STA     A+4           T/R ORG                                       0714 
+       CLA     6,4                                                         0715 
+       STA     A+5           NODE NUMBER                                   0716 
+       STA     *+1                                                         0717 
+       CLA     **                                                          0718 
+       TZE     EXIT                                                        0719 
+       CLA     7,4                                                         0720 
+       STA     A+6           NEIGHBOR COUNT                                0721 
+       CLA     8,4                                                         0722 
+       STA     A+7           K ORG                                         0723 
+       CLA     9,4                                                         0724 
+       STA     A+8      L ORG                                              0725 
+       CLA     A+6                                                         0726 
+       STA     MPY                                                         0727 
+       STA     *+1                                                         0728 
+       LXD     **,2          COUNT IN XR2                                  0729 
+       CLA     A                                                           0730 
+       STA     MOD                                                         0731 
+       STA     MOD+1                                                       0732 
+       STA     *+1                                                         0733 
+       CLA     **                                                          0734 
+       ARS     18                                                          0735 
+       STA     *+1                                                         0736 
+       AXC     **,1                                                        0737 
+       CLA     A+5                                                         0738 
+       STA     *+1                                                         0739 
+       CLA     **                                                          0740 
+       ARS     18                                                          0741 
+       SUB     1B35                                                        0742 
+       STO     NODE                                                        0743 
+       CLA     A+4                                                         0744 
+       ADD     STZ                                                         0745 
+       SUB     NODE                                                        0746 
+       STO     0,1                                                         0747 
+       CLA     A+3                                                         0748 
+       ADD     STZ                                                         0749 
+       SUB     NODE                                                        0750 
+       STO     1,1                                                         0751 
+       CLA     A+7                                                         0752 
+       STA     K                                                           0753 
+       CLA     A+8                                                         0754 
+       STA     L                                                           0755 
+       AXT     0,4                                                         0756 
+ LOOP  CLA     CLA1F                                                       0757 
+       STO     2,1                                                         0758 
+ L     CLA     **,4                                                        0759 
+       ARS     18                                                          0760 
+       SUB     1B35                                                        0761 
+       SSM                                                                 0762 
+       ADD     A+1                                                         0763 
+       ADD     FDP                                                         0764 
+       STO     3,1                                                         0765 
+       CLA     STQX                                                        0766 
+       STO     4,1                                                         0767 
+ K     CLA     **,4                                                        0768 
+       ARS     18                                                          0769 
+       SUB     1B35                                                        0770 
+       SSM                                                                 0771 
+       ADD     A+2                                                         0772 
+       ADD     FMP                                                         0773 
+       STO     5,1                                                         0774 
+       CLA     A+4                                                         0775 
+       ADD     FAD                                                         0776 
+       SUB     NODE                                                        0777 
+       STO     6,1                                                         0778 
+       ADD     OCT1                                                        0779 
+       STO     7,1                                                         0780 
+       CLA     CLAX                                                        0781 
+       STO     8,1                                                         0782 
+       CLA     A+3                                                         0783 
+       ADD     FAD                                                         0784 
+       SUB     NODE                                                        0785 
+       STO     9,1                                                         0786 
+       ADD     OCT1                                                        0787 
+       STO     10,1                                                        0788 
+       TXI     *+1,4,1                                                     0789 
+       TXI     *+1,1,-9                                                    0790 
+       TIX     LOOP,2,1                                                    0791 
+       LDQ     9B35                                                        0792 
+ MPY   MPY     **                                                          0793 
+       XCA                                                                 0794 
+       ADD     2B17                                                        0795 
+ MOD   ADD     **                                                          0796 
+       STD     **                                                          0797 
+ GO    LXD     COMPIL-3,4                                                  0798 
+       LXD     COMPIL-2,2                                                  0799 
+       LXD     COMPIL-1,1                                                  0800 
+       TRA     10,4                                                        0801 
+ EXIT  CLA     A                                                           0802 
+       STA     *+1                                                         0803 
+       CLA     **                                                          0804 
+       ARS     18                                                          0805 
+       STA     RETRN                                                       0806 
+       CLA     7,4                                                         0807 
+       STA     *+1                                                         0808 
+       CLA     **                                                          0809 
+ RETRN STO     **                                                          0810 
+       TRA     GO                                                          0811 
+ A     BSS     9                                                           0812 
+ NODE  BSS     1                                                           0813 
+ STZ   STZ     0                                                           0814 
+ CLA1F CLA     1FP                                                         0815 
+ 1FP   DEC     1.                                                          0816 
+ FDP   FDP     0                                                           0817 
+ STQX  STQ     X                                                           0818 
+ X     BSS     1                                                           0819 
+ FMP   FMP     0                                                           0820 
+ FAD   FAD     0                                                           0821 
+ OCT1  OCT     030100000000                                                0822 
+ CLAX  CLA     X                                                           0823 
+ 9B35  DEC     9B35                                                        0824 
+ 2B17  DEC     2B17                                                        0825 
+ 1B35  DEC     1B35                                                        0826 
+      END                                                                  0827 
+C                                                                          0828 
+C     ECKERT EQUATION FOR AERODYNAMIC HEATING                              0829 
+C                                                                          0830 
+      FUNCTION QECK (TIME,FLAG,T,TABH,TABM,TABA,TABB,TABREX,TABS           0831 
+     X,IBFLAG                                                              0832 
+     X,I2AER,ALLOC                                                         0833 
+     1,TABTLT,TABMLM,TABT,A,B,E,GAM,TABPR,EK)                              0834 
+      DIMENSION TABB(104)                                                  0835 
+      IF(FLAG)19,2,19                                                      0836 
+    2 H=ENTERP(TIME,TABH)                                                  0837 
+      EM=ENTERP(TIME,TABM)                                                 0838 
+      IF(IBFLAG)4,3,4                                                      0839 
+    4 BETA=1.                                                              0840 
+      GO TO 5                                                              0841 
+    3 ALPH=ENTERP(TIME,TABA)                                               0842 
+    5 REXM=10.**(ENTERP(H,TABREX))                                         0843 
+    6 S=ENTERP(EM,TABS)                                                    0844 
+    9 TLOTI=ENTERP(EM,TABTLT)                                              0845 
+      EMLOMI=ENTERP(EM,TABMLM)                                             0846 
+   11 TINF=ENTERP(H,TABT)                                                  0847 
+      EN=.71**E*(GAM-1.)/2.*(EMLOMI*EM)**2                                 0848 
+      TL=TLOTI*TINF                                                        0849 
+      TR=TL*(1.+EN)                                                        0850 
+      FLAG=1.                                                              0851 
+   19 IF(IBFLAG)1,20,1                                                     0852 
+  20  ALPHL=ALLOC-ALPH                                                     0853 
+      IF(I2AER)12,14,12                                                    0854 
+  12  ALPHL=-ALPHL                                                         0855 
+   14 IF(TABB(4))15,16,15                                                  0856 
+   15 BETA=ENTERP(ALPHL,TABB)                                              0857 
+      GO TO1                                                               0858 
+   16 IF(ALPHL)17,18,18                                                    0859 
+   17 BETA=TABB(3)*ALPHL+1.                                                0860 
+      GO TO1                                                               0861 
+   18 BETA=TABB(5)*ALPHL+1.                                                0862 
+    1 TLPOTL =.5 *(1.+(T+459.69)/TL)+.22*EN                                0863 
+      PR3K=10.**(ENTERP(TLPOTL*TL,TABPR))                                  0864 
+      QECK=BETA*EK*(S*REXM*EM/TLPOTL**1.69)**A*EM                          0865 
+     1**B*PR3K*(TR-T-459.69)                                               0866 
+      RETURN                                                               0867 
+      END                                                                  0868 
+C                                                                          0869 
+C     R-W EQUATION FOR AERODYNAMIC HEATING                                 0870 
+C                                                                          0871 
+      FUNCTION QRW(TIME,FLAG,IBFLAG,T,TABH,TABM,TABA,A,B,E,GAM,EK,TABREX   0872 
+     X ,I2AER,ALLOC                                                        0873 
+     1,TABT,TABB)                                                          0874 
+      DIMENSION TABB(104)                                                  0875 
+      IF(FLAG)19,2,19                                                      0876 
+    2 H=ENTERP(TIME,TABH)                                                  0877 
+      EM=ENTERP(TIME,TABM)                                                 0878 
+      IF(IBFLAG)4,3,4                                                      0879 
+    4 BETA=1.                                                              0880 
+      GO TO 5                                                              0881 
+    3 ALPH=ENTERP(TIME,TABA)                                               0882 
+   5  REXM=10.**(ENTERP(H,TABREX))                                         0883 
+      TINF=ENTERP(H,TABT)                                                  0884 
+      EN=.71**E*(GAM-1.)/2.*EM**2                                          0885 
+      TR=TINF*(1.+EN)                                                      0886 
+      FLAG=1.                                                              0887 
+   19 IF(IBFLAG)1,20,1                                                     0888 
+  20  ALPHL=ALLOC-ALPH                                                     0889 
+      IF(I2AER)12,14,12                                                    0890 
+  12  ALPHL=-ALPHL                                                         0891 
+   14 IF(TABB(4))15,16,15                                                  0892 
+   15 BETA=ENTERP(ALPHL,TABB)                                              0893 
+      GO TO1                                                               0894 
+   16 IF(ALPHL)17,18,18                                                    0895 
+   17 BETA=TABB(3)*ALPHL+1.                                                0896 
+      GO TO1                                                               0897 
+   18 BETA=TABB(5)*ALPHL+1.                                                0898 
+    1 QRW=BETA*EK*(REXM*EM)**A*EM**B*(TR-T-459.69)/(TR-TINF)               0899 
+      RETURN                                                               0900 
+       END                                                                 0901 
+C                                                                          0902 
+C THIS ROUTINE READS IN THE TABULAR DATA                                   0903 
+C                                                                          0904 
+      SUBROUTINETABIN(TABLE,KDEP,KIND)                                     0905 
+      DIMENSION TABLE(104,30),KDEP(30),KIND(30)                            0906 
+  106 READ INPUT TAPE 5,107,NTAB,NIND,NDEP,    PER,CONST                   0907 
+  107 FORMAT (3I5,2E15.5,27H                           )                   0908 
+      WRITEOUTPUTTAPE6,107 ,NTAB,NIND,NDEP,    PER,CONST                   0909 
+      IF (NTAB)108,108,109                                                 0910 
+  109 TABLE (1,NTAB)=PER                                                   0911 
+      KDEP(NTAB)=NDEP                                                      0912 
+      TABLE(2,NTAB)=CONST                                                  0913 
+      KIND(NTAB)=NIND                                                      0914 
+      N1=1                                                                 0915 
+      DO 110I=3,103,2                                                      0916 
+      READ INPUT TAPE 5,107,N1,N2,N3,   TABLE(I,NTAB),TABLE(I+1,NTAB)      0917 
+      WRITEOUTPUTTAPE6,107 ,N1,N2,N3,   TABLE(I,NTAB),TABLE(I+1,NTAB)      0918 
+      IF(N1)106,110,110                                                    0919 
+  110 CONTINUE                                                             0920 
+      WRITE OUTPUT TAPE 6,111,NTAB                                         0921 
+111   FORMAT(103H0YOU HAVE FORGOTTEN THE MINUS ONE AT THE END OF THE PRE   0922 
+     1VIOUS TABLE OR USED MORE THAN 50 POINTS ON TABLE I2)                 0923 
+      X=DUMPF(1)                                                           0924 
+  108 RETURN                                                               0925 
+       END                                                                 0926 
+C                                                                          0927 
+C     ROUTINE FOR LATENT HEAT EFFECTS                                      0928 
+C                                                                          0929 
+      SUBROUTINE LAT (PHT1,PHH1,PHT2,PHH2,QDEL,T,TPREV,                    0930 
+     1Q,RI,TR,DELTAT,TIME,K)                                               0931 
+      IF(QDEL)2,3,2                                                        0932 
+    2 IF(TPREV-PHT2)16,4,16                                                0933 
+    4 TLH=PHT2                                                             0934 
+      IF(PHH2)30,30,31                                                     0935 
+  30  WRITEOUTPUTTAPE6,32,TIME,K                                           0936 
+      X=EXITF(1)                                                           0937 
+   32 FORMAT(1H0//40H PROBLEM CUT OFF BY LATENT HEAT ROUTINE.F12.2,I5)     0938 
+   31 EMDLH=PHH2                                                           0939 
+    6 QCH=(TR+Q-TLH*RI)*DELTAT+QDEL                                        0940 
+      IF(ABSF(QCH)-EMDLH)7,8,8                                             0941 
+    8 WRITE OUTPUT TAPE6,9,TIME,K,T                                        0942 
+    9 FORMAT(1H0//24H LATENT HEAT INFORMATIONF12.2,I5,F10.2)               0943 
+      QDEL=0.                                                              0944 
+    1 TPREV=T                                                              0945 
+      RETURN                                                               0946 
+    3 IF(T-PHT2)10,29,11                                                   0947 
+   10 IF(TPREV-PHT2)12,1,13                                                0948 
+   12 IF(T-PHT1)14,20,15                                                   0949 
+   14 IF(TPREV-PHT1)1,1,26                                                 0950 
+   26 WRITE OUTPUT TAPE6,9,TIME,K,T                                        0951 
+   16 TLH=PHT1                                                             0952 
+      EMDLH=PHH1                                                           0953 
+      GO TO 6                                                              0954 
+   15 IF(TPREV-PHT1)26,26,1                                                0955 
+   13 WRITE OUTPUT TAPE6,9,TIME,K,T                                        0956 
+      GO TO 4                                                              0957 
+   11 IF(TPREV-PHT2)13,13,1                                                0958 
+    7 IF(QCH)17,19,18                                                      0959 
+   17 IF(QDEL)19,19,8                                                      0960 
+   19 QDEL=QCH                                                             0961 
+      T=TLH                                                                0962 
+      GO TO 1                                                              0963 
+   18 IF(QDEL)8,19,19                                                      0964 
+   29 IF(TPREV-PHT2)8,1,8                                                  0965 
+   20 IF(TPREV-PHT1)8,1,8                                                  0966 
+      END                                                                  0967 
+C                                                                          0968 
+C     LINEAR INTERPOLATION ROUTINE                                         0969 
+C                                                                          0970 
+      FUNCTION ENTERP(ARG,TAB)                                             0971 
+      DIMENSION TAB(104)                                                   0972 
+      IF (TAB(2)) 1,12,1                                                   0973 
+    1 ENTERP=TAB(2)                                                        0974 
+      RETURN                                                               0975 
+   12 ARGI = ARG                                                           0976 
+    2 DO 3 I=2,100,2                                                       0977 
+      IF (TAB(I+1) - ARGI) 4,5,6                                           0978 
+    6 IF(I-2) 7,7,8                                                        0979 
+    8 ENTERP= (ARGI-TAB(I-1))/(TAB(I+1)-TAB(I-1))*(TAB(I+2)-TAB(I))        0980 
+     1+TAB(I)                                                              0981 
+      RETURN                                                               0982 
+    5 ENTERP = TAB(I+2)                                                    0983 
+      RETURN                                                               0984 
+    4 IF (I-2) 3,3,14                                                      0985 
+   14 IF (TAB(I+1)-TAB(I-1)) 9,3,3                                         0986 
+    3 CONTINUE                                                             0987 
+    7 WRITE OUTPUT TAPE 6,10,ARG,TAB                                       0988 
+   10 FORMAT(34H0ARGUMENT EXCEEDS EXTENT OF TABLE./E12.4/2E12.4/(6E12.4    0989 
+     1))                                                                   0990 
+      X=DUMPF(1)                                                           0991 
+    9 IF(TAB(1))7,7,11                                                     0992 
+   11 ARGI=ARGI-TAB                                                        0993 
+      IF (ARGI -TAB(I-1)) 2,2,11                                           0994 
+      END                                                                  0995 

@@ -1,0 +1,1047 @@
+UMPLOT REM 1047 03011                                                   PLOT0001
+       ORG 0                                                            PLOT0002
+       PGM              PROGRAM CARD                                    PLOT0003
+       PZE END,0,0                                                      PLOT0004
+       PZE                                                              PLOT0005
+       BCD 1PLOT1                                                       PLOT0006
+       PZE PLOT1                                                        PLOT0007
+       BCD 1PLOT2                                                       PLOT0008
+       PZE PLOT2                                                        PLOT0009
+       BCD 1PLOT3                                                       PLOT0010
+       PZE PLOT3                                                        PLOT0011
+       BCD 1PLOT4                                                       PLOT0012
+       PZE PLOT4                                                        PLOT0013
+       BCD 1FPLOT4                                                      PLOT0014
+       PZE FPLOT                                                        PLOT0015
+       BCD 1OMIT                                                        PLOT0016
+       PZE OMIT                                                         PLOT0017
+       BCD 1PLTAPE                                                      PLOT0018
+       PZE PLTAP                                                        PLOT0019
+       REL                                                              PLOT0020
+       ORG 0                                                            PLOT0021
+       REM    PLOTTING SUBROUTINE.   WRITES GRAPH IMAGES ON DECIMAL TAPEPLOT0022
+       REM    FOR SUBSEQUENT OFF-LINE PRINTING OR PUNCHING. TAPE NUMBER,PLOT0023
+       REM    NUMBER OF COLUMNS PER LINE AND NUMBER OF LINES PER RECORD PLOT0024
+       REM    (HIGH OR LOW SPEED PRINTING) ARE SET AT ASSEMBLY TIME.    PLOT0025
+       REM    TAPE CAN BE SWITCHED DURING EXECUTION BY THE PLTAPE ENTRY.PLOT0026
+       REM                                                              PLOT0027
+       REM    UNIVERSITY OF MICHIGAN COMPUTING CENTER   FEBRUARY 15,1961PLOT0028
+       REM    PROGRAMMERS - BRICE CARNAHAN, LARRY EVANS                 PLOT0029
+       REM                                                              PLOT0030
+       REM    FORTRAN OR MAD CALLING SEQUENCES ARE                      PLOT0031
+       REM      CALL OR EXECUTE  PLOT1 (NSCALE,NH,SBH,NV,SBV)           PLOT0032
+       REM      CALL OR EXECUTE  PLOT2 (IMAGE,XMAX,XMIN,YMAX,YMIN)      PLOT0033
+       REM      CALL OR EXECUTE  PLOT3 (BCD,X,Y,NDATA)                  PLOT0034
+       REM              EXECUTE  PLOT4.(NCHAR,LABEL)                    PLOT0035
+       REM      CALL            FPLOT4 (NCHAR,NHABCDEF....)             PLOT0036
+       REM      CALL OR EXECUTE  OMIT (ARG)                             PLOT0037
+       REM      CALL OR EXECUTE PLTAPE (ARG)                            PLOT0038
+       REM                                                              PLOT0039
+       REM    PRESET THE FOLLOWING FIVE INSTRUCTIONS BEFORE ASSEMBLY    PLOT0040
+OTAPE  EQU 6                 SET OUTPUT TAPE HERE                       PLOT0041
+LNREC  EQU 1                 SET LINES PER OUTPUT RECORD                PLOT0042
+COL    EQU 120               SET COLUMNS IN OUTPUT LINE                 PLOT0043
+SPACS  EQU 6                 SET UNUSED SPACES AT RIGHT EDGE OF PAGE    PLOT0044
+       REM                   OR CARD.  SPACS MUST BE AT LEAST 6         PLOT0045
+CDIM   EQU 20                SET SIZE OF C REGION.  MUST BE COL/6 OR    PLOT0046
+       REM                   2*LNREC+2 WHICHEVER IS LARGER.             PLOT0047
+       REM    ALL NON-709 INSTRUCTIONS HAVE ..... IN COLUMNS 20-25      PLOT0048
+       REM .............................................................PLOT0049
+       REM         MAIN JOB OF PLOT1 IS TO EXAMINE ARGUMENTS AND PREPAREPLOT0050
+       REM         SAMPLE GRIDLINE (DASH TO DASH-WORDS+1) AND SAMPLE    PLOT0051
+       REM         NON-GRID LINE (BLANK TO BLANK-WORDS+1) FOR PLOT2     PLOT0052
+PLOT1  SXD IR4,4        ENTRY TO PLOT1                                  PLOT0053
+       SXD IR1,1        SAVE REGISTERS                                  PLOT0054
+       SXD IR2,2                                                        PLOT0055
+       CLA 1,4          SCALE FACTORS AND DECIMAL POINT POSITIONS       PLOT0056
+       STA DELTA                                                        PLOT0057
+       STA DELT                                                         PLOT0058
+       STZ WRON1        WRON1 = 0      CLEAR ERROR FLAG, PLOT1          PLOT0059
+       CLA ONE                                                          PLOT0060
+       STO WRON3        WRON3 = 1      SET ERROR FLAG, MISSING PLOT2    PLOT0061
+       CLA 2,4                                                          PLOT0062
+       STA *+1                                                          PLOT0063
+       CLA **           NH,  NUMBER OF HORIZONTAL GRID LINES            PLOT0064
+       TSX FIX,2                                                        PLOT0065
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             PLOT0066
+       STO NH                                                           PLOT0067
+       CLA 3,4                                                          PLOT0068
+       STA *+1                                                          PLOT0069
+       CLA **           SBH, NUMBER OF SPACES BETWEEN HORIZ GRID LINES  PLOT0070
+       TSX FIX,2                                                        PLOT0071
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             PLOT0072
+       STO SBH                                                          PLOT0073
+       LDQ SBH                                                          PLOT0074
+       MPY NH                                                           PLOT0075
+       STQ LINES        LINES = NH*SBH      MAXIMUM LINE INDEX          PLOT0076
+       CLA 4,4                                                          PLOT0077
+       STA *+1                                                          PLOT0078
+       CLA **           NV,  NUMBER OF VERTICAL GRID LINES              PLOT0079
+       TSX FIX,2                                                        PLOT0080
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             PLOT0081
+       STO NV                                                           PLOT0082
+       CLA 5,4                                                          PLOT0083
+       STA *+1                                                          PLOT0084
+       CLA **           SBV, NUMBER OF SPACES BETWEEN VERT GRID LINES   PLOT0085
+       TSX FIX,2                                                        PLOT0086
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             PLOT0087
+       STO SBV                                                          PLOT0088
+       LDQ SBV                                                          PLOT0089
+       MPY NV                                                           PLOT0090
+       STQ TOT          TOT = SBV*NV        MAXIMUM COLUMN INDEX        PLOT0091
+       LLS 35                                                           PLOT0092
+       ADD ONE                                                          PLOT0093
+       STO TOTAL        TOTAL = TOT + 1     TOTAL COLUMNS PER LINE      PLOT0094
+       SUB GWID         WHENEVER TOTAL .G. GRAPH WIDTH, ERROR RETURN    PLOT0095
+       TMI PASS                                                         PLOT0096
+ERR1   CLA FPONE        RETURN ONE, UNSUCCESSFUL PLOT1                  PLOT0097
+       STO WRON1        WRON1 = 1      SET ERROR FLAG, PLOT1            PLOT0098
+       WTD OTAPE   .....                                                PLOT0099
+       CPY ER1     .....WRITE COMMENT  PLOT1                            PLOT0100
+IR22   TXL WRITE,0,**                                                   PLOT0101
+PASS   CLA TOTAL                                                        PLOT0102
+       TSX FLOAT,2                                                      PLOT0103
+       FDP SIXF                                                         PLOT0104
+       STQ TEMP                                                         PLOT0105
+       CLA TEMP                                                         PLOT0106
+       FAD N999                                                         PLOT0107
+       TSX FIX1,2                                                       PLOT0108
+       STO WORDS        WORDS = TOTAL/6. ROUNDED UP TO NEAREST INTEGER  PLOT0109
+       LDQ WORDS        WORDS, NUMBER OF MACHINE LOCATIONS PER LINE     PLOT0110
+       MPY SIX                                                          PLOT0111
+       STQ TOTLS        TOTLS = WORDS*6     BCD CHARACTERS PER LINE     PLOT0112
+       LXA WORDS,2                                                      PLOT0113
+       CLA TOTLS                                                        PLOT0114
+       SUB TOTAL                                                        PLOT0115
+       PAX 0,1                                                          PLOT0116
+       CLA DSH,1        LAST WORD OF A HORIZONTAL GRID LINE             PLOT0117
+       STO DASH+1,2     SET UP LAST WORD IN HORIZONTAL GRID LINE IMAGE  PLOT0118
+       LDQ BLNKK        LAST WORD OF NON GRID LINE                      PLOT0119
+       STQ BLANK+1,2    SET UP LAST WORD IN NON GRID LINE IMAGE         PLOT0120
+       TIX *+2,2,1                                                      PLOT0121
+       TXL *+5,0,       ONE WORD PER LINE CASE                          PLOT0122
+       CLA DSH                                                          PLOT0123
+       STO DASH+1,2     SET UP REMAINDER OF HORIZONTAL GRID LINE IMAGE  PLOT0124
+       STQ BLANK+1,2    SET UP REMAINDER OF NON GRID LINE IMAGE         PLOT0125
+       TIX *-2,2,1                                                      PLOT0126
+       STZ I            I = 0, COLUMN INDEX FOR VERTICAL GRID POSITIONS PLOT0127
+GAMMA  TSX PLACE,4      PLACE I FOR VERTICAL GRID LINE IN NON GRID IMAGEPLOT0128
+       TXH IEYE                                                         PLOT0129
+       TXH I                                                            PLOT0130
+       TXH BLANK                                                        PLOT0131
+       TSX PLACE,4      PLACE + AT INTERSECTION POINTS IN GRID LINE IMAGPLOT0132
+       TXH IPLUS                                                        PLOT0133
+       TXH I                                                            PLOT0134
+       TXH DASH                                                         PLOT0135
+       CLA I                                                            PLOT0136
+       ADD SBV                                                          PLOT0137
+       STO I            I=I+SBV, INCREMENT COLUMN INDEX FOR VERT GRID   PLOT0138
+       SUB TOTAL                                                        PLOT0139
+       TZE GAMMA        IF ZERO OR MINUS LINE IS UNFINISHED, RETURN     PLOT0140
+       TMI GAMMA                                                        PLOT0141
+DELTA  CLA **           NSCALE, DETERMINES SCALE FACTOR MODIFICATION    PLOT0142
+       TZE ETA          STANDARD SCALE FACTORS AND DEC POINT POSITIONS  PLOT0143
+       LXD FOUR,4       G3 = NSCALE-1       SCALE FACTOR FOR Y          PLOT0144
+DELT   CLA **,4         G4 = NSCALE-2       DEC POINT POSITION FOR Y    PLOT0145
+       TSX TFIX,2       G5 = NSCALE-3       SCALE FACTOR FOR X          PLOT0146
+       STO G3+1,4       G7 = NSCALE-4       DEC POINT POSITION FOR X    PLOT0147
+       TIX DELT,4,1                                                     PLOT0148
+ETA    CLA G4                                                           PLOT0149
+       TZE *+4                                                          PLOT0150
+       TPL *+3                                                          PLOT0151
+       CLS ONE          NEG DEC POINT POSITION, INTEGER ORDINATE DESIREDPLOT0152
+TWNTY  TXL *+4,0,COL/6                                                  PLOT0153
+       LRS 35                                                           PLOT0154
+       CLA EIGHT        MAX DEC PLACES FOR ORDINATE IS EIGHT            PLOT0155
+       TLQ PASS3                                                        PLOT0156
+       STO G4           WHENEVER G4 .G. 8, G4 = 8                       PLOT0157
+PASS3  CLA G7                                                           PLOT0158
+       SUB TEN          ABSCISSA DEC POINT POSITION TAKEN MODULO TEN    PLOT0159
+       TPL *-1                                                          PLOT0160
+       ADD TEN                                                          PLOT0161
+       TZE *+3                                                          PLOT0162
+       TPL *+2                                                          PLOT0163
+       CLS ONE          NEG DEC POINT POSITION, INTEGER ABSCISSA DESIREDPLOT0164
+       STO G7                                                           PLOT0165
+       CLA SBV          SBV, COLUMNS AVAILABLE FOR EACH ABSCISSA VALUE  PLOT0166
+       SUB ONE          LEAVE ONE BLANK TO SEPARATE NUMBERS             PLOT0167
+       STO G9           G9 = SBV-1     FIELD WIDTH FOR ABSCISSA VALUES  PLOT0168
+       LDQ G7           WHENEVER G7.GE.G9, G7 = G9-1                    PLOT0169
+       TLQ PASS4        INSURES DECIMAL POINT INSIDE FIELD              PLOT0170
+       SUB ONE                                                          PLOT0171
+       STO G7                                                           PLOT0172
+PASS4  CLA TWELV        TWELVE SPACES ON LEFT FOR ORDINATE AND LABEL    PLOT0173
+       ADD G7                                                           PLOT0174
+       STO G6           G6 = G7+12     FIELD WIDTH, LEFT ABSCISSA VALUE PLOT0175
+       CLA RECLT                                                        PLOT0176
+       SUB TOTAL                                                        PLOT0177
+       SUB G6                                                           PLOT0178
+       TPL *+3          WHENEVER RECLT-TOTAL-G6.L.0, MUST REDUCE G6     PLOT0179
+       ADD G6                                                           PLOT0180
+       STO G6           G6  REDUCED TO NUMBER OF COLUMNS AVAILABLE      PLOT0181
+PASS5  CLA G6           WHENEVER G7.GE.G6, G7 = G6-1                    PLOT0182
+       LDQ G7           INSURES DECIMAL POINT INSIDE LEFTMOST FIELD     PLOT0183
+       TLQ EXIT-1                                                       PLOT0184
+       SUB ONE                                                          PLOT0185
+       STO G7                                                           PLOT0186
+       LXD IR4,4        RESTORE REGISTERS                               PLOT0187
+EXIT   PXD 0,0          RETURN ZERO, SUCCESSFUL PLOT1,PLOT2,PLOT3,PLOT4 PLOT0188
+       LXD IR1,1                                                        PLOT0189
+       LXD IR2,2                                                        PLOT0190
+       TRA 6,4                                                          PLOT0191
+       REM .............................................................PLOT0192
+       REM         MAIN JOB OF PLOT2 IS TO REPEATEDLY LAY DOWN SAMPLE   PLOT0193
+       REM         GRIDLINE (DASH TO DASH-WORDS+1) FOLLOWED BY (SBH-1)  PLOT0194
+       REM         NON-GRID LINES (BLANK TO BLANK-WORDS+1) TO FORM THE  PLOT0195
+       REM         GRID IN THE IMAGE REGION                             PLOT0196
+PLOT2  SXD IR4,4        ENTRY TO PLOT2                                  PLOT0197
+       SXD IR2,2        SAVE REGISTERS                                  PLOT0198
+       SXD IR1,1                                                        PLOT0199
+       CLA PLADD        PREPARE SWITCH FOR EXIT FROM TSTFP              PLOT0200
+       COM                                                              PLOT0201
+       STD SAVE4-1           PLOT3 ADD COMPLEMENT IN DEC OF TSTFP EXIT  PLOT0202
+       STZ WRON3        WRON3 = 0      CLEAR ERROR FLAG, MISSING PLOT2  PLOT0203
+       CLA WRON1                                                        PLOT0204
+       TZE *+3                                                          PLOT0205
+       CLA FPTWO        WRON1 ERROR FLAG SET, UNSUCCESSFUL PLOT1        PLOT0206
+       TRA 6,4          RETURN TWO, UNSUCCESSFUL PLOT2                  PLOT0207
+       CLA 1,4          ADDRESS OF THE IMAGE REGION                     PLOT0208
+       STA PLT22                                                        PLOT0209
+       STA PLT23                                                        PLOT0210
+       STA PLT37                                                        PLOT0211
+       STA ADDB                                                         PLOT0212
+       STZ WRON2        WRON2 = 0      CLEAR ERROR FLAG, PLOT2          PLOT0213
+       CLA 2,4                                                          PLOT0214
+       STA *+1                                                          PLOT0215
+       CLA **           XMAX, MAXIMUM ABSCISSA (X) VALUE                PLOT0216
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0217
+       STO XMAX                                                         PLOT0218
+       CLA 3,4                                                          PLOT0219
+       STA *+1                                                          PLOT0220
+       CLA **           XMIN, MINIMUM ABSCISSA (X) VALUE                PLOT0221
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0222
+       STO XMIN                                                         PLOT0223
+       CLA 4,4                                                          PLOT0224
+       STA *+1                                                          PLOT0225
+       CLA **           YMAX, MAXIMUM ORDINATE (Y) VALUE                PLOT0226
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0227
+       STO YMAX                                                         PLOT0228
+       CLA 5,4                                                          PLOT0229
+       STA *+1                                                          PLOT0230
+       CLA **           YMIN, MINIMUM ORDINATE (Y) VALUE                PLOT0231
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0232
+       STO YMIN                                                         PLOT0233
+       CLS XMIN                                                         PLOT0234
+       FAD XMAX                                                         PLOT0235
+       TMI BAD          WHENEVER XMIN .GE. XMAX, ERROR RETURN           PLOT0236
+       STO SPANX        SPANX = XMAX - XMIN      ABSCISSA SPAN          PLOT0237
+       CLS YMIN                                                         PLOT0238
+       FAD YMAX                                                         PLOT0239
+       TMI BAD          WHENEVER YMIN .GE. YMAX, ERROR RETURN           PLOT0240
+       STO SPANY        SPANY = YMAX - YMIN      ORDINATE SPAN          PLOT0241
+       CLA LINES                                                        PLOT0242
+       TSX FLOAT,2                                                      PLOT0243
+       FDP SPANY                                                        PLOT0244
+       STQ U            U = LINES/SPANY     NUMBER OF LINES PER UNIT Y  PLOT0245
+       CLA TOT                                                          PLOT0246
+       TSX FLOAT,2                                                      PLOT0247
+       FDP SPANX                                                        PLOT0248
+       STQ V            V = TOT/SPANX       NUMBER OF COLUMNS PER UNIT XPLOT0249
+       CLA NV                                                           PLOT0250
+       TSX FLOAT,2                                                      PLOT0251
+       STO TEMP                                                         PLOT0252
+       CLA SPANX                                                        PLOT0253
+       FDP TEMP                                                         PLOT0254
+       STQ DELTX        DETLX = SPANX/NV    X INCR BETWN VERT GRID LINESPLOT0255
+       CLA NH                                                           PLOT0256
+       TSX FLOAT,2                                                      PLOT0257
+       STO TEMP                                                         PLOT0258
+       CLA SPANY                                                        PLOT0259
+       FDP TEMP                                                         PLOT0260
+       STQ DELTY        DELTY = SPANY/NH    Y INCR BETWN HORZ GRID LINESPLOT0261
+       STZ I            I=0  INITIALIZE WORD COUNTER FOR IMAGE REGION   PLOT0262
+       STZ J            J=0  INITIALIZE LINE COUNTER FOR IMAGE REGION   PLOT0263
+TNEXT  STZ K            K=0  INITIALIZE WORD COUNTER FOR HORZ GRID LINE PLOT0264
+LNEXT  CLA K            LOOP FROM LNEXT TO NEXT PLACES ONE HORIZONTAL   PLOT0265
+       PAX 0,2          GRID LINE IMAGE (DASH REGION) INTO IMAGE REGION PLOT0266
+       ADD I                                                            PLOT0267
+       PAX 0,4                                                          PLOT0268
+       CLA DASH,2                                                       PLOT0269
+PLT22  STO **,4                                                         PLOT0270
+       CLA K                                                            PLOT0271
+       ADD ONE                                                          PLOT0272
+       STO K            K = K+1        INCREMENT WORD COUNTER FOR LINE  PLOT0273
+       SUB WORDS                                                        PLOT0274
+NEXT   TNZ LNEXT        IF NONZERO, LINE IS UNFINISHED                  PLOT0275
+       CLA I                                                            PLOT0276
+       ADD WORDS                                                        PLOT0277
+       STO I            I = I+WORDS    INCR WORD COUNTER FOR NEW LINE   PLOT0278
+       CLA NH                                                           PLOT0279
+       SUB J                                                            PLOT0280
+       TZE EXIT-1       WHENEVER J.E.NH, IMAGE GRID COMPLETED           PLOT0281
+       CLA ONE                                                          PLOT0282
+       STO TEMP         TEMP = 1  INITIALIZE BETWEEN GRID LINE COUNTER  PLOT0283
+TFIN   STZ K            K=0  INITIALIZE WORD COUNTER FOR EACH LINE      PLOT0284
+LFIN   CLA K            LOOP FROM TFIN TO FNSH PLACES SBH NON GRID LINE PLOT0285
+       PAX 0,2          IMAGES (BLANK REGION) INTO THE IMAGE REGION     PLOT0286
+       ADD I                                                            PLOT0287
+       PAX 0,4                                                          PLOT0288
+       CLA BLANK,2                                                      PLOT0289
+PLT23  STO **,4                                                         PLOT0290
+       CLA K                                                            PLOT0291
+       ADD ONE                                                          PLOT0292
+       STO K            K = K+1        INCREMENT WORD COUNTER FOR LINE  PLOT0293
+       SUB WORDS                                                        PLOT0294
+FIN    TNZ LFIN         IF NONZERO, LINE IS UNFINISHED                  PLOT0295
+       CLA I                                                            PLOT0296
+       ADD WORDS                                                        PLOT0297
+       STO I            I = I+WORDS    INCR WORD COUNTER FOR NEW LINE   PLOT0298
+       CLA TEMP                                                         PLOT0299
+       ADD ONE                                                          PLOT0300
+       STO TEMP         TEMP = TEMP+1  INCREMENT BETWN GRID LINE COUNTERPLOT0301
+       SUB SBH                                                          PLOT0302
+FNSH   TNZ TFIN         IF NONZERO, MORE NON GRID LINES ARE REQUIRED    PLOT0303
+       CLA J                                                            PLOT0304
+       ADD ONE                                                          PLOT0305
+       STO J            J = J+1   INCREMENT LINE COUNT FOR IMAGE REGION PLOT0306
+NTEEN  TXL TNEXT,0,COL/6-1   RETURN FOR ANOTHER HORIZONTAL GRID LINE    PLOT0307
+BAD    CLA FPTWO        RETURN TWO, UNSUCCESSFUL PLOT2                  PLOT0308
+       STO WRON2        SET ERROR FLAG, PLOT2                           PLOT0309
+       WTD OTAPE   .....                                                PLOT0310
+       CPY ER2     .....WRITE COMMENT  PLOT2                            PLOT0311
+WRITE  CPY WRONG   .....WRITE COMMENT  IMPROPER ARGUMENT                PLOT0312
+       CPY WRONG+1 .....                                                PLOT0313
+       CPY WRONG+2 .....                                                PLOT0314
+       IOD         .....                                                PLOT0315
+INDX1  TXL EXIT+1,0,**                                                  PLOT0316
+ERR3   WTD OTAPE   .....                                                PLOT0317
+       CPY ER3     .....WRITE COMMENT  NO PREVIOUS PLOT2                PLOT0318
+       CPY ER3+1   .....                                                PLOT0319
+       CPY ER3+2   .....                                                PLOT0320
+       IOD         .....                                                PLOT0321
+       TXL EXIT+1,0,    RETURN, REGISTER 4 UNCHANGED                    PLOT0322
+       REM .............................................................PLOT0323
+       REM         PLOT3 EXAMINES THE DATA POINT TO MAKE SURE IT IS     PLOT0324
+       REM         FLOATING POINT AND THEN PLACES IT IN THE PROPER SPOT PLOT0325
+       REM         IN THE IMAGE REGION                                  PLOT0326
+PLOT3  SXD IR4,4        ENTRY TO PLOT3                                  PLOT0327
+       SXD IR2,2        SAVE REGISTERS                                  PLOT0328
+       SXD IR1,1                                                        PLOT0329
+       STZ FLAG1        FLAG1 = 0      PLOT3 RETURN PRESET TO ZERO      PLOT0330
+       CLA 1,4          BCD, ADDRESS OF THE PLOTTING CHARACTER          PLOT0331
+       STA PLT36                                                        PLOT0332
+       CLA 2,4          X,   BASE ADDRESS FOR X COORDINATES             PLOT0333
+       STA PLT35                                                        PLOT0334
+       CLA 3,4          Y,   BASE ADDRESS OF THE Y COORDINATES          PLOT0335
+       STA PLT34                                                        PLOT0336
+       CLA WRON1                                                        PLOT0337
+       ORA WRON2                                                        PLOT0338
+       TZE *+3                                                          PLOT0339
+       CLA FTHRE        WRON1 OR WRON2 ERROR FLAG SET,BAD PLOT1 OR PLOT2PLOT0340
+       TRA 5,4          RETURN THREE, UNSUCCESSFUL PLOT3                PLOT0341
+       ORA WRON3                                                        PLOT0342
+       TZE *+3                                                          PLOT0343
+       CLA FTHRE        WRON3 ERROR FLAG SET, NO PREVIOUS PLOT2         PLOT0344
+       TXI ERR3,4,1     RETURN THREE, UNSUCCESSFUL PLOT3                PLOT0345
+       CLA 4,4                                                          PLOT0346
+       STA *+1                                                          PLOT0347
+       CLA **           NDATA, NUMBER OF DATA POINTS TO BE PLOTTED      PLOT0348
+       TSX FIX,2                                                        PLOT0349
+       TNZ *+3                                                          PLOT0350
+       CLS FTHRE        IF NDATA = 0, NO DATA POINTS. RETURN MINUS THREEPLOT0351
+       TRA 5,4                                                          PLOT0352
+       STO NDATA                                                        PLOT0353
+       STZ K            K=0       INITIALIZE DATA POINT COUNTER         PLOT0354
+LTEND  LXA K,1                                                          PLOT0355
+PLT34  CLS **,1         Y(K)      Y COORDINATE OF (K+1)TH DATA POINT    PLOT0356
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0357
+       FAD YMAX                                                         PLOT0358
+       LRS 35                                                           PLOT0359
+       FMP U                                                            PLOT0360
+       TPL *+3                                                          PLOT0361
+       FSB N05                                                          PLOT0362
+       TXL *+2,0,                                                       PLOT0363
+       FAD N05                                                          PLOT0364
+       TSX FIX1,2                                                       PLOT0365
+       STO I            I=(YMAX-Y(K))*U +OR- 0.5, LINE INDEX FOR DATA PTPLOT0366
+       TZE *+5          Y COORDINATE LIES ON TOP GRID LINE              PLOT0367
+       TMI THEND-2      REJECT POINT, LIES ABOVE TOP GRID LINE          PLOT0368
+       SUB LINES                                                        PLOT0369
+       TZE *+2          Y COORDINATE LIES ON BOTTOM GRID LINE           PLOT0370
+       TPL THEND-2      REJECT POINT, LIES BELOW BOTTOM GRID LINE       PLOT0371
+PLT35  CLA **,1         X(K)      X COORDINATE OF (K+1)TH DATA POINT    PLOT0372
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                PLOT0373
+       FSB XMIN                                                         PLOT0374
+       LRS 35                                                           PLOT0375
+       FMP V                                                            PLOT0376
+       TPL *+3                                                          PLOT0377
+       FSB N05                                                          PLOT0378
+PLADD  TXL *+2,0,PLOT3       (ADDRESS OF PLOT3 IN DECREMENT)            PLOT0379
+       FAD N05                                                          PLOT0380
+       TSX FIX1,2                                                       PLOT0381
+       STO J            J=(X(K)-XMIN)*V +OR- 0.5, COL INDEX FOR DATA PT PLOT0382
+       TZE *+5          X COORDINATE LIES ON LEFTMOST GRID LINE         PLOT0383
+       TMI THEND-2      REJECT POINT, LIES TO LEFT OF LEFTMOST GRID LINEPLOT0384
+       SUB TOT                                                          PLOT0385
+       TZE *+2          X COORDINATE LIES ON RIGHTMOST GRID LINE        PLOT0386
+       TPL THEND-2      REJECT POINT, LIES TO RIGHT OF RIGHT GRID LINE  PLOT0387
+       LDQ TOTLS                                                        PLOT0388
+       MPY I                                                            PLOT0389
+       LLS 35                                                           PLOT0390
+       ADD J                                                            PLOT0391
+       STO L            L=TOTLS*I+J, CHARACTER POSITION IN IMAGE REGION PLOT0392
+       TSX PLACE,4      PLACES PLOTTING CHARACTER BCD IN THE L TH       PLOT0393
+PLT36  TXH **           CHARACTER POSITION OF THE IMAGE REGION          PLOT0394
+       TXH L                                                            PLOT0395
+PLT37  TXH **,0,-1                                                      PLOT0396
+FOUR   TXL *+3,0,4                                                      PLOT0397
+       CLS FTHRE                                                        PLOT0398
+       STO FLAG1        FLAG1=-3, PLOT3 RETURN SET FOR REJECTED POINT   PLOT0399
+THEND  CLA K                                                            PLOT0400
+       ADD ONE                                                          PLOT0401
+       STO K            K=K+1     INCREMENT DATA POINT COUNTER          PLOT0402
+       SUB NDATA                                                        PLOT0403
+       TNZ LTEND        IF NONZERO, MORE DATA POINTS TO BE PLOTTED      PLOT0404
+       CLA FLAG1        PLOT3 RETURN                                    PLOT0405
+       LXD IR4,4        RESTORE REGISTER 4                              PLOT0406
+       TXI EXIT+1,4,1   INCREMENT REGISTER 4 AND RETURN                 PLOT0407
+       REM .............................................................PLOT0408
+       REM         PLOT4 DECOMPOSES THE STRING OF CHARACTERS IN LABEL   PLOT0409
+       REM         AND WRITES THE CURRENT GRAPH ON TAPE OTAPE           PLOT0410
+FPLOT  CLA PLT37        ENTRY TO PLOT4, LABEL STORED FORWARD            PLOT0411
+       TXL PLOT4+1,0,                                                   PLOT0412
+PLOT4  CLA ONED         ENTRY TO PLOT4, LABEL STORED BACKWARD           PLOT0413
+       STD PLT42-1      DECREMENT (-1 FORWARD), (+1 BACKWARD)           PLOT0414
+       SXD IR4,4        SAVE REGISTERS                                  PLOT0415
+       SXD IR2,2                                                        PLOT0416
+       SXD IR1,1                                                        PLOT0417
+       CLA WRON1                                                        PLOT0418
+       ORA WRON2                                                        PLOT0419
+       TZE *+3                                                          PLOT0420
+       CLA FPFOR        WRON1 OR WRON2 ERROR FLAG SET,BAD PLOT1 OR PLOT2PLOT0421
+       TRA 3,4          RETURN FOUR, UNSUCCESSFUL PLOT4                 PLOT0422
+       ORA WRON3                                                        PLOT0423
+       TZE *+3                                                          PLOT0424
+       CLA FPFOR        WRON3 ERROR FLAG SET, NO PREVIOUS PLOT2         PLOT0425
+       TXI ERR3,4,3     RETURN FOUR, UNSUCCESSFUL PLOT4                 PLOT0426
+       CLA 2,4          BASE ADDRESS FOR LABEL                          PLOT0427
+       STA PLT41                                                        PLOT0428
+       STA PLT42                                                        PLOT0429
+       CLA 1,4                                                          PLOT0430
+       STA *+1                                                          PLOT0431
+       CLA **           NCHAR, NUMBER OF BCD CHARACTERS IN LABEL        PLOT0432
+       TSX FIX,2                                                        PLOT0433
+       ADD ONE                                                          PLOT0434
+       PAX 0,4                                                          PLOT0435
+       SXD INDX4,4      INITIALIZE COUNTER FOR CHARACTERS IN LABEL      PLOT0436
+       STD INDX2        INDX2=0   INITIALIZE COUNT FOR WORDS IN LABEL   PLOT0437
+       LXA SIX,1                                                        PLOT0438
+       SXD INDX1,1      INDX1=6   INITIALIZE COUNT OF CHARACTERS IN WORDPLOT0439
+PLT41  LDQ **           LABEL, FIRST WORD IN LABEL                      PLOT0440
+       STQ LABEL                                                        PLOT0441
+       CLA G3                                                           PLOT0442
+       STO N1           N1 = G3   SCALE FACTOR FOR ORDINATE (Y) VALUES  PLOT0443
+       CLA G4                                                           PLOT0444
+       STO N3           N3 = G4   DEC PT POSITION FOR ORDINATE (Y) VALUEPLOT0445
+       CLA LINES                                                        PLOT0446
+       STO FIXV         FIXV = LINES   MAXIMUM HORIZONTAL LINE INDEX    PLOT0447
+       CAL IFOMT                                                        PLOT0448
+       ANA IFOUR        IF IFOMT = 4,5,6, OR 7, DELETE BOTTOM GRID LINE PLOT0449
+       TZE *+4                                                          PLOT0450
+       CLA LINES                                                        PLOT0451
+       SUB ONE                                                          PLOT0452
+       STO FIXV         FIXV = LINES-1, MAX LINE INDEX WITH NO BOTT LINEPLOT0453
+       STZ I            I=0, INITIALIZE LINE COUNTER FOR IMAGE REGION   PLOT0454
+       LXA I,2          INITIALIZE WORD COUNTER FOR IMAGE REGION        PLOT0455
+CHECK  CLA FIXV                                                         PLOT0456
+       SUB I                                                            PLOT0457
+       TMI IR44+1       IF FIXV-I NEGATIVE, IMAGE PRINTOUT COMPLETED    PLOT0458
+       SUB LNPRC                                                        PLOT0459
+       LXA LNPRC,4      INITIALIZE IR4 WITH NUMBER OF LINES PER RECORD  PLOT0460
+       TPL *+4          IF FIXV-I-LNPRC.GE.0, PRINT FULL RECORD         PLOT0461
+       ADD LNPRC                                                        PLOT0462
+       ADD ONE                                                          PLOT0463
+       PAX 0,4          INITIALIZE IR4 WITH LINES IN PARTIAL RECORD     PLOT0464
+       SXD SAVE4,4      SAVE LINE COUNTER FOR RECORD                    PLOT0465
+       SXD IR22,2       SAVE WORD COUNTER FOR IMAGE REGION              PLOT0466
+XXX    CLA BLKS                                                         PLOT0467
+       STO LEFT         LEFT = BLNKK, PREPARE FIRST WORD OF LEFT MARGIN PLOT0468
+       CLA BLNKK                                                        PLOT0469
+       STO LEFT-1       LEFT-1=BLNKK, PREPARE SECOND WORD OF LEFT MARGINPLOT0470
+TPCON  PXD 128,0                                                        PLOT0471
+       LDQ I                                                            PLOT0472
+       DVP SBH                                                          PLOT0473
+       STQ L            L=I/SBH, WHEN INTEGRAL, PREPARE ORDINATE VALUE  PLOT0474
+       TNZ SKIP         IF NON-INTEGRAL, BYPASS ORDINATE PREPARATION    PLOT0475
+       CAL IFOMT                                                        PLOT0476
+       ANA TWO                                                          PLOT0477
+       TNZ SKIP         IF IFOMT=2,3,OR 6, DELETE ORDINATE VALUE        PLOT0478
+       CLA L                                                            PLOT0479
+       TSX FLOAT,2                                                      PLOT0480
+       LRS 35                                                           PLOT0481
+       FMP DELTY                                                        PLOT0482
+       STO TEMP                                                         PLOT0483
+       CLA YMAX                                                         PLOT0484
+       FSB TEMP                                                         PLOT0485
+       STO YAXIS        YAXIS=YMAX-(L*DELTY), CURRENT ORDINATE (Y) VALUEPLOT0486
+       CLA TWO                                                          PLOT0487
+       STO COUNT        COUNT=2, INITIALIZE TYPEWHEEL COUNTER FOR SETUP PLOT0488
+       CLA NINE                                                         PLOT0489
+       STO N2           N2 = 9, FIELD WIDTH FOR ORDINATE (Y) VALUES     PLOT0490
+       SXD IR44,4       SAVE LINE COUNTER FOR RECORD                    PLOT0491
+       TSX SETUP,4      PLACES BCD ORDINATE VALUE IN LEFT AND LEFT-1    PLOT0492
+       REM              AS FOLLOWS.  LEFT(  XXXX), LEFT-1(XXXXX )       PLOT0493
+       LXD IR44,4       RESTORE LINE COUNTER FOR RECORD                 PLOT0494
+SKIP   CLA LEFT                                                         PLOT0495
+       STO C-1,4        SAVE EACH LEFT IN LOWER PORTION OF C REGION     PLOT0496
+       CLA LEFT-1                                                       PLOT0497
+       STO C-1-LNREC,4  SAVE EACH LEFT-1 IN UPPER PORTION OF C REGION   PLOT0498
+       CLA I                                                            PLOT0499
+       ADD ONE                                                          PLOT0500
+       STO I            I=I+1, INCREMENT LINE COUNTER FOR IMAGE REGION  PLOT0501
+       TIX XXX,4,1      RETURN IF MULTI LINE RECORD UNFINISHED          PLOT0502
+       LXD SAVE4,4      LOAD IR4 WITH NUMBER OF LINES IN THIS RECORD    PLOT0503
+BACK   SXD IR44,4       SAVE LINE COUNTER FOR RECORD                    PLOT0504
+DECMP  LXD INDX4,4      RESTORE CHARACTER COUNT IN LABEL                PLOT0505
+       CAL SBLNK        BLANK IN ORDINATE LABEL POSITION                PLOT0506
+       TNX OUT1+2,4,1   DECREMENT CHARACTER COUNTER FOR LABEL           PLOT0507
+       LXD INDX2,2      RESTORE WORD COUNTER FOR LABEL                  PLOT0508
+       LXD INDX1,1      RESTORE CHARACTER COUNTER IN LABEL WORD         PLOT0509
+       LDQ LABEL        CURRENT LABEL WORD                              PLOT0510
+       LGL 6            CURRENT LABEL CHARACTER INTO ACCUMULATOR        PLOT0511
+       ALS 24           CURRENT LABEL CHAR INTO ORDINATE LABEL POSITION PLOT0512
+       TIX OUT1,1,1     DECREMENT CHARACTER COUNTER IN LABEL WORD       PLOT0513
+       LXA SIX,1        REINITIALIZE CHARACTER COUNTER FOR LABEL WORD   PLOT0514
+       TXI *+1,2,**     +1 FOR PLOT4  AND -1 FOR FPLOT                  PLOT0515
+PLT42  LDQ **,2         PICK UP NEXT FULL WORD OF LABEL                 PLOT0516
+OUT1   SXD INDX2,2      SAVE WORD COUNTER FOR LABEL                     PLOT0517
+       SXD INDX1,1      SAVE CHARACTER COUNTER FOR LABEL WORD           PLOT0518
+       SXD INDX4,4      SAVE CHARACTER COUNTER FOR LABEL                PLOT0519
+       LXD IR44,4       RESTORE LINE COUNTER FOR RECORD                 PLOT0520
+       ORS C-1,4        PLACE ORDINATE LABEL CHARACTER INTO LEFT WORD   PLOT0521
+       STQ LABEL        SAVE CURRENT LABEL WORD                         PLOT0522
+       TIX BACK,4,1     RETURN IF MULTI-LINE RECORD UNFINISHED          PLOT0523
+BACKK  WTD OTAPE   .....TAPE SELECT FOR IMAGE PRINTOUT                  PLOT0524
+CLOOP  LXD SAVE4,4      LOAD IR4 WITH NUMBER OF LINES IN THIS RECORD    PLOT0525
+       LXD IR22,2       RESTORE WORD COUNTER FOR IMAGE REGION           PLOT0526
+       CPY C-1,4   .....PRINT FIRST WORD IN LINE (LEFT)                 PLOT0527
+       CPY C-1-LNREC,4  .....PRINT SECOND WORD IN LINE (LEFT-1)         PLOT0528
+       LXA WORDS,1      INITIALIZE IR1 WITH WORDS IN ONE LINE OF IMAGE  PLOT0529
+ADDB   CPY **,2    .....PRINT THE REMAINDER OF THE IMAGE LINE           PLOT0530
+       TXI *+1,2,1      INCREMENT WORD COUNTER FOR THE IMAGE REGION     PLOT0531
+       TIX ADDB,1,1     DECREMENT WORD COUNT, RETURN FOR UNFINISHED LINEPLOT0532
+       TXL *+3,4,1      BYPASS REC MARK PRINT IF LAST LINE IN RECORD    PLOT0533
+       CPY RECMK   .....COPY RECORD MARK FOR MULTI LINE RECORD          PLOT0534
+       TIX ADDB-3,4,1   DECREMENT LINE COUNT, RETURN - UNFINISHED RECORDPLOT0535
+       IOD         .....                                                PLOT0536
+IR44   TXL CHECK,0,**   RETURN FOR NEXT RECORD                          PLOT0537
+       CAL IFOMT                                                        PLOT0538
+       ANA ONE                                                          PLOT0539
+       TNZ EXIT2        IF IFOMT=1,3,5, OR 7, DELETE ABSCISSA PRINTOUT  PLOT0540
+TS1    LXD TWNTY,4                                                      PLOT0541
+       CLA BLNKK                                                        PLOT0542
+LS1    STO C+1,4        PREPARE C REGION FOR ABSCISSA VALUES            PLOT0543
+S1     TIX LS1,4,1                                                      PLOT0544
+       CLA ONE                                                          PLOT0545
+       STO COUNT        COUNT = 1, INITIALIZE TYPEWHEEL COUNT FOR SETUP PLOT0546
+       LDQ TWO          SHIFT ABCISSA PRINTOUT ONE COLUMN FOR           PLOT0547
+       CLA G7           INTEGER PRINTOUT                                PLOT0548
+       TZE *+3                                                          PLOT0549
+       TPL *+2                                                          PLOT0550
+       STQ COUNT                                                        PLOT0551
+       CLA XMIN                                                         PLOT0552
+       STO BOTOM        BOTOM = XMIN,  FIRST ABSCISSA VALUE             PLOT0553
+       CLA G5                                                           PLOT0554
+       STO N1           N1 = G5, SCALE FACTOR FOR ABSCISSA VALUES       PLOT0555
+       CLA G6                                                           PLOT0556
+       STO N2           N2 = G6, FIELD WIDTH FOR LEFTMOST ABSCISSA VALUEPLOT0557
+       CLA G7                                                           PLOT0558
+       STO N3           N3 = G7, DEC POINT POSITION FOR ABSCISSA VALUES PLOT0559
+       TSX SETUP,4      PLACES LEFT ABSCISSA VALUE (BCD) INTO C REGION  PLOT0560
+TS2    CLA ONE                                                          PLOT0561
+       STO I            I=1, INITIALIZE COUNTER FOR OTHER ABSCISSA VALUSPLOT0562
+LS2    CLA I                                                            PLOT0563
+       TSX FLOAT,2                                                      PLOT0564
+       LRS 35                                                           PLOT0565
+       FMP DELTX                                                        PLOT0566
+       FAD XMIN                                                         PLOT0567
+       STO BOTOM        BOTTOM=I*DELTX+XMIN, ABSCISSA VALUE             PLOT0568
+       CLA COUNT                                                        PLOT0569
+       ADD ONE                                                          PLOT0570
+       STO COUNT        COUNT=COUNT+1, LEAVE BLANK BETWN ABSCISSA VALUESPLOT0571
+       CLA G9                                                           PLOT0572
+       STO N2           N2=G9, FIELD WIDTH FOR OTHER ABSCISSA VALUES    PLOT0573
+       TSX SETUP,4      PLACES ABSCISSA VALUE (BCD) INTO C REGION       PLOT0574
+       CLA I                                                            PLOT0575
+       ADD ONE                                                          PLOT0576
+       STO I            I=I+1, INCREMENT COUNTER FOR ABSCISSA VALUES    PLOT0577
+       SUB NV                                                           PLOT0578
+       TZE LS2          IF ZERO OR NEGATIVE, RETURN TO SET UP ANOTHER   PLOT0579
+S2     TMI LS2          ABSCISSA VALUE                                  PLOT0580
+       WTD OTAPE   .....                                                PLOT0581
+       CPY BLNKK   .....SKIP ONE LINE BEFORE PRINTING ABSCISSA VALUES   PLOT0582
+       WTD OTAPE   .....                                                PLOT0583
+       LXA WORDS,2                                                      PLOT0584
+       TXI *+1,2,3      NUMBER OF WORDS TO BE PRINTED = WORDS + 3       PLOT0585
+       LXD ZERO,1       INITIALIZE WORD COUNTER FOR COPY LOOP           PLOT0586
+CP     CPY C,1     .....PRINT OUT THE ABSCISSA VALUES                   PLOT0587
+       TXI *+1,1,1      INCREMENTWORD COUNTER                           PLOT0588
+       TIX CP,2,1       RETURN FOR UNFINISHED LINE                      PLOT0589
+       IOD         .....                                                PLOT0590
+EXIT2  LXD IR4,4        RESTORE REGISTER 4                              PLOT0591
+       TXI EXIT,4,3     INCREMENT REGISTER 4 AND RETURN                 PLOT0592
+       REM .............................................................PLOT0593
+TSTFP  TZE 1,2          TSTFP CHECKS FOR A FLOATING POINT ARGUMENT      PLOT0594
+       STO TEMP         ITS CALLING SEQUENCE IS                         PLOT0595
+       SSP                   TSX TSTFP,2                                PLOT0596
+       SUB MS004        THE ARGUMENT IS IN THE ACCUMULATOR              PLOT0597
+       TMI *+3                                                          PLOT0598
+       CLA TEMP                                                         PLOT0599
+       TRA 1,2                                                          PLOT0600
+       TXL THEND-2,2,**      NOT FLOATING POINT, REJECT PLOT3 DATA POINTPLOT0601
+SAVE4  TXL BAD,0,**          NOT FLOATING POINT, IMPROPER PLOT2 ARGUMENTPLOT0602
+FLOAT  ORA CONST        FLOAT FLOATS A NUMBER KNOWN TO BE AN INTEGER    PLOT0603
+       FAD CONST        THE CALLING SEQUENCE IS                         PLOT0604
+       TRA 1,2               TSX FLOAT,2  WITH ARGUMENT IN ACCUMULATOR  PLOT0605
+       REM              THE FOLLOWING ENTRIES PRODUCE A MAD-LIKE INTEGERPLOT0606
+       REM              FROM AN ARGUMENT WHICH MAY BE A FLOATING        PLOT0607
+       REM              POINT NUMBER, A MAD-LIKE INTEGER (ADDRESS),     PLOT0608
+       REM              OR FORTRAN INTEGER (DECREMENT). THE CALLING     PLOT0609
+       REM              SEQUENCES ARE OF THE FORM                       PLOT0610
+       REM                   TSX NAME,2  WITH ARGUMENT IN ACCUMULATOR   PLOT0611
+FIX    SSP              FIX PRODUCES A POSITIVE INTEGER IN THE ADDRESS  PLOT0612
+TFIX   LRS 33           TFIX PRODUCES A SIGNED INTEGER IN THE ADDRESS   PLOT0613
+       TNZ FIX1-1       IF NONZERO NUMBER IS IN FLOATING POINT          PLOT0614
+       LLS 15                                                           PLOT0615
+       TNZ 1,2          IF NONZERO IS A FORTRAN (DECREMENT) INTEGER     PLOT0616
+       LLS 18                                                           PLOT0617
+       TRA 1,2          MAD (ADDRESS) INTEGER                           PLOT0618
+       LLS 33           RESTORED A FLOATING POINT NUMBER                PLOT0619
+FIX1   UFA CONST        FIXES A NUMBER KNOWN TO BE IN FLOATING POINT    PLOT0620
+       LRS 27                                                           PLOT0621
+       PXD 0,0                                                          PLOT0622
+       LLS 27                                                           PLOT0623
+       TRA 1,2                                                          PLOT0624
+       REM .............................................................PLOT0625
+OMIT   CLA 1,4          OMIT DELETES PRINTOUT OF CERTAIN SEGMENTS       PLOT0626
+       STA *+1          ITS ARGUMENT IS TAKEN MODULO 8 AS FOLLOWS       PLOT0627
+       CLA **           ARG = 1, DELETE ABSCISSA VALUE PRINTOUT         PLOT0628
+       TSX TFIX,2       ARG = 2, DELETE ORDINATE VALUE PRINTOUT         PLOT0629
+       TMI *+3          ARG = 3, DELETE 1 AND 2 ABOVE                   PLOT0630
+       ORS IFOMT        ARG = 4, DELETE BOTTOM GRID LINE PRINTOUT       PLOT0631
+       TRA 2,4          ARG = 5, DELETE 1 AND 4 ABOVE                   PLOT0632
+       COM              ARG = 6, DELETE 2 AND 4 ABOVE                   PLOT0633
+       ANS IFOMT        ARG = 7, DELETE 1, 2, AND 4 ABOVE               PLOT0634
+       TRA 2,4          TO RESTORE ANY OF THE ABOVE OMIT CAN BE EXECUTEDPLOT0635
+       REM              WITH THE NEGATIVES OF THE ABOVE ARGUMENTS       PLOT0636
+       REM .............................................................PLOT0637
+PLACE  CLA 1,4          PLACE PLACES ANY SPECIFIED BCD CHARACTER IN THE PLOT0638
+       STA BCDCH        I TH CHARACTER POSITION OF A SPECIFIED REGION   PLOT0639
+       CLA 2,4          IN STORAGE.  THE CALLING SEQUENCE IS            PLOT0640
+       STA *+1               TSX PLACE,4                                PLOT0641
+       LDQ **                TXH BCD                                    PLOT0642
+       STQ TEM               TXH I                                      PLOT0643
+       PXD 0,0               TXH REGION                                 PLOT0644
+       DVP SIX                                                          PLOT0645
+       STQ TEM1         TEM1=I/6, INDEX OF WORD CONTAINING CHAR POSITIONPLOT0646
+       LXA TEM1,2                                                       PLOT0647
+USED1  MPY SIX               (USED AS CONSTANT BIGP)                    PLOT0648
+       STQ TEM1         TEM1=TEM1*6,  CONTAINS TOTAL CHARACTER POSITIONSPLOT0649
+       CLA TEM          TEM, CONTAINS THE CHARACTER POSITION            PLOT0650
+       SUB TEM1                                                         PLOT0651
+       PAX 0,1          TEM-TEM1 = CHARACTER POSITION IN WORD           PLOT0652
+       CLA 3,4                                                          PLOT0653
+       STA *+3                                                          PLOT0654
+       STA BCDCH+5                                                      PLOT0655
+       CAL PLCMK,1                                                      PLOT0656
+       ANS **,2         ZERO CHARACTER POSITION IN STORAGE WORD         PLOT0657
+BCDCH  CAL **                                                           PLOT0658
+       ANA MASK         ZERO ALL EXCEPT CHARACTER POSITION IN ACC       PLOT0659
+       TNX *+3,1,0                                                      PLOT0660
+       ARS 6            SHIFT BCD INTO PROPER CHARACTER POSITION        PLOT0661
+       TIX *-1,1,1                                                      PLOT0662
+       ORS **,2         PLACE CHARACTER IN STORAGE WORD                 PLOT0663
+       TRA 4,4          RETURN                                          PLOT0664
+       REM .............................................................PLOT0665
+       REM    SUBROUTINE TO CONVERT FLOATING POINT NUMBER TO BCD ACCOR- PLOT0666
+       REM    DING TO THE SPECIAL PURPOSE FORMAT N1 P F N2 . N3         PLOT0667
+       REM    BCD RESULT IS PLACED IN STORAGE REGION REG TO REG-19      PLOT0668
+       REM    (WHICH REPRESENTS DUMMY TYPEWHEELS 1 TO 120)   BCD RESULT PLOT0669
+       REM    BEGINS AT TYPEWHEEL COUNT + 1   THE CALLING SEQUENCE IS   PLOT0670
+       REM         TSX SETUP,4                                          PLOT0671
+       REM    WHERE COUNT AND ARG ARE SET BEFORE ENTRY AND REG TO REG-19PLOT0672
+       REM    IS ASSUMED TO BE FILLED WITH BLANKS                       PLOT0673
+       REM    ***NOTE  ARG IS SYN WITH YAXIS AND BOTOM AND              PLOT0674
+       REM          REG IS SYN WITH C AND LEFT ***                      PLOT0675
+SETUP  SXD SIR4,4       ENTRY TO SETUP                                  PLOT0676
+       CLA N1                                                           PLOT0677
+       SSP                                                              PLOT0678
+       SUB N37          CHECK FOR SCALE FACTOR GREATER THAN +OR-37      PLOT0679
+       TMI OK           SCALE FACTOR INSIDE LIMIT                       PLOT0680
+       CLA FPONE        MULTIPLIER = 1. FOR FACTOR OUT OF RANGE         PLOT0681
+       TXI *+3,0,28672       (USED AS CONSTANT SMALP)                   PLOT0682
+OK     CLA N1                                                           PLOT0683
+       TSX TPOWR,2                                                      PLOT0684
+       STO TEMP         TEMP = 10 .P. N1                                PLOT0685
+       TOV *+1          TURN OFF OVERFLOW INDICATOR                     PLOT0686
+       LDQ TEMP                                                         PLOT0687
+       SUB SMALP        WHENEVER MULTIPLICATION OF ARG BY 10 .P. N1     PLOT0688
+       ADM ARG          WOULD PRODUCE RESULT TOO LARGE OR SMALL FOR     PLOT0689
+       TOV *+3          FLOATING POINT MACHINE WORD, MULTIPLY           PLOT0690
+       SUB BIGP                                                         PLOT0691
+       TPL *+2          BY 1. INSTEAD                                   PLOT0692
+       LDQ FPONE                                                        PLOT0693
+       FMP ARG                                                          PLOT0694
+       STO Z            Z = ARG*10.P.N1 (OR Z = ARG*1.)                 PLOT0695
+       SSP                                                              PLOT0696
+       LDQ TM11         WHENEVER Z IS LESS THAN 10 TO THE -11, Z = 0    PLOT0697
+       TLQ *+2                                                          PLOT0698
+       STZ Z                                                            PLOT0699
+       SUB FPONE        ACCUMULATOR WILL BE SET TO LARGEST REASONABLE   PLOT0700
+       TPL *+4          FIELD WIDTH                                     PLOT0701
+       CLA N3           WHEN .ABS. Z .L. 1., ACCUMULATOR = N3 + 3       PLOT0702
+       ADD THREE                                                        PLOT0703
+INDX4  TXL *+3,0,**                                                     PLOT0704
+       CLA N3           OR WHEN .ABS.Z .G. 1, ACCUMULATOR = N3 + 20     PLOT0705
+       ADD TWENT                                                        PLOT0706
+       SUB N2           IS FIELD WIDTH LESS THAN VALUE IN ACCUMULATOR   PLOT0707
+       TPL OKK          YES                                             PLOT0708
+       ADD N2                                                           PLOT0709
+       LDQ N2                                                           PLOT0710
+       STQ TEMP         NO, SO SET FIELD WIDTH (N2) TO VALUE IN ACC     PLOT0711
+       STO N2                                                           PLOT0712
+       CLA TEMP         COUNT = ORIGINAL COUNT + (ORIGINAL N2           PLOT0713
+       ADD COUNT             - CURRENT N2)                              PLOT0714
+       SUB N2                                                           PLOT0715
+       STO COUNT                                                        PLOT0716
+OKK    CLA N2                                                           PLOT0717
+       TZE THRU         WHEN FIELD WIDTH (N2) = 0, FUNCTION RETURN      PLOT0718
+       SUB N3                                                           PLOT0719
+       SUB TWO                                                          PLOT0720
+       TSX TPOWR,2                                                      PLOT0721
+       STO P            P = 10 .P. (N2-N3-2)                            PLOT0722
+       CLA BLNKK                                                        PLOT0723
+       STO SIGN         SIGN = $ $ (BLANK BCD CONSTANT)                 PLOT0724
+       CLA Z                                                            PLOT0725
+       TPL *+5                                                          PLOT0726
+       SSP                                                              PLOT0727
+       STO Z                                                            PLOT0728
+       CLA MINUS                                                        PLOT0729
+       STO SIGN         WHEN Z IS NEGATIVE, SIGN = $-$                  PLOT0730
+       LDQ FPONE        PUT LEAST SIGNIFICANT FIGURE (IN MQ) TO 1.      PLOT0731
+       CLS N3              IN CASE INTEGER PRINTOUT IS DESIRED          PLOT0732
+       TPL *+3                                                          PLOT0733
+       TSX TPOWR,2      NON INTEGER PRINTOUT, LEAST SIGNIFICANT FIGURE  PLOT0734
+       LRS 35           (IN MQ) IS 10 .P. -N3                           PLOT0735
+       FMP N05                                                          PLOT0736
+       FAD Z            ROUND Z BY ADDING 0.5*(LEAST SIGNIFICANT FIGURE)PLOT0737
+       STO Z                                                            PLOT0738
+       CLA ONE          SET BOOL = 1     (BOOL IS 1 UNTIL FIRST NON-    PLOT0739
+       STO BOOL         BLANK CHARACTER IS ENCOUNTERED)                 PLOT0740
+       CLA N2           SET COUNTER (SI) TO N2 FOR COUNTING LOOP        PLOT0741
+       STO SI           BETWEEN LOOPA AND STOBK + 6                     PLOT0742
+LOOPA  SUB N3                                                           PLOT0743
+       SUB ONE                                                          PLOT0744
+       TNZ STATA                                                        PLOT0745
+       CLA PER          WHENEVER I = N3 + 1, PERIOD AND POSSIBLY LEADINGPLOT0746
+       STO CHAR         ZERO AND SIGN ARE TO BE PLACED                  PLOT0747
+       CLA BOOL         WHENEVER BOOL = 0, SIGN AND LEADING ZERO HAVE   PLOT0748
+       TZE STATB        ALREADY BEEN PLACED,  SO IGNORE THEM            PLOT0749
+       CLA SI                                                           PLOT0750
+       SUB N2                                                           PLOT0751
+       TPL STATB        WHEN SI = N2, NO ROOM FOR EITHER LEADING ZERO   PLOT0752
+       CLA COUNT        OR SIGN                                         PLOT0753
+       SUB ONE                                                          PLOT0754
+       STO TEMP                                                         PLOT0755
+       TSX PLACE,4      PLACE LEADING ZERO IN TYPEWHEEL COUNT-1         PLOT0756
+       TXH ZBLNK                                                        PLOT0757
+       TXH TEMP                                                         PLOT0758
+       TXH REG                                                          PLOT0759
+       CLA SI           WHEN SI .GE. N2-1, NO ROOM FOR SIGN             PLOT0760
+       ADD ONE                                                          PLOT0761
+       SUB N2                                                           PLOT0762
+       TPL STATB                                                        PLOT0763
+       CLA COUNT                                                        PLOT0764
+       SUB TWO                                                          PLOT0765
+       STO TEMP                                                         PLOT0766
+       TSX PLACE,4      PLACE SIGN IN TYPEWHEEL COUNT-2                 PLOT0767
+IR1    TXH SIGN,0,**                                                    PLOT0768
+IR2    TXH TEMP,0,**                                                    PLOT0769
+IR4    TXH REG,0,**                                                     PLOT0770
+STATB  STZ BOOL         NON-BLANK CHARACTER PLACED, SO BOOL = 0         PLOT0771
+SIR4   TXL STLST,0,**                                                   PLOT0772
+STATA  CLA P            NORMAL CASE (WHEN NOT POSITION FOR PERIOD)      PLOT0773
+       STO Q            INITIALIZE Q TO P                               PLOT0774
+       CLA Z                                                            PLOT0775
+       FDP P                                                            PLOT0776
+       STQ TEMP         TEMP = Z/P                                      PLOT0777
+       CLA TEMP                                                         PLOT0778
+       SUB TPA          WHENEVER TEMP LESS THAN TPA, IT CAH BE          PLOT0779
+       TMI ONWD         CONVERTED TO AN INTEGER                         PLOT0780
+RETRN  LDQ Q                                                            PLOT0781
+       FMP TPA                                                          PLOT0782
+       STO Q            Q = Q*TPA                                       PLOT0783
+       CLA TEMP                                                         PLOT0784
+       FDP TPA                                                          PLOT0785
+       STQ TEMP         TEMP = TEMP/TPA                                 PLOT0786
+       CLA TPA                                                          PLOT0787
+       TLQ *+2          WHENEVER TEMP .L. TPA, MODIFY Z                 PLOT0788
+       TXL RETRN,0,     OTHERWISE, KEEP DIVIDING BY TPA                 PLOT0789
+       CLS TEMP                                                         PLOT0790
+       TSX FIX1,2                                                       PLOT0791
+       TSX FLOAT,2      ACC = INTEGRAL PART OF TEMP, IN FLTG PT FORM    PLOT0792
+       LRS 35                                                           PLOT0793
+       FMP Q                                                            PLOT0794
+       FAD Z                                                            PLOT0795
+       STO Z            Z = Z - Q*TEMP                                  PLOT0796
+       TXL STATA,0,     GO BACK AND TRY AGAIN                           PLOT0797
+ONWD   CLA TEMP                                                         PLOT0798
+       TSX FIX,2                                                        PLOT0799
+       STO CHAR         CHAR = INTEGRAL PART OF Z/P                     PLOT0800
+       TSX FLOAT,2                                                      PLOT0801
+       LRS 35                                                           PLOT0802
+       FMP P            ACCUMULATOR = CHAR*P                            PLOT0803
+       CHS                                                              PLOT0804
+       FAD Z            Z = Z - ACCUMULATOR                             PLOT0805
+       STO Z                                                            PLOT0806
+       CLA P                                                            PLOT0807
+       FDP FTEN                                                         PLOT0808
+       STQ P            P = P/10.                                       PLOT0809
+       CLA NINE         WHEN CHAR .LE. 9, IT IS SMALL ENOUGH TO FIT     PLOT0810
+       SUB CHAR         INTO ONE TYPEWHEEL                              PLOT0811
+       TPL ALRIT                                                        PLOT0812
+       STZ BOOL                                                         PLOT0813
+       PXD 0,0          OTHERWISE (WHEN CHAR WONT FIT INTO ONE          PLOT0814
+       LDQ CHAR         TYPEWHEEL) IT MUST BE TRUNCATED FROM LEFT       PLOT0815
+       DVP TEN          FIRST PRINTED DIGIT IS THE REMAINDER IN THE     PLOT0816
+       STO CHAR         ACCUMULATOR                                     PLOT0817
+ALRIT  CLA BOOL         WHEN BOOL = 0, SOME NON-BLANK CHAR HAS ALREADY  PLOT0818
+       TZE STLST        BEEN PLACED, SO CHAR MUST BE PLACED EVEN IF 0   PLOT0819
+       CLA CHAR         WHEN CHAR = 0 (AND NO NON-BLANK CHAR HAS BEEN   PLOT0820
+       TZE STOBK        PLACED,YET) BYPASS THE PLACING OF 0             PLOT0821
+       CLA SI                                                           PLOT0822
+       SUB N2           SINCE CHAR = NONZERO, SEE IF THERE IS ROOM TO   PLOT0823
+       TPL STATC        PLACE LEADING SIGN (I.E. SI .L. N2)             PLOT0824
+       CLA COUNT                                                        PLOT0825
+       SUB ONE                                                          PLOT0826
+       STO TEMP                                                         PLOT0827
+       TSX PLACE,4      PLACE LEADING SIGN IN TYPEWHEEL COUNT-1         PLOT0828
+       TXH SIGN                                                         PLOT0829
+       TXH TEMP                                                         PLOT0830
+       TXH REG                                                          PLOT0831
+STATC  STZ BOOL         NON-BLANK CHAR HAS BEEN PLACED  BOOL = 0        PLOT0832
+STLST  LDQ CHAR         MAKE CHAR (WHICH IS INTEGER LESS THAN 10)       PLOT0833
+       RQL 30                LEFT ADJUSTED BCD CHARACTER                PLOT0834
+       STQ TEMP                                                         PLOT0835
+       TSX PLACE,4      PLACE CHAR IN TYPEBAR COUNT                     PLOT0836
+       TXH TEMP                                                         PLOT0837
+       TXH COUNT                                                        PLOT0838
+       TXH REG                                                          PLOT0839
+STOBK  CLA COUNT                                                        PLOT0840
+       ADD ONE                                                          PLOT0841
+       STO COUNT        COUNT = COUNT + 1                               PLOT0842
+       CLS ONE                                                          PLOT0843
+       ADD SI                                                           PLOT0844
+       STO SI           SI = SI - 1                                     PLOT0845
+       TPL LOOPA        WHEN SI .G. 0, REPEAT LOOP                      PLOT0846
+       CLA BOOL         WHEN EXIT FROM LOOP WITH NO NONBLANK CHAR PLACEDPLOT0847
+       TZE THRU         MUST BE INTEGER 0                               PLOT0848
+       CLA COUNT                                                        PLOT0849
+       SUB ONE          COUNT = COUNT - 1                               PLOT0850
+       STO COUNT                                                        PLOT0851
+       STZ TEMP         MAKE CHAR TO BE PLACED A $0$ (BCD 0)            PLOT0852
+       STZ BOOL         BOOL = 0 TO EXIT FROM LOOP NEXT TIME            PLOT0853
+INDX2  TXL STLST+3,0,** TRANSFER BACK TO PLACE THE $0$                  PLOT0854
+THRU   LXD SIR4,4                                                       PLOT0855
+       TRA 1,4          RETURN                                          PLOT0856
+       REM .............................................................PLOT0857
+       REM    TPOWR RAISES  10 TO THE INTEGRAL POWER N (N MAY BE +OR-)  PLOT0858
+TPOWR  LDQ FPONE        ENTRY TO TPOWR      CALLING SEQUENCE IS         PLOT0859
+       STQ Q                                  CLA N                     PLOT0860
+       PAX 0,4                                TSX TPOWR,2               PLOT0861
+       TXH *+3,4,0                          FLT PT RESULT IS IN ACC     PLOT0862
+       CLA FPONE        ARG = 0             N MUST BE A SIGNED INTEGER  PLOT0863
+       TRA 1,2          RETURN 1.           IN THE ADDRESS              PLOT0864
+       TMI NGARG                                                        PLOT0865
+       LDQ Q                                                            PLOT0866
+       FMP FTEN                                                         PLOT0867
+       STO Q                                                            PLOT0868
+       TIX *-3,4,1                                                      PLOT0869
+       TRA 1,2          RETURN FOR ARG .G. 0                            PLOT0870
+NGARG  CLA Q                                                            PLOT0871
+       FDP FTEN                                                         PLOT0872
+       STQ Q                                                            PLOT0873
+       TIX *-3,4,1                                                      PLOT0874
+       CLA Q                                                            PLOT0875
+       TRA 1,2          RETURN FOR ARG .L. 0                            PLOT0876
+PLTAP  SXD IR2,2        SAVE REGISTER 2                                 PLOT0877
+       CLA 1,4                                                          PLOT0878
+       STA *+1                                                          PLOT0879
+       CLA **           NEW TAPE NUMBER                                 PLOT0880
+       TSX FIX,2                                                        PLOT0881
+       LDQ TEN                                                          PLOT0882
+       TLQ EX           TAPE NUMBER.G.10, DONT CHANGE                   PLOT0883
+       ORA TPCON        OCTAL TAPE NUMBER FOR WTD                       PLOT0884
+       STA ERR1+2                                                       PLOT0885
+       STA BAD+2                                                        PLOT0886
+       STA ERR3                                                         PLOT0887
+       STA BACKK                                                        PLOT0888
+       STA S2+1                                                         PLOT0889
+       STA S2+3                                                         PLOT0890
+EX     LXD IR2,2                                                        PLOT0891
+       TRA 2,4          RETURN                                          PLOT0892
+       REM .............................................................PLOT0893
+       REM PRESET LOCATIONS FOR STD GRID NOTED WITH *** IN COL 21-23    PLOT0894
+ADMSK  OCT 77777                                                        PLOT0895
+ARG                     FLTG PT ARG FOR SETUP  SYN WITH YAXIS AND BOTOM PLOT0896
+       BCD 1    I   ***                                                 PLOT0897
+       BCD 1I       *** BLANK TO BLANK-16 IS A SAMPLE LINE IMAGE        PLOT0898
+       BCD 1        *** FOR NON-GRID LINES                              PLOT0899
+       BCD 1  I     *** THIS IS LINE IMAGE USED IN STANDARD GRID        PLOT0900
+       BCD 1        *** EXECUTION OF PLOT1 SETS UP NEW VALUES           PLOT0901
+       BCD 1    I   ***                                                 PLOT0902
+       BCD 1I       ***                                                 PLOT0903
+       BCD 1        ***                                                 PLOT0904
+       BCD 1  I     ***                                                 PLOT0905
+       BCD 1        ***                                                 PLOT0906
+       BCD 1    I   ***                                                 PLOT0907
+       BCD 1I       ***                                                 PLOT0908
+       BCD 1        ***                                                 PLOT0909
+       BCD 1  I     ***                                                 PLOT0910
+       BCD 1        ***                                                 PLOT0911
+       BCD 1    I   ***                                                 PLOT0912
+BIGP   SYN USED1             (OCTAL 020000KKKKKK)                       PLOT0913
+BLANK  BCD 1I       *** FIRST WORD OF LINE IMAGE FOR NON GRID LINES     PLOT0914
+BLNKK  BCD 1                                                            PLOT0915
+BLKS   OCT 600060606060                                                 PLOT0916
+BOOL                                                                    PLOT0917
+BOTOM  SYN ARG                                                          PLOT0918
+C      BES CDIM         SYN WITH LEFT AND REG, USED BY SETUP            PLOT0919
+       PZE              MUST FOLLOW C                                   PLOT0920
+CHAR                                                                    PLOT0921
+CONST  OCT 233000000000                                                 PLOT0922
+COUNT                                                                   PLOT0923
+       BCD 1----+   ***                                                 PLOT0924
+       BCD 1+-----  *** DASH TO DASH-16 IS A SAMPLE LINE IMAGE FOR      PLOT0925
+       BCD 1------  *** HORIZONTAL GRID LINES                           PLOT0926
+       BCD 1--+---  *** THIS IS THE LINE IMAGE USED IN STANDARD GRID    PLOT0927
+       BCD 1------  *** EXECUTION OF PLOT1 PRODUCES NEW VALUES          PLOT0928
+       BCD 1----+-  ***                                                 PLOT0929
+       BCD 1+-----  ***                                                 PLOT0930
+       BCD 1------  ***                                                 PLOT0931
+       BCD 1--+---  ***                                                 PLOT0932
+       BCD 1------  ***                                                 PLOT0933
+       BCD 1----+-  ***                                                 PLOT0934
+       BCD 1+-----  ***                                                 PLOT0935
+       BCD 1------  ***                                                 PLOT0936
+       BCD 1--+---  ***                                                 PLOT0937
+       BCD 1------  ***                                                 PLOT0938
+       BCD 1----+-  ***                                                 PLOT0939
+DASH   BCD 1+-----  *** 1ST WORD OF LINE IMAGE FOR HORIZONTAL GRID LINESPLOT0940
+DELTX                                                                   PLOT0941
+DELTY                                                                   PLOT0942
+       BCD 1-                                                           PLOT0943
+       BCD 1--          DSH TO DSH-5 USED BY PLOT1 TO FILL OUT LAST WORDPLOT0944
+       BCD 1---         OF HORIZONTAL LINE IMAGE                        PLOT0945
+       BCD 1----                                                        PLOT0946
+       BCD 1-----                                                       PLOT0947
+DSH    BCD 1------                                                      PLOT0948
+EIGHT  DEC 8                                                            PLOT0949
+ER1    BCD 10PLOT1                                                      PLOT0950
+ER2    BCD 10PLOT2                                                      PLOT0951
+ER3    BCD 30NO PREVIOUS PLOT2                                          PLOT0952
+FIXV                    MAXIMUM HORIZONTAL LINE INDEX FOR PRINTING      PLOT0953
+FLAG1                                                                   PLOT0954
+FPONE  DEC 1.                                                           PLOT0955
+FPTWO  DEC 2.                                                           PLOT0956
+FTHRE  DEC 3.                                                           PLOT0957
+FPFOR  DEC 4.                                                           PLOT0958
+FTEN   DEC 10.          G7,G5,G4,AND G3 MUST BE IN ASCENDING SEQUENCE   PLOT0959
+G7     DEC 3            LEFT-MOST ABCISSA (BOTTOM) VALUE IS PRINTED     PLOT0960
+G5     DEC 0               ACCORDING TO FORMAT G5 P F G6 . G7           PLOT0961
+G4     DEC 3            OTHER ABCISSA VALUES ARE PRINTED ACCORDING      PLOT0962
+G3     DEC 0               TO FORMAT G5 P F G9 . G7                     PLOT0963
+G6     DEC 14           ORDINATE (LEFT) VALUES ARE PRINTED ACCORDING    PLOT0964
+G9     DEC 9               TO FORMAT G3 P F9 . G4                       PLOT0965
+G      EQU COL-11-SPACS COLUMNS IN OUTPUT LINE AVAILABLE FOR IMAGE      PLOT0966
+GWID   PZE G            GRAPH WIDTH (NUMBER OF COLUMNS FOR IMAGE + 1)   PLOT0967
+I                                                                       PLOT0968
+IEYE   BCD 1I                                                           PLOT0969
+IPLUS  BCD 1+                                                           PLOT0970
+IFOMT                   SWITCH CONTAINING INFORMATION FROM OMIT         PLOT0971
+IFOUR  DEC 4                                                            PLOT0972
+J      SYN COUNT                                                        PLOT0973
+K                                                                       PLOT0974
+L                                                                       PLOT0975
+LABEL                                                                   PLOT0976
+LEFT   SYN C                                                            PLOT0977
+LINES  DEC 50       *** MAXIMUM HORIZONTAL LINE INDEX                   PLOT0978
+LNPRC  PZE LNREC        NUMBER OF LINES PER RECORD                      PLOT0979
+MINUS  SYN DSH-5                                                        PLOT0980
+MS004  OCT 000777777777                                                 PLOT0981
+       OCT 777777777700                                                 PLOT0982
+       OCT 777777770077                                                 PLOT0983
+       OCT 777777007777                                                 PLOT0984
+       OCT 777700777777                                                 PLOT0985
+       OCT 770077777777                                                 PLOT0986
+PLCMK  OCT 007777777777                                                 PLOT0987
+MASK   OCT 770000000000                                                 PLOT0988
+N05    DEC 0.5                                                          PLOT0989
+N37    DEC 37                                                           PLOT0990
+N999   DEC .99                                                          PLOT0991
+NINE   DEC 9                                                            PLOT0992
+N3                       N1,N2,AND N3 ARE ARGUMENTS FOR SETUP           PLOT0993
+N2                                                                      PLOT0994
+N1                                                                      PLOT0995
+NDATA                   NUMBER OF DATA POINTS TO BE PLOTTED             PLOT0996
+NH     DEC 5        *** NUMBER OF HORIZONTAL GRID LINES                 PLOT0997
+NV     DEC 10       *** NUMBER OF VERTICAL GRID LINES                   PLOT0998
+ONE    DEC 1                                                            PLOT0999
+ONED   PZE 0,0,1                                                        PLOT1000
+P                                                                       PLOT1001
+Q                                                                       PLOT1002
+PER    BCD 1     .                                                      PLOT1003
+RECMK  OCT 606060606072                                                 PLOT1004
+RECLT  PZE COL          NUMBER OF COLUMNS IN OUTPUT LINE                PLOT1005
+REG    SYN C                                                            PLOT1006
+SBH    DEC 10       *** NUMBER OF SPACES BETWEEN HORIZONTAL GRIDLINES   PLOT1007
+SBV    PZE G/10     *** SPACES BETWEEN VERTICAL GRID LINES              PLOT1008
+SI                                                                      PLOT1009
+SIGN                                                                    PLOT1010
+SIX    DEC 6                                                            PLOT1011
+SIXF   DEC 6.                                                           PLOT1012
+SMALP  SYN OK-1              (OCTAL 170000KKKKKK)                       PLOT1013
+SPANX                                                                   PLOT1014
+SPANY                                                                   PLOT1015
+SBLNK  OCT 006000000000                                                 PLOT1016
+TEM                                                                     PLOT1017
+TEM1                                                                    PLOT1018
+TEMP                                                                    PLOT1019
+TEN    DEC 10                                                           PLOT1020
+TOT    DEC 100      *** MAXIMUM COLUMN INDEX                            PLOT1021
+TOTAL  DEC 101      *** TOTAL COLUMNS PER LINE                          PLOT1022
+TOTLS  DEC 102      *** NUMBER OF BCD CHARACTERS PER LINE               PLOT1023
+THREE  DEC 3                                                            PLOT1024
+TM11   DEC 1.E-11                                                       PLOT1025
+TPA    DEC 10.E7        LARGEST NUMBER THAT CAN BE SAFELY INTEGERIZED   PLOT1026
+TWELV  DEC 12                                                           PLOT1027
+TWENT  DEC 20                                                           PLOT1028
+TWO    DEC 2                                                            PLOT1029
+U                       NUMBER OF LINES PER UNIT Y                      PLOT1030
+V                       NUMBER OF LINES PER UNIT X                      PLOT1031
+WORDS  DEC 17       *** NUMBER OF MACHINE LOCATIONS PER LINE            PLOT1032
+WRONG  BCD 3 IMPROPER ARGUMENT                                          PLOT1033
+WRON1  DEC 0        *** EQUALS 1 FOR UNSUCCESSFUL PLOT1                 PLOT1034
+WRON2                   EQUALS 1 FOR UNSUCCESSFUL PLOT2                 PLOT1035
+WRON3  DEC 1        *** EQUALS 1 UNTIL SUCCESSFUL PLOT2                 PLOT1036
+XIX                                                                     PLOT1037
+YAXIS  SYN ARG                                                          PLOT1038
+XMAX                                                                    PLOT1039
+XMIN                                                                    PLOT1040
+YMAX                                                                    PLOT1041
+YMIN                                                                    PLOT1042
+Z                                                                       PLOT1043
+ZBLNK  SYN SIX                                                          PLOT1044
+ZERO                                                                    PLOT1045
+END    SYN *                                                            PLOT1046
+       END              THIS IS THE LAST CARD                           PLOT1047

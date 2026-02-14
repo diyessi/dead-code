@@ -1,0 +1,183 @@
+*TAINT  CODE AL. NASA, AMES RESEARCH CENTER, MOFFETT FIELD, CALIF.              
+*        UNIVARIATE TABLE LOOK-UP AND INTERPOLATION FOR MULTIPLE        TAINT002
+*              ARRAYS. SORENSEN, EMC.                                   TAINT003
+*        USAGE -CALL TAINT(XT,FXT,X,FX,K,M,NERR,DMON,GXT,GX,HXT,HX,...) TAINT004
+*              XT =MONOTONIC INCREASING OR DECREASING TABLE OF THE      TAINT005
+*                  INDEPENDENT VARIABLE                                 TAINT006
+*              FXT = TABLE OF THE DEPENDENT VARIABLE, F=F(X).           TAINT007
+*              X = ARGUMENT                                             TAINT008
+*              FX = VALUE OF DEPENDENT VARIABLE                         TAINT009
+*              K = NUMBER OF TABLE VALUES                               TAINT010
+*              M = ORDER OF INTERPOLATION                               TAINT011
+*              NERR = ERROR CODE, (1 IS NORMAL RETURN, 2 AND 3          TAINT012
+*                  ARE ERROR RETURNS)                                   TAINT013
+*              DMON = LOCATION IN WHICH MONOTONICITY INFORMATION        TAINT014
+*                  IS STORED.                                           TAINT015
+       COUNT   200                                                      TAINT016
+       ENTRY   TAINT                                                    TAINT017
+ TAINT SXA     SV1,1          SAVE INDEX REGISTERS.                     TAINT018
+       SXA     SV2,2                                                    TAINT019
+       SXA     SV4,4                                                    TAINT020
+       CLA     1,4            INITIALIZE ADDRESSES                      TAINT021
+       STA     XTM1                                                     TAINT022
+       ADD     =1                                                       TAINT023
+       STA     XT                                                       TAINT024
+       CLA     2,4                                                      TAINT025
+       ADD     =1                                                       TAINT026
+       STA     FXT                                                      TAINT027
+       CLA     3,4                                                      TAINT028
+       STA     X                                                        TAINT029
+       CLA     4,4                                                      TAINT030
+       STA     FX                                                       TAINT031
+       CLA*    5,4                                                      TAINT032
+       STD     K                                                        TAINT033
+       STD     TREE                                                     TAINT034
+       CLA*    6,4                                                      TAINT035
+       CAS     =O12000000                                               TAINT036
+       TRA     ERR0                                                     TAINT037
+       TRA     ERR0                                                     TAINT038
+       STD     M                                                        TAINT039
+       CAS     K              TEST FOR M LESS THAN K.                   TAINT040
+       TRA     ERR0           NO - ERROR.                               TAINT041
+       TRA     ERR0                                                     TAINT042
+       ARS     1                                                        TAINT043
+       STD     M2                                                       TAINT044
+       CLA     7,4                                                      TAINT045
+       STA     NERR                                                     TAINT046
+       CLA*    8,4                                                      TAINT047
+       TNZ     DIR            YES.                                      TAINT048
+       LXD     K,1            NO.                                       TAINT049
+       AXT     0,2                                                      TAINT050
+       TXI     *+1,1,-1                                                 TAINT051
+ CLAP  CLA*    XT             MONTONICITY TEST.                         TAINT052
+ XTM1  CAS     XTM1,1                                                   TAINT053
+       TXI     BUMP,2,-1                                                TAINT054
+       TRA     ERR1           ADJACENT X-VALUES EQUAL.                  TAINT055
+       TXI     BUMP,2,1                                                 TAINT056
+ BUMP  TIX     CLAP,1,1                                                 TAINT057
+       CLA     =2                                                       TAINT058
+       TXH     *+2,2,16000                                              TAINT059
+       CLA     =1             MONOTONIC INCREASING.                     TAINT060
+       STO*    8,4                                                      TAINT061
+ DIR   PAX     ,2                                                       TAINT062
+       CLA     K                                                        TAINT063
+       ARS     1              COMPUTE K/2 =N.                           TAINT064
+       PDX     ,1                                                       TAINT065
+       TXH     BINSR,1,8      DO SEQUENTIAL FOR K L/E 15.               TAINT066
+       LXD     K,1            SEQUENTIAL SEARCH.                        TAINT067
+ X     CLA     X                                                        TAINT068
+ BUT   CAS*    XT                                                       TAINT069
+       XEC     TIX+4,2                                                  TAINT070
+       TRA     ALDON                                                    TAINT071
+       XEC     TIXX+4,2                                                 TAINT072
+ ALDON PXD     ,1             TEST FOR N+M L/E K.                       TAINT073
+       ADD     M                                                        TAINT074
+       SUB     M2                                                       TAINT075
+       CAS     K                                                        TAINT076
+       TXI     ALDON,1,-1     NO. N=N-1                                 TAINT077
+       TRA     *+1                                                      TAINT078
+       SUB     M                                                        TAINT079
+       TMI     AXT                                                      TAINT080
+       PDX     ,1                                                       TAINT081
+       TXH     INTRP,1,0      TEST FOR N=0.                             TAINT082
+ AXT   AXT     1,1                                                      TAINT083
+       TRA     INTRP                                                    TAINT084
+ BINSR SXD     TXIP,1                                                   TAINT085
+       TXI     MOD,2,2                                                  TAINT086
+ CAX   CLA*    X                                                        TAINT087
+ XT    CAS     XT,1            X1=N/2 INITIALLY                         TAINT088
+       XEC     TXIP+3,2       * =+N/4 INITIALLY.                        TAINT089
+       TRA     BUT                                                      TAINT090
+       XEC     TXIP+4,2       * =-N/4 INITIALLY                         TAINT091
+ MOD   LXD     TXIP,4                                                   TAINT092
+       TXL     BUT,4,4                                                  TAINT093
+       PXD     ,4             HALVE THE INCREMENTS.                     TAINT094
+       ARS     1                                                        TAINT095
+       STD     TXIP                                                     TAINT096
+       PDC     ,4                                                       TAINT097
+       SXD     TXIM,4                                                   TAINT098
+       SXD     TXIL,4                                                   TAINT099
+       TRA     CAX                                                      TAINT100
+*              AITKEN INTERPOLATION FORMULA.                            TAINT101
+ INTRP SXA     I,1            SAVE INDEX FROM TABLE LOOK-UP.            TAINT102
+ I     AXT     I,1                                                      TAINT103
+       LXD     M,2            START INTERPOLATION.                      TAINT104
+       TXI     *+1,2,1                                                  TAINT105
+       SXA     RM,2                                                     TAINT106
+ FXT   CLA     FXT,1                                                    TAINT107
+       STO     T,2                                                      TAINT108
+       CLA*    X              COMPUTE X-X(I), I= N,N+M                  TAINT109
+       FSB*    XT                                                       TAINT110
+       STO     C,2                                                      TAINT111
+       TXI     *+1,1,1                                                  TAINT112
+       TIX     SAVE,2,1                                                 TAINT113
+       LXA     RM,1                                                     TAINT114
+ RM    AXT     RM,2                                                     TAINT115
+       TNX     DUN,2,1                                                  TAINT116
+       SXA     RM,2                                                     TAINT117
+ LOOP  CLA     C,1                                                      TAINT118
+       FSB     C,2                                                      TAINT119
+       STO     D1                                                       TAINT120
+       LDQ     T,1                                                      TAINT121
+       FMP     C,2                                                      TAINT122
+       STO     T1                                                       TAINT123
+       LDQ     T,2                                                      TAINT124
+       FMP     C,1                                                      TAINT125
+       FSB     T1                                                       TAINT126
+       FDP     D1                                                       TAINT127
+       STQ     T,2                                                      TAINT128
+       TIX     LOOP,2,1                                                 TAINT129
+       TIX     RM,1,1                                                   TAINT130
+ FX    STQ     FX                                                       TAINT131
+       LXA     SV4,4          SET UP ADDRESS                            TAINT132
+       CLA     9,4                                                      TAINT133
+       ADD     =1                                                       TAINT134
+       STA     FXT                                                      TAINT135
+       ANA     =O777777700000                                           TAINT136
+       SUB     =O7400000000                                             TAINT137
+       TNZ     NERR-1                                                   TAINT138
+       CLA     10,4                                                     TAINT139
+       STA     FX                                                       TAINT140
+       TXI     *+1,4,-2                                                 TAINT141
+       SXA     SV4,4                                                    TAINT142
+       TRA     I                                                        TAINT143
+       AXT     1,1            SET NORMAL EXIT.                          TAINT144
+ NERR  SXD     *,1            SET ERROR CODE.                           TAINT145
+ SV1   AXT     *,1                                                      TAINT146
+ SV2   AXT     *,2                                                      TAINT147
+ SV4   AXT     *,4                                                      TAINT148
+       TRA     9,4            RETURN.                                   TAINT149
+ ERR0  AXT     2,1            ERROR. M IS LESS THAN K.                  TAINT150
+       TRA     *+2                                                      TAINT151
+ ERR1  AXT     3,1            ERROR. ADJACENT X-VALUES ARE              TAINT152
+       LXA     SV4,4                                                    TAINT153
+ CLA94 CLA     9,4                                                      TAINT154
+       ANA     =O777777700000                                           TAINT155
+       SUB     =O7400000000                                             TAINT156
+       TNZ     NERR                                                     TAINT157
+       TXI     *+1,4,-1                                                 TAINT158
+       SXA     SV4,4                                                    TAINT159
+       TRA     CLA94                                                    TAINT160
+ K     PZE                                                              TAINT161
+ M     PZE                                                              TAINT162
+ TIX   TXI     BUT,2,-2                                                 TAINT163
+       TXI     TREE,1,1                                                 TAINT164
+       TIX     BUT,1,1                                                  TAINT165
+       TRA     ALDON                                                    TAINT166
+ TIXX  TXI     TREE,1,1                                                 TAINT167
+       TXI     BUT,2,-2                                                 TAINT168
+       TRA     ALDON                                                    TAINT169
+       TIX     BUT,1,1                                                  TAINT170
+ TREE  TXL     BUT,1,*        *=K                                       TAINT171
+       TRA     ALDON                                                    TAINT172
+ TXIM  TXI     MOD,1,*        * = -N/2                                  TAINT173
+ TXIP  TXI     MOD,1,*        * = N/2                                   TAINT174
+ TXIL  TXI     MOD,1,*        * = -N/2                                  TAINT175
+ D1    PZE                                                              TAINT176
+ T1    PZE                                                              TAINT177
+ T     BES     10                                                       TAINT178
+ C     BES     10                                                       TAINT179
+ DUN   SYN     FX                                                       TAINT180
+ SAVE  SYN     FXT                                                      TAINT181
+ M2    PZE                                                              TAINT182
+       END                                                              TAINT183

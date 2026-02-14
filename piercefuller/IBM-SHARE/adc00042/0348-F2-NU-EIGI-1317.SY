@@ -1,0 +1,427 @@
+      SUBROUTINE EIG1(A,N,M,RTR,RTI)                                    EIG10002
+      DIMENSION A(101,103),NC(100),RTR(100),RTI(100)                    EIG10003
+      ZERO=0.                                                           EIG10004
+C  12 READ INPUT TAPE 5,1,(COMT(I),I=1,13)                              EIG10005
+C     WRITE OUTPUT TAPE 6,1,(COMT(I),I=1,13)                            EIG10006
+C     WRITE OUTPUT TAPE 6,2                                             EIG10007
+C     CALL MATRIX(A,N,N,101,103)                                        EIG10008
+C     CALL MATOUT(A,N,N,101)                                            EIG10009
+      TRACE=A(1,1)                                                      EIG10010
+      DO 10 I=2,N                                                       EIG10011
+   10 TRACE=TRACE+A(I,I)                                                EIG10012
+      WRITE OUTPUT TAPE 6,4,TRACE                                       EIG10013
+      CALL TRING(A,1.E-7,N,NC)                                          EIG10014
+      TRACE=A(1,1)                                                      EIG10015
+      DO 11 I=2,N                                                       EIG10016
+   11 TRACE=TRACE+A(I,I)                                                EIG10017
+      WRITE OUTPUT TAPE 6,4,TRACE                                       EIG10018
+      NU=0                                                              EIG10019
+      NV=0                                                              EIG10020
+   13 IF (NV-N)14,12,14                                                 EIG10021
+   14 NV=NV+1                                                           EIG10022
+      NU=NV                                                             EIG10023
+   16 IF (NC(NV))15,17,15                                               EIG10024
+   15 NV=NV+1                                                           EIG10025
+      GO TO 16                                                          EIG10026
+   17 IF (NV-NU)19,18,19                                                EIG10027
+ 18   RTR(NU)=A(NU,NU)                                                  EIG10028
+      RTI(NU)=0.                                                        EIG10029
+      WRITE OUTPUT TAPE 6,5,RTR(NU),RTI(NU)                             EIG10030
+      GO TO 13                                                          EIG10031
+   19 IF (NV-NU-1)20,21,20                                              EIG10032
+ 20   NP=XMIN0F(M,NV)                                                   EIG10033
+      CALL LAGER(A,1.E-4,NP,NU,NV,RTR,RTI)                              EIG10034
+      GO TO 13                                                          EIG10035
+   21 RR=.5*(A(NU,NU)+A(NV,NV))                                         EIG10036
+      E1=RR**2-A(NU,NU)*A(NV,NV)+A(NU,NV)*A(NV,NU)                      EIG10037
+      S=SQRTF(ABSF(E1))                                                 EIG10038
+      IF(E1)22,23,23                                                    EIG10039
+ 23   RTR(NU)=RR+S                                                      EIG10040
+      RTI(NU)=0.                                                        EIG10041
+      RTR(NV)=RR-S                                                      EIG10042
+      RTI(NV)=0.                                                        EIG10043
+ 25   WRITE OUTPUT TAPE 6,5,RTR(NU),RTI(NU),RTR(NV),RTI(NV)             EIG10044
+      GO TO 13                                                          EIG10045
+ 22   RTR(NU)=RR                                                        EIG10046
+      RTI(NU)=S                                                         EIG10047
+      RTR(NV)=RR                                                        EIG10048
+      RTI(NV)=-S                                                        EIG10049
+      GO TO 25                                                          EIG10050
+ 12   X=0.                                                              EIG10051
+      CALL FPOLD                                                        EIG10052
+      DO 24 J=1,M                                                       EIG10053
+ 24   X=X+RTR(J)                                                        EIG10054
+      WRITE OUTPUT TAPE 6,6,X                                           EIG10055
+      RETURN                                                            EIG10056
+C   1 FORMAT(13A6)                                                      EIG10057
+C   2 FORMAT(1H053X,12HINPUT MATRIX)                                    EIG10058
+    4 FORMAT(1H048X,7HTRACE =E16.8)                                     EIG10059
+    5 FORMAT (11H0EIGENVALUE 12X,2E20.8)                                EIG10060
+ 6    FORMAT(1H035X,20HSUM OF EIGENVALUES =E16.8)                       EIG10061
+      END                                                               EIG10062
+      SUBROUTINE TRING(A,EPS,N,NC)                                      EIG10063
+      DIMENSION A(101,103),X(100),NC(100)                               EIG10064
+      WRITE OUTPUT TAPE 6,24                                            EIG10065
+      NX=N-2                                                            EIG10066
+      DO 27J=1,NX                                                       EIG10067
+      AM=ABSF(A(J,J+1))                                                 EIG10068
+      NC(J)=J+1                                                         EIG10069
+      J1=J+1                                                            EIG10070
+      J2=J+2                                                            EIG10071
+      NJ1=N-J1                                                          EIG10072
+      DO 12NS=J2,N                                                      EIG10073
+      IF(ABSF(A(J,NS))-AM)12,12,11                                      EIG10074
+   11 NC(J)=NS                                                          EIG10075
+      AM=ABSF(A(J,NS))                                                  EIG10076
+   12 CONTINUE                                                          EIG10077
+      IF(NC(J)-J1)14,16,14                                              EIG10078
+   14 M=NC(J)                                                           EIG10079
+      DO 15K=J,N                                                        EIG10080
+      T=A(K,J+1)                                                        EIG10081
+      A(K,J+1)=A(K,M)                                                   EIG10082
+   15 A(K,M)=T                                                          EIG10083
+      DO 13 K=1,N                                                       EIG10084
+      T=A(J+1,K)                                                        EIG10085
+      A(J+1,K)=A(M,K)                                                   EIG10086
+   13 A(M,K)=T                                                          EIG10087
+   16 T=A(J,J+1)                                                        EIG10088
+      IF(ABSF(T)-EPS*MIN1F(ABSF(A(J,J)),ABSF(A(J+1,J+1))))17,17,18      EIG10089
+   17 NC(J)=0                                                           EIG10090
+      GO TO 27                                                          EIG10091
+   18 DO 19 NS=J2,N                                                     EIG10092
+   19 A(J,NS)=A(J,NS)/T                                                 EIG10093
+      DO 20 K=J2,N                                                      EIG10094
+      T=A(J,K)                                                          EIG10095
+      DO 20 NQ=J1,N                                                     EIG10096
+   20 A(NQ,K)=A(NQ,K)-T*A(NQ,J+1)                                       EIG10097
+   21 DO 28K=J2,N                                                       EIG10098
+   28 X(K)=A(J,K)                                                       EIG10099
+      DO 23NQ=1,N                                                       EIG10100
+   23 A(J+1,NQ)=A(J+1,NQ)+FIPD(J2,J2,NJ1 ,A(1,NQ),X,1.)                 EIG10101
+   27 CONTINUE                                                          EIG10102
+      NX=N-1                                                            EIG10103
+      NC(NX)=N                                                          EIG101 4
+      IF(A(NX,N))25,26,25                                               EIG10105
+   26 NC(NX)=0                                                          EIG10106
+   25 NC(N)=0                                                           EIG10107
+      RETURN                                                            EIG10108
+   24 FORMAT(1H048X,22HALMOST TRIANGULAR FORM)                          EIG10109
+      END                                                               EIG10110
+      SUBROUTINE LAGER(A,EPS,N1,NU,N,RTR,RTI)                           EIG10111
+      DIMENSION A(101,103),P(6,103),RTR(100),RTI(100),B(6),V(100),      EIG101 2
+     1XX(103),DD(103),NC(100)                                           EIG10113
+      WRITE OUTPUT TAPE 6,1                                             EIG10114
+      ONCE=0.                                                           EIG10115
+      DBL=1.                                                            EIG10116
+      BL1=1.                                                            EIG10117
+      NUQ=NU-1                                                          EIG10118
+      LLY=0                                                             EIG10119
+      DELOLD=1.                                                         EIG10120
+      ROLD=1.                                                           EIG10121
+      EGSUM1=0.                                                         EIG10122
+      EGSUM2=0.                                                         EIG10123
+      CAP=0.                                                            EIG10124
+      CALL FPTEST(Z)                                                    EIG10125
+      DO 10 L=2,6                                                       EIG10126
+      P(L,NU)=0.                                                        EIG10127
+   10 P(L,NU+1)=0.                                                      EIG10128
+      A(N,N+1)=-1.                                                      EIG10129
+      NU1=NU+1                                                          EIG10130
+      D=1.                                                              EIG10131
+      DO 11 J=NU,N                                                      EIG10132
+      V(J)=-A(J,J+1)                                                    EIG10133
+      D=D*V(J)                                                          EIG10134
+   11 A(J,J+3)=1.                                                       EIG10135
+      D=ABSF(D)                                                         EIG10136
+      IF(D)92,92,93                                                     EIG10137
+ 92   D=1.0E-37                                                         EIG10138
+   93 P(1,NU)=MIN1F(.1,D)                                               EIG10139
+      P(2,NU+1)=-P(1,NU)/V(NU)                                          EIG10140
+C                                                                       EIG10141
+C     FIND TRACE OF H AND H SQUARED                                     EIG10142
+C                                                                       EIG10143
+      NU1=NU+1                                                          EIG10144
+      SPUR1=A(NU,NU)                                                    EIG10145
+      SPUR2=A(NU,NU)**2                                                 EIG10146
+      DO 13 J=NU1,N                                                     EIG10147
+      SPUR1=SPUR1+A(J,J)                                                EIG10148
+   13 SPUR2=SPUR2+A(J,J)**2+2.*A(J-1,J)*A(J,J-1)                        EIG10149
+C                                                                       EIG10150
+C     INITIAL ITERATE FROM INFINITY                                     EIG10151
+C                                                                       EIG10152
+   14 S1R=EGSUM1-SPUR1                                                  EIG10153
+      S2R=SPUR2-EGSUM2                                                  EIG10154
+      F1=N-NUQ                                                          EIG10155
+      IF(ABSF(S1R)+ABSF(S2R))16,15,16                                   EIG10156
+ 15   XBAR=F1*ABSF(A(NU,NU1))                                           EIG10157
+      YBAR=XBAR                                                         EIG10158
+      GO TO 23                                                          EIG10159
+ 16   F2=F1-1.                                                          EIG10160
+      DR=F2*(F1*S2R-S1R**2)                                             EIG10161
+      ER=SQRTF(ABSF(DR))                                                EIG10162
+      IF(DR)17,18,18                                                    EIG10163
+   17 XBAR=-2.*S1R/F1                                                   EIG10164
+      YBAR=2.*ER/F1                                                     EIG10165
+      GO TO 23                                                          EIG10166
+   18 YBAR=0.                                                           EIG10167
+      F2=SIGNF(1.,S1R)                                                  EIG10168
+      IF(S1R)22,20,22                                                   EIG10169
+   20 F2=0.                                                             EIG10170
+   22 XBAR=-(S1R+F2*ER)/F1                                              EIG10171
+C                                                                       EIG10172
+C     EVALUATE POLYNOMIAL AND DERIVATIVES                               EIG10173
+C                                                                       EIG10174
+   23 IF(ABSF(YBAR)-ABSF(XBAR)*1.E-6)24,25,25                           EIG10175
+   24 YBAR=0.                                                           EIG10176
+   25 M=6                                                               EIG10177
+      IF(YBAR)27,26,27                                                  EIG10178
+   26 M=3                                                               EIG10179
+   27 DO 28 J=NU1,N                                                     EIG10180
+      A(J,J+1)=-XBAR                                                    EIG10181
+   28 A(J,J+2)=YBAR                                                     EIG10182
+      P(1,NU+1)=(A(NU,NU)-XBAR)*P(1,NU)/V(NU)                           EIG10183
+      P(4,NU+1)=-YBAR*P(1,NU)/V(NU)                                     EIG10184
+      DO 34 K=NU1,N                                                     EIG10185
+      T=V(K)                                                            EIG10186
+      DO 34 L=1,M                                                       EIG10187
+      S=SIGNF(1.,3.5-FLOATF(L))                                         EIG10188
+      P(L,K+1)=P(L,K)                                                   EIG10189
+      M1=L+3*XFIXF(S)                                                   EIG10190
+      P(L,K+2)=S*P(M1,K)                                                EIG10191
+      IF (Z)95,12,95                                                    EIG10192
+   95 Z=0.                                                              EIG10193
+      P(1,NU)=1.E-10*P(1,NU)                                            EIG10194
+      P(2,NU+1)=-P(1,NU)/V(NU)                                          EIG10195
+      GO TO 23                                                          EIG10196
+   12 P(L,K+3)=-FLOATF(XMODF(L-1,3))*P(L-1,K)                           EIG10197
+   32 M1=K+3                                                            EIG10198
+      DO 33 I=1,M1                                                      EIG10199
+      XX(I)=P(L,I)                                                      EIG10200
+   33 DD(I)=A(K,I)                                                      EIG10201
+   34 P(L,K+1)=FIPD(1,1,M1,XX,DD,T)                                     EIG10202
+C                                                                       EIG10203
+C     SCALE DOWN                                                        EIG10204
+C                                                                       EIG10205
+      DO 39 K=1,6                                                       EIG10206
+   39 B(K)=0.                                                           EIG10207
+      DO 35 J=1,M                                                       EIG10208
+   35 B(J)=P(J,N+1)                                                     EIG10209
+      G1=ABSF(B(1))+ABSF(B(4))                                          EIG10210
+      G2=ABSF(B(2))+ABSF(B(5))                                          EIG10211
+      G3=ABSF(B(3))+ABSF(B(6))                                          EIG10212
+      WRITE OUTPUT TAPE 6,2,XBAR,YBAR,G1,G2,G3                          EIG10213
+ 2    FORMAT(8H ITERATE20X,E15.8,5X,E15.8,8X,3E15.4)                    EIG10214
+      D=ABSF(B(1))                                                      EIG10215
+      DO 36 K=2,M                                                       EIG10216
+   36 D=MAX1F(D,ABSF(B(K)))                                             EIG10217
+      CALL SCALE(D,B,M)                                                 EIG10218
+C                                                                       EIG10219
+C     REMOVE KNOWN ROOTS                                                EIG10220
+C                                                                       EIG10221
+   43 Q1R=0.                                                            EIG10222
+      Q1I=0.                                                            EIG10223
+      Q2R=0.                                                            EIG10224
+      Q2I=0.                                                            EIG10225
+      IF(NUQ-NU)19,21,21                                                EIG10226
+   21 DO 44 J=NU,NUQ                                                    EIG10227
+      D1=RTR(J)-XBAR                                                    EIG10228
+      D2=RTI(J)-YBAR                                                    EIG10229
+      D=D1**2+D2**2                                                     EIG10230
+      D1=D1/D                                                           EIG10231
+      D2=-D2/D                                                          EIG10232
+      Q1R=Q1R+D1                                                        EIG10233
+      Q1I=Q1I+D2                                                        EIG10234
+      Q2R=Q2R+D1**2-D2**2                                               EIG10235
+   44 Q2I=Q2I+2.*D1*D2                                                  EIG10236
+C                                                                       EIG10237
+C     FIND S1 AND S2                                                    EIG10238
+C                                                                       EIG10239
+   19 T1R=B(2)/B(1)                                                     EIG10240
+      T1I=0.                                                            EIG10241
+      T2R=B(3)/B(2)                                                     EIG10242
+      T2I=0.                                                            EIG10243
+      IF(YBAR)45,46,45                                                  EIG10244
+   45 D1=B(1)**2+B(4)**2                                                EIG10245
+      D2=B(2)**2+B(5)**2                                                EIG10246
+      T1R=(B(2)*B(1)+B(5)*B(4))/D1                                      EIG10247
+      T1I=(B(5)*B(1)-B(4)*B(2))/D1                                      EIG10248
+      T2R=(B(3)*B(2)+B(6)*B(5))/D2                                      EIG10249
+      T2I=(B(6)*B(2)-B(5)*B(3))/D2                                      EIG10250
+   46 S1R=T1R+Q1R                                                       EIG10251
+      S1I=T1I+Q1I                                                       EIG10252
+      S2R=T1R*(T1R-T2R)-T1I*(T1I-T2I)-Q2R                               EIG10253
+      S2I=T1R*(T1I-T2I)+T1I*(T1R-T2R)-Q2I                               EIG10254
+C                                                                       EIG10255
+C     FIND THE NEXT ITERATE                                             EIG10256
+C                                                                       EIG10257
+      LLY=LLY+1                                                         EIG10258
+      D=ABSF(XBAR)+ABSF(YBAR)                                           EIG10259
+      IF(G1-D*G2*1.E-8)41,41,42                                         EIG10260
+   41 MARK=1                                                            EIG10261
+      GO TO 100                                                         EIG10262
+   42 G=N-NUQ                                                           EIG10263
+      CONTINUE                                                          EIG10264
+   48 IF(ABSF(YBAR)-ABSF(X))50,50,49                                    EIG10265
+   49 S1I=S1I+1./(2.*YBAR)                                              EIG10266
+      S2R=S2R+1./(4.*YBAR**2)                                           EIG10267
+      G=G-1.                                                            EIG10268
+ 50   IF(BL1)65,65,66                                                   EIG10269
+ 65   H=.5*(G-2.)                                                       EIG10270
+      GO TO 67                                                          EIG10271
+ 66   H=G-1.                                                            EIG10272
+ 67   DR=H*(G*S2R-S1R**2+S1I**2)                                        EIG10273
+      DI=H*(G*S2I-2.*S1R*S1I)                                           EIG10274
+      IF(DI)53,51,53                                                    EIG10275
+   51 EI=0.                                                             EIG10276
+      ER=SQRTF(ABSF(DR))                                                EIG10277
+      IF(DR)52,54,54                                                    EIG10278
+   52 EI=ER                                                             EIG10279
+      ER=0.                                                             EIG10280
+      GO TO 54                                                          EIG10281
+   53 CALL CXSQRT(DR,DI,ER,EI)                                          EIG10282
+   54 IF(S1R*ER+S1I*EI)55,56,56                                         EIG10283
+   55 ER=-ER                                                            EIG10284
+      EI=-EI                                                            EIG10285
+   56 D1=S1R+ER                                                         EIG10286
+      D2=S1I+EI                                                         EIG10287
+      D=D1**2+D2**2                                                     EIG10288
+      X=-G*D1/D                                                         EIG10289
+      XBAR=XBAR+X                                                       EIG10290
+      Y=G*D2/D                                                          EIG10291
+      YBAR=YBAR+Y                                                       EIG10292
+      DELNEW=ABSF(X)+ABSF(Y)                                            EIG10293
+      RNEW=DELNEW/DELOLD                                                EIG10294
+      D=ABSF(XBAR)+ABSF(YBAR)                                           EIG10295
+C                                                                       EIG10296
+C     TEST FOR LINEAR CONVERGENCE                                       EIG10297
+C                                                                       EIG10298
+      IF(LLY-3)62,62,57                                                 EIG10299
+ 57   IF(RNEW-.7*ROLD)62,58,58                                          EIG10300
+   58 MARK=3                                                            EIG10301
+      IF(DELNEW-.001*EPS*CAP)70,59,59                                   EIG10302
+ 59   IF(BL1)61,61,60                                                   EIG10303
+ 60   XBAR=XBAR-X                                                       EIG10304
+      YBAR=YBAR-Y                                                       EIG10305
+      BL1=0.                                                            EIG10306
+      GO TO 48                                                          EIG10307
+ 61   BL1=1.                                                            EIG10308
+      GO TO 63                                                          EIG10309
+C                                                                       EIG10310
+C     TEST FOR AN EIGENVALUE                                            EIG10311
+C                                                                       EIG10312
+   62 IF(DELNEW-EPS*MAX1F(D,.001*CAP))64,64,63                          EIG10313
+ 63   DELOLD=DELNEW                                                     EIG10314
+      ROLD=RNEW                                                         EIG10315
+      IF(LLY-15)40,40,100                                               EIG10316
+   40 GO TO 23                                                          EIG10317
+C                                                                       EIG10318
+C     DO WE HAVE A COMPLEX APPROACH TO A REAL ROOT                      EIG10319
+C                                                                       EIG10320
+   64 MARK=2                                                            EIG10321
+   70 BL1=1                                                             EIG10322
+      IF(YBAR)71,100,71                                                 EIG10323
+   71 IF(G2*ABSF(YBAR)-G1)72,100,100                                    EIG10324
+   72 IF(ONCE)73,73,100                                                 EIG10325
+   73 X=0.                                                              EIG10326
+      ONCE=1.                                                           EIG10327
+      YBAR=0.                                                           EIG10328
+      GO TO 63                                                          EIG10329
+C                                                                       EIG10330
+C     WE ACCEPT (XBAR,YBAR) AS A ROOT                                   EIG10331
+C                                                                       EIG10332
+  100 NUQ=NUQ+1                                                         EIG10333
+      RTR(NUQ)=XBAR                                                     EIG10334
+      IF(ABSF(YBAR)-.001*ABSF(XBAR))74,74,75                            EIG10335
+   74 YBAR=0.                                                           EIG10336
+   75 IF(NUQ-NU)29,76,29                                                EIG10337
+   29 IF(RTI(NUQ-1))76,76,77                                            EIG10338
+   76 YBAR=ABSF(YBAR)                                                   EIG10339
+      RTI(NUQ)=YBAR                                                     EIG10340
+      GO TO 78                                                          EIG10341
+   77 RTI(NUQ)=-ABSF(YBAR)                                              EIG10342
+   78 WRITE OUTPUT TAPE 6,3,RTR(NUQ),RTI(NUQ),LLY,MARK                  EIG10343
+    3 FORMAT(11H0EIGENVALUE12X,2E20.8,12X,I3,17H ITERATIONS,TEST I1//)  EIG10344
+      LLY=0                                                             EIG10345
+      CAP=MAX1F(D,CAP)                                                  EIG10346
+      DELOLD=1.                                                         EIG10347
+      ROLD=1.                                                           EIG10348
+      EGSUM1=EGSUM1+RTR(NUQ)                                            EIG10349
+      EGSUM2=EGSUM2+RTR(NUQ)**2-RTI(NUQ)**2                             EIG10350
+      IF(NUQ-N1)80,101,101                                              EIG10351
+   80 IF(YBAR)83,84,81                                                  EIG10352
+   81 YBAR=-YBAR                                                        EIG10353
+      GO TO 23                                                          EIG10354
+   83 IF(NUQ-NU)31,84,31                                                EIG10355
+   31 RTI(NUQ-1)=.5*(RTI(NUQ-1)-RTI(NUQ))                               EIG10356
+      RTI(NUQ)=-RTI(NUQ-1)                                              EIG10357
+   84 DBL=1.                                                            EIG10358
+      ONCE=0.                                                           EIG10359
+      GO TO 14                                                          EIG10360
+  101 RETURN                                                            EIG10361
+    1 FORMAT(1H050X,19HLAGUERRE ITERATIONS/31X,9HREAL PART10X,10HIMAG. PEIG10362
+     1ART22X,1HP11X,7HP PRIME6X,11HP DBL PRIME)                         EIG10363
+      END                                                               EIG10364
+      FUNCTION FIPD(I1,J1,L,A,B,D)                                      EIG10365
+      DIMENSION A(100),B(100)                                           EIG10366
+D     DIMENSION DA(1),DB(1)                                             EIG10367
+D     DC=0.                                                             EIG10368
+      DA(2)=0.                                                          EIG10369
+      DB(2)=0.                                                          EIG10370
+      DO 10 I=1,L                                                       EIG10371
+      N1=I1+I-1                                                         EIG10372
+      N2=J1+I-1                                                         EIG10373
+      DA=A(N1)                                                          EIG10374
+      DB=B(N2)                                                          EIG10375
+D  10 DC=DC+DA*DB                                                       EIG10376
+      FIPD=DC/D                                                         EIG10377
+      RETURN                                                            EIG10378
+      END                                                               EIG10379
+      SUBROUTINE CXSQRT(A,B,X,Y)                                        EIG10380
+      F=MAX1F(ABSF(A),ABSF(B))                                          EIG10381
+      F=F*SQRTF((A/F)**2+(B/F)**2)                                      EIG10382
+      IF(A)1,1,2                                                        EIG10383
+    1 Y=SQRTF((F-A)*.5)                                                 EIG10384
+      X=.5*B/Y                                                          EIG10385
+      IF(X)4,3,3                                                        EIG10386
+    4 X=-X                                                              EIG10387
+      Y=-Y                                                              EIG10388
+      GO TO 3                                                           EIG10389
+    2 X=SQRTF((F+A)*.5)                                                 EIG10390
+      Y=.5*B/X                                                          EIG10391
+    3 RETURN                                                            EIG10392
+      END                                                               EIG10393
+*     FAP                                                               EIG10394
+       COUNT   30                                                       EIG10395
+*051/6         SUBROUTINE SCALE                                         EIG10396
+       ENTRY   SCALE                                                    EIG10397
+SCALE  SXA     AD,1          SUBROUTINE SCALE(D,B,M)                    EIG10398
+       CLA     1,4                                                      EIG10399
+       STA     *+1                                                      EIG10400
+       CAL     **                                                       EIG10401
+       ANA     MASK                                                     EIG10402
+       SUB     TG                                                       EIG10403
+       STO     TE                                                       EIG10404
+       CLA     2,4                                                      EIG10405
+       ADD     TF                                                       EIG10406
+       STA     AA                                                       EIG10407
+       STA     AB                                                       EIG10408
+       CLA     3,4                                                      EIG10409
+       STA     *+1                                                      EIG10410
+       CLA     **                                                       EIG10411
+       STD     AC                                                       EIG10412
+       LXA     TF,1                                                     EIG10413
+AA     CAL     **,1                                                     EIG10414
+       SUB     TE                                                       EIG10415
+       TPL     *+2                                                      EIG10416
+       CLA     TH                                                       EIG10417
+AB     SLW     **,1                                                     EIG10418
+       TXI     *+1,1,1                                                  EIG10419
+AC     TXL     AA,1                                                     EIG10420
+AD     AXT     **,1                                                     EIG10421
+       TRA     4,4                                                      EIG10422
+MASK   OCT     377000000000                                             EIG10423
+TE     OCT                                                              EIG10424
+TF     OCT     000000000001                                             EIG10425
+TG     OCT     200000000000                                             EIG10426
+TH     OCT     000000000000                                             EIG10427
+       END                                                              EIG10428

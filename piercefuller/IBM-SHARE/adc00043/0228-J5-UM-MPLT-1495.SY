@@ -1,0 +1,1060 @@
+UMMPLT REM 1060 04013                                                   UMPL0001
+       ENTRY   PLOT1                                                    UMPL0002
+       ENTRY   PLOT2                                                    UMPL0003
+       ENTRY   PLOT3                                                    UMPL0004
+       ENTRY   PLOT4                                                            
+       ENTRY   OMIT                                                     U4PL0006
+       ENTRY   FPLOT4                                                           
+       REM         PLOTTING SUBROUTINE.   WRITES GRAPH IMAGES ON        UMPL0008
+       REM         DECIMAL TAPE FOR SUBS[QUENT OFF-LINE PRINTING OR     UMPL0009
+       REM         PUNCHING.  THE NUMBER OF COLUMNS IN ,HE              UMPL0010
+       REM         PRINTED LINE OR PUN.HED CARD IS SET AT ASSEMB$Y.     UMPL0011
+       REM    UNIVERSITY OF MICHIGAN COMPUTING CENTER   FEBRUARY 15,1961UMPL0012
+       REM    PROGRAMMERS - BRICE CARNAHAN, LARRY EVANS                 UMPL0013
+       REM  MODIFIED FOR 709 BY BOB ROSIN, MAY JUNE, 1961               UMPL0014
+       REM  MODIFIED FOR 7090 BY DON BOETTNER AND PREPARED              UMPL0015
+       REM  FOR SHARE BY GERALD LEVITT MARCH 15, 1963                   UMPL0016
+       REM                                                              UMPL0017
+       REM    FORTRN OR MAD CALLING SEQUENCES ARE                       UMPL0018
+       REM      CALL OR EXECUTE  PLOT1 (NSCALE,NH,SBH,NV,SBV)           UMPL0019
+       REM      CALL OR EXECUTE  PLOT2 (IMAGE,XMAX,XMIN,YMAX,YMIN)      UMPL0020
+       REM      CALL OR EXECUTE  PLOT3 (BCD,X,Y,NDATA)                  UMPL0021
+       REM              EXECUTE  PLOT4.(NCHAR,LABEL)                    UMPL0022
+       REM      CALL            FPLOT4 (NCHAR,NHABCDEF....)             UMPL0023
+       REM      CALL OR EXECUTE  OMIT (ARG)                             UMPL0024
+       REM                                                              UMPL0025
+       REM  PRESET THE FOLLOWING TWO INSTRUCTIONS BEFORE ASSEMBLY       UMPL0026
+COL    EQU 132               SET COLUMNS IN OUTPUT LINE                 UMPL0027
+SPACS  EQU 6                 SET UNUSED SPACES AT RIGHT EDGE OF PAGE    UMPL0028
+       REM                   OR CARD.  SPACS MUST BE AT LEAST 6         UMPL0029
+CDIM   EQU COL/6+2           SIZE OF C REGION                           UMPL0030
+LNREC  EQU     1                                                        UMPL0031
+       REM .............................................................UMPL0032
+       REM                                                              UMPL0033
+       REM         MAIN JOB OF PLOT1 IS TO EXAMINE ARGUMENTS AND PREPAREUMPL0034
+       REM         SAMPLE GRIDLINE (DASH TO DASH-WORDS+1) AND SAMPLE    UMPL0035
+       REM         NON-GRID LINE (BLANK TO BLANK-WORDS+1) FOR USE BY    UMPL0036
+       REM         PLOT2                                                UMPL0037
+       REM                                                              UMPL0038
+PLOT1  SXD IR4,4        ENTRY TO PLOT1                                  UMPL0039
+       SXD IR1,1        SAVE REGISTERS                                  UMPL0040
+       SXD IR2,2                                                        UMPL0041
+       CLA 1,4          SCALE FACTORS AND DECIMAL POINT POSITIONS       UMPL0042
+       STA DELTA                                                        UMPL0043
+       STA DELT                                                         UMPL0044
+       STZ WRON1        WRON1 = 0      CLEAR ERROR FLAG, PLOT1          UMPL0045
+       CLA ONE                                                          UMPL0046
+       STO WRON3        WRON3 = 1      SET ERROR FLAG, MISSING PLOT2    UMPL0047
+       CLA*    2,4      NH,  NUMBER OF HORIZONTAL GRID LINES            UMPL0048
+       TSX FIX,2                                                        UMPL0049
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             UMPL0050
+       STO NH                                                           UMPL0051
+       CLA*    3,4      SBH,  NUMBER OF SPACES BETWEEN HORIZ GRID LINES UMPL0052
+       TSX FIX,2                                                        UMPL0053
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             UMPL0054
+       STO SBH                                                          UMPL0055
+       LDQ SBH                                                          UMPL0056
+       MPY NH                                                           UMPL0057
+       STQ LINES        LINES = NH*SBH      MAXIMUM LINE INDEX          UMPL0058
+       CLA*    4,4      NV,  NUMBER OF VERTICAL GRID LINES              UMPL0059
+       TSX FIX,2                                                        UMPL0060
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             UMPL0061
+       STO NV                                                           UMPL0062
+       CLA*    5,4      SBV, NUMBER OF SPACES BETWEEN VERT GRID LINES   UMPL0063
+       TSX FIX,2                                                        UMPL0064
+       TZE ERR1         ZERO ARGUMENT ILLEGAL, ERROR RETURN             UMPL0065
+       STO SBV                                                          UMPL0066
+       LDQ SBV                                                          UMPL0067
+       MPY NV                                                           UMPL0068
+       STQ TOT          TOT = SBV*NV        MAXIMUM COLUMN INDEX        UMPL0069
+       LLS 35                                                           UMPL0070
+       ADD ONE                                                          UMPL0071
+       STO TOTAL        TOTAL = TOT + 1     TOTAL COLUMNS PER LINE      UMPL0072
+       SUB GWID         WHENEVER TOTAL .G. GRAPH WIDTH, ERROR RETURN    UMPL0073
+       TMI PASS                                                         UMPL0074
+ERR1   CLA FPONE        RETURN ONE, UNSUCCESSFUL PLOT1                  UMPL0075
+       STO WRON1        WRON1 = 1      SET ERROR FLAG, PLOT1            UMPL0076
+       CLA     ER1                                                      UMPL0077
+       STO     WRONG                                                    UMPL0078
+IR22   TXL WRITE,0,**                                                   UMPL0079
+PASS   CLA TOTAL                                                        UMPL0080
+       TSX FLOAT,2                                                      UMPL0081
+       FDP SIXF                                                         UMPL0082
+       XCA                                                              UMPL0083
+       FAD N999                                                         UMPL0084
+       TSX FIX1,2                                                       UMPL0085
+       STO WORDS        WORDS = TOTAL/6. ROUNDED UP TO NEAREST INTEGER  UMPL0086
+       LDQ WORDS        WORDS, NUMBER OF MACHINE LOCATIONS PER LINE     UMPL0087
+       MPY SIX                                                          UMPL0088
+       STQ TOTLS        TOTLS = WORDS*6     BCD CHARACTERS PER LINE     UMPL0089
+       LXA WORDS,2                                                      UMPL0090
+       CLA TOTLS                                                        UMPL0091
+       SUB TOTAL                                                        UMPL0092
+       PAX 0,1                                                          UMPL0093
+       CLA DSH,1        LAST WORD OF A HORIZONTAL GRID LINE             UMPL0094
+       STO DASH+1,2     SET UP LAST WORD IN HORIZONTAL GRID LINE IMAGE  UMPL0095
+       LDQ BLNKK        LAST WORD OF NON GRID LINE                      UMPL0096
+       STQ BLANK+1,2    SET UP LAST WORD IN NON GRID LINE IMAGE         UMPL0097
+       TIX *+2,2,1                                                      UMPL0098
+       TXL *+5,0,       ONE WORD PER LINE CASE                          UMPL0099
+       CLA DSH                                                          UMPL0100
+       STO DASH+1,2     SET UP REMAINDER OF HORIZONTAL GRID LINE IMAGE  UMPL0101
+       STQ BLANK+1,2    SET UP REMAINDER OF NON GRID LINE IMAGE         UMPL0102
+       TIX *-2,2,1                                                      UMPL0103
+       STZ I            I = 0, COLUMN INDEX FOR VERTICAL GRID POSITIONS UMPL0104
+GAMMA  TSX PLACE,4      PLACE I FOR VERTICAL GRID LINE IN NON GRID IMAGEUMPL0105
+       TXH IEYE                                                         UMPL0106
+       TXH I                                                            UMPL0107
+       TXH BLANK                                                        UMPL0108
+       TSX PLACE,4      PLACE + AT INTERSECTION POINTS IN GRID LINE IMAGUMPL0109
+       TXH IPLUS                                                        UMPL0110
+       TXH I                                                            UMPL0111
+       TXH DASH                                                         UMPL0112
+       CLA I                                                            UMPL0113
+       ADD SBV                                                          UMPL0114
+       STO I            I=I+SBV, INCREMENT COLUMN INDEX FOR VERT GRID   UMPL0115
+       SUB TOTAL                                                        UMPL0116
+       TZE GAMMA        IF ZERO OR MINUS LINE IS UNFINISHED, RETURN     UMPL0117
+       TMI GAMMA                                                        UMPL0118
+DELTA  CLA **           NSCALE, DETERMINES SCALE FACTOR MODIFICATION    UMPL0119
+       TZE ETA          STANDARD SCALE FACTORS AND DEC POINT POSITIONS  UMPL0120
+       LXD FOUR,4       G3 = NSCALE-1       SCALE FACTOR FOR Y          UMPL0121
+DELT   CLA **,4         G4 = NSCALE-2       DEC POINT POSITION FOR Y    UMPL0122
+       TSX TFIX,2       G5 = NSCALE-3       SCALE FACTOR FOR X          UMPL0123
+       STO G3+1,4       G7 = NSCALE-4       DEC POINT POSITION FOR X    UMPL0124
+       TIX DELT,4,1                                                     UMPL0125
+       REM              LEFT-MOST ABCISSA (BOTTOM) VALUE IS PRINTED     UMPL0126
+       REM                 ACCORDING TO FORMAT G5 P F G6 . G7           UMPL0127
+       REM              OTHER ABCISSA VALUES ARE PRINTED ACCORDING      UMPL0128
+       REM                 TO FORMAT G5 P F G9 . G7                     UMPL0129
+       REM              ORDINATE (LEFT) VALUES ARE PRINTED ACCORDING    UMPL0130
+       REM                 TO FORMAT G3 P F9 . G4                       UMPL0131
+ETA    CLA G4                                                           UMPL0132
+       TZE *+4                                                          UMPL0133
+       TPL *+3                                                          UMPL0134
+       CLS ONE          NEG DEC POINT POSITION, INTEGER ORDINATE DESIREDUMPL0135
+TWNTY  TXL *+4,0,COL/6                                                  UMPL0136
+       LRS 35                                                           UMPL0137
+       CLA EIGHT        MAX DEC PLACES FOR ORDINATE IS EIGHT            UMPL0138
+       TLQ PASS3                                                        UMPL0139
+       STO G4           WHENEVER G4 .G. 8, G4 = 8                       UMPL0140
+PASS3  CLA G7                                                           UMPL0141
+       SUB TEN          ABSCISSA DEC POINT POSITION TAKEN MODULO TEN    UMPL0142
+       TPL *-1                                                          UMPL0143
+       ADD TEN                                                          UMPL0144
+       TZE *+3                                                          UMPL0145
+       TPL *+2                                                          UMPL0146
+       CLS ONE          NEG DEC POINT POSITION, INTEGER ABSCISSA DESIREDUMPL0147
+       STO G7                                                           UMPL0148
+       CLA SBV          SBV, COLUMNS AVAILABLE FOR EACH ABSCISSA VALUE  UMPL0149
+       SUB ONE          LEAVE ONE BLANK TO SEPARATE NUMBERS             UMPL0150
+       STO G9           G9 = SBV-1     FIELD WIDTH FOR ABSCISSA VALUES  UMPL0151
+       LDQ G7           WHENEVER G7.GE.G9, G7 = G9-1                    UMPL0152
+       TLQ PASS4        INSURES DECIMAL POINT INSIDE FIELD              UMPL0153
+       SUB ONE                                                          UMPL0154
+       STO G7                                                           UMPL0155
+PASS4  CLA TWELV        TWELVE SPACES ON LEFT FOR ORDINATE AND LABEL    UMPL0156
+       ADD G7                                                           UMPL0157
+       STO G6           G6 = G7+12     FIELD WIDTH, LEFT ABSCISSA VALUE UMPL0158
+       CLA RECLT                                                        UMPL0159
+       SUB TOTAL                                                        UMPL0160
+       SUB G6                                                           UMPL0161
+       TPL *+3          WHENEVER RECLT-TOTAL-G6.L.0, MUST REDUCE G6     UMPL0162
+       ADD G6                                                           UMPL0163
+       STO G6           G6  REDUCED TO NUMBER OF COLUMNS AVAILABLE      UMPL0164
+PASS5  CLA G6           WHENEVER G7.GE.G6, G7 = G6-1                    UMPL0165
+       LDQ G7           INSURES DECIMAL POINT INSIDE LEFTMOST FIELD     UMPL0166
+       TLQ EXIT-1                                                       UMPL0167
+       SUB ONE                                                          UMPL0168
+       STO G7                                                           UMPL0169
+       LXD IR4,4        RESTORE REGISTERS                               UMPL0170
+EXIT   PXD 0,0          RETURN ZERO, SUCCESSFUL PLOT1,PLOT2,PLOT3,PLOT4 UMPL0171
+       LXD IR1,1                                                        UMPL0172
+       LXD IR2,2                                                        UMPL0173
+       TRA 6,4                                                          UMPL0174
+       REM .............................................................UMPL0175
+       REM         MAIN JOB OF PLOT2 IS TO REPEATEDLY LAY DOWN SAMPLE   UMPL0176
+       REM         GRIDLINE (DASH TO DASH-WORDS+1) FOLLOWED BY (SBH-1)  UMPL0177
+       REM         NON-GRID LINES (BLANK TO BLANK-WORDS+1) TO FORM THE  UMPL0178
+       REM         GRID IN THE IMAGE REGION                             UMPL0179
+PLOT2  SXD IR4,4        ENTRY TO PLOT2                                  UMPL0180
+       SXD IR2,2        SAVE REGISTERS                                  UMPL0181
+       SXD IR1,1                                                        UMPL0182
+       CLA PLADD        PREPARE SWITCH FOR EXIT FROM TSTFP              UMPL0183
+       COM                                                              UMPL0184
+       STD SAVE4-1           PLOT3 ADD COMPLEMENT IN DEC OF TSTFP EXIT  UMPL0185
+       STZ WRON3        WRON3 = 0      CLEAR ERROR FLAG, MISSING PLOT2  UMPL0186
+       CLA WRON1                                                        UMPL0187
+       TZE *+3                                                          UMPL0188
+       CLA FPTWO        WRON1 ERROR FLAG SET, UNSUCCESSFUL PLOT1        UMPL0189
+       TRA 6,4          RETURN TWO, UNSUCCESSFUL PLOT2                  UMPL0190
+       CLA 1,4          ADDRESS OF THE IMAGE REGION                     UMPL0191
+       STA PLT22                                                        UMPL0192
+       STA PLT23                                                        UMPL0193
+       STA PLT37                                                        UMPL0194
+       STA ADDB                                                         UMPL0195
+       STZ WRON2        WRON2 = 0      CLEAR ERROR FLAG, PLOT2          UMPL0196
+       CLA*    2,4      XMAX, MAXIMUM ABSCISSA (X) VALUE                UMPL0197
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0198
+       STO XMAX                                                         UMPL0199
+       CLA*    3,4      XMIN, MINIMUM ABSCISSA (X) VALUE                UMPL0200
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0201
+       STO XMIN                                                         UMPL0202
+       CLA*    4,4      YMAX, MAXIMUM ORDINATE (Y) VALUE                UMPL0203
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0204
+       STO YMAX                                                         UMPL0205
+       CLA*    5,4      YMIN, MINIMUM ORDINATE (Y) VALUE                UMPL0206
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0207
+       STO YMIN                                                         UMPL0208
+       CLS XMIN                                                         UMPL0209
+       FAD XMAX                                                         UMPL0210
+       STO SPANX        SPANX = XMAX - XMIN      ABSCISSA SPAN          UMPL0211
+       SSP                                                              UMPL0212
+       SUB     =1E-32                                                   UMPL0213
+       TMI BAD          WHENEVER XMIN .GE. XMAX, ERROR RETURN           UMPL0214
+       CLS YMIN                                                         UMPL0215
+       FAD YMAX                                                         UMPL0216
+       STO SPANY        SPANY = YMAX - YMIN      ORDINATE SPAN          UMPL0217
+       SSP                                                              UMPL0218
+       SUB     =1E-32                                                   UMPL0219
+       TMI BAD          WHENEVER YMIN .GE. YMAX, ERROR RETURN           UMPL0220
+       CLA LINES                                                        UMPL0221
+       TSX FLOAT,2                                                      UMPL0222
+       FDP SPANY                                                        UMPL0223
+       STQ U            U = LINES/SPANY     NUMBER OF LINES PER UNIT Y  UMPL0224
+       CLA TOT                                                          UMPL0225
+       TSX FLOAT,2                                                      UMPL0226
+       FDP SPANX                                                        UMPL0227
+       STQ V            V = TOT/SPANX       NUMBER OF COLUMNS PER UNIT XUMPL0228
+       CLA NV                                                           UMPL0229
+       TSX FLOAT,2                                                      UMPL0230
+       STO TEMP                                                         UMPL0231
+       CLA SPANX                                                        UMPL0232
+       FDP TEMP                                                         UMPL0233
+       STQ DELTX        DETLX = SPANX/NV    X INCR BETWN VERT GRID LINESUMPL0234
+       CLA NH                                                           UMPL0235
+       TSX FLOAT,2                                                      UMPL0236
+       STO TEMP                                                         UMPL0237
+       CLA SPANY                                                        UMPL0238
+       FDP TEMP                                                         UMPL0239
+       STQ DELTY        DELTY = SPANY/NH    Y INCR BETWN HORZ GRID LINESUMPL0240
+       STZ I            I=0  INITIALIZE WORD COUNTER FOR IMAGE REGION   UMPL0241
+       STZ J            J=0  INITIALIZE LINE COUNTER FOR IMAGE REGION   UMPL0242
+TNEXT  STZ K            K=0  INITIALIZE WORD COUNTER FOR HORZ GRID LINE UMPL0243
+LNEXT  CLA K            LOOP FROM LNEXT TO NEXT PLACES ONE HORIZONTAL   UMPL0244
+       PAX 0,2          GRID LINE IMAGE (DASH REGION) INTO IMAGE REGION UMPL0245
+       ADD I                                                            UMPL0246
+       PAX 0,4                                                          UMPL0247
+       CLA DASH,2                                                       UMPL0248
+PLT22  STO **,4                                                         UMPL0249
+       CLA K                                                            UMPL0250
+       ADD ONE                                                          UMPL0251
+       STO K            K = K+1        INCREMENT WORD COUNTER FOR LINE  UMPL0252
+       SUB WORDS                                                        UMPL0253
+NEXT   TNZ LNEXT        IF NONZERO, LINE IS UNFINISHED                  UMPL0254
+       CLA I                                                            UMPL0255
+       ADD WORDS                                                        UMPL0256
+       STO I            I = I+WORDS    INCR WORD COUNTER FOR NEW LINE   UMPL0257
+       CLA NH                                                           UMPL0258
+       SUB J                                                            UMPL0259
+       TZE EXIT-1       WHENEVER J.E.NH, IMAGE GRID COMPLETED           UMPL0260
+       CLA ONE                                                          UMPL0261
+       STO TEMP         TEMP = 1  INITIALIZE BETWEEN GRID LINE COUNTER  UMPL0262
+TFIN   STZ K            K=0  INITIALIZE WORD COUNTER FOR EACH LINE      UMPL0263
+LFIN   CLA K            LOOP FROM TFIN TO FNSH PLACES SBH NON GRID LINE UMPL0264
+       PAX 0,2          IMAGES (BLANK REGION) INTO THE IMAGE REGION     UMPL0265
+       ADD I                                                            UMPL0266
+       PAX 0,4                                                          UMPL0267
+       CLA BLANK,2                                                      UMPL0268
+PLT23  STO **,4                                                         UMPL0269
+       CLA K                                                            UMPL0270
+       ADD ONE                                                          UMPL0271
+       STO K            K = K+1        INCREMENT WORD COUNTER FOR LINE  UMPL0272
+       SUB WORDS                                                        UMPL0273
+FIN    TNZ LFIN         IF NONZERO, LINE IS UNFINISHED                  UMPL0274
+       CLA I                                                            UMPL0275
+       ADD WORDS                                                        UMPL0276
+       STO I            I = I+WORDS    INCR WORD COUNTER FOR NEW LINE   UMPL0277
+       CLA TEMP                                                         UMPL0278
+       ADD ONE                                                          UMPL0279
+       STO TEMP         TEMP = TEMP+1  INCREMENT BETWN GRID LINE COUNTERUMPL0280
+       SUB SBH                                                          UMPL0281
+FNSH   TNZ TFIN         IF NONZERO, MORE NON GRID LINES ARE REQUIRED    UMPL0282
+       CLA J                                                            UMPL0283
+       ADD ONE                                                          UMPL0284
+       STO J            J = J+1   INCREMENT LINE COUNT FOR IMAGE REGION UMPL0285
+NTEEN  TXL TNEXT,0,COL/6-1   RETURN FOR ANOTHER HORIZONTAL GRID LINE    UMPL0286
+BAD    CLA FPTWO        RETURN TWO, UNSUCCESSFUL PLOT2                  UMPL0287
+       STO WRON2        SET ERROR FLAG, PLOT2                           UMPL0288
+       CLA     ER2                                                      UMPL0289
+       STO     WRONG                                                    UMPL0290
+WRITE  SXA     *+4,4                                                    UMPL0291
+       STO     AC                                                       UMPL0292
+       CALL SPRINT           WRITE ERROR COMMENT FOR WRONG              UMPL0293
+       PZE WRONG,4           PLOT1 OR PLOT2 ARGUMENT                    UMPL0294
+       AXT     0,4                                                      UMPL0295
+       CLA     AC                                                       UMPL0296
+INDX1  TXL EXIT+1,0,**                                                  UMPL0297
+ERR3   SXA     *+4,4                                                    UMPL0298
+       STO     AC                                                       UMPL0299
+       CALL SPRINT           WRITE ERROR COMMENT FOR PLOT3 ARGUMENT     UMPL0300
+       PZE     ER3,,3                                                   UMPL0301
+       AXT     0,4                                                      UMPL0302
+       CLA     AC                                                       UMPL0303
+       TXL EXIT+1,0,    RETURN, REGISTER 4 UNCHANGED                    UMPL0304
+       REM .............................................................UMPL0305
+       REM         PLOT3 EXAMINES THE DATA POINT TO MAKE SURE IT IS     UMPL0306
+       REM         FLOATING POINT AND THEN PLACES IT IN THE PROPER SPOT UMPL0307
+       REM         IN THE IMAGE REGION                                  UMPL0308
+PLOT3  SXD IR4,4        ENTRY TO PLOT3                                  UMPL0309
+       SXD IR2,2        SAVE REGISTERS                                  UMPL0310
+       SXD IR1,1                                                        UMPL0311
+       STZ FLAG1        FLAG1 = 0      PLOT3 RETURN PRESET TO ZERO      UMPL0312
+       CLA 1,4          BCD, ADDRESS OF THE PLOTTING CHARACTER          UMPL0313
+       STA PLT36                                                        UMPL0314
+       CLA 2,4          X,   BASE ADDRESS FOR X COORDINATES             UMPL0315
+       STA PLT35                                                        UMPL0316
+       CLA 3,4          Y,   BASE ADDRESS OF THE Y COORDINATES          UMPL0317
+       STA PLT34                                                        UMPL0318
+       CLA WRON1                                                        UMPL0319
+       ORA WRON2                                                        UMPL0320
+       TZE *+3                                                          UMPL0321
+       CLA FTHRE        WRON1 OR WRON2 ERROR FLAG SET,BAD PLOT1 OR PLOT2UMPL0322
+       TRA 5,4          RETURN THREE, UNSUCCESSFUL PLOT3                UMPL0323
+       ORA WRON3                                                        UMPL0324
+       TZE *+3                                                          UMPL0325
+       CLA FTHRE        WRON3 ERROR FLAG SET, NO PREVIOUS PLOT2         UMPL0326
+       TXI ERR3,4,1     RETURN THREE, UNSUCCESSFUL PLOT3                UMPL0327
+       CLA*    4,4      NDATA, NUMBER OF DATA POINTS TO BE PLOTTED      UMPL0328
+       TSX FIX,2                                                        UMPL0329
+       TNZ *+3                                                          UMPL0330
+       CLS FTHRE        IF NDATA = 0, NO DATA POINTS. RETURN MINUS THREEUMPL0331
+       TRA 5,4                                                          UMPL0332
+       STO NDATA                                                        UMPL0333
+       STZ K            K=0       INITIALIZE DATA POINT COUNTER         UMPL0334
+LTEND  LXA K,1                                                          UMPL0335
+PLT34  CLS **,1         Y(K)      Y COORDINATE OF (K+1)TH DATA POINT    UMPL0336
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0337
+       FAD YMAX                                                         UMPL0338
+       LRS 35                                                           UMPL0339
+       FMP U                                                            UMPL0340
+       TPL *+3                                                          UMPL0341
+       FSB N05                                                          UMPL0342
+       TXL *+2,0,                                                       UMPL0343
+       FAD N05                                                          UMPL0344
+       TSX FIX1,2                                                       UMPL0345
+       STO I            I=(YMAX-Y(K))*U +OR- 0.5, LINE INDEX FOR DATA PTUMPL0346
+       TZE *+5          Y COORDINATE LIES ON TOP GRID LINE              UMPL0347
+       TMI THEND-2      REJECT POINT, LIES ABOVE TOP GRID LINE          UMPL0348
+       SUB LINES                                                        UMPL0349
+       TZE *+2          Y COORDINATE LIES ON BOTTOM GRID LINE           UMPL0350
+       TPL THEND-2      REJECT POINT, LIES BELOW BOTTOM GRID LINE       UMPL0351
+PLT35  CLA **,1         X(K)      X COORDINATE OF (K+1)TH DATA POINT    UMPL0352
+       TSX TSTFP,2      TEST FOR FLOATING POINT ARGUMENT                UMPL0353
+       FSB XMIN                                                         UMPL0354
+       LRS 35                                                           UMPL0355
+       FMP V                                                            UMPL0356
+       TPL *+3                                                          UMPL0357
+       FSB N05                                                          UMPL0358
+PLADD  TXL *+2,0,PLOT3       (ADDRESS OF PLOT3 IN DECREMENT)            UMPL0359
+       FAD N05                                                          UMPL0360
+       TSX FIX1,2                                                       UMPL0361
+       STO J            J=(X(K)-XMIN)*V +OR- 0.5, COL INDEX FOR DATA PT UMPL0362
+       TZE *+5          X COORDINATE LIES ON LEFTMOST GRID LINE         UMPL0363
+       TMI THEND-2      REJECT POINT, LIES TO LEFT OF LEFTMOST GRID LINEUMPL0364
+       SUB TOT                                                          UMPL0365
+       TZE *+2          X COORDINATE LIES ON RIGHTMOST GRID LINE        UMPL0366
+       TPL THEND-2      REJECT POINT, LIES TO RIGHT OF RIGHT GRID LINE  UMPL0367
+       LDQ TOTLS                                                        UMPL0368
+       MPY I                                                            UMPL0369
+       LLS 35                                                           UMPL0370
+       ADD J                                                            UMPL0371
+       STO L            L=TOTLS*I+J, CHARACTER POSITION IN IMAGE REGION UMPL0372
+       TSX PLACE,4      PLACES PLOTTING CHARACTER BCD IN THE L TH       UMPL0373
+PLT36  TXH **           CHARACTER POSITION OF THE IMAGE REGION          UMPL0374
+       TXH L                                                            UMPL0375
+PLT37  TXH **,0,-1                                                      UMPL0376
+FOUR   TXL *+3,0,4                                                      UMPL0377
+       CLS FTHRE                                                        UMPL0378
+       STO FLAG1        FLAG1=-3, PLOT3 RETURN SET FOR REJECTED POINT   UMPL0379
+THEND  CLA K                                                            UMPL0380
+       ADD ONE                                                          UMPL0381
+       STO K            K=K+1     INCREMENT DATA POINT COUNTER          UMPL0382
+       SUB NDATA                                                        UMPL0383
+       TNZ LTEND        IF NONZERO, MORE DATA POINTS TO BE PLOTTED      UMPL0384
+       CLA FLAG1        PLOT3 RETURN                                    UMPL0385
+       LXD IR4,4        RESTORE REGISTER 4                              UMPL0386
+       TXI EXIT+1,4,1   INCREMENT REGISTER 4 AND RETURN                 UMPL0387
+       REM .............................................................UMPL0388
+       REM         PLOT4 DECOMPOSES THE STRING OF CHARACTERS IN LABEL   UMPL0389
+       REM         AND WRITES THE CURRENT GRAPH ON TAPE OTAPE           UMPL0390
+FPLOT4 CLA PLT37        ENTRY TO PLOT4, LABEL STORED FORWARD            UMPL0391
+       TXL PLOT4+1,0,                                                   UMPL0392
+PLOT4  CLA ONED         ENTRY TO PLOT4, LABEL STORED BACKWARD           UMPL0393
+       STD PLT42-1      DECREMENT (-1 FORWARD), (+1 BACKWARD)           UMPL0394
+       SXD IR4,4        SAVE REGISTERS                                  UMPL0395
+       SXD IR2,2                                                        UMPL0396
+       SXD IR1,1                                                        UMPL0397
+       CLA WRON1                                                        UMPL0398
+       ORA WRON2                                                        UMPL0399
+       TZE *+3                                                          UMPL0400
+       CLA FPFOR        WRON1 OR WRON2 ERROR FLAG SET,BAD PLOT1 OR PLOT2UMPL0401
+       TRA 3,4          RETURN FOUR, UNSUCCESSFUL PLOT4                 UMPL0402
+       ORA WRON3                                                        UMPL0403
+       TZE *+3                                                          UMPL0404
+       CLA FPFOR        WRON3 ERROR FLAG SET, NO PREVIOUS PLOT2         UMPL0405
+       TXI ERR3,4,3     RETURN FOUR, UNSUCCESSFUL PLOT4                 UMPL0406
+       REM                                                              UMPL0407
+       CLA 2,4          BASE ADDRESS FOR LABEL                          UMPL0408
+       STA PLT41                                                        UMPL0409
+       STA PLT42                                                        UMPL0410
+       CLA*    1,4      NCHAR, NUMBER OF BCD CHARACTERS IN LABEL        UMPL0411
+       TSX FIX,2                                                        UMPL0412
+       ADD ONE                                                          UMPL0413
+       PAX 0,4                                                          UMPL0414
+       SXD INDX4,4      INITIALIZE COUNTER FOR CHARACTERS IN LABEL      UMPL0415
+       STD INDX2        INDX2=0   INITIALIZE COUNT FOR WORDS IN LABEL   UMPL0416
+       LXA SIX,1                                                        UMPL0417
+       SXD INDX1,1      INDX1=6   INITIALIZE COUNT OF CHARACTERS IN WORDUMPL0418
+PLT41  LDQ **           LABEL, FIRST WORD IN LABEL                      UMPL0419
+       STQ LABEL                                                        UMPL0420
+       CLA G3                                                           UMPL0421
+       STO N1           N1 = G3   SCALE FACTOR FOR ORDINATE (Y) VALUES  UMPL0422
+       CLA G4                                                           UMPL0423
+       STO N3           N3 = G4   DEC PT POSITION FOR ORDINATE (Y) VALUEUMPL0424
+       CLA LINES                                                        UMPL0425
+       STO FIXV         FIXV = LINES   MAXIMUM HORIZONTAL LINE INDEX    UMPL0426
+       CAL IFOMT                                                        UMPL0427
+       ANA IFOUR        IF IFOMT = 4,5,6, OR 7, DELETE BOTTOM GRID LINE UMPL0428
+       TZE *+4                                                          UMPL0429
+       CLA LINES                                                        UMPL0430
+       SUB ONE                                                          UMPL0431
+       STO FIXV         FIXV = LINES-1, MAX LINE INDEX WITH NO BOTT LINEUMPL0432
+       STZ I            I=0, INITIALIZE LINE COUNTER FOR IMAGE REGION   UMPL0433
+       LXA I,2          INITIALIZE WORD COUNTER FOR IMAGE REGION        UMPL0434
+CHECK  CLA FIXV                                                         UMPL0435
+       SUB I                                                            UMPL0436
+       TMI IR44+1       IF FIXV-I NEGATIVE, IMAGE PRINTOUT COMPLETED    UMPL0437
+       SUB LNPRC                                                        UMPL0438
+       LXA LNPRC,4      INITIALIZE IR4 WITH NUMBER OF LINES PER RECORD  UMPL0439
+       TPL *+4          IF FIXV-I-LNPRC.GE.0, PRINT FULL RECORD         UMPL0440
+       ADD LNPRC                                                        UMPL0441
+       ADD ONE                                                          UMPL0442
+       PAX 0,4          INITIALIZE IR4 WITH LINES IN PARTIAL RECORD     UMPL0443
+       SXD SAVE4,4      SAVE LINE COUNTER FOR RECORD                    UMPL0444
+       SXD IR22,2       SAVE WORD COUNTER FOR IMAGE REGION              UMPL0445
+XXX    CLA BLKS                                                         UMPL0446
+       STO LEFT         LEFT = BLNKK, PREPARE FIRST WORD OF LEFT MARGIN UMPL0447
+       CLA BLNKK                                                        UMPL0448
+       STO LEFT-1       LEFT-1=BLNKK, PREPARE SECOND WORD OF LEFT MARGINUMPL0449
+TPCON  PXD 128,0                                                        UMPL0450
+       LDQ I                                                            UMPL0451
+       DVP SBH                                                          UMPL0452
+       STQ L            L=I/SBH, WHEN INTEGRAL, PREPARE ORDINATE VALUE  UMPL0453
+       TNZ SKIP         IF NON-INTEGRAL, BYPASS ORDINATE PREPARATION    UMPL0454
+       CAL IFOMT                                                        UMPL0455
+       ANA TWO                                                          UMPL0456
+       TNZ SKIP         IF IFOMT=2,3,OR 6, DELETE ORDINATE VALUE        UMPL0457
+       CLA L                                                            UMPL0458
+       TSX FLOAT,2                                                      UMPL0459
+       LRS 35                                                           UMPL0460
+       FMP DELTY                                                        UMPL0461
+       STO TEMP                                                         UMPL0462
+       CLA YMAX                                                         UMPL0463
+       FSB TEMP                                                         UMPL0464
+       STO YAXIS        YAXIS=YMAX-(L*DELTY), CURRENT ORDINATE (Y) VALUEUMPL0465
+       CLA TWO                                                          UMPL0466
+       STO COUNT        COUNT=2, INITIALIZE TYPEWHEEL COUNTER FOR SETUP UMPL0467
+       CLA NINE                                                         UMPL0468
+       STO N2           N2 = 9, FIELD WIDTH FOR ORDINATE (Y) VALUES     UMPL0469
+       SXD IR44,4       SAVE LINE COUNTER FOR RECORD                    UMPL0470
+       TSX SETUP,4      PLACES BCD ORDINATE VALUE IN LEFT AND LEFT-1    UMPL0471
+       REM              AS FOLLOWS.  LEFT(  XXXX), LEFT-1(XXXXX )       UMPL0472
+       LXD IR44,4       RESTORE LINE COUNTER FOR RECORD                 UMPL0473
+SKIP   CLA LEFT                                                         UMPL0474
+       STO C-1,4        SAVE EACH LEFT IN LOWER PORTION OF C REGION     UMPL0475
+       CLA LEFT-1                                                       UMPL0476
+       STO C-1-LNREC,4  SAVE EACH LEFT-1 IN UPPER PORTION OF C REGION   UMPL0477
+       CLA I                                                            UMPL0478
+       ADD ONE                                                          UMPL0479
+       STO I            I=I+1, INCREMENT LINE COUNTER FOR IMAGE REGION  UMPL0480
+       TIX XXX,4,1      RETURN IF MULTI LINE RECORD UNFINISHED          UMPL0481
+       LXD SAVE4,4      LOAD IR4 WITH NUMBER OF LINES IN THIS RECORD    UMPL0482
+       REM                                                              UMPL0483
+       REM                                                              UMPL0484
+BACK   SXD IR44,4            REVERSE FORTRAN VECTOR                     UMPL0485
+DECMP  LXD INDX4,4                                                      UMPL0486
+       CAL SBLNK                                                        UMPL0487
+       TNX OUT1+2,4,1                                                   UMPL0488
+       LXD INDX2,2                                                      UMPL0489
+       LXD INDX1,1                                                      UMPL0490
+       LDQ LABEL                                                        UMPL0491
+       LGL 6                                                            UMPL0492
+       ALS 24                                                           UMPL0493
+       TIX OUT1,1,1                                                     UMPL0494
+       LXA SIX,1                                                        UMPL0495
+       TXI *+1,2,**                                                     UMPL0496
+PLT42  LDQ **,2                                                         UMPL0497
+OUT1   SXD INDX2,2                                                      UMPL0498
+       SXD INDX1,1                                                      UMPL0499
+       SXD INDX4,4                                                      UMPL0500
+       LXD IR44,4                                                       UMPL0501
+       ORS C-1,4                                                        UMPL0502
+       STQ LABEL                                                        UMPL0503
+       TIX BACK,4,1                                                     UMPL0504
+BACKK  NOP                                                              UMPL0505
+CLOOP  LXD     SAVE4,4                                                  UMPL0506
+       LXD     IR22,2                                                   UMPL0507
+       CLA     BUFFRA                                                   UMPL0508
+       STA     *+4                                                      UMPL0509
+       ADD     ONE                                                      UMPL0510
+       STA     *+4                                                      UMPL0511
+       CLA     C-1,4                                                    UMPL0512
+       STO     **                                                       UMPL0513
+       CLA     C-1-LNREC,4                                              UMPL0514
+       STO     **                                                       UMPL0515
+       LXA     WORDS,1                                                  UMPL0516
+       CAL     *-2                                                      UMPL0517
+       ADD     ONE                                                      UMPL0518
+       STA     *+2                                                      UMPL0519
+ADDB   CLA     **,2                                                     UMPL0520
+       STO     **                                                       UMPL0521
+       TXI     *+1,2,1                                                  UMPL0522
+       CAL     *-2                                                      UMPL0523
+       ADD     ONE                                                      UMPL0524
+       STA     *-4                                                      UMPL0525
+       TIX     ADDB,1,1                                                 UMPL0526
+       TXL     IR444,4,1                                                UMPL0527
+       CAL     *-7                                                      UMPL0528
+       STA     *+2                                                      UMPL0529
+       CLA     RECMK                                                    UMPL0530
+       STO     **                                                       UMPL0531
+       CAL     *-1                                                      UMPL0532
+       ADD     ONE                                                      UMPL0533
+       TIX     ADDB-11,4,1                                              UMPL0534
+IR444  CAL     ADDB+1                                                   UMPL0535
+       SUB     ONE04                                                    UMPL0536
+       ALS     18                                                       UMPL0537
+       STD     QQ                                                       UMPL0538
+       CAL BUFF              ENTER CORRECT CARRIAGE CONTROL             UMPL0539
+       ANA     PLCMK                                                    UMPL0540
+       ORA     CARCTL                                                   UMPL0541
+       SLW     BUFF                                                     UMPL0542
+       CALL    SPRINT                                                   UMPL0543
+QQ     PZE     BUFF,,**                                                 UMPL0544
+IR44   TXL CHECK,0,**   RETURN FOR NEXT RECORD                          UMPL0545
+       CAL IFOMT                                                        UMPL0546
+       ANA ONE                                                          UMPL0547
+       TNZ EXIT2        IF IFOMT=1,3,5, OR 7, DELETE ABSCISSA PRINTOUT  UMPL0548
+TS1    LXD TWNTY,4                                                      UMPL0549
+       CLA BLNKK                                                        UMPL0550
+LS1    STO C+1,4        PREPARE C REGION FOR ABSCISSA VALUES            UMPL0551
+S1     TIX LS1,4,1                                                      UMPL0552
+       CLA ONE                                                          UMPL0553
+       STO COUNT        COUNT = 1, INITIALIZE TYPEWHEEL COUNT FOR SETUP UMPL0554
+       LDQ TWO          SHIFT ABCISSA PRINTOUT ONE COLUMN FOR           UMPL0555
+       CLA G7           INTEGER PRINTOUT                                UMPL0556
+       TZE *+3                                                          UMPL0557
+       TPL *+2                                                          UMPL0558
+       STQ COUNT                                                        UMPL0559
+       CLA XMIN                                                         UMPL0560
+       STO BOTOM        BOTOM = XMIN,  FIRST ABSCISSA VALUE             UMPL0561
+       CLA G5                                                           UMPL0562
+       STO N1           N1 = G5, SCALE FACTOR FOR ABSCISSA VALUES       UMPL0563
+       CLA G6                                                           UMPL0564
+       STO N2           N2 = G6, FIELD WIDTH FOR LEFTMOST ABSCISSA VALUEUMPL0565
+       CLA G7                                                           UMPL0566
+       STO N3           N3 = G7, DEC POINT POSITION FOR ABSCISSA VALUES UMPL0567
+       TSX SETUP,4      PLACES LEFT ABSCISSA VALUE (BCD) INTO C REGION  UMPL0568
+TS2    CLA ONE                                                          UMPL0569
+       STO I            I=1, INITIALIZE COUNTER FOR OTHER ABSCISSA VALUSUMPL0570
+LS2    CLA I                                                            UMPL0571
+       TSX FLOAT,2                                                      UMPL0572
+       LRS 35                                                           UMPL0573
+       FMP DELTX                                                        UMPL0574
+       FAD XMIN                                                         UMPL0575
+       STO BOTOM        BOTTOM=I*DELTX+XMIN, ABSCISSA VALUE             UMPL0576
+       CLA COUNT                                                        UMPL0577
+       ADD ONE                                                          UMPL0578
+       STO COUNT        COUNT=COUNT+1, LEAVE BLANK BETWN ABSCISSA VALUESUMPL0579
+       CLA G9                                                           UMPL0580
+       STO N2           N2=G9, FIELD WIDTH FOR OTHER ABSCISSA VALUES    UMPL0581
+       TSX SETUP,4      PLACES ABSCISSA VALUE (BCD) INTO C REGION       UMPL0582
+       CLA I                                                            UMPL0583
+       ADD ONE                                                          UMPL0584
+       STO I            I=I+1, INCREMENT COUNTER FOR ABSCISSA VALUES    UMPL0585
+       SUB NV                                                           UMPL0586
+       TZE LS2          IF ZERO OR NEGATIVE, RETURN TO SET UP ANOTHER   UMPL0587
+S2     TMI LS2          ABSCISSA VALUE                                  UMPL0588
+       CALL    SPRINT                                                   UMPL0589
+       PZE BLNKK,,1          WRITE 6 BLANKS AT LEFT                     UMPL0590
+       LXA     WORDS,2                                                  UMPL0591
+       TXI     *+1,2,3                                                  UMPL0592
+       SXD     CYCT,2                                                   UMPL0593
+       LXD     ZERO,5                                                   UMPL0594
+CYC    CLA     C,1                                                      UMPL0595
+       STO BUFF,4            SAVE ABSCISSA VALUES IN PRINT BUFFER       UMPL0596
+       TXI     *+1,1,1                                                  UMPL0597
+       TXI     *+1,4,-1                                                 UMPL0598
+       TIX     CYC,2,1                                                  UMPL0599
+       CALL SPRINT           WRITE ABSCISSA VALUES ON TAPE              UMPL0600
+CYCT   PZE     BUFF,,**                                                 UMPL0601
+EXIT2  LXD IR4,4        RESTORE REGISTER 4                              UMPL0602
+       TXI EXIT,4,3     INCREMENT REGISTER 4 AND RETURN                 UMPL0603
+       REM                                                              UMPL0604
+       REM .............................................................UMPL0605
+TSTFP  TZE 1,2          TSTFP CHECKS FOR A FLOATING POINT ARGUMENT      UMPL0606
+       STO TEMP         ITS CALLING SEQUENCE IS                         UMPL0607
+       SSP                   TSX TSTFP,2                                UMPL0608
+       SUB MS004        THE ARGUMENT IS IN THE ACCUMULATOR              UMPL0609
+       TMI *+3                                                          UMPL0610
+       CLA TEMP                                                         UMPL0611
+       TRA 1,2                                                          UMPL0612
+       TXL THEND-2,2,**      NOT FLOATING POINT, REJECT PLOT3 DATA POINTUMPL0613
+SAVE4  TXL BAD,0,**          NOT FLOATING POINT, IMPROPER PLOT2 ARGUMENTUMPL0614
+FLOAT  ORA CONST        FLOAT FLOATS A NUMBER KNOWN TO BE AN INTEGER    UMPL0615
+       FAD CONST        THE CALLING SEQUENCE IS                         UMPL0616
+       TRA 1,2               TSX FLOAT,2  WITH ARGUMENT IN ACCUMULATOR  UMPL0617
+       REM              THE FOLLOWING ENTRIES PRODUCE A MAD-LIKE INTEGERUMPL0618
+       REM              FROM AN ARGUMENT WHICH MAY BE A FLOATING        UMPL0619
+       REM              POINT NUMBER, A MAD-LIKE INTEGER (ADDRESS),     UMPL0620
+       REM              OR FORTRAN INTEGER (DECREMENT). THE CALLING     UMPL0621
+       REM              SEQUENCES ARE OF THE FORM                       UMPL0622
+       REM                   TSX NAME,2  WITH ARGUMENT IN ACCUMULATOR   UMPL0623
+FIX    SSP              FIX PRODUCES A POSITIVE INTEGER IN THE ADDRESS  UMPL0624
+TFIX   LRS 33           TFIX PRODUCES A SIGNED INTEGER IN THE ADDRESS   UMPL0625
+       TNZ FIX1-1       IF NONZERO NUMBER IS IN FLOATING POINT          UMPL0626
+       LLS 15                                                           UMPL0627
+       TNZ 1,2          IF NONZERO IS A FORTRAN (DECREMENT) INTEGER     UMPL0628
+       LLS 18                                                           UMPL0629
+       TRA 1,2          MAD (ADDRESS) INTEGER                           UMPL0630
+       LLS 33           RESTORED A FLOATING POINT NUMBER                UMPL0631
+FIX1   UFA CONST        FIXES A NUMBER KNOWN TO BE IN FLOATING POINT    UMPL0632
+       ERA CONST                                                        UMPL0633
+       LLS 0                                                            UMPL0634
+       TRA 1,2                                                          UMPL0635
+       REM                                                              UMPL0636
+       REM .............................................................UMPL0637
+       REM              OMIT DELETES PRINTOUT OF CERTAIN SEGMENTS       UMPL0638
+       REM              ITS ARGUMENT IS TAKEN MODULO 8 AS FOLLOWS       UMPL0639
+OMIT   CLA*    1,4      ARG = 1, DELETE ABSCISSA VALUE PRINTOUT         UMPL0640
+       TSX TFIX,2       ARG = 2, DELETE ORDINATE VALUE PRINTOUT         UMPL0641
+       TMI *+3          ARG = 3, DELETE 1 AND 2 ABOVE                   UMPL0642
+       ORS IFOMT        ARG = 4, DELETE BOTTOM GRID LINE PRINTOUT       UMPL0643
+       TRA 2,4          ARG = 5, DELETE 1 AND 4 ABOVE                   UMPL0644
+       COM              ARG = 6, DELETE 2 AND 4 ABOVE                   UMPL0645
+       ANS IFOMT        ARG = 7, DELETE 1, 2, AND 4 ABOVE               UMPL0646
+       TRA 2,4          TO RESTORE ANY OF THE ABOVE OMIT CAN BE EXECUTEDUMPL0647
+       REM              WITH THE NEGATIVES OF THE ABOVE ARGUMENTS       UMPL0648
+       REM                                                              UMPL0649
+       REM .............................................................UMPL0650
+PLACE  CLA 1,4          PLACE PLACES ANY SPECIFIED BCD CHARACTER IN THE UMPL0651
+       STA BCDCH        I TH CHARACTER POSITION OF A SPECIFIED REGION   UMPL0652
+       CLA 2,4          IN STORAGE.  THE CALLING SEQUENCE IS            UMPL0653
+       STA *+1               TSX PLACE,4                                UMPL0654
+       LDQ **                TXH BCD                                    UMPL0655
+       STQ TEM               TXH I                                      UMPL0656
+       PXD 0,0               TXH REGION                                 UMPL0657
+       DVP SIX                                                          UMPL0658
+       STQ TEM1         TEM1=I/6, INDEX OF WORD CONTAINING CHAR POSITIONUMPL0659
+       LXA TEM1,2                                                       UMPL0660
+USED1  MPY SIX               (USED AS CONSTANT BIGP)                    UMPL0661
+       STQ TEM1         TEM1=TEM1*6,  CONTAINS TOTAL CHARACTER POSITIONSUMPL0662
+       CLA TEM          TEM, CONTAINS THE CHARACTER POSITION            UMPL0663
+       SUB TEM1                                                         UMPL0664
+       PAX 0,1          TEM-TEM1 = CHARACTER POSITION IN WORD           UMPL0665
+       CLA 3,4                                                          UMPL0666
+       STA *+3                                                          UMPL0667
+       STA BCDCH+5                                                      UMPL0668
+       CAL PLCMK,1                                                      UMPL0669
+       ANS **,2         ZERO CHARACTER POSITION IN STORAGE WORD         UMPL0670
+BCDCH  CAL **                                                           UMPL0671
+       ANA MASK         ZERO ALL EXCEPT CHARACTER POSITION IN ACC       UMPL0672
+       TNX *+3,1,0                                                      UMPL0673
+       ARS 6            SHIFT BCD INTO PROPER CHARACTER POSITION        UMPL0674
+       TIX *-1,1,1                                                      UMPL0675
+       ORS **,2         PLACE CHARACTER IN STORAGE WORD                 UMPL0676
+       TRA 4,4          RETURN                                          UMPL0677
+       REM .............................................................UMPL0678
+       REM    SUBROUTINE TO CONVERT FLOATING POINT NUMBER TO BCD ACCOR- UMPL0679
+       REM    DING TO THE SPECIAL PURPOSE FORMAT N1 P F N2 . N3         UMPL0680
+       REM    BCD RESULT IS PLACED IN STORAGE REGION REG TO REG-19      UMPL0681
+       REM    (WHICH REPRESENTS DUMMY TYPEWHEELS 1 TO 120)   BCD RESULT UMPL0682
+       REM    BEGINS AT TYPEWHEEL COUNT + 1   THE CALLING SEQUENCE IS   UMPL0683
+       REM         TSX SETUP,4                                          UMPL0684
+       REM    WHERE COUNT AND ARG ARE SET BEFORE ENTRY AND REG TO REG-19UMPL0685
+       REM    IS ASSUMED TO BE FILLED WITH BLANKS                       UMPL0686
+       REM    ***NOTE  ARG IS SYN WITH YAXIS AND BOTOM AND              UMPL0687
+       REM          REG IS SYN WITH C AND LEFT ***                      UMPL0688
+SETUP  SXD SIR4,4       ENTRY TO SETUP                                  UMPL0689
+       REM                   (INSTRUCTION REMOVED)                      UMPL0690
+       REM                   (INSTRUCTION REMOVED)                      UMPL0691
+       CLA N1                                                           UMPL0692
+       SSP                                                              UMPL0693
+       SUB N37          CHECK FOR SCALE FACTOR GREATER THAN +OR-37      UMPL0694
+       TMI OK           SCALE FACTOR INSIDE LIMIT                       UMPL0695
+       CLA FPONE        MULTIPLIER = 1. FOR FACTOR OUT OF RANGE         UMPL0696
+       TXI *+3,0,28672       (USED AS CONSTANT SMALP)                   UMPL0697
+OK     CLA N1                                                           UMPL0698
+       TSX TPOWR,2                                                      UMPL0699
+       STO TEMP         TEMP = 10 .P. N1                                UMPL0700
+       TOV *+1          TURN OFF OVERFLOW INDICATOR                     UMPL0701
+       LDQ TEMP                                                         UMPL0702
+       SUB SMALP        WHENEVER MULTIPLICATION OF ARG BY 10 .P. N1     UMPL0703
+       ADM ARG          WOULD PRODUCE RESULT TOO LARGE OR SMALL FOR     UMPL0704
+       TOV *+3          FLOATING POINT MACHINE WORD, MULTIPLY           UMPL0705
+       SUB BIGP                                                         UMPL0706
+       TPL *+2          BY 1. INSTEAD                                   UMPL0707
+       LDQ FPONE                                                        UMPL0708
+       FMP ARG                                                          UMPL0709
+       STO Z            Z = ARG*10.P.N1 (OR Z = ARG*1.)                 UMPL0710
+       SSP                                                              UMPL0711
+       LDQ TM11         WHENEVER Z IS LESS THAN 10 TO THE -11, Z = 0    UMPL0712
+       TLQ *+2                                                          UMPL0713
+       STZ Z                                                            UMPL0714
+       SUB FPONE        ACCUMULATOR WILL BE SET TO LARGEST REASONABLE   UMPL0715
+       TPL *+4          FIELD WIDTH                                     UMPL0716
+       CLA N3           WHEN .ABS. Z .L. 1., ACCUMULATOR = N3 + 3       UMPL0717
+       ADD THREE                                                        UMPL0718
+INDX4  TXL *+3,0,**                                                     UMPL0719
+       CLA N3           OR WHEN .ABS.Z .G. 1, ACCUMULATOR = N3 + 20     UMPL0720
+       ADD TWENT                                                        UMPL0721
+       SUB N2           IS FIELD WIDTH LESS THAN VALUE IN ACCUMULATOR   UMPL0722
+       TPL OKK          YES                                             UMPL0723
+       ADD N2                                                           UMPL0724
+       LDQ N2                                                           UMPL0725
+       STQ TEMP         NO, SO SET FIELD WIDTH (N2) TO VALUE IN ACC     UMPL0726
+       STO N2                                                           UMPL0727
+       CLA TEMP         COUNT = ORIGINAL COUNT + (ORIGINAL N2           UMPL0728
+       ADD COUNT             - CURRENT N2)                              UMPL0729
+       SUB N2                                                           UMPL0730
+       STO COUNT                                                        UMPL0731
+OKK    CLA N2                                                           UMPL0732
+       TZE THRU         WHEN FIELD WIDTH (N2) = 0, FUNCTION RETURN      UMPL0733
+       SUB N3                                                           UMPL0734
+       SUB TWO                                                          UMPL0735
+       TSX TPOWR,2                                                      UMPL0736
+       STO P            P = 10 .P. (N2-N3-2)                            UMPL0737
+       CLA BLNKK                                                        UMPL0738
+       STO SIGN         SIGN = $ $ (BLANK BCD CONSTANT)                 UMPL0739
+       CLA Z                                                            UMPL0740
+       TPL *+5                                                          UMPL0741
+       SSP                                                              UMPL0742
+       STO Z                                                            UMPL0743
+       CLA MINUS                                                        UMPL0744
+       STO SIGN         WHEN Z IS NEGATIVE, SIGN = $-$                  UMPL0745
+       LDQ FPONE        PUT LEAST SIGNIFICANT FIGURE (IN MQ) TO 1.      UMPL0746
+       CLS N3              IN CASE INTEGER PRINTOUT IS DESIRED          UMPL0747
+       TPL *+3                                                          UMPL0748
+       TSX TPOWR,2      NON INTEGER PRINTOUT, LEAST SIGNIFICANT FIGURE  UMPL0749
+       LRS 35           (IN MQ) IS 10 .P. -N3                           UMPL0750
+       FMP N05                                                          UMPL0751
+       FAD Z            ROUND Z BY ADDING 0.5*(LEAST SIGNIFICANT FIGURE)UMPL0752
+       STO Z                                                            UMPL0753
+       CLA ONE          SET BOOL = 1     (BOOL IS 1 UNTIL FIRST NON-    UMPL0754
+       STO BOOL         BLANK CHARACTER IS ENCOUNTERED)                 UMPL0755
+       CLA N2           SET COUNTER (SI) TO N2 FOR COUNTING LOOP        UMPL0756
+       STO SI           BETWEEN LOOPA AND STOBK + 6                     UMPL0757
+LOOPA  SUB N3                                                           UMPL0758
+       SUB ONE                                                          UMPL0759
+       TNZ STATA                                                        UMPL0760
+       CLA PER          WHENEVER I = N3 + 1, PERIOD AND POSSIBLY LEADINGUMPL0761
+       STO CHAR         ZERO AND SIGN ARE TO BE PLACED                  UMPL0762
+       CLA BOOL         WHENEVER BOOL = 0, SIGN AND LEADING ZERO HAVE   UMPL0763
+       TZE STATB        ALREADY BEEN PLACED,  SO IGNORE THEM            UMPL0764
+       CLA SI                                                           UMPL0765
+       SUB N2                                                           UMPL0766
+       TPL STATB        WHEN SI = N2, NO ROOM FOR EITHER LEADING ZERO   UMPL0767
+       CLA COUNT        OR SIGN                                         UMPL0768
+       SUB ONE                                                          UMPL0769
+       STO TEMP                                                         UMPL0770
+       TSX PLACE,4      PLACE LEADING ZERO IN TYPEWHEEL COUNT-1         UMPL0771
+       TXH ZBLNK                                                        UMPL0772
+       TXH TEMP                                                         UMPL0773
+       TXH REG                                                          UMPL0774
+       CLA SI           WHEN SI .GE. N2-1, NO ROOM FOR SIGN             UMPL0775
+       ADD ONE                                                          UMPL0776
+       SUB N2                                                           UMPL0777
+       TPL STATB                                                        UMPL0778
+       CLA COUNT                                                        UMPL0779
+       SUB TWO                                                          UMPL0780
+       STO TEMP                                                         UMPL0781
+       TSX PLACE,4      PLACE SIGN IN TYPEWHEEL COUNT-2                 UMPL0782
+IR1    TXH SIGN,0,**                                                    UMPL0783
+IR2    TXH TEMP,0,**                                                    UMPL0784
+IR4    TXH REG,0,**                                                     UMPL0785
+STATB  STZ BOOL         NON-BLANK CHARACTER PLACED, SO BOOL = 0         UMPL0786
+SIR4   TXL STLST,0,**                                                   UMPL0787
+STATA  CLA P            NORMAL CASE (WHEN NOT POSITION FOR PERIOD)      UMPL0788
+       STO Q            INITIALIZE Q TO P                               UMPL0789
+       CLA Z                                                            UMPL0790
+       FDP P                                                            UMPL0791
+       STQ TEMP         TEMP = Z/P                                      UMPL0792
+       CLA TEMP                                                         UMPL0793
+       SUB TPA          WHENEVER TEMP LESS THAN TPA, IT CAH BE          UMPL0794
+       TMI ONWD         CONVERTED TO AN INTEGER                         UMPL0795
+RETRN  LDQ Q                                                            UMPL0796
+       FMP TPA                                                          UMPL0797
+       STO Q            Q = Q*TPA                                       UMPL0798
+       CLA TEMP                                                         UMPL0799
+       FDP TPA                                                          UMPL0800
+       STQ TEMP         TEMP = TEMP/TPA                                 UMPL0801
+       CLA TPA                                                          UMPL0802
+       TLQ *+2          WHENEVER TEMP .L. TPA, MODIFY Z                 UMPL0803
+       TXL RETRN,0,     OTHERWISE, KEEP DIVIDING BY TPA                 UMPL0804
+       CLS TEMP                                                         UMPL0805
+       TSX FIX1,2                                                       UMPL0806
+       TSX FLOAT,2      ACC = INTEGRAL PART OF TEMP, IN FLTG PT FORM    UMPL0807
+       LRS 35                                                           UMPL0808
+       FMP Q                                                            UMPL0809
+       FAD Z                                                            UMPL0810
+       STO Z            Z = Z - Q*TEMP                                  UMPL0811
+       TXL STATA,0,     GO BACK AND TRY AGAIN                           UMPL0812
+ONWD   CLA TEMP                                                         UMPL0813
+       TSX FIX,2                                                        UMPL0814
+       STO CHAR         CHAR = INTEGRAL PART OF Z/P                     UMPL0815
+       TSX FLOAT,2                                                      UMPL0816
+       LRS 35                                                           UMPL0817
+       FMP P            ACCUMULATOR = CHAR*P                            UMPL0818
+       CHS                                                              UMPL0819
+       FAD Z            Z = Z - ACCUMULATOR                             UMPL0820
+       STO Z                                                            UMPL0821
+       CLA P                                                            UMPL0822
+       FDP FTEN                                                         UMPL0823
+       STQ P            P = P/10.                                       UMPL0824
+       CLA NINE         WHEN CHAR .LE. 9, IT IS SMALL ENOUGH TO FIT     UMPL0825
+       SUB CHAR         INTO ONE TYPEWHEEL                              UMPL0826
+       TPL ALRIT                                                        UMPL0827
+       STZ BOOL                                                         UMPL0828
+       PXD 0,0          OTHERWISE (WHEN CHAR WONT FIT INTO ONE          UMPL0829
+       LDQ CHAR         TYPEWHEEL) IT MUST BE TRUNCATED FROM LEFT       UMPL0830
+       DVP TEN          FIRST PRINTED DIGIT IS THE REMAINDER IN THE     UMPL0831
+       STO CHAR         ACCUMULATOR                                     UMPL0832
+ALRIT  CLA BOOL         WHEN BOOL = 0, SOME NON-BLANK CHAR HAS ALREADY  UMPL0833
+       TZE STLST        BEEN PLACED, SO CHAR MUST BE PLACED EVEN IF 0   UMPL0834
+       CLA CHAR         WHEN CHAR = 0 (AND NO NON-BLANK CHAR HAS BEEN   UMPL0835
+       TZE STOBK        PLACED,YET) BYPASS THE PLACING OF 0             UMPL0836
+       CLA SI                                                           UMPL0837
+       SUB N2           SINCE CHAR = NONZERO, SEE IF THERE IS ROOM TO   UMPL0838
+       TPL STATC        PLACE LEADING SIGN (I.E. SI .L. N2)             UMPL0839
+       CLA COUNT                                                        UMPL0840
+       SUB ONE                                                          UMPL0841
+       STO TEMP                                                         UMPL0842
+       TSX PLACE,4      PLACE LEADING SIGN IN TYPEWHEEL COUNT-1         UMPL0843
+       TXH SIGN                                                         UMPL0844
+       TXH TEMP                                                         UMPL0845
+       TXH REG                                                          UMPL0846
+STATC  STZ BOOL         NON-BLANK CHAR HAS BEEN PLACED  BOOL = 0        UMPL0847
+STLST  LDQ CHAR         MAKE CHAR (WHICH IS INTEGER LESS THAN 10)       UMPL0848
+       RQL 30                LEFT ADJUSTED BCD CHARACTER                UMPL0849
+       STQ TEMP                                                         UMPL0850
+       TSX PLACE,4      PLACE CHAR IN TYPEBAR COUNT                     UMPL0851
+       TXH TEMP                                                         UMPL0852
+       TXH COUNT                                                        UMPL0853
+       TXH REG                                                          UMPL0854
+STOBK  CLA COUNT                                                        UMPL0855
+       ADD ONE                                                          UMPL0856
+       STO COUNT        COUNT = COUNT + 1                               UMPL0857
+       CLS ONE                                                          UMPL0858
+       ADD SI                                                           UMPL0859
+       STO SI           SI = SI - 1                                     UMPL0860
+       TPL LOOPA        WHEN SI .G. 0, REPEAT LOOP                      UMPL0861
+       CLA BOOL         WHEN EXIT FROM LOOP WITH NO NONBLANK CHAR PLACEDUMPL0862
+       TZE THRU         MUST BE INTEGER 0                               UMPL0863
+       CLA COUNT                                                        UMPL0864
+       SUB ONE          COUNT = COUNT - 1                               UMPL0865
+       STO COUNT                                                        UMPL0866
+       STZ TEMP         MAKE CHAR TO BE PLACED A $0$ (BCD 0)            UMPL0867
+       STZ BOOL         BOOL = 0 TO EXIT FROM LOOP NEXT TIME            UMPL0868
+INDX2  TXL STLST+3,0,** TRANSFER BACK TO PLACE THE $0$                  UMPL0869
+THRU   LXD SIR4,4                                                       UMPL0870
+       TRA 1,4          RETURN                                          UMPL0871
+       REM .............................................................UMPL0872
+       REM    TPOWR RAISES  10 TO THE INTEGRAL POWER N (N MAY BE +OR-)  UMPL0873
+       REM                                                              UMPL0874
+TPOWR  LDQ FPONE        ENTRY TO TPOWR      CALLING SEQUENCE IS         UMPL0875
+       STQ Q                                  CLA N                     UMPL0876
+       PAX 0,4                                TSX TPOWR,2               UMPL0877
+       TXH *+3,4,0                          FLT PT RESULT IS IN ACC     UMPL0878
+       CLA FPONE        ARG = 0             N MUST BE A SIGNED INTEGER  UMPL0879
+       TRA 1,2          RETURN 1.           IN THE ADDRESS              UMPL0880
+       TMI NGARG                                                        UMPL0881
+       LDQ Q                                                            UMPL0882
+       FMP FTEN                                                         UMPL0883
+       STO Q                                                            UMPL0884
+       TIX *-3,4,1                                                      UMPL0885
+       TRA 1,2          RETURN FOR ARG .G. 0                            UMPL0886
+NGARG  CLA Q                                                            UMPL0887
+       FDP FTEN                                                         UMPL0888
+       STQ Q                                                            UMPL0889
+       TIX *-3,4,1                                                      UMPL0890
+       CLA Q                                                            UMPL0891
+       TRA 1,2          RETURN FOR ARG .L. 0                            UMPL0892
+       REM .............................................................UMPL0893
+       REM              CONSTANTS AND STORAGE LOCATIONS                 UMPL0894
+       REM              ALL VARIABLES WHICH MUST BE PRESET FOR STANDARD UMPL0895
+       REM              GRID ARE NOTED WITH ASTERISKS *** IN COLUMNS    UMPL0896
+       REM              21,22,AND23                                     UMPL0897
+AC     PZE                                                              UMPL0898
+ADMSK  OCT 77777                                                        UMPL0899
+ARG                     FLTG PT ARG FOR SETUP  SYN WITH YAXIS AND BOTOM UMPL0900
+BIGP   SYN USED1             (OCTAL 020000KKKKKK)                       UMPL0901
+       BCD 1                                                            UMPL0902
+       BCD 1                                                            UMPL0903
+       BCD 1    I   ***                                                 UMPL0904
+       BCD 1I       *** BLANK TO BLANK-16 IS A SAMPLE LINE IMAGE        UMPL0905
+       BCD 1        *** FOR NON-GRID LINES                              UMPL0906
+       BCD 1  I     *** THIS IS LINE IMAGE USED IN STANDARD GRID        UMPL0907
+       BCD 1        *** EXECUTION OF PLOT1 SETS UP NEW VALUES           UMPL0908
+       BCD 1    I   ***                                                 UMPL0909
+       BCD 1I       ***                                                 UMPL0910
+       BCD 1        ***                                                 UMPL0911
+       BCD 1  I     ***                                                 UMPL0912
+       BCD 1        ***                                                 UMPL0913
+       BCD 1    I   ***                                                 UMPL0914
+       BCD 1I       ***                                                 UMPL0915
+       BCD 1        ***                                                 UMPL0916
+       BCD 1  I     ***                                                 UMPL0917
+       BCD 1        ***                                                 UMPL0918
+       BCD 1    I   ***                                                 UMPL0919
+BLANK  BCD 1I       *** FIRST WORD OF LINE IMAGE FOR NON GRID LINES     UMPL0920
+BLNKK  BCD 1                                                            UMPL0921
+BLKS   OCT 600060606060                                                 UMPL0922
+BOOL                                                                    UMPL0923
+BOTOM  SYN ARG                                                          UMPL0924
+BUFFRA PZE     BUFF                                                     UMPL0925
+BUFF   BSS     COL/6+1*LNREC                                            UMPL0926
+C      BES CDIM         SYN WITH LEFT AND REG, USED BY SETUP            UMPL0927
+       PZE              MUST FOLLOW C                                   UMPL0928
+CARCTL BCD 1900000           CARRIAGE CONTROL = 9 SINGLE SPACES AND     UMPL0929
+       REM                   SUPPRESSES OVERFLOW                        UMPL0930
+CHAR                                                                    UMPL0931
+CONST  OCT 233000000000                                                 UMPL0932
+COUNT                                                                   UMPL0933
+       BCD 1                                                            UMPL0934
+       BCD 1                                                            UMPL0935
+       BCD 1----+   ***                                                 UMPL0936
+       BCD 1+-----  *** DASH TO DASH-16 IS A SAMPLE LINE IMAGE FOR      UMPL0937
+       BCD 1------  *** HORIZONTAL GRID LINES                           UMPL0938
+       BCD 1--+---  *** THIS IS THE LINE IMAGE USED IN STANDARD GRID    UMPL0939
+       BCD 1------  *** EXECUTION OF PLOT1 PRODUCES NEW VALUES          UMPL0940
+       BCD 1----+-  ***                                                 UMPL0941
+       BCD 1+-----  ***                                                 UMPL0942
+       BCD 1------  ***                                                 UMPL0943
+       BCD 1--+---  ***                                                 UMPL0944
+       BCD 1------  ***                                                 UMPL0945
+       BCD 1----+-  ***                                                 UMPL0946
+       BCD 1+-----  ***                                                 UMPL0947
+       BCD 1------  ***                                                 UMPL0948
+       BCD 1--+---  ***                                                 UMPL0949
+       BCD 1------  ***                                                 UMPL0950
+       BCD 1----+-  ***                                                 UMPL0951
+DASH   BCD 1+-----  *** 1ST WORD OF LINE IMAGE FOR HORIZONTAL GRID LINESUMPL0952
+DELTX                                                                   UMPL0953
+DELTY                                                                   UMPL0954
+       BCD 1-                                                           UMPL0955
+       BCD 1--          DSH TO DSH-5 USED BY PLOT1 TO FILL OUT LAST WORDUMPL0956
+       BCD 1---         OF HORIZONTAL LINE IMAGE                        UMPL0957
+       BCD 1----                                                        UMPL0958
+       BCD 1-----                                                       UMPL0959
+DSH    BCD 1------                                                      UMPL0960
+EIGHT  DEC 8                                                            UMPL0961
+ER1    BCD 10PLOT1                                                      UMPL0962
+ER2    BCD 10PLOT2                                                      UMPL0963
+ER3    BCD 30NO PREVIOUS PLOT2                                          UMPL0964
+FIXV                    MAXIMUM HORIZONTAL LINE INDEX FOR PRINTING      UMPL0965
+FLAG1                                                                   UMPL0966
+FPONE  DEC 1.                                                           UMPL0967
+FPTWO  DEC 2.                                                           UMPL0968
+FTHRE  DEC 3.                                                           UMPL0969
+FPFOR  DEC 4.                                                           UMPL0970
+FTEN   DEC 10.                                                          UMPL0971
+       REM              G7,G5,G4,AND G3 MUST BE IN ASCENDING SEQUENCE   UMPL0972
+G7     DEC 3        *** DECIMAL PLACES FOR ABCISSA PRINTOUT             UMPL0973
+G5     DEC 0        *** SCALE FACTOR FOR ABCISSA PRINTOUT               UMPL0974
+G4     DEC 3        *** DECIMAL PLACES FOR ORDINATE PRINTOUT            UMPL0975
+G3     DEC 0        *** SCALE FACTOR FOR ORDINATE PRINTOUT              UMPL0976
+G6     DEC 14       *** FIELD WIDTH FOR LEFTMOST ABCISSA PRINTOUT       UMPL0977
+G9     DEC 9        *** FIELD WIDTH FOR (NORMAL) ABCISSA PRINTOUT       UMPL0978
+G      EQU COL-11-SPACS COLUMNS IN OUTPUT LINE AVAILABLE FOR IMAGE      UMPL0979
+GWID   PZE G            GRAPH WIDTH (NUMBER OF COLUMNS FOR IMAGE + 1)   UMPL0980
+I                                                                       UMPL0981
+IEYE   BCD 1I                                                           UMPL0982
+IPLUS  BCD 1+                                                           UMPL0983
+IFOMT                   SWITCH CONTAINING INFORMATION FROM OMIT         UMPL0984
+IFOUR  DEC 4                                                            UMPL0985
+J      SYN COUNT                                                        UMPL0986
+K                                                                       UMPL0987
+L                                                                       UMPL0988
+LABEL                                                                   UMPL0989
+LEFT   SYN C                                                            UMPL0990
+LINES  DEC 50       *** MAXIMUM HORIZONTAL LINE INDEX                   UMPL0991
+LNPRC  PZE LNREC        NUMBER OF LINES PER RECORD                      UMPL0992
+MINUS  SYN DSH-5                                                        UMPL0993
+MS004  OCT 000777777777                                                 UMPL0994
+       OCT 777777777700                                                 UMPL0995
+       OCT 777777770077                                                 UMPL0996
+       OCT 777777007777                                                 UMPL0997
+       OCT 777700777777                                                 UMPL0998
+       OCT 770077777777                                                 UMPL0999
+PLCMK  OCT 007777777777                                                 UMPL1000
+MASK   OCT 770000000000                                                 UMPL1001
+N05    DEC 0.5                                                          UMPL1002
+N37    DEC 37                                                           UMPL1003
+N999   DEC .99                                                          UMPL1004
+NINE   DEC 9                                                            UMPL1005
+N3                       N1,N2,AND N3 ARE ARGUMENTS FOR SETUP           UMPL1006
+N2                                                                      UMPL1007
+N1                                                                      UMPL1008
+NDATA                   NUMBER OF DATA POINTS TO BE PLOTTED             UMPL1009
+NH     DEC 5        *** NUMBER OF HORIZONTAL GRID LINES                 UMPL1010
+NV     DEC 10       *** NUMBER OF VERTICAL GRID LINES                   UMPL1011
+ONE    DEC 1                                                            UMPL1012
+ONED   PZE 0,0,1                                                        UMPL1013
+ONE04  PZE     BUFF                                                     UMPL1014
+P                                                                       UMPL1015
+Q                                                                       UMPL1016
+PER    BCD 1     .                                                      UMPL1017
+RECMK  OCT 606060606072                                                 UMPL1018
+RECLT  PZE COL          NUMBER OF COLUMNS IN OUTPUT LINE                UMPL1019
+REG    SYN C                                                            UMPL1020
+SBH    DEC 10       *** NUMBER OF SPACES BETWEEN HORIZONTAL GRIDLINES   UMPL1021
+SBV    PZE G/10     *** SPACES BETWEEN VERTICAL GRID LINES              UMPL1022
+SI                                                                      UMPL1023
+SIGN                                                                    UMPL1024
+SIX    DEC 6                                                            UMPL1025
+SIXF   DEC 6.                                                           UMPL1026
+SMALP  SYN OK-1              (OCTAL 170000KKKKKK)                       UMPL1027
+SPANX                                                                   UMPL1028
+SPANY                                                                   UMPL1029
+SBLNK  OCT 006000000000                                                 UMPL1030
+TEM                                                                     UMPL1031
+TEM1                                                                    UMPL1032
+TEMP                                                                    UMPL1033
+TEN    DEC 10                                                           UMPL1034
+TOT    DEC 100      *** MAXIMUM COLUMN INDEX                            UMPL1035
+TOTAL  DEC 101      *** TOTAL COLUMNS PER LINE                          UMPL1036
+TOTLS  DEC 102      *** NUMBER OF BCD CHARACTERS PER LINE               UMPL1037
+THREE  DEC 3                                                            UMPL1038
+TM11   DEC 1.E-11                                                       UMPL1039
+TPA    DEC 10.E7        LARGEST NUMBER THAT CAN BE SAFELY INTEGERIZED   UMPL1040
+TWELV  DEC 12                                                           UMPL1041
+TWENT  DEC 20                                                           UMPL1042
+TWO    DEC 2                                                            UMPL1043
+U                       NUMBER OF LINES PER UNIT Y                      UMPL1044
+V                       NUMBER OF LINES PER UNIT X                      UMPL1045
+WORDS  DEC 17       *** NUMBER OF MACHINE LOCATIONS PER LINE            UMPL1046
+WRONG  BCD 4       IMPROPER ARGUMENT                                    UMPL1047
+WRON1  DEC 0        *** EQUALS 1 FOR UNSUCCESSFUL PLOT1                 UMPL1048
+WRON2                   EQUALS 1 FOR UNSUCCESSFUL PLOT2                 UMPL1049
+WRON3  DEC 1        *** EQUALS 1 UNTIL SUCCESSFUL PLOT2                 UMPL1050
+XIX                                                                     UMPL1051
+YAXIS  SYN ARG                                                          UMPL1052
+XMAX                                                                    UMPL1053
+XMIN                                                                    UMPL1054
+YMAX                                                                    UMPL1055
+YMIN                                                                    UMPL1056
+Z                                                                       UMPL1057
+ZBLNK  SYN SIX                                                          UMPL1058
+ZERO                                                                    UMPL1059
+       END                                                              UMPL1060

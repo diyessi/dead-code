@@ -1,0 +1,325 @@
+C     ----- MAIN PROGRAM FOR DETERMINATION OF MATRIC ADJOINTS -----     MADJI001
+C     THIS PROGRAM USES SUBROUTINES MTXIN, INPUT, MTXOUT, OUTPUT, AND   MADJI002
+C                                                                       MADJI003
+C     THE VARIABLE PRECISION ARITHMETIC PACKAGE(TEVPAP-S. D. 1293 )     MADJI004
+C                                                                       MADJI005
+      DIMENSION M(8,50,50),NP1(5),MP(3),D0(8),E0(8),F0(9),Q0(9),        MADJI006
+     1IR(50),JC(50),NHOLD(8,50),NDONE(8),NDTWO(8),NDET(8)               MADJI007
+C                                                                       MADJI008
+      COMMON NP1,MP,NP,D0,E0,F0,Q0                                      MADJI009
+C                                                                       MADJI010
+C     READING IN PARAMETERS FOR ARITHMETIC PACKAGE.                     MADJI011
+C                                                                       MADJI012
+    1 READ INPUT TAPE 5,500,NPM1,MPM1,NM1                               MADJI013
+  500 FORMAT(2J2,I2)                                                    MADJI014
+C                                                                       MADJI015
+C     INITIALIZATION OF ARITHMETIC PACKAGE                              MADJI016
+C                                                                       MADJI017
+      CALL SETUP(NPM1,MPM1)                                             MADJI018
+C                                                                       MADJI019
+C     READING IN ORDER AND ID OF MATRIX                                 MADJI020
+C                                                                       MADJI021
+      READ INPUT TAPE 5,502,N,ID,NDUMP                                  MADJI022
+C                                                                       MADJI023
+C    INITIALIZATION OF NDONE AND NDET                                   MADJI024
+C                                                                       MADJI025
+      CALL INPUT(NDONE)                                                 MADJI026
+      CALL INPUT(NDET)                                                  MADJI027
+C                                                                       MADJI028
+C     READING IN THE ELEMENTS OF THE MATRIX                             MADJI029
+C                                                                       MADJI030
+      CALL MTXIN(M,N)                                                   MADJI031
+C                                                                       MADJI032
+C     WRITING OUT ORIGINAL MATRIX                                       MADJI033
+C                                                                       MADJI034
+      WRITE OUTPUT TAPE 6,666,ID                                        MADJI035
+      CALL MTXOUT(M,N)                                                  MADJI036
+      IR(1)=0                                                           MADJI037
+      JC(1)=0                                                           MADJI038
+      JGO=1                                                             MADJI039
+      DO 999 L=1,N                                                      MADJI040
+      LM1=L-1                                                           MADJI041
+      GO TO(44,54),JGO                                                  MADJI042
+C                                                                       MADJI043
+C     IR(L) AND JC(L) CHOOSE UNUSED ROWS AND COLS.                      MADJI044
+C                                                                       MADJI045
+C     THIS OCCURS ONLY AFTER DTWO IS FOUND TO BE ZERO.                  MADJI046
+C                                                                       MADJI047
+   54 DO 57 I1=1,N                                                      MADJI048
+      DO 58 I2=1,LM1                                                    MADJI049
+      IF(I1-IR(I2))58,57,58                                             MADJI050
+   58 CONTINUE                                                          MADJI051
+      IR(L)=I1                                                          MADJI052
+      IRL=I1                                                            MADJI053
+      GO TO 59                                                          MADJI054
+   57 CONTINUE                                                          MADJI055
+   59 DO 60 J1=1,N                                                      MADJI056
+      DO 61 J2=1,LM1                                                    MADJI057
+      IF(J1-JC(J2))61,60,61                                             MADJI058
+   61 CONTINUE                                                          MADJI059
+      JC(L)=J1                                                          MADJI060
+      JCL=J1                                                            MADJI061
+      GO TO 995                                                         MADJI062
+   60 CONTINUE                                                          MADJI063
+C                                                                       MADJI064
+C     SCANNING FOR LARGEST VALUE IN ARRAY                               MADJI065
+C                                                                       MADJI066
+   44 DO 45 I=1,NM1                                                     MADJI067
+   45 NDTWO(I)=0                                                        MADJI068
+      DO 4 I=1,N                                                        MADJI069
+      DO 5 I1=1,LM1                                                     MADJI070
+      IF(I-IR(I1))5,4,5                                                 MADJI071
+    5 CONTINUE                                                          MADJI072
+      DO 6 J=1,N                                                        MADJI073
+      DO 7 J1=1,LM1                                                     MADJI074
+      IF(J-JC(J1))7,6,7                                                 MADJI075
+    7 CONTINUE                                                          MADJI076
+      CALL IF(M(1,I,J),KGO)                                             MADJI077
+      GO TO(80,65,65),KGO                                               MADJI078
+C                                                                       MADJI079
+C     NEGATIVE OR ZERO                                                  MADJI080
+C                                                                       MADJI081
+   80 CALL ADD(NDTWO,M(1,I,J),NHOLD(1,1))                               MADJI082
+   81 CALL IF(NHOLD(1,1),KGO)                                           MADJI083
+      GO TO(73,73,6),KGO                                                MADJI084
+   73 DO 74 IJ=1,NM1                                                    MADJI085
+   74 NDTWO(IJ)=-M(IJ,I,J)                                              MADJI086
+      IRL=I                                                             MADJI087
+      JCL=J                                                             MADJI088
+      GO TO 6                                                           MADJI089
+C                                                                       MADJI090
+C     POSITIVE                                                          MADJI091
+C                                                                       MADJI092
+   65 CALL SUB(NDTWO,M(1,I,J),NHOLD(1,1))                               MADJI093
+      CALL IF(NHOLD(1,1),KGO)                                           MADJI094
+      GO TO(75,75,6),KGO                                                MADJI095
+   75 DO 76 IJ=1,NM1                                                    MADJI096
+   76 NDTWO(IJ)=M(IJ,I,J)                                               MADJI097
+      IRL=I                                                             MADJI098
+      JCL=J                                                             MADJI099
+    6 CONTINUE                                                          MADJI100
+    4 CONTINUE                                                          MADJI101
+      IR(L)=IRL                                                         MADJI102
+      JC(L)=JCL                                                         MADJI103
+      DO 400 IJ=1,NM1                                                   MADJI104
+  400 NDTWO(IJ)=M(IJ,IRL,JCL)                                           MADJI105
+      CALL IF(NDTWO,KGO)                                                MADJI106
+      GO TO (12,11,12),KGO                                              MADJI107
+   11 JGO=2                                                             MADJI108
+   12 DO 20 I=1,N                                                       MADJI109
+      IF(I-IRL)14,20,14                                                 MADJI110
+   14 DO 19 J=1,N                                                       MADJI111
+      IF(J-JCL)16,19,16                                                 MADJI112
+   16 CALL MPY(M(1,IRL,J),M(1,I,JCL),NHOLD(1,1))                        MADJI113
+      CALL MPY(M(1,I,J),M(1,IRL,JCL),NHOLD(1,2))                        MADJI114
+      CALL SUB(NHOLD(1,2),NHOLD(1,1),M(1,I,J))                          MADJI115
+      CALL DIV(M(1,I,J),NDONE,M(1,I,J))                                 MADJI116
+   19 CONTINUE                                                          MADJI117
+   20 CONTINUE                                                          MADJI118
+      DO 210 IJ=1,NM1                                                   MADJI119
+  210 M(IJ,IRL,JCL)=NDONE(IJ)                                           MADJI120
+      DO 30 I=1,N                                                       MADJI121
+      IF(I-IRL)31,30,31                                                 MADJI122
+   31 DO 310 IJ=1,NM1                                                   MADJI123
+  310 M(IJ,I,JCL)=-M(IJ,I,JCL)                                          MADJI124
+   30 CONTINUE                                                          MADJI125
+  995 IF(NDUMP)996,909,996                                              MADJI126
+  996 WRITE OUTPUT TAPE 6,700,L,L,IRL,L,JCL                             MADJI127
+      CALL OUTPUT(NDONE)                                                MADJI128
+      CALL OUTPUT(NDTWO)                                                MADJI129
+      CALL MTXOUT(M,N)                                                  MADJI130
+  909 DO 910 IJ=1,NM1                                                   MADJI131
+  910 NDONE(IJ)=NDTWO(IJ)                                               MADJI132
+  999 CONTINUE                                                          MADJI133
+C                                                                       MADJI134
+C     TIME TO UNSCRAMBLE ROWS AND COLUMNS                               MADJI135
+C                                                                       MADJI136
+      DO 70 I=1,N                                                       MADJI137
+      DO 71 J=1,N                                                       MADJI138
+      IRL=IR(J)                                                         MADJI139
+      JCL=JC(J)                                                         MADJI140
+      DO 710 K=1,NM1                                                    MADJI141
+  710 NHOLD(K,JCL)=M(K,IRL,I)                                           MADJI142
+   71 CONTINUE                                                          MADJI143
+      DO 72 J=1,N                                                       MADJI144
+      DO 720 K=1,NM1                                                    MADJI145
+  720 M(K,J,I)=NHOLD(K,J)                                               MADJI146
+   72 CONTINUE                                                          MADJI147
+   70 CONTINUE                                                          MADJI148
+      DO 89 I=1,N                                                       MADJI149
+      DO 88 J=1,N                                                       MADJI150
+      IRL=IR(J)                                                         MADJI151
+      JCL=JC(J)                                                         MADJI152
+      DO 810 K=1,NM1                                                    MADJI153
+  810 NHOLD(K,IRL)=M(K,I,JCL)                                           MADJI154
+   88 CONTINUE                                                          MADJI155
+      DO 82 J=1,N                                                       MADJI156
+      DO 820 K=1,NM1                                                    MADJI157
+  820 M(K,I,J)=NHOLD(K,J)                                               MADJI158
+   82 CONTINUE                                                          MADJI159
+   89 CONTINUE                                                          MADJI160
+      K=1                                                               MADJI161
+      DO 41 I=1,N                                                       MADJI162
+      IF(IR(I))33,41,33                                                 MADJI163
+   33 IF(IR(I)-JC(I))34,40,34                                           MADJI164
+   34 JCL=JC(I)                                                         MADJI165
+   35 K=-K                                                              MADJI166
+      DO 38 J=1,N                                                       MADJI167
+      IF(JCL-IR(J))38,36,38                                             MADJI168
+   36 IF(IR(I)-JC(J))37,39,37                                           MADJI169
+   37 JCL=JC(J)                                                         MADJI170
+      IR(J)=0                                                           MADJI171
+      GO TO 35                                                          MADJI172
+   38 CONTINUE                                                          MADJI173
+   39 IR(J)=0                                                           MADJI174
+   40 IR(I)=0                                                           MADJI175
+   41 CONTINUE                                                          MADJI176
+      IF(K)43,42,42                                                     MADJI177
+   43 DO 50 I=1,NM1                                                     MADJI178
+   50 NDET(I)=-NDTWO(I)                                                 MADJI179
+      DO 202 I=1,N                                                      MADJI180
+      DO 202 J=1,N                                                      MADJI181
+      DO 222 K=1,NM1                                                    MADJI182
+  222 M(K,I,J)=-M(K,I,J)                                                MADJI183
+  202 CONTINUE                                                          MADJI184
+      GO TO(100,101),JGO                                                MADJI185
+   42 DO 52 IJ=1,NM1                                                    MADJI186
+      NDET(IJ)=NDTWO(IJ)                                                MADJI187
+   52 CONTINUE                                                          MADJI188
+      GO TO(100,101),JGO                                                MADJI189
+  101 WRITE OUTPUT TAPE 6,603,ID                                        MADJI190
+      GO TO 102                                                         MADJI191
+  100 WRITE OUTPUT TAPE 6,602,ID                                        MADJI192
+  102 CALL MTXOUT(M,N)                                                  MADJI193
+      WRITE OUTPUT TAPE 6,604                                           MADJI194
+      CALL OUTPUT(NDET)                                                 MADJI195
+      GO TO 1                                                           MADJI196
+  501 FORMAT(J2,3I2)                                                    MADJI197
+  502 FORMAT(I3,A6,I3)                                                  MADJI198
+  602 FORMAT(1H1,19X,14H THE ORIGINAL ,A6,7HMATRIX                      MADJI199
+     133HIS NON-SINGULAR. ADJOINT FOLLOWS. /)                           MADJI200
+  603 FORMAT(1H1,21X,14H THE ORIGINAL ,A6,7HMATRIX                      MADJI201
+     129HIS SINGULAR. ADJOINT FOLLOWS. /)                               MADJI202
+  604 FORMAT(1H0,33X,32H THE VALUE OF THE DETERMINANT IS/)              MADJI203
+  666 FORMAT(1H1,36X,14H THE ORIGINAL ,A6,7HMATRIX /)                   MADJI204
+  700 FORMAT(1H1,28X,12H DUMP NUMBER,I3,5H, IR(                         MADJI205
+     1I2,4H) = I2,5H, JC(I2,4H) = I2,/28X,                              MADJI000
+     217H NDONE AND NDTWO /)                                            MADJI206
+      END                                                               MADJI207
+C     ----- MTXIN -----                                                 MADJI208
+C     SUBROUTINE MTXIN IS USED IN CONJUNCTION                           MADJI209
+C     WITH INTEGER ARITHMETIC PACKAGE TO READ                           MADJI210
+C     IN THE MATRIX ENTRIES. IT USES A VARIABLE                         MADJI211
+C     FORMAT WHICH IS READ IN AT OBJECT TIME                            MADJI212
+C     AS THE FIRST CARD OF THE INPUT DATA.                              MADJI213
+C     THE FORMAT SHOULD BE OF THE FORM                                  MADJI214
+C                                                                       MADJI215
+C     -- FORMAT(KK J NN) --  WHERE,                                     MADJI216
+C                                                                       MADJI217
+C      NN CAN VARY FROM  2 TO 11 (INCLUDES SIGN),                       MADJI218
+C     AND  KK*NN  CANNOT EXCEED 72.                                     MADJI219
+C     N IS ARRAY IN QUESTION                                            MADJI220
+C     NORDER IS ORDER OF NXN MATRIX AND CANNOT                          MADJI221
+C     EXCEED  50.                                                       MADJI222
+C                                                                       MADJI223
+      SUBROUTINE MTXIN(N,NORDER)                                        MADJI224
+      DIMENSION N(8,50,50),NP1(5),MP(3),D0(8),E0(8),F0(9),Q0(9),        MADJI225
+     1FMT(2)                                                            MADJI226
+      COMMON NP1,MP,NP,D0,E0,F0,Q0                                      MADJI227
+      READ INPUT TAPE 5,500,(FMT(I),I=1,2)                              MADJI228
+  500 FORMAT(2A6)                                                       MADJI229
+      READ INPUT TAPE 5,FMT,((N(1,J,K),K=1,NORDER),                     MADJI230
+     1J=1,NORDER)                                                       MADJI231
+      DO 3 J=1,NORDER                                                   MADJI232
+      DO 2 K=1,NORDER                                                   MADJI233
+    2 CALL CONVRT(N(1,J,K))                                             MADJI234
+    3 CONTINUE                                                          MADJI235
+      RETURN                                                            MADJI236
+      END                                                               MADJI237
+C     ----- INPUT -----                                                 MADJI238
+C     SUBROUTINE INPUT IS USED IN CONJUNCTION                           MADJI239
+C     WITH ARITHMETIC PACKAGE TO READ IN AN                             MADJI240
+C     INTEGER OF VARIABLE LENGTH. SUBROUTINE                            MADJI241
+C     USES A FORMAT OF 6J11. CALLING SEQUENCE                           MADJI242
+C     CALL INPUT(N), WHERE N IS THE LOCATION                            MADJI243
+C     WHERE LOW ORDER DIGITS OF INTEGER ARE                             MADJI244
+C     TO APPEAR.                                                        MADJI245
+C                                                                       MADJI246
+      SUBROUTINE INPUT(N)                                               MADJI247
+      DIMENSION N(8),NP1(5),MP(3),D0(8),E0(8),F0(9),Q0(9),M(8)          MADJI248
+      COMMON NP1,MP,NP,D0,E0,F0,Q0                                      MADJI249
+      K=MP(3)+1                                                         MADJI250
+      READ INPUT TAPE 5,102,(M(I),I=1,K)                                MADJI251
+  102 FORMAT(6J11)                                                      MADJI252
+      DO 1 I=1,K                                                        MADJI253
+      L=K+1-I                                                           MADJI254
+      N(L)=M(I)                                                         MADJI255
+    1 CONTINUE                                                          MADJI256
+      CALL CONVRT(N)                                                    MADJI257
+      RETURN                                                            MADJI258
+      END                                                               MADJI259
+C     ----- MTXOUT -----                                                MADJI260
+C     SUBROUTINE MTXOUT IS USED IN CONJUNCTION                          MADJI261
+C     WITH INTEGER ARITHMETIC PACKAGE TO WRITE                          MADJI262
+C     OUT THE MATRIX ENTRIES. THE FORMAT IS                             MADJI263
+C     FIXED AND ENTRIES ARE LABELED.                                    MADJI264
+C                                                                       MADJI265
+      SUBROUTINE MTXOUT(N,NORDER)                                       MADJI266
+      DIMENSION N(8,50,50),NP1(5),MP(3),D0(8),E0(8),N0(9),Q0(9),        MADJI267
+     1M(9)                                                              MADJI268
+      COMMON NP1,MP,NP,D0,E0,N0,Q0                                      MADJI269
+      IF(NORDER-20)7,11,1                                               MADJI270
+    7 IF(NORDER-14)8,12,11                                              MADJI271
+    8 IF(NORDER-10)9,13,11                                              MADJI272
+    9 IF(NORDER-7)15,14,13                                              MADJI273
+    1 KON=1                                                             MADJI274
+      GO TO 16                                                          MADJI275
+   11 KON=2                                                             MADJI276
+      GO TO 16                                                          MADJI277
+   12 KON=3                                                             MADJI278
+      GO TO 16                                                          MADJI279
+   13 KON=4                                                             MADJI280
+      GO TO 16                                                          MADJI281
+   14 KON=5                                                             MADJI282
+      GO TO 16                                                          MADJI283
+   15 KON=6                                                             MADJI284
+   16 KK=NP+1                                                           MADJI285
+      DO 3 J=1,NORDER                                                   MADJI286
+      WRITE OUTPUT TAPE 6,500,J                                         MADJI287
+  500 FORMAT(1H0,30X,20H THE ENTRIES IN ROW I2,                         MADJI288
+     116H ARE AS FOLLOWS //)                                            MADJI289
+      DO 2 K=1,NORDER                                                   MADJI290
+      CALL RECNVT(N(1,J,K))                                             MADJI291
+      DO 10 I=1,KK                                                      MADJI292
+      LL=KK+1-I                                                         MADJI293
+   10 M(LL)=N0(I)                                                       MADJI294
+      WRITE OUTPUT TAPE 6,501,K,(M(I),I=1,KK)                           MADJI295
+  501 FORMAT(1H ,7X,8H COLUMN I2,1X,9J11)                               MADJI296
+    2 CONTINUE                                                          MADJI297
+      IF(J-NORDER)5,3,5                                                 MADJI298
+    5 IF((J/KON)*KON-J)3,4,3                                            MADJI299
+    4 WRITE OUTPUT TAPE 6,502                                           MADJI300
+  502 FORMAT(1H1,//)                                                    MADJI301
+    3 CONTINUE                                                          MADJI302
+      RETURN                                                            MADJI303
+      END                                                               MADJI304
+C     ----- OUTPUT -----                                                MADJI305
+C     SUBROUTINE OUTPUT IS USED IN CONJUNCTION                          MADJI306
+C     WITH ARITHMETIC PACKAGE TO WRITE OUT AN                           MADJI307
+C     INTEGER OF VARIABLE LENGTH. SUBROUTINE                            MADJI308
+C     USES A FORMAT OF  8J11. CALLING SEQUENCE                          MADJI309
+C     CALL OUTPUT(N) WHERE N IS  LOCATION OF                            MADJI310
+C     LOW ORDER DIGITS OF THE INTEGER.                                  MADJI311
+C                                                                       MADJI312
+      SUBROUTINE OUTPUT(N)                                              MADJI313
+      DIMENSION N(8),NP1(5),MP(3),D0(8),E0(8),N0(9),Q0(9),M(9)          MADJI314
+      COMMON NP1,MP,NP,D0,E0,N0,Q0                                      MADJI315
+      CALL RECNVT(N)                                                    MADJI316
+      K=NP+1                                                            MADJI317
+      DO 1 I=1,K                                                        MADJI318
+      L=K+1-I                                                           MADJI319
+    1 M(L)=N0(I)                                                        MADJI320
+      WRITE OUTPUT TAPE 6,100,(M(I),I=1,K)                              MADJI321
+  100 FORMAT(1H ,18X,9J11)                                              MADJI322
+      RETURN                                                            MADJI323
+      END                                                               MADJI324

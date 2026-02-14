@@ -1,0 +1,672 @@
+       REM MICND, CONDENSE THE SHARE SYMBOLIC LIBRARY TAPE.             MICND001
+       REM INPUT TAPE IS   INPUT                                        MICND002
+       REM *************************************************************MICND003
+       REM NEW LIBRARY TAPE IS NLIB                                     MICND004
+       REM OLD LIBRARY TAPE IS OLIB                                     MICND005
+       REM *************************************************************MICND006
+       REM SENSE SWITCH 2. UP NEW TAPE FROM OLD.                        MICND007
+       REM DOWN NO OLD LIBE TAPE                                        MICND008
+       REM *************************************************************MICND009
+       REM BLANK CARD MUST PRECEDE SUBROUTINES                          MICND010
+       REM EACH SUBROUTINE MUST BE FOLLOWED BY AN END CARD              MICND011
+       REM                                                              MICND012
+       REM *************************************************************MICND013
+       REM INSERTION. INS IN OP FIELD                                   MICND014
+       REM NAME OF ROUTINE ON OLD TAPE WHICH NEW                        MICND015
+       REM ROUTINE IS TO PRECEDE.                                       MICND016
+       REM *************************************************************MICND017
+       REM DELETION. DEL IN OP FIELD                                    MICND018
+       REM ROUTINE TO DELETE IN LOCATION FIELD                          MICND019
+       REM *************************************************************MICND020
+       REM *************************************************************MICND021
+       REM INS AND DEL CARDS FOLLOWED BY A                              MICND022
+       REM BLANK CARD, THEN NEW SUBROUTINES                             MICND023
+       REM *************************************************************MICND024
+       ORG 100                                                          MICND025
+INPUT  EQU 7                                                            MICND026
+NLIB   EQU 8                                                            MICND027
+OLIB   EQU 9                                                            MICND028
+START  REW INPUT                                                        MICND029
+       SWT 2                                                            MICND030
+       REW OLIB                                                         MICND031
+       REW NLIB                                                         MICND032
+       SLN 4                                                            MICND033
+       WTD NLIB                                                         MICND034
+       CPY MARKER-1                                                     MICND035
+       CPY MARKER                                                       MICND036
+       REM TO CLEAR CORE FOR MARKER                                     MICND037
+       LXD *+2,1                                                        MICND038
+       STZ MARKER,1                                                     MICND039
+       TXI *+1,1,-1                                                     MICND040
+       TXH *-2,1,MARKER                                                 MICND041
+       LXA Q0,1                                                         MICND042
+ CP1   SXD SAVE,1                                                       MICND043
+       RTD INPUT                                                        MICND044
+       NOP BCD                                                          MICND045
+       TSX RTX,4                                                        MICND046
+       HPR 10   NO SUBROUTINES ON TAPE 6                                MICND047
+       TXL *+3,2,4                                                      MICND048
+       TSX TPFAIL,4                                                     MICND049
+       HPR 6                                                            MICND050
+       LXD SAVE,1                                                       MICND051
+       CLA BCD                                                          MICND052
+       STO DATA,1                                                       MICND053
+       SUB BLANKS                                                       MICND054
+       TZE CP3               BLANK LOCATION FIELD, NO MORE STORAGE DATA MICND055
+       CLA BCD+1                                                        MICND056
+       STO DATA+1,1                                                     MICND057
+       TXI CP1,1,-2                                                     MICND058
+       REM                                                              MICND059
+ ED33  CLA SQC1              NOT BCD, CANNOT BE NAME OF ROUTINE         MICND060
+       TXL ED2                                                          MICND061
+ ED9   CLA EDC1              TRAP ENDOP, COPY REST OF TAPE 6(INPUT TAPE)MICND062
+       STA ENDP1                                                        MICND063
+       TXL IN101                                                        MICND064
+ ED16  SWT 2                                                            MICND065
+       REW OLIB                                                         MICND066
+       WEF NLIB              DOWN,  END OF FILE                         MICND067
+       REW NLIB              AND REWIND                                 MICND068
+ED15   REW INPUT                                                        MICND069
+ED13   HTR -1                                                           MICND070
+       REM                                                              MICND071
+ DE1   CLA BLANKS            ADVANCE TO RECORD WITH NON-BLANK FIRST WORDMICND072
+   DE2 RTD OLIB                                                         MICND073
+       CPY SR                                                           MICND074
+       CAS SR                                                           MICND075
+       TXL DE3                                                          MICND076
+       TXL DE2                                                          MICND077
+ DE3   CLA SR                                                           MICND078
+       CAS MARKER-1                                                     MICND079
+       TRA *+2                                                          MICND080
+       TRA DE4                                                          MICND081
+       BST OLIB                                                         MICND082
+ DE4   TXL ED1                                                          MICND083
+       REM EDIT TAPES                                                   MICND084
+       REM                                                              MICND085
+ ED5   LXA Q0,4                                                         MICND086
+       LXD TPNO,2                                                       MICND087
+       WTD NLIB                                                         MICND088
+       PXD 0,2                                                          MICND089
+       COM                                                              MICND090
+       ADD QD1                                                          MICND091
+       PDX 0,2                                                          MICND092
+ ED7   CPY SR,4                                                         MICND093
+       TXI ED8,4,-1          MODIFY CPY ADDRESS                         MICND094
+ ED8   TIX ED7,2,1           ARE WE THROUGH COPYING                     MICND095
+       TXL ED2               RECORD COPIED                              MICND096
+       REM                                                              MICND097
+       REM ROUTINE FOUND, DELETION OR INSERTION                         MICND098
+ ED6   CAL DATA+1,1                                                     MICND099
+       ALS 7                                                            MICND100
+       ARS 19                                                           MICND101
+       CAS INS                                                          MICND102
+       HPR                   MUST BE ONE OR OTHER                       MICND103
+       TXI IN1,1,-2                                                     MICND104
+       CAS DEL                                                          MICND105
+       HPR                   MUST BE ONE OR OTHER                       MICND106
+       TXI DE1,1,-2                                                     MICND107
+       HPR                                                              MICND108
+ ED3   SWT 2                 IS THERE AN OLD LIBE TAPE                  MICND109
+       TXL ED33              UP, YES                                    MICND110
+TPNO   TXL ED9,0,**          DECR( NO. OF RECORDS READ INTO SR)         MICND111
+ CP3   LXA Q0,1                                                         MICND112
+ ED1   CLA DATA,1                                                       MICND113
+       CAS BLANKS            DO REMAINING SUBROUTINES GO AT END OF TAPE MICND114
+       TXL ED2               NO                                         MICND115
+       TXL ED3               YES                                        MICND116
+       REM                                                              MICND117
+       REM COPY OLD TAPE ONTO NEW UP TO LOCATION OF NEXT CHANGE         MICND118
+ED2    SXD SAVE,1                                                       MICND119
+       RTD OLIB                                                         MICND120
+       NOP SR                                                           MICND121
+       TSX RTX,4                                                        MICND122
+       TRA ED9                                                          MICND123
+       TXL *+3,2,4                                                      MICND124
+       TSX TPFAIL,4                                                     MICND125
+       HPR 2                                                            MICND126
+       SXD TPNO,1                                                       MICND127
+       LXD SAVE,1                                                       MICND128
+       CLA SR                                                           MICND129
+       CAS MARKER-1                                                     MICND130
+       TRA NOMRKR                                                       MICND131
+       TRA *+2               THIS RECORD IS A MARKER                    MICND132
+       TRA NOMRKR                                                       MICND133
+       SLT 4                                                            MICND134
+       TSX WMRK,4            4OFF, NORMAL TO WRITE MARKER               MICND135
+       TXL ED2               4ON                                        MICND136
+ WMRK  SXD SAVE,1            WRITE MARKER                               MICND137
+       LXD MARKNO,1                                                     MICND138
+       SXD CT1,1                                                        MICND139
+       SXD CT2,1                                                        MICND140
+       SXD CT3,1                                                        MICND141
+       SXD IR4,4                                                        MICND142
+       SXD CPYM,1                                                       MICND143
+       LXA Q0,1                                                         MICND144
+ INCR  CLA MARKER+1,1                                                   MICND145
+       ADD RECNO                                                        MICND146
+       ADD Q1                ADDS 1 FOR MARKER-RECORD TO NUMBER FOR BACKMICND147
+       STO MARKER+1,1                                                   MICND148
+       TXI *+1,1,-2                                                     MICND149
+ CT1   TXH INCR,1,**                                                    MICND150
+       LXA Q0,1                                                         MICND151
+ CHG1  PXD 0,0                                                          MICND152
+       LDQ MARKER+1,1                                                   MICND153
+       TSX OCTNO,4           CONVERT BINARY TO OCTAL NUMBER(RECORDS TO BMICND154
+       STO MARKER+1,1                                                   MICND155
+       TXI *+1,1,-2                                                     MICND156
+ CT2   TXH CHG1,1,**                                                    MICND157
+       WTD NLIB                                                         MICND158
+       CLA Q0                                                           MICND159
+       STO RECNO                                                        MICND160
+       PDX 0,1                                                          MICND161
+       CPY MARKER-1                                                     MICND162
+       CPY MARKER,1                                                     MICND163
+       TXI *+1,1,-1                                                     MICND164
+ CPYM  TXH *-2,1,**                                                     MICND165
+       IOD                                                              MICND166
+       REM *************************************************************MICND167
+       REM                                                              MICND168
+       REM RESTORE RECORD COUNT TO BINARY NUMBER FOR COUNTING NEXT ROUTIMICND169
+       LXA Q0,1                                                         MICND170
+ CHG2  PXD 0,0                                                          MICND171
+       LDQ MARKER+1,1                                                   MICND172
+       TSX BINNO,4                                                      MICND173
+       STO MARKER+1,1                                                   MICND174
+       TXI *+1,1,-2                                                     MICND175
+ CT3   TXH CHG2,1,**                                                    MICND176
+       LXD SAVE,1                                                       MICND177
+       LXD IR4,4                                                        MICND178
+       TRA 1,4                                                          MICND179
+       REM                                                              MICND180
+NOMRKR CAS BLANKS                                                       MICND181
+       TXL *+2                                                          MICND182
+       TXL INC               IS THIS THE FIRST RECORD OF A SUBROUTINE   MICND183
+       CAS DATA,1            INSERTION OR DELETION                      MICND184
+       TXL *+2                                                          MICND185
+       TXL ED6                                                          MICND186
+       SXD SAVE,1                                                       MICND187
+       LXD MARKNO,1                                                     MICND188
+       CLA SR                                                           MICND189
+       STO MARKER,1                                                     MICND190
+       TXI *+1,1,-2                                                     MICND191
+       SXD MARKNO,1                                                     MICND192
+       LXD SAVE,1                                                       MICND193
+ INC   CLA RECNO                                                        MICND194
+       ADD Q1                                                           MICND195
+       STO RECNO                                                        MICND196
+       TRA ED5                                                          MICND197
+       REM                                                              MICND198
+       REM ROUTINE TO BE INSERTED                                       MICND199
+IN1    BST OLIB                                                         MICND200
+ IN101 IOD                                                              MICND201
+       SLN 1                 FIRST CARD OF ROUTINE TREATED DIFFERENTLY  MICND202
+       SXD INS1,1                                                       MICND203
+IN2    RTD INPUT                                                        MICND204
+       LXA Q0,4                                                         MICND205
+ IN3   CPY BCD,4                                                        MICND206
+       TXI IN3,4,-1                                                     MICND207
+       TXL ED16              SEE ROUTINES CONDENSED                     MICND208
+       CAL BLANKS            FINISH RECORD WITH BLANKS                  MICND209
+ IN5   TXL IN6,4,-14                                                    MICND210
+       SLW BCD,4                                                        MICND211
+       TXI IN5,4,-1                                                     MICND212
+ IN6   IOD                                                              MICND213
+ INP1  SLT 1                                                            MICND214
+       TXL IN61              OFF                                        MICND215
+       CAL BCD               ON, STORE NAME OF ROUTINE AS FIRST WORD OF MICND216
+       SLW SR                INITIALIZE ST                              MICND217
+       LXD MARKNO,4                                                     MICND218
+       SLW MARKER,4                                                     MICND219
+       TXI *+1,4,-2                                                     MICND220
+       SXD MARKNO,4                                                     MICND221
+       CLA Q6                                                           MICND222
+       STO STS7                                                         MICND223
+       STO STS8                                                         MICND224
+       CLA Q0                                                           MICND225
+       STD STJ                                                          MICND226
+       CLA QDM1                                                         MICND227
+       STD STI                                                          MICND228
+       TXL IN2                                                          MICND229
+ IN61  CAL BCD+1                                                        MICND230
+       NOP                                                              MICND231
+       NOP                                                              MICND232
+       ALS 7                                                            MICND233
+       ARS 19                                                           MICND234
+       CAS REM                                                          MICND235
+       TXL SQ                                                           MICND236
+       TXL REMOP                                                        MICND237
+       CAS HED                                                          MICND238
+       TXL SQ                                                           MICND239
+       TXL HEDOP                                                        MICND240
+       CAS END                                                          MICND241
+       TXL SQ                                                           MICND242
+       TXL ENDOP                                                        MICND243
+       CAS BCD0                                                         MICND244
+       TXL SQ                                                           MICND245
+       TXL BCDOP                                                        MICND246
+       TXL SQ                                                           MICND247
+ BCDOP SLN 1                                                            MICND248
+       TXL SQ                                                           MICND249
+ HEDOP CLA BCD                                                          MICND250
+       SUB BLANKS                                                       MICND251
+       TZE SQ2               IF NO HEADING CHARACTER                    MICND252
+       LDQ Q1                                                           MICND253
+       RQL 30                                                           MICND254
+       TSX ST,4                                                         MICND255
+           1                                                            MICND256
+       LDQ BCD                                                          MICND257
+       TSX ST,4                                                         MICND258
+           6                                                            MICND259
+       TXL SQ13                                                         MICND260
+ REMOP CLA BCD                                                          MICND261
+       SUB BLANKS                                                       MICND262
+       TZE IN2               REMARK WILL BE DELETED                     MICND263
+       LDQ Q6                                                           MICND264
+       RQL 30                                                           MICND265
+       TSX ST,4                                                         MICND266
+           1                                                            MICND267
+       LDQ BCD                                                          MICND268
+       RQL 30                                                           MICND269
+       TSX ST,4                                                         MICND270
+           1                                                            MICND271
+       LDQ BCD+1                                                        MICND272
+       RQL 6                                                            MICND273
+       TSX ST,4                                                         MICND274
+           3                                                            MICND275
+       RQL 6                                                            MICND276
+       TSX ST,4                                                         MICND277
+           1                                                            MICND278
+       CAL BCD                                                          MICND279
+       ANA SQC1                                                         MICND280
+       TXL SQ18              REST LIKE BCD OPERATION                    MICND281
+ ENDOP LDQ Q7                                                           MICND282
+       RQL 30                                                           MICND283
+       SLN 3                 SUPPRESS WRITING CARD TAPE                 MICND284
+       TSX ST,4                                                         MICND285
+           1                                                            MICND286
+       LDQ BCD+1                                                        MICND287
+       RQL 6                                                            MICND288
+       SLN 3                                                            MICND289
+       TSX ST,4                                                         MICND290
+           3                                                            MICND291
+       LDQ BLANKS                                                       MICND292
+       TSX ST,4                                                         MICND293
+           1                                                            MICND294
+       REM FINISH OFF RECORD AND STORE IT                               MICND295
+       TXL ENT                                                          MICND296
+       REM                                                              MICND297
+       REM COPY MARKER                                                  MICND298
+ END1  TSX WMRK,4                                                       MICND299
+ END2  LXD INS1,1                                                       MICND300
+ ENDP1 TXL ED1                                                          MICND301
+       REM                                                              MICND302
+       REM FINISH OFF RECORD FOR LIBRARY TAPE                           MICND303
+ ENT   LXD STI,1             WORD OF RECORD                             MICND304
+       TXL ENT1,1,-N         IF RECORD JUST FILLED                      MICND305
+       LDQ BLANKS            FILL UP WORD WITH BLANKS                   MICND306
+       LXA STS7,2            ROOM LEFT IN WORD                          MICND307
+       TXH ENT1,2,5          IF WORD ALREADY FILLED                     MICND308
+       CAL SR,1                                                         MICND309
+ ENT3  LGL 6                                                            MICND310
+       TIX ENT3,2,1                                                     MICND311
+       SLW SR,1                                                         MICND312
+ENT2   WTD NLIB                                                         MICND313
+       LXA Q0,2                                                         MICND314
+       PXD 0,1               NO. WORDS TO COPY                          MICND315
+       COM                                                              MICND316
+       ADD QD2                                                          MICND317
+       PDX 0,1                                                          MICND318
+ ENT4  CPY SR,2                                                         MICND319
+       TXI *+1,2,-1                                                     MICND320
+ ENT5  TIX ENT4,1,1                                                     MICND321
+       CLA RECNO                                                        MICND322
+       ADD Q1                                                           MICND323
+       STO RECNO                                                        MICND324
+       IOD                                                              MICND325
+       TXL END1                                                         MICND326
+ ENT1  TXI ENT2,1,1          ONE LESS WORD TO COPY                      MICND327
+       REM                                                              MICND328
+ SQ    CLA BCD                                                          MICND329
+       SUB BLANKS                                                       MICND330
+       TZE SQ2                                                          MICND331
+       REM                                                              MICND332
+       REM SHIFT LOCATION RIGHT UNTIL COL. 6 IS NON-BLANK               MICND333
+       CAL BCD                                                          MICND334
+ SQ1   SLW SQS1                                                         MICND335
+       ANA SQC1              (OCT 77) MASK                              MICND336
+       SUB SQC2              (BLANK)                                    MICND337
+       TNZ SQ3               TRA IF COL. 6 IS NOT BLANK                 MICND338
+       CAL SQS1                                                         MICND339
+       ARS 6                                                            MICND340
+       ORA SQC4              (BLANK AS FIRST CHARACTER)                 MICND341
+       TXL SQ1                                                          MICND342
+       REM                                                              MICND343
+       REM RIGHT CHAR. IS BLANK, WHERE IS LEFT MOST CHAR. NON-BLANK     MICND344
+ SQ3   LXA Q1,1                                                         MICND345
+       CLA Q0                                                           MICND346
+       LDQ SQS1                                                         MICND347
+ SQ5   LGL 6                                                            MICND348
+       SUB SQC2                                                         MICND349
+       TNZ SQ4               IF NON-BLANK FOUND.                        MICND350
+       TXI SQ5,1,1                                                      MICND351
+       REM                                                              MICND352
+       REM STORE NUMBER OF FIRST NON-BLANK COLUMN                       MICND353
+ SQ4   ADD SQC2              SAVE SHIFTED WORD                          MICND354
+       LGL 30                                                           MICND355
+       SLW SQS1                                                         MICND356
+       SXD SQS2,1            GET COLUMN NUMBER IN LEFT OF MQ FOR ST     MICND357
+       LDQ SQS2                                                         MICND358
+       RQL 12                                                           MICND359
+       TSX ST,4              STORE IT                                   MICND360
+           1                                                            MICND361
+       PXD 0,1               COMPUTE NO. OF CHARACTERS IN LOCATION FIELDMICND362
+       ARS 18                                                           MICND363
+       SSM                                                              MICND364
+       ADD Q7                                                           MICND365
+       STO SQ6+1             SET NUMBER TO BE STORED                    MICND366
+       LDQ SQS1                                                         MICND367
+ SQ6   TSX ST,4                                                         MICND368
+           0                 VALUE COMPUTED                             MICND369
+       REM                                                              MICND370
+       REM STORE OPERATION PART                                         MICND371
+ SQ13  LDQ BCD+1                                                        MICND372
+       RQL 6                                                            MICND373
+       TSX ST,4                                                         MICND374
+           3                                                            MICND375
+       REM                                                              MICND376
+       REM STORE VARIABLE FIELD                                         MICND377
+       SLT 1                                                            MICND378
+       TXL SQ7               OFF.                                       MICND379
+       TXL SQ8               ON, IF BCD OPERATION                       MICND380
+       REM                                                              MICND381
+       REM JUMP INTO STORAGE LOOP TO STORE COL. 12                      MICND382
+ SQ7   RQL 6                                                            MICND383
+ SQ14  LXA Q13,1                                                        MICND384
+       LXA Q1,2                                                         MICND385
+       CAL BCD+1                                                        MICND386
+       ALS 30                                                           MICND387
+       SLW SQS3                                                         MICND388
+       TXL SQ9                                                          MICND389
+ SQ10  LXA Q6,2                                                         MICND390
+       LDQ BCD+14,1                                                     MICND391
+ SQ9   STQ SQS3              SAVE MQ FOR TEST FOR BLANK                 MICND392
+       TSX ST,4                                                         MICND393
+           1                                                            MICND394
+       CAL SQS3                                                         MICND395
+       ANA SQC3              GETS FIRST CHARACTER                       MICND396
+       ARS 6                 SHIFT OUT OF P POSITION                    MICND397
+       SUB SQC5                                                         MICND398
+       TZE IN2               IF CHAR. IS BLANK                          MICND399
+       TIX SQ9,2,1                                                      MICND400
+       TXI SQ10,1,-1                                                    MICND401
+       REM                                                              MICND402
+       REM IF BLANK LOCATION FIELD, EXAMINE OPERATION FIELD             MICND403
+ SQ2   CAL BCD+1                                                        MICND404
+       ANA SQC6              KEEPS ONLY OPERATION PART                  MICND405
+       SUB SQC7              BLANK OPERATION FIELD                      MICND406
+       TZE SQ12              IF OPERATION FIELD IS BLANK                MICND407
+       LDQ Q7                SET 7 AS COLUMN INDICATOR                  MICND408
+       RQL 30                                                           MICND409
+       TSX ST,4                                                         MICND410
+           1                                                            MICND411
+       TXL SQ13              STORE OPERATION PART                       MICND412
+ SQ12  LDQ Q8                                                           MICND413
+       RQL 30                                                           MICND414
+       TSX ST,4                                                         MICND415
+           1                                                            MICND416
+       LDQ BCD+1                                                        MICND417
+       RQL 30                                                           MICND418
+       TXL SQ14                                                         MICND419
+       REM                                                              MICND420
+       REM BCD INSTRUCTION                                              MICND421
+ SQ8   LDQ BCD+1                                                        MICND422
+       RQL 30                                                           MICND423
+       TSX ST,4                                                         MICND424
+           1                                                            MICND425
+       CAL BCD+1                                                        MICND426
+       ANA SQC1                                                         MICND427
+       TZE IN2               IF ZERO WORDS TO BE STORED                 MICND428
+ SQ18  CAS Q10                                                          MICND429
+       CLA Q10                                                          MICND430
+       NOP                                                              MICND431
+ SQ17  PAX 0,2                                                          MICND432
+       LXA Q0,1                                                         MICND433
+ SQ15  LDQ BCD+2,1                                                      MICND434
+       TSX ST,4                                                         MICND435
+           6                                                            MICND436
+       TNX IN2,2,1                                                      MICND437
+       TXI SQ15,1,-1                                                    MICND438
+       REM                                                              MICND439
+       REM INSTRUCTION CONDENSED AND STORED                             MICND440
+ ST    SXD STS1,1            SAVE INDEX                                 MICND441
+       SXD STS2,2                                                       MICND442
+       STQ STS5              SAVE MQ                                    MICND443
+       TXL ST12                                                         MICND444
+ ST20  LXD STS1,1                                                       MICND445
+       LXD STS2,2                                                       MICND446
+       TRA 2,4                                                          MICND447
+ ST11  SYN ST20                                                         MICND448
+ ST1   TXL ST22,1,0          OK IF ZERO WORD                            MICND449
+ ST23  TXL ST2,1             IS THERE ROOM IN RECORD                    MICND450
+ ST22  CLA STS3                                                         MICND451
+       CAS STP                                                          MICND452
+       TXL ST3                                                          MICND453
+       TXL ST4                                                          MICND454
+       REM                                                              MICND455
+       REM ROOM TO SPARE                                                MICND456
+       LXA STS3,2                                                       MICND457
+ STP2  CAL 0,1                                                          MICND458
+ ST5   LGL 6                                                            MICND459
+       TIX ST5,2,1                                                      MICND460
+STP3   SLW 0,1                                                          MICND461
+       CLA STP                                                          MICND462
+       SUB STS3                                                         MICND463
+       STO STP                                                          MICND464
+ ST6   TXL                   (ST15 OR ST16)                             MICND465
+       REM                                                              MICND466
+       REM JUST ENOUGH ROOM                                             MICND467
+ ST4   CAL 0,1                                                          MICND468
+       LXA STS3,2                                                       MICND469
+ ST7   LGL 6                                                            MICND470
+       TIX ST7,2,1                                                      MICND471
+ STP6  SLW 0,1                                                          MICND472
+       CLA Q6                                                           MICND473
+       STO STP                                                          MICND474
+       TXI ST6,1,-1                                                     MICND475
+       REM                                                              MICND476
+       REM NOT ENOUGH ROOM IN WORD                                      MICND477
+ ST3   SUB STP               HOW MANY CHARACTERS WILL BE LEFT OVER      MICND478
+       STO STS3                                                         MICND479
+ STP8  CAL 0,1                                                          MICND480
+       LXA STP,2                                                        MICND481
+ ST8   LGL 6                                                            MICND482
+       TIX ST8,2,1                                                      MICND483
+ STP11 SLW 0,1                                                          MICND484
+       TXI ST9,1,-1                                                     MICND485
+ ST9   CLA Q6                                                           MICND486
+       STO STP                                                          MICND487
+       TXL ST1                                                          MICND488
+       REM                                                              MICND489
+       REM NOT ENOUGH ROOM IN RECORD, PUT IT ON TAPE                    MICND490
+ ST2   STQ STS4              SAVE MQ DURING TAPE WRITING                MICND491
+ ST222                       (WRITE NLIB TAPE)                          MICND492
+ STP9  LXA 0,1                                                          MICND493
+ ST10  CPY 0,1                                                          MICND494
+       TIX ST10,1,1                                                     MICND495
+       CLA RECNO                                                        MICND496
+       ADD Q1                                                           MICND497
+       STO RECNO                                                        MICND498
+       IOD                                                              MICND499
+       LDQ STS4              RESTORE MQ                                 MICND500
+       LXA Q0,1                                                         MICND501
+       SLT 2                                                            MICND502
+       TXL ST9                                                          MICND503
+       CAL BLANKS                                                       MICND504
+       SLW SR                                                           MICND505
+       TXI ST9,1,-1                                                     MICND506
+       REM                                                              MICND507
+       REM SET ST TO WRITE LIBRARY TAPE                                 MICND508
+ ST12  CLA 1,4               NO. OF CHARACTERS TO ADD TO RECORD         MICND509
+       STO STS3                                                         MICND510
+       CLA STS7              ROOM IN WORD OF RECORD                     MICND511
+       STA STP                                                          MICND512
+       CLA STC1              LOCATION OF RECORD                         MICND513
+       STA STP2                                                         MICND514
+       STA STP3                                                         MICND515
+       STA ST4                                                          MICND516
+       STA STP6                                                         MICND517
+       STA STP8                                                         MICND518
+       STA STP11                                                        MICND519
+       CLA STC3                                                         MICND520
+       STD ST23              DEFINES ROOM IN RECORD                     MICND521
+       STA ST6               RETURN                                     MICND522
+       CLA STC5                                                         MICND523
+       STO ST222                                                        MICND524
+       CLA STC17                                                        MICND525
+       STA STP9                                                         MICND526
+       CLA STC9              (SR+N)                                     MICND527
+       STA ST10                                                         MICND528
+       LXD STI,1                                                        MICND529
+       SLN 2                                                            MICND530
+       TXL ST1                                                          MICND531
+ ST15  SXD STI,1                                                        MICND532
+       CLA STP                                                          MICND533
+       STA STS7                                                         MICND534
+       TXL ST11                                                         MICND535
+ N     EQU 200                                                          MICND536
+ SR    BSS N                                                            MICND537
+ BCD   BSS 14                                                           MICND538
+ Q0    PZE                                                              MICND539
+ QDM1  PZE 0,0,-1                                                       MICND540
+ Q1    PZE 1                                                            MICND541
+ QM1       -1                                                           MICND542
+ Q2        2                                                            MICND543
+ QD1       0,0,1                                                        MICND544
+ QD2       0,0,2                                                        MICND545
+ Q3        3                                                            MICND546
+ Q5        5                                                            MICND547
+ Q6        6                                                            MICND548
+ Q7        7                                                            MICND549
+ Q8        8                                                            MICND550
+ Q10       10                                                           MICND551
+ Q13       13                                                           MICND552
+BLANKS BCD 1                                                            MICND553
+ INS   BCD 1000INS                                                      MICND554
+ DEL   BCD 1000DEL                                                      MICND555
+ REM   BCD 1000REM                                                      MICND556
+ LIB   BCD 1000LIB                                                      MICND557
+ HED   BCD 1000HED                                                      MICND558
+ END   BCD 1000END                                                      MICND559
+ BCD0  BCD 1000BCD                                                      MICND560
+ INS1                        FOR INDEX GIVING DATA WORD                 MICND561
+ SQS1                        FOR SAVING PARTIALLY SHIFTED WORD          MICND562
+ SQS2                        DECREMENT GETS COLUMN NUMBER               MICND563
+ SQS3                        USED DURING STORAGE OF OPERATION PART      MICND564
+ STS1                        SAVE INDEX                                 MICND565
+ STS2                        SAVE INDEX                                 MICND566
+ STS3                        CHARACTERS TO GO                           MICND567
+ STS4                        SAVE MQ DURING OUTPUT                      MICND568
+ STS5                        SAVE MQ DURING WRITING OF LIBE RECORD      MICND569
+ STS7                        ROOM LEFT IN WORD FOR LIBE RECORD          MICND570
+ STS8                                                                   MICND571
+ STC1  PZE SR                                                           MICND572
+ STC3  PZE ST15,0,-N                                                    MICND573
+STC5   WTD NLIB                                                         MICND574
+STC7   PZE N                                                            MICND575
+ STC9  PZE SR+N                                                         MICND576
+STC17  PZE STC7                                                         MICND577
+ STI                                                                    MICND578
+STJ                                                                     MICND579
+ STP                                                                    MICND580
+ SQC1  OCT 77                                                           MICND581
+ SQC2  OCT 60                                                           MICND582
+ SQC3  OCT 770000000000                                                 MICND583
+ SQC4  BCD 1 00000                                                      MICND584
+ SQC5  BCD 10 0000                                                      MICND585
+ SQC6  OCT 7777770000        GETS OPERATION PART                        MICND586
+ SQC7  OCT 6060600000        BLANK OPERATION PART                       MICND587
+ EDC1  TXL IN101             CONDENSE ANOTHER ROUTINE                   MICND588
+MASK   OCT 77777                                                        MICND589
+ BCDL  PZE BCD+13                                                       MICND590
+ SRL   PZE SR+N-1                                                       MICND591
+       REM ************************************************************ MICND592
+TPFAIL SXD IR4,4                                                        MICND593
+       CAL RTX3                                                         MICND594
+       ANA MASK                                                         MICND595
+       STA REGFL      IS RECORD IN BCD OR SR BLOCK                      MICND596
+       SUB STC1                                                         MICND597
+       TZE SRTX                                                         MICND598
+       CAL BCDL                                                         MICND599
+ IR4   TXL *+2                                                          MICND600
+ SRTX  CAL SRL     ADDRESS WAS SR                                       MICND601
+       ALS 18                                                           MICND602
+       STD REGFL                                                        MICND603
+       REM  PRINT OUT THE RECORD ON-LINE                                MICND604
+       TSX WOT,4                                                        MICND605
+ REGFL PZE **,0,**                                                      MICND606
+       LXD IR4,4                                                        MICND607
+       TRA 1,4                                                          MICND608
+       REM                                                              MICND609
+       REM *************************************************************MICND610
+ OCTNO SXD FIVE,4                                                       MICND611
+       LXA FIVE,4                                                       MICND612
+       RQL 21                                                           MICND613
+       ALS 3                                                            MICND614
+       LGL 3                                                            MICND615
+       TIX *-2,4,1                                                      MICND616
+       LXD FIVE,4                                                       MICND617
+       TRA 1,4                                                          MICND618
+       REM ************************************************************ MICND619
+       REM  OCTAL TO BINARY CONVERSION                                  MICND620
+       REM OF THE RECORD COUNT IN THE MARKER                            MICND621
+BINNO  SXD FIVE,4                                                       MICND622
+       LXA FIVE,4                                                       MICND623
+       RQL 6                                                            MICND624
+       RQL 3                                                            MICND625
+       LGL 3                                                            MICND626
+       TIX *-2,4,1                                                      MICND627
+       LXD FIVE,4                                                       MICND628
+       TRA 1,4                                                          MICND629
+       REM                                                              MICND630
+       REM ************************************************************ MICND631
+       REM  TAPE READING ROUTINE  CHAECKS FOR TAPE FAILURES             MICND632
+ RTX   CLA -2,4                                                         MICND633
+       RTT                                                              MICND634
+ RTX9  TXH 1                                                            MICND635
+       STA RTX5                                                         MICND636
+       STA RTX7                                                         MICND637
+       STA RTX4                                                         MICND638
+       CLA -1,4                                                         MICND639
+       STA RTX3                                                         MICND640
+       LXA RTX9,2                                                       MICND641
+ RTX6  LXD RTX9,1                                                       MICND642
+ RTX3  CPY BCD,1                                                        MICND643
+       TXI RTX3,1,-1                                                    MICND644
+       TXI RTX1,4,1                                                     MICND645
+       TXL RTX8,1,0   FALSE EOR SKIP                                    MICND646
+       IOD                                                              MICND647
+       RQL 180                                                          MICND648
+       RQL 180                                                          MICND649
+       RTT                                                              MICND650
+       TXI RTX2   ERROR                                                 MICND651
+ RTX1  TRA 2,4      END OF FILE EXITS HERE ALSO TO 1,4                  MICND652
+ RTX8  HPR 333                                                          MICND653
+ RTX4  RTD                                                              MICND654
+ RTX2  TXH RTX1,2,4                                                     MICND655
+ RTX5  BST                                                              MICND656
+ RTX7  RTD                                                              MICND657
+       TXI RTX6,2,1                                                     MICND658
+       REM *************************************************************MICND659
+       REM ************************************************************ MICND660
+UASPH1 LIB                                                              MICND661
+COMMON BSS 35                                                           MICND662
+       REM ************************************************************ MICND663
+ RECNO                                                                  MICND664
+MARKNO                                                                  MICND665
+ FIVE  PZE 5                                                            MICND666
+ SAVE  PZE                                                              MICND667
+ DATA                                                                   MICND668
+       ORG 6000                                                         MICND669
+       BCD 1999999                                                      MICND670
+MARKER PZE                                                              MICND671
+       END START                                                        MICND672

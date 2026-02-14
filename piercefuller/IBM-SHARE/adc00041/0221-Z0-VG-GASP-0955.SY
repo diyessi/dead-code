@@ -1,0 +1,330 @@
+*     P.L. CHESSIN -- GENERAL AMORTIZATION SCHEDULE PROGRAM              GASP001
+*     XEQ                                                                GASP002
+*     CARDS COLUMN                                                       GASP003
+*     LIST                                                               GASP004
+C                                                                        GASP005
+C     GENERALIZED LOAN AMORTIZATION SCHEDULE PROGRAM                     GASP006
+C                                                                        GASP007
+C      L= NUMBER OF CASES TO BE TREATED                                  GASP008
+C                                                                        GASP009
+C     NS = OUTPUT CODE                                                   GASP010
+C              1 FOR TAPE(A8)                                            GASP011
+C              2 FOR PRINTER                                             GASP012
+C              3 FOR PUNCH                                               GASP013
+C              4 FOR TAPE AND PRINTER                                    GASP014
+C              5 FOR TAPE AND PUNCH                                      GASP015
+C              6 FOR PRINTER AND PUNCH                                   GASP016
+C              7 FOR TAPE, PRINTER,AND PUNCH                             GASP017
+C              8 FOR SPECIAL (OPTIONAL) ON LINE PRINTING                 GASP018
+C                                                                        GASP019
+C     DATA DECK SETUP --                                                 GASP020
+C        CARD 1  L(1-2)                                                  GASP021
+C        CARD 2  HEADING(2-72)                                           GASP022
+C        CARD 3  XMORTG(1-10),XINTRT(11-20),NUMPAY(21-25),PAY(26-34),    GASP023
+C                NS(35-36)                                               GASP024
+C                                                                        GASP025
+C        CARDS 2 AND 3 ARE TO BE REPEATED FOR EACH SUCCEEDING CASE       GASP026
+C                                                                        GASP027
+C     SENSE SWITCH 6  -- DOWN FOR DATA CARDS ON ON-LINE CARD READER      GASP028
+C                     -- UP FOR DATA ON INPUT TAPE                       GASP029
+C                                                                        GASP030
+C     PROGRAMMED BY P. L. CHESSIN, APRIL 1960                            GASP031
+C                                                                        GASP032
+C                                                                        GASP033
+      DIMENSION BAL(601),AMORT(601),XINT(601),TOTINT(601),TOTPAY(601)    GASP034
+      DIMENSION JJ(601)                                                  GASP035
+C                                                                        GASP036
+      PRINT 4                                                            GASP037
+      XINT(1) = 0.                                                       GASP038
+      AMORT(1) =  0.                                                     GASP039
+      TOTINT(1) = 0.                                                     GASP040
+      TOTPAY (1) = 0.                                                    GASP041
+      IF(SENSE SWITCH 6) 17,27                                           GASP042
+   17 PRINT 9404                                                         GASP043
+      PAUSE                                                              GASP044
+      READ  1,L                                                          GASP045
+      DO 999 J=1,L                                                       GASP046
+  199 READ 2                                                             GASP047
+      READ 22,XMORTG,XINTRT,NUMPAY,PAY,NS                                GASP048
+      IF (NS-8)11,11,456                                                 GASP049
+   11 IF(XMORTG)14,14,24                                                 GASP050
+   14 CALL MORT(XMORTG,XINTRT,NUMPAY,PAY)                                GASP051
+      IF(NS-8)399,15,456                                                 GASP052
+   15 PRINT 5,XINTRT,NUMPAY,PAY,XMORTG                                   GASP053
+      GO TO 999                                                          GASP054
+   24 IF(XINTRT)34,34,44                                                 GASP055
+   34 CALL XINTR(XMORTG,XINTRT,NUMPAY,PAY)                               GASP056
+      IF(NS-8)399,45,456                                                 GASP057
+   45 PRINT 61,XMORTG,NUMPAY,PAY,XINTRT                                  GASP058
+      GO TO 999                                                          GASP059
+   44 IF(NUMPAY)54,54,74                                                 GASP060
+   54 CALL NUMBER(XMORTG,XINTRT,NUMPAY,PAY)                              GASP061
+      IF(NS-8)399,75,456                                                 GASP062
+   75 PRINT 51,XMORTG,XINTRT,PAY,NUMPAY                                  GASP063
+      GO TO 999                                                          GASP064
+   74 IF (PAY) 299,299,399                                               GASP065
+  299 CALL PAYDAY(XMORTG,XINTRT,NUMPAY,PAY)                              GASP066
+      IF(NS-8)399,350,456                                                GASP067
+  350 PRINT 55,XMORTG,XINTRT,NUMPAY,PAY                                  GASP068
+      GO TO 999                                                          GASP069
+  399 NN = NUMPAY+1                                                      GASP070
+      BAL(1)  = XMORTG                                                   GASP071
+      DO 250 K=2,NN                                                      GASP072
+  250 JJ(K) = K-1                                                        GASP073
+      DO 499 K= 2,NUMPAY                                                 GASP074
+      XINT(K) = XINTRT*BAL(K-1)/12.                                      GASP075
+      AMORT(K) = PAY - XINT(K)                                           GASP076
+      TOTINT(K) = TOTINT(K-1) + XINT(K)                                  GASP077
+      TOTPAY(K)=TOTPAY(K-1)+AMORT(K)                                     GASP078
+      BAL(K)=XMORTG-TOTPAY(K)                                            GASP079
+  499 CONTINUE                                                           GASP080
+      K=NN                                                               GASP081
+      AMORT(K)=XMORTG-TOTPAY(K-1)                                        GASP082
+      XINT(K)=XINTRT*AMORT(K)/12.                                        GASP083
+      BAL(K) = 0.                                                        GASP084
+      TOTINT(K) = TOTINT(K-1) + XINT(K)                                  GASP085
+      TOTPAY(K) = XMORTG                                                 GASP086
+      CENTUM = 100.*XINTRT                                               GASP087
+      IF(NS-2)801,802,803                                                GASP088
+  801 ASSIGN 999 TO III                                                  GASP089
+      GO TO 100                                                          GASP090
+  802 ASSIGN 999 TO IIJ                                                  GASP091
+      GO TO 200                                                          GASP092
+  803 IF(NS-4)300,804,805                                                GASP093
+  804 ASSIGN 200 TO III                                                  GASP094
+      ASSIGN 999 TO IIJ                                                  GASP095
+      GO TO  100                                                         GASP096
+  805 IF(NS-6)806,807,808                                                GASP097
+  806 ASSIGN 300 TO III                                                  GASP098
+      GO TO 100                                                          GASP099
+  807 ASSIGN 300 TO IIJ                                                  GASP100
+      GO TO 200                                                          GASP101
+  808 IF(NS-8)809,999,456                                                GASP102
+  809 ASSIGN 200 TO III                                                  GASP103
+      ASSIGN 300 TO IIJ                                                  GASP104
+      GO TO 100                                                          GASP105
+  456 PRINT 69                                                           GASP106
+      PAUSE                                                              GASP107
+      IF(SENSE SWITCH 1)457,999                                          GASP108
+  457 NS=1                                                               GASP109
+      GO TO 11                                                           GASP110
+  100 WRITE OUTPUT TAPE 8,4                                              GASP111
+      WRITE OUTPUT TAPE 8,2                                              GASP112
+      WRITE OUTPUT TAPE 8,10                                             GASP113
+      WRITE OUTPUT TAPE 8,3,XMORTG,CENTUM,NUMPAY,PAY                     GASP114
+      WRITE OUTPUT TAPE 8,33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TO GASP115
+     1TPAY(K),K=2,NN)                                                    GASP116
+      GO TO III,(200,300,999)                                            GASP117
+  200 PRINT 4                                                            GASP118
+      PRINT 2                                                            GASP119
+      PRINT 10                                                           GASP120
+      PRINT 3,XMORTG,CENTUM,NUMPAY,PAY                                   GASP121
+      PRINT 33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TOTPAY(K),K=2,NN GASP122
+     1)                                                                  GASP123
+      GO TO IIJ,(300,999)                                                GASP124
+  300 PUNCH 10                                                           GASP125
+      PUNCH 2                                                            GASP126
+      PUNCH 10                                                           GASP127
+      PUNCH 3,XMORTG,CENTUM,NUMPAY,PAY                                   GASP128
+      PUNCH 33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TOTPAY(K),K=2,NN GASP129
+     1)                                                                  GASP130
+  999 CONTINUE                                                           GASP131
+      END FILE 8                                                         GASP132
+      REWIND 8                                                           GASP133
+      XYZ=EXITF(1)                                                       GASP134
+C                                                                        GASP135
+   27 READ INPUT TAPE 2,1,L                                              GASP136
+      DO 1999 J=1,L                                                      GASP137
+ 1199 READ INPUT TAPE 2,2                                                GASP138
+      READ INPUT TAPE 2,22,XMORTG,XINTRT,NUMPAY,PAY,NS                   GASP139
+      IF(NS-8)1011,1011,1456                                             GASP140
+ 1011 IF(XMORTG)714,714,724                                              GASP141
+  714 CALL MORT(XMORTG,XINTRT,NUMPAY,PAY)                                GASP142
+      IF(NS-8)1399,715,1456                                              GASP143
+  715 PRINT 5,XINTRT,NUMPAY,PAY,XMORTG                                   GASP144
+      GO TO 1999                                                         GASP145
+  724 IF(XINTRT)734,734,744                                              GASP146
+  734 CALL XINTR(XMORTG,XINTRT,NUMPAY,PAY)                               GASP147
+      IF(NS-8)1399,745,1456                                              GASP148
+  745 PRINT 61,XMORTG,NUMPAY,PAY,XINTRT                                  GASP149
+      GO TO 1999                                                         GASP150
+  744 IF(NUMPAY)754,754,774                                              GASP151
+  754 CALL NUMBER(XMORTG,XINTRT,NUMPAY,PAY)                              GASP152
+      IF(NS-8)1399,775,1456                                              GASP153
+  775 PRINT 51,XMORTG,XINTRT,PAY,NUMPAY                                  GASP154
+      GO TO 1999                                                         GASP155
+  774 IF(PAY)1299,1299,1399                                              GASP156
+ 1299 CALL PAYDAY(XMORTG,XINTRT,NUMPAY,PAY)                              GASP157
+      IF(NS-8)1399,1350,1456                                             GASP158
+ 1350 PRINT 55,XMORTG,XINTRT,NUMPAY,PAY                                  GASP159
+      GO TO 1999                                                         GASP160
+ 1399 NN = NUMPAY + 1                                                    GASP161
+      BAL(1)  = XMORTG                                                   GASP162
+      DO 1250 K=2,NN                                                     GASP163
+ 1250 JJ(K) = K-1                                                        GASP164
+      DO 1499 K = 2, NUMPAY                                              GASP165
+      XINT(K) = XINTRT*BAL(K-1)/12.                                      GASP166
+      AMORT(K) = PAY - XINT(K)                                           GASP167
+      TOTINT(K) = TOTINT(K-1) + XINT(K)                                  GASP168
+      TOTPAY(K)=TOTPAY(K-1)+AMORT(K)                                     GASP169
+      BAL(K)=XMORTG-TOTPAY(K)                                            GASP170
+ 1499 CONTINUE                                                           GASP171
+      K=NN                                                               GASP172
+      AMORT(K)=XMORTG-TOTPAY(K-1)                                        GASP173
+      XINT(K)=XINTRT*AMORT(K)/12.                                        GASP174
+      BAL(K) = 0.                                                        GASP175
+      TOTINT(K) = TOTINT(K-1) + XINT(K)                                  GASP176
+      TOTPAY(K) = XMORTG                                                 GASP177
+      CENTUM = 100.*XINTRT                                               GASP178
+      IF(NS-2)1801,1802,1803                                             GASP179
+ 1801 ASSIGN1999 TO III                                                  GASP180
+      GO TO 1100                                                         GASP181
+ 1802 ASSIGN1999 TO IIJ                                                  GASP182
+      GO TO 1200                                                         GASP183
+ 1803 IF(NS - 4)1300,1804,1805                                           GASP184
+ 1804 ASSIGN1200 TO III                                                  GASP185
+      ASSIGN1999 TO IIJ                                                  GASP186
+      GO TO 1100                                                         GASP187
+ 1805 IF(NS-6)1806,1807,1808                                             GASP188
+ 1806 ASSIGN1300 TO III                                                  GASP189
+      GO TO 1100                                                         GASP190
+ 1807 ASSIGN1300 TO IIJ                                                  GASP191
+      GO TO 1200                                                         GASP192
+ 1808 IF(NS-8)1809,1999,1456                                             GASP193
+ 1809 ASSIGN1200 TO III                                                  GASP194
+      ASSIGN1300 TO IIJ                                                  GASP195
+      GO TO 1100                                                         GASP196
+ 1456 PRINT 69                                                           GASP197
+      PAUSE                                                              GASP198
+      IF (SENSE SWITCH 1)1457,1999                                       GASP199
+ 1457 NS=1                                                               GASP200
+      GO TO 1011                                                         GASP201
+ 1100 WRITE OUTPUT TAPE 8,4                                              GASP202
+      WRITE OUTPUT TAPE 8,2                                              GASP203
+      WRITE OUTPUT TAPE 8,10                                             GASP204
+      WRITE OUTPUT TAPE 8,3,XMORTG,CENTUM,NUMPAY,PAY                     GASP205
+      WRITE OUTPUT TAPE 8,33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TO GASP206
+     1TPAY(K),K=2,NN)                                                    GASP207
+      GO TO III,(1200,1300,1999)                                         GASP208
+ 1200 PRINT 4                                                            GASP209
+      PRINT 2                                                            GASP210
+      PRINT 10                                                           GASP211
+      PRINT 3,XMORTG,CENTUM,NUMPAY,PAY                                   GASP212
+      PRINT 33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TOTPAY(K),K=2,NN GASP213
+     1)                                                                  GASP214
+      GO TO IIJ,(1300,1999)                                              GASP215
+ 1300 PUNCH 10                                                           GASP216
+      PUNCH 2                                                            GASP217
+      PUNCH 10                                                           GASP218
+      PUNCH 3,XMORTG,CENTUM,NUMPAY,PAY                                   GASP219
+      PUNCH 33,(JJ(K),XINT(K),AMORT(K),BAL(K),TOTINT(K),TOTPAY(K),K=2,NN GASP220
+     1)                                                                  GASP221
+ 1999 CONTINUE                                                           GASP222
+      END FILE 8                                                         GASP223
+      REWIND 8                                                           GASP224
+      XYZ=EXITF(1)                                                       GASP225
+C                                                                        GASP226
+    1 FORMAT(I2)                                                         GASP227
+    2 FORMAT(72H                                                         GASP228
+     1                )                                                  GASP229
+   22 FORMAT   (F10.2,F10.5,I5,F9.2,I2)                                  GASP230
+    5 FORMAT(34H DATA -- ANNUAL RATE OF INTEREST =F10.5,31H ,NUMBER OF   GASP231
+     1MONTHLY PAYMENTS =I5,21H ,MONTHLY PAYMENT = $F9.2/25H ANSWER -- TO GASP232
+     2TAL LOAN = $F10.2//)                                               GASP233
+   61 FORMAT(23H DATA -- TOTAL LOAN = $F10.2,30H ,NUMBER OF MONTHLY PAYM GASP234
+     1ENTS =I5,21H ,MONTHLY PAYMENT = $F9.2/36H ANSWER -- ANNUAL RATE OF GASP235
+     2 INTEREST =F10.5//)                                                GASP236
+   51 FORMAT(23H DATA -- TOTAL LOAN = $F10.2,27H ,ANNUAL RATE OF INTERES GASP237
+     1T =F10.5,21H ,MONTHLY PAYMENT = $F9.2/39H ANSWER -- NUMBER OF MONT GASP238
+     2HLY PAYMENTS =I5//)                                                GASP239
+   55 FORMAT(23H DATA -- TOTAL LOAN = $F10.2,27H ,ANNUAL RATE OF INTERES GASP240
+     1T =F10.5,30H ,NUMBER OF MONTHLY PAYMENTS =I5/30H ANSWER -- MONTHLY GASP241
+     2 PAYMENT = $F9.2//)                                                GASP242
+   10 FORMAT(1H ///1H )                                                  GASP243
+    3 FORMAT(1H //28H THE AMOUNT OF THE LOAN IS $F10.2,4H,AT F10.5,19H(P GASP244
+     1ER CENT)PER YEAR./26H THE NUMBER OF PAYMENTS ISI5,26H. THE MONTHLY GASP245
+     2 PAYMENT IS $F9.2,4H .  //69H PAYMENT   INTEREST   PRINCIPAL   BAL GASP246
+     3ANCE OF   TOTAL PAID     CURRENT/68H NUMBER      DUE         DUE   GASP247
+     4     LOAN DUE     INTEREST      EQUITY//)                          GASP248
+   33 FORMAT(1H I4,6H     $F8.2,3H  $F9.2,3H  $F10.2,3H  $F10.2,3H  $F10 GASP249
+     1.2)                                                                GASP250
+    4 FORMAT(1H1)                                                        GASP251
+   69 FORMAT(1H 50H THERE IS AN ERROR IN THE DATA CARD FOR THIS CASE./// GASP252
+     147H THE VALUE OF NS EXCEEDS THE ALLOWABLE MAXIMUM.///87H TO DELETE GASP253
+     2 THIS CASE ---  PUT SENSE SWITCH 1(ONE) UP,IF NECESSARY, AND PRESS GASP254
+     3 S T A R T.///97H TO RETRY WITH OUTPUT ON TAPE A8, PUT SENSE SWITC GASP255
+     4H 1(ONE) DOWN,IF NECESSARY, AND PRESS S T A R T.//1H //1H ///1H /) GASP256
+ 9404 FORMAT(115H1NOTE TO THE MACHINE OPERATOR---TO PROCEED,THIS JOB REQ GASP257
+     1UIRES THAT THE CARD READER BE CLEARED AND THAT THE DATA DECK/105H  GASP258
+     2THEN BE PUT ONTO THE READER. FOLLOWING THIS, PLEASE PRESS THE STAR GASP259
+     3T BUTTON ON THE CONSOLE.... THANK YOU.///////)                     GASP260
+      END                                                                GASP261
+*     CARDS COLUMN                                                       GASP262
+*     LIST                                                               GASP263
+      SUBROUTINE MORT(A,B,K,C)                                           GASP264
+      X1 = 12.*C/B                                                       GASP265
+      X2 = 1. + B/12.                                                    GASP266
+      X3 = 1. - X2**(-K)                                                 GASP267
+      W = X1*X3                                                          GASP268
+      A = W                                                              GASP269
+      RETURN                                                             GASP270
+      END                                                                GASP271
+*     CARDS COLUMN                                                       GASP272
+*     LIST                                                               GASP273
+      SUBROUTINE XINTR(A,B,K,C)                                          GASP274
+      DIMENSION Y(101)                                                   GASP275
+      UN = K                                                             GASP276
+      Y(1) = 12.*C/A                                                     GASP277
+      DO 40 J=1,100                                                      GASP278
+      DO 30 I=1,100                                                      GASP279
+      W1=1.+Y(I)/12.                                                     GASP280
+      W1N=W1**(-K)                                                       GASP281
+      W1M=W1N/W1                                                         GASP282
+      W2=1.-W1N                                                          GASP283
+      W2M=(12.*C/A)*W2                                                   GASP284
+      XNUME=Y(I)-W2M                                                     GASP285
+      W3=(C*UN/A)*W1M                                                    GASP286
+      DENOM=1.-W3                                                        GASP287
+      FRACT=XNUME/DENOM                                                  GASP288
+      Y(I+1)=Y(I)-FRACT                                                  GASP289
+      Z=ABSF(FRACT)                                                      GASP290
+      IF(Z)10,10,20                                                      GASP291
+   10 B=ABSF(Y(I+1))                                                     GASP292
+      RETURN                                                             GASP293
+   20 IF(Z-.000005)10,10,30                                              GASP294
+   30 CONTINUE                                                           GASP295
+      Y(1)=Y(101)                                                        GASP296
+   40 CONTINUE                                                           GASP297
+      B=0.                                                               GASP298
+      RETURN                                                             GASP299
+      END                                                                GASP300
+*     CARDS COLUMN                                                       GASP301
+*     LIST                                                               GASP302
+      SUBROUTINE NUMBER(A,B,K,C)                                         GASP303
+      TEMP1 = (B*A)/(12.*C)                                              GASP304
+      TEMP1 = 1. - TEMP1                                                 GASP305
+      TEMP2 = 1. + B/12.                                                 GASP306
+      TEMP3 = LOGF(TEMP1)                                                GASP307
+      TEMP4 = LOGF(TEMP2)                                                GASP308
+      Z = - TEMP3/TEMP4                                                  GASP309
+      M=Z                                                                GASP310
+      Y=M                                                                GASP311
+      IF(Z-Y)100,200,300                                                 GASP312
+  100 K=0                                                                GASP313
+      RETURN                                                             GASP314
+  200 K=Z                                                                GASP315
+      RETURN                                                             GASP316
+  300 K=Z+1.                                                             GASP317
+      RETURN                                                             GASP318
+      END                                                                GASP319
+*     CARDS COLUMN                                                       GASP320
+*     LIST                                                               GASP321
+      SUBROUTINE PAYDAY(A,B,K,C)                                         GASP322
+      Y1 = A*B/12.                                                       GASP323
+      Y2 = (1. + B/12.)**(- K)                                           GASP324
+      Y3 = 1. - Y2                                                       GASP325
+      Y4 = Y1/Y3                                                         GASP326
+      C = Y4                                                             GASP327
+      RETURN                                                             GASP328
+      END                                                                GASP329
+*     DATA                                                               GASP330

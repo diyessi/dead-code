@@ -1,0 +1,671 @@
+C     NONLINEAR LEAST SQUARES           PROGRAM 2135                         001
+C     BY    T. BAUMEISTER III AND D. W. MARQUARDT                            002
+C                  IFSS3 = 0 MEANS SS3 IS SET, SO NO PRINT                   003
+C                  IFSS3 = 1 MEANS SS3 IS NOT SET, SO PRINT                  004
+C                  IBKT=1 MEANS USE UPPER A MATRIX                           005
+C                  IBKT=2 MEANS USE TAPE 3                                   006
+C                                                                            007
+      DIMENSION FMT(12),BS(20),DB(20),BA(20),PRNT(5)                         008
+      DIMENSION G(20),A(20,21),W(21),IB(19)                                  009
+      DIMENSION SA(20),P(20),X( 60,5),B(20),Y( 60) ,SPRNT(5)                 010
+C                                                                            011
+C     ------------------------------------------------------------------     012
+C      MAX NO OF PARAMETERS IS K=20                                          013
+C      MAX NO OF IND VARS IS M=5                                             014
+C      MAX NO OF OBSERVATIONS IS N=60                                        015
+C                  IWHER =-1 MEANS DO ANY SPECIAL INITIALIZING FOR CASE      016
+C                  IWHER = 0 MEANS START NEW CASE OR END RUN                 017
+C                  IWHER = 1 MEANS GET P S AND F                             018
+C                  IWHER GREATER THAN 1 MEANS GET F ONLY                     019
+      NPRNT=0                                                               1019
+  650 IWHER = 0                                                              020
+  652 GO TO 4                                                                021
+  653 IWHER = IWHER                                                          022
+      IF(IWHER)651,660,654                                                   023
+  651 CONTINUE                                                               024
+C                  CODING FOR CASE INITIALIZING GOES HERE                    025
+C     ..................................................................     026
+C     ..................................................................     027
+      GO TO 652                                                              028
+  654 CONTINUE                                                               029
+C                  CODING TO MAKE F GOES HERE                                030
+C                  F IS Y HAT (I)                                            031
+C                  NPRNT IS THE NO OF OTHER WORDS TO BE PRINTED              032
+C                  THE WORDS TO BE PRINTED ARE IN PRNT(1)...PRNT(5)          033
+C     ..................................................................     034
+C     ..................................................................     035
+      IF(IWHER-1)652,656,652                                                 036
+  656 IF(IFSS2)652,658,658                                                   037
+  658 CONTINUE                                                               038
+C                  CODING TO MAKE DF/DB GOES HERE                            039
+C                  MAKE K OF THEM. CALL THEM P(J)                            040
+C                  THEY ARE MADE FROM X(I,L) AND B(J)                        041
+C     ..................................................................     042
+C     ..................................................................     043
+      GO TO 652                                                              044
+  660 PAUSE 777                                                              045
+      GO TO 650                                                              046
+C                  THIS IS THE END OF THE MAIN ROUTINE                       047
+C     ------------------------------------------------------------------     048
+    4 IWHER = IWHER                                                          049
+C               -  0 +                                                       050
+      IF(IWHER)59,10,8                                                       051
+C             1  2   3   4                                                   052
+    8 GO TO (75,304,606,620), IWHER                                          053
+C                  READ FIRST CARD OF NEXT CASE                              054
+   10 ITCT=0                                                                 055
+      PRINT 932                                                             1055
+      READ 900,N,K,IP,M,IFP                                                  056
+      IF (N) 20,20,21                                                        057
+C                  END OF LAST PROBLEM                                       058
+   20 GO TO (  19,  17),IBKT                                                 059
+   17 REWIND 3                                                               060
+   19 IWHER=0                                                                061
+      GO TO 653                                                              062
+   21 IF(IFP)22,22,23                                                        063
+   23 READ 929,IBCH,IOCH,IPCH,IXCH,IYCH                                      064
+      READ 930, YMN,SPRD                                                     065
+   22 IF(IP)30,30,24                                                         066
+   24 READ 900,(IB(I),I=1,IP)                                                067
+      DO 26 I=1,IP                                                           068
+      IF(IB(I))25,25,26                                                      069
+   25 PRINT 926                                                              070
+      PAUSE 111                                                              071
+      GO TO 10                                                               072
+   26 CONTINUE                                                               073
+   30 READ 931,FF,T,E,TAU,XL,GAMCR                                           074
+C                  DUB IN INPUT CONSTANTS IF NOT SUPPLIED                    075
+C                  ( XL IS CHECKED IN FIRST ITERATION )                      076
+      IF (FF) 32,32,34                                                       077
+   32 FF=4.                                                                  078
+   34 IF (E) 36,36,38                                                        079
+   36 E=.00001                                                               080
+      TAU=.001                                                               081
+   38 IF(T)40,40,42                                                          082
+   40 T=2.                                                                   083
+   42 IF(K-10)44,44,46                                                       084
+   44 IBKT=1                                                                 085
+      GO TO 50                                                               086
+   46 IBKT=2                                                                 087
+      REWIND 3                                                               088
+   50 IF (GAMCR)  51,51,53                                                   089
+   51 GAMCR = 45.                                                            090
+   53 XKDB = 1.                                                             1090
+   54 CONTINUE                                                               091
+C                  READ IN INITIAL B GUESSES 7 TO THE CARD                   092
+      READ 901,(B(I),I=1,K)                                                  093
+      READ 902,(FMT(I),I=1,12)                                               094
+      DO 56 I=1,N                                                            095
+   56 READ FMT, Y(I),(X(I,L),L=1,M)                                          096
+      IWHER=-1                                                               097
+      GO TO 653                                                              098
+   59 IBKA=1                                                                 099
+C                                                                            100
+C     ..................................................................     101
+C                  START THE CALCULATION OF THE PTP MATRIX                   102
+   58 PRINT 907, N,K,IP,M,IFP,GAMCR,FF,T,E,TAU,XL                            103
+   60 CONTINUE                                                               104
+      DO 62 I=1,K                                                            105
+      G (I) =0.                                                              106
+      DO 62 J=1,K                                                            107
+   62 A (I,J)=0.                                                             108
+      GO TO (63,66,66),IBKA                                                  109
+   63 IF(SENSE SWITCH 3)64,66                                                110
+   64 IFSS3=0                                                                111
+      GO TO 70                                                               112
+   66 IFSS3=1                                                                113
+   70 PRINT 908,(B(J),J=1,K)                                                 114
+      IF(IFSS3)73,73,71                                                      115
+   71 IF(IFP)68,68,67                                                        116
+   67 WS = YMN+SPRD                                                          117
+      PRINT 906, YMN,WS                                                      118
+      GO TO 73                                                               119
+   68 PRINT 910                                                              120
+   73 I=1                                                                    121
+      PHI=0.                                                                 122
+      IF(SENSE SWITCH 2)600,74                                               123
+   72 IF(IFSS2)602,602,57                                                    124
+C                  THIS IS THE ANALYTICAL P S ROUTINE                        125
+   74 IFSS2=1                                                                126
+   57 IWHER=1                                                                127
+C                  GET P S AND F                                             128
+      GO TO 653                                                              129
+   75 IF(IP)80,80,76                                                         130
+   76 DO 77 II=1,IP                                                          131
+      IWS=IB(II)                                                             132
+   77 P(IWS)=0.                                                              133
+      GO TO 80                                                               134
+C     ..................................................................     135
+C                  THIS IS THE ESTIMATED P S ROUTINE                         136
+  600 CONTINUE                                                               137
+      IFSS2=0                                                                138
+  602 IWHER=3                                                                139
+      GO TO 653                                                              140
+  606 FWS=F                                                                  141
+      DO 607 II=1,NPRNT                                                     1141
+  607 SPRNT(II)=PRNT(II)                                                    2141
+      J=1                                                                    142
+  608 IF (IP) 618,618,610                                                    143
+  610 DO 612 II=1,IP                                                         144
+      IF (J-IB(II)) 612,621,612                                              145
+  612 CONTINUE                                                               146
+  618 DBW=B(J)*.00001                                                        147
+      TWS=B(J)                                                               148
+      B(J)=B(J)+DBW                                                          149
+      IWHER=4                                                                150
+      GO TO 653                                                              151
+  620 B(J)=TWS                                                               152
+      P(J)=(F-FWS)/DBW                                                       153
+      GO TO 622                                                              154
+  621 P(J)=0.                                                                155
+  622 J=J+1                                                                  156
+      IF (J-K) 608,608,624                                                   157
+  624 F=FWS                                                                  158
+      DO 625 II=1,NPRNT                                                     1158
+  625 PRNT(II)=SPRNT(II)                                                    2158
+C                  END OF ESTIMATED P S ROUTINE                              159
+C     ..................................................................     160
+C                  NOW, USE THE P S TO MAKE PARTIALS MATRIX                  161
+   80 DO 82 JJ=1,K                                                           162
+      G(JJ)=G(JJ)+(Y(I)-F)*P(JJ)                                             163
+      DO 82 II=JJ,K                                                          164
+      A(II,JJ)=A(II,JJ)+P(II)*P(JJ)                                          165
+   82 A(JJ,II)=A(II,JJ)                                                      166
+      IF(IFP)318,318,800                                                     167
+  800 IF(IFSS3)314,314,802                                                   168
+C                  PLOTTING Y(I),F                                           169
+  802 IO = (Y(I)-YMN)*100./SPRD                                              170
+      IPP = (F-YMN)*100./SPRD                                                171
+      IF(IO-IPP)804,808,812                                                  172
+C                  Y(I) OUT FIRST                                            173
+  804 IP1=IOCH                                                               174
+      IP2=IPCH                                                               175
+      I1=IO                                                                  176
+      I2=IPP                                                                 177
+      GO TO 816                                                              178
+C                  ONLY ONE CHARACTER                                        179
+  808 IP1=IYCH                                                               180
+      IP2=IBCH                                                               181
+      I1=IO                                                                  182
+      I2=IPP                                                                 183
+      GO TO 816                                                              184
+C                  F OUT FIRST                                               185
+  812 IP1=IPCH                                                               186
+      IP2=IOCH                                                               187
+      I1=IPP                                                                 188
+      I2=IO                                                                  189
+C                  ZERO PLOTS IN THE LEFT HAND COLUMN, SO I1 IS ITS          190
+C                  OWN BLANK COUNTER                                         191
+C                  OVERFLOWS PLOT X IN COLUMN 102                            192
+C                  UNDERFLOWS ALSO PLOT X IN COLUMN ZERO                     193
+  816 IF(I2-101)819,819,817                                                  194
+  817 I2=101                                                                 195
+      IP2=IXCH                                                               196
+      IF(I1-101)819,818,818                                                  197
+  818 I1=101                                                                 198
+      IP1=IXCH                                                               199
+      IP2=IBCH                                                               200
+      GO TO 825                                                              201
+  819 IF(I1)822,825,825                                                      202
+  822 I1=0                                                                   203
+      IP1=IXCH                                                               204
+      IF(I2)823,823,825                                                      205
+  823 I2=1                                                                   206
+      IP2=IBCH                                                               207
+  825 I1M1=I1                                                                208
+      I1M2=I2-I1-1                                                           209
+      IF(I1M1)820,820,832                                                    210
+  820 IF(I1M2)824,824,828                                                    211
+  824 PRINT 928,IP1,IP2                                                      212
+      GO TO 844                                                              213
+  828 PRINT 928,IP1,(IBCH,II=1,I1M2),IP2                                     214
+      GO TO 844                                                              215
+  832 IF(I1M2)836,836,840                                                    216
+  836 PRINT 928,(IBCH,II=1,I1M1),IP1,IP2                                     217
+      GO TO 844                                                              218
+  840 PRINT 928,(IBCH,II=1,I1M1),IP1,(IBCH,II=1,I1M2),IP2                    219
+  844 GO TO 314                                                              220
+  318 WS=Y(I)-F                                                              221
+      IF(IFSS3)314,314,308                                                   222
+  308 IF(NPRNT)310,310,312                                                   223
+  310 PRINT 925,Y(I),F,WS                                                    224
+      GO TO 314                                                              225
+  312 PRINT 925,Y(I),F,WS,(PRNT(JJ),JJ=1,NPRNT)                              226
+  314 WS=Y(I)-F                                                              227
+      PHI=PHI+WS*WS                                                          228
+      I=I+1                                                                  229
+      IF(I-N)72,72,84                                                        230
+   84 IF(IP)88,88,85                                                         231
+   85 DO 87 JJ=1,IP                                                          232
+      IWS=IB(JJ)                                                             233
+      DO 86 II=1,K                                                           234
+      A(IWS,II)=0.                                                           235
+   86 A(II,IWS)=0.                                                           236
+   87 A(IWS,IWS)=1.                                                          237
+   88 GO TO (90,704,706),IBKA                                                238
+C                  SAVE SQUARE ROOTS OF DIAGONAL ELEMENTS                    239
+   90 DO 92 I=1,K                                                            240
+   92 SA(I)=SQRTF(A(I,I))                                                    241
+      DO 106 I=1,K                                                           242
+      DO 100 J=1,K                                                           243
+      WS = SA(I)*SA(J)                                                       244
+      IF (WS) 96,96,98                                                       245
+   96 A(I,J) =0.                                                             246
+      GO TO 100                                                              247
+   98 A(I,J)=A(I,J)/WS                                                       248
+  100 CONTINUE                                                               249
+      IF (SA(I)) 102,102,104                                                 250
+  102 G(I)=0.                                                                251
+      GO TO 106                                                              252
+  104 G(I)=G(I)/SA(I)                                                        253
+  106 CONTINUE                                                               254
+      DO 110 I=1,K                                                           255
+  110 A(I,I)=1.                                                              256
+      PHIZ=PHI                                                               257
+C                  WE NOW HAVE PHI ZERO                                      258
+      GO TO (1132,1130),IBKT                                                 259
+ 1130 WRITE TAPE 3,A                                                         260
+      REWIND 3                                                               261
+      GO TO 1134                                                             262
+ 1132 DO 1133 II=1,K                                                         263
+      III=II+10                                                              264
+      DO 1133 JJ=1,K                                                         265
+ 1133 A(III,JJ)=A(II,JJ)                                                     266
+C     ..................................................................     267
+ 1134 RHO = 0.                                                               268
+      DO 146 I=1,K                                                           269
+      TWS=0.                                                                 270
+      DO 144 J=1,K                                                           271
+  144 TWS=TWS+ABSF(A(I,J))                                                   272
+      IF (RHO-TWS)  145,146,146                                              273
+  145 RHO = TWS                                                              274
+  146 CONTINUE                                                               275
+      IF(ITCT)150,150,163                                                    276
+C                  FIRST ITERATION                                           277
+  150 IF(XL)152,152,154                                                      278
+  152 XL=0.01                                                                279
+  154 ITCT=1                                                                 280
+      DO 161 J=1,K                                                           281
+  161 BS(J)=B(J)                                                             282
+C                  BS(J) CORRESPONDS TO PHIZ                                 283
+  163 IBK1=1                                                                 284
+      WS=N-K+IP                                                              285
+      SE=SQRTF(PHIZ/WS)                                                      286
+      IF(IFSS3)162,162,165                                                   287
+  162 IF (IFSS2)  167,167,168                                                288
+  167 PRINT 911, PHIZ,SE,XLL,GAMMA,XL                                        289
+      GO TO 169                                                              290
+  168 PRINT 912, PHIZ,SE,XLL,GAMMA,XL                                        291
+      GO TO 169                                                              292
+  165 IF (IFSS2)  166,166,1661                                               293
+  166 PRINT 903, PHIZ,SE,RHO,XL                                              294
+      GO TO 169                                                             1294
+ 1661 PRINT 909, PHIZ,SE,RHO,XL                                             2294
+  169 GO TO 200                                                              295
+  164 PHIL=PHI                                                               296
+C                  WE NOW HAVE PHI LAMBDA                                    297
+      DO 170 J=1,K                                                           298
+      IF(ABSF(DB(J)/(ABSF(B(J))+TAU))-E)170,172,172                          299
+  170 CONTINUE                                                               300
+      PRINT 923                                                              301
+      GO TO 700                                                              302
+  172 IF(SENSE SWITCH 4)171,173                                              303
+  171 PRINT 924                                                              304
+      GO TO 700                                                              305
+  173 XKDB = 1.                                                             1305
+      IF(PHIL-PHIZ)174,174,190                                               306
+  174 XLS=XL                                                                 307
+      DO 176 J=1,K                                                           308
+      BA(J)=B(J)                                                             309
+  176 B(J)=BS(J)                                                             310
+      IF(XL-.00000001)60,60,175                                              311
+  175 XL=XL/10.                                                              312
+      IBK1=2                                                                 313
+      GO TO 200                                                              314
+  177 PHL4=PHI                                                               315
+C                  WE NOW HAVE PHI(LAMBDA/10)                                316
+      IF(PHL4-PHIZ)182,182,184                                               317
+  182 DO 183 J=1,K                                                           318
+  183 BS(J)=B(J)                                                             319
+      GO TO 60                                                               320
+  184 XL=XLS                                                                 321
+      DO 186 J=1,K                                                           322
+      BS(J)=BA(J)                                                            323
+  186 B(J)=BA(J)                                                             324
+      GO TO 60                                                               325
+  190 IBK1=4                                                                 327
+      XLS=XL                                                                 328
+      XL=XL/10.                                                              329
+      DO 185 J=1,K                                                           330
+  185 B(J)=BS(J)                                                             331
+      GO TO 200                                                              332
+  187 IF(PHI-PHIZ)196,196,191                                                333
+  191 XL=XLS                                                                 334
+      IBK1=3                                                                 335
+  192 XL=XL*10.                                                              336
+  195 DO 193 J=1,K                                                           337
+  193 B(J)=BS(J)                                                             338
+      GO TO 200                                                              339
+  194 PHIT4=PHI                                                              340
+C                  WE NOW HAVE PHI(10*LAMBDA)                                341
+  180 IF(PHIT4-PHIZ   )196,196,198                                           342
+  196 DO 197 J=1,K                                                           343
+  197 BS(J)=B(J)                                                             344
+      GO TO 60                                                               345
+  198 IF (GAMMA-GAMCR)  199,192,192                                          346
+  199 XKDB = XKDB/2.                                                         347
+      GO TO 195                                                              348
+C                                                                            355
+C     ..................................................................     356
+C                  THIS CODING REPRESENTS SUBROUTINE 1                       357
+  200 GO TO (1102,1100),IBKT                                                 358
+ 1100 READ TAPE 3,A                                                          359
+      REWIND 3                                                               360
+      GO TO 1104                                                             361
+ 1102 DO 1103 II=1,K                                                         362
+      III=II+10                                                              363
+      DO 1103 JJ=1,K                                                         364
+ 1103 A(II,JJ)=A(III,JJ)                                                     365
+ 1104 DO 202 I=1,K                                                           366
+  202 A(I,I)=A(I,I)+XL                                                       367
+C                  GET INVERSE OF A AND SOLVE FOR DB (J)S                    368
+C                  PUT G S INTO LAST COLUMN OF MATRIX                        369
+      DO 402 I=1,K                                                           370
+  402 A(I,K+1)=G(I)                                                          371
+      KP1=K+1                                                                372
+      IBKM=1                                                                 373
+C     ..................................................................     374
+C                  THIS IS THE MATRIX INVERSION AND SOLUTION ROUTINE         375
+C                  K IS THE SIZE OF THE MATRIX                               376
+C                  KP1 IS THE SIZE OF THE AUGMENTED MATRIX                   377
+  404 DO 415 LN=1,K                                                          378
+      WS1=A(1,1)                                                             379
+      W(KP1)=1./WS1                                                          380
+      DO 411 I=2,KP1                                                         381
+      J=I-1                                                                  382
+  411 W(J)=A(1,I)/WS1                                                        383
+      KM1=K-1                                                                384
+      DO 412 I=1,KM1                                                         385
+      IP1=I+1                                                                386
+      WS2=A(IP1,1)                                                           387
+      M2=KP1-1                                                               388
+      DO 413 J=1,M2                                                          389
+      JP1=J+1                                                                390
+  413 A(I,J)=-WS2*W(J)+A(IP1,JP1)                                            391
+  412 A(I,KP1)=-WS2/WS1                                                      392
+      DO 414 J=1,KP1                                                         393
+  414 A(K,J)=W(J)                                                            394
+  415 CONTINUE                                                               395
+      GO TO (416,710,740),IBKM                                               396
+C                  END OF MATRIX INVERSION AND SOLUTION                      397
+C     ..................................................................     398
+C                  GET THE ANSWER DB  S OUT OF THE FIRST COL. OF MATRIX      399
+  416 DO 420 I=1,K                                                           400
+  420 DB(I)=A(I,1)*XKDB                                                      401
+      XLL=0.                                                                 402
+      DTG = 0.                                                              1402
+      GTG = 0.                                                              2402
+      DO 250 J=1,K                                                           403
+      DB(J)=DB(J)/SA(J)                                                      404
+      DTG = DTG + DB(J)*G(J)                                                1404
+      GTG = GTG + G(J)**2                                                   2404
+      B(J)=B(J)+DB(J)                                                        405
+  250 XLL=XLL+DB(J)*DB(J)                                                    406
+      CGAM = DTG/SQRTF(XLL*GTG)                                             1406
+      JGAM = 1                                                              2406
+      IF (CGAM)  251,253,253                                                3406
+  251 CGAM = ABSF(CGAM)                                                     4406
+      JGAM = 2                                                              5406
+  253 GAMMA = 57.2957795*(1.5707288+CGAM*(-0.2121144+CGAM*(0.074261         6406
+     1-CGAM*0.0187293)))*SQRTF(1.0-CGAM)                                    7406
+      GO TO (257,255), JGAM                                                 8406
+  255 GAMMA = 180.-GAMMA                                                    9406
+  257 XLL=SQRTF(XLL)                                                         407
+      IBK2=1                                                                 408
+      GO TO 300                                                              409
+  252 IF(IFSS3-1)256,254,256                                                 410
+  254 PRINT 904,(DB(J),J=1,K)                                                411
+      PRINT 905,PHI,XL,GAMMA,XLL                                             412
+  256 GO TO (164,177,194,187),IBK1                                           413
+C                  THIS IS THE END OF SUBROUTINE 1                           414
+C     ..................................................................     415
+C                  THIS CODING REPRESENTS SUBROUTINE 2                       416
+  300 I=1                                                                    417
+      PHI=0.                                                                 418
+      IWHER=2                                                                419
+  302 GO TO 653                                                              420
+  304 PHI=PHI+(Y(I)-F)**2                                                    421
+      I=I+1                                                                  422
+      IF (I-N) 302,302,316                                                   423
+  316 GO TO (252,780,704,762,766,772),IBK2                                   424
+C                  THIS IS THE END OF SUBROUTINE 2                           425
+C                                                                            426
+C     ..................................................................     427
+C                  THIS IS THE CONFIDENCE LIMIT CALCULATION                  428
+  700 DO 702 J=1,K                                                           429
+  702 B(J)=BS(J)                                                             430
+      PRINT 933,N,K,IP,M,FF,T,E,TAU                                         1430
+      IBKA=2                                                                 431
+C                  THIS WILL PRINT THE Y,YHAT,DELTA Y                        432
+      GO TO 60                                                               433
+  704 IF(IFP)706,706,705                                                     434
+  705 IBKA=3                                                                 435
+      IFP=0                                                                  436
+      GO TO 60                                                               437
+  706 WS=N-K+IP                                                              438
+      SE=SQRTF(PHI /WS)                                                      439
+      PHIZ=PHI                                                               441
+      IF (IFSS2)  707,707,709                                               1441
+  707 PRINT 903, PHIZ,SE,RHO,XL                                             2441
+      GO TO 708                                                             3441
+  709 PRINT 909, PHIZ,SE,RHO,XL                                             4441
+C                  NOW WE HAVE MATRIX A                                      442
+  708 GO TO (1122,1120),IBKT                                                 443
+ 1120 WRITE TAPE 3,A                                                         444
+      REWIND 3                                                               445
+      GO TO 1124                                                             446
+ 1122 DO 1123 II=1,K                                                         447
+      III=II+10                                                              448
+      DO 1123 JJ=1,K                                                         449
+ 1123 A(III,JJ)=A(II,JJ)                                                     450
+ 1124 IBKM=2                                                                 451
+      KP1=K                                                                  452
+      GO TO 404                                                              453
+C                  NOW WE HAVE C = A INVERSE                                 454
+  710 DO 711 J=1,K                                                           455
+  711 SA(J)=SQRTF(A(J,J))                                                    456
+      PRINT 916                                                              457
+      DO 712 I=1,K                                                           458
+  712 PRINT 918,I,(A(I,J),J=1,K)                                             459
+      DO 718 I=1,K                                                           460
+      DO 718 J=1,K                                                           461
+      WS=SA(I)*SA(J)                                                         462
+      IF(WS)714,714,716                                                      463
+  714 A(I,J)=0.                                                              464
+      GO TO 718                                                              465
+  716 A(I,J)=A(I,J)/WS                                                       466
+  718 CONTINUE                                                               467
+      DO 720 J=1,K                                                           468
+  720 A(J,J)=1.                                                              469
+      PRINT 917                                                              470
+      DO 724 I=1,K                                                           471
+  724 PRINT 918,I,(A(I,J),J=1,K)                                             472
+C                  GET T*SE*SQRT(C(I,I))                                     473
+      DO 726 J=1,K                                                           474
+  726 SA(J)=T*SE*SA(J)                                                       475
+      GO TO (1112,1110),IBKT                                                 476
+ 1110 READ TAPE 3,A                                                          477
+      REWIND 3                                                               478
+      GO TO 1114                                                             479
+ 1112 DO 1113 II=1,K                                                         480
+      III=II+10                                                              481
+      DO 1113 JJ=1,K                                                         482
+ 1113 A(II,JJ)=A(III,JJ)                                                     483
+ 1114 CONTINUE                                                               484
+C                  LAGRANGE ORTHOGONALIZATION                                485
+      DO 730 I=2,K                                                           486
+      IM1=I-1                                                                487
+      DO 730 J=I,K                                                           488
+      DO 730 II=1,IM1                                                        489
+  730 A(I,J)=A(I,J)-A(II,I)*A(II,J)/A(II,II)                                 490
+      DO 734 I=2,K                                                           491
+      IM1=I-1                                                                492
+      DO 734 J=1,IM1                                                         493
+  734 A(I,J)=0.                                                              494
+      DO 736 I=1,K                                                           495
+      WS=SQRTF(A(I,I))                                                       496
+      DO 736 J=1,K                                                           497
+  736 A(I,J)=A(I,J)/WS                                                       498
+C                  WE NOW HAVE M INVERSE                                     499
+      KP1=K                                                                  500
+      IBKM=3                                                                 501
+      GO TO 404                                                              502
+C                  WE NOW HAVE M                                             503
+  740 PRINT 919                                                              504
+      WS=K-IP                                                                505
+      DO 750 J=1,K                                                           506
+      IF(IP)743,743,741                                                      507
+  741 DO 742 I=1,IP                                                          508
+      IF(J-IB(I))742,746,742                                                 509
+  742 CONTINUE                                                               510
+  743 XMTM=0.                                                                511
+      DO 744 JJ=1,K                                                          512
+  744 XMTM=XMTM+A(J,JJ)**2                                                   513
+      HJTD=SQRTF(SE*SE*WS*FF*XMTM)                                           514
+      STE=SA(J)/T                                                            515
+      OPL=BS(J)-SA(J)                                                        516
+      OPU=BS(J)+SA(J)                                                        517
+      SPL=BS(J)-HJTD                                                         518
+      SPU=BS(J)+HJTD                                                         519
+      PRINT 927,J,STE,OPL,OPU,SPL,SPU                                        520
+      GO TO 750                                                              521
+  746 PRINT 913,J                                                            522
+  750 CONTINUE                                                               523
+C                  NONLINEAR CONFIDENCE LIMIT                                524
+      WS=K-IP                                                                525
+      WS1=N-K+IP                                                             526
+      PKN=WS/WS1                                                             527
+      PC=PHIZ*(1.+FF*PKN)                                                    528
+      PRINT 920,PC                                                           529
+      PRINT 921                                                              530
+      IFSS3=0                                                                531
+      DO 790 J=1,K                                                           532
+      IBKP=1                                                                 533
+      DO 752 JJ=1,K                                                          534
+  752 B(JJ)=BS(JJ)                                                           535
+      IF(IP)758,758,754                                                      536
+  754 DO 756 JJ=1,IP                                                         537
+      IF(J-IB(JJ))756,787,756                                                538
+  756 CONTINUE                                                               539
+  758 DD=-1.                                                                 540
+      IBKN=1                                                                 541
+  760 D=DD                                                                   542
+      B(J)=BS(J)+D*SA(J)                                                     543
+      IBK2=4                                                                 544
+      GO TO 300                                                              545
+  762 PHI1=PHI                                                               546
+      IF(PHI1-PC)764,770,770                                                 547
+  764 D=D+DD                                                                 548
+      IF(D/DD-5.)765,788,788                                                 549
+  765 B(J)=BS(J)+D*SA(J)                                                     550
+      IBK2=5                                                                 551
+      GO TO 300                                                              552
+  766 PHID=PHI                                                               553
+      IF(PHID-PC)764,778,778                                                 554
+  770 D=D/2.                                                                 555
+      IF(D/DD-.001)788,788,771                                               556
+  771 B(J)=BS(J)+D*SA(J)                                                     557
+      IBK2=6                                                                 558
+      GO TO 300                                                              559
+  772 PHID=PHI                                                               560
+      IF(PHID-PC)778,778,770                                                 561
+  778 XK1=PHIZ/D+PHI1/(1.-D)+PHID/(D*(D-1.))                                 562
+      XK2=-(PHIZ*(1.+D)/D+D/(1.-D)*PHI1+PHID/(D*(D-1.)))                     563
+      XK3=PHIZ-PC                                                            564
+      BC=(SQRTF(XK2*XK2-4.*XK1*XK3)-XK2)/(2.*XK1)                            565
+      GO TO (779,784),IBKN                                                   566
+  779 B(J)=BS(J)-SA(J)*BC                                                    567
+      GO TO 781                                                              568
+  784 B(J)=BS(J)+SA(J)*BC                                                    569
+  781 IBK2=2                                                                 570
+      GO TO 300                                                              571
+  780 GO TO (782,786),IBKN                                                   572
+  782 IBKN=2                                                                 573
+      DD=1.                                                                  574
+      BL=B(J)                                                                575
+      PL=PHI                                                                 576
+      GO TO 760                                                              577
+  786 BU=B(J)                                                                578
+      PU=PHI                                                                 579
+      GO TO (783,795,785,789),IBKP                                           580
+  783 PRINT 918,J,BL,PL,BU,PU                                                581
+      GO TO 790                                                              582
+  795 PRINT 915,J,BU,PU                                                      583
+      GO TO 790                                                              584
+  785 PRINT 918,J,BL,PL                                                      585
+      GO TO 790                                                              586
+  787 PRINT 913,J                                                            587
+      GO TO 790                                                              588
+  789 PRINT 914,J                                                            589
+      GO TO 790                                                              590
+  788 GO TO (791,792),IBKN                                                   591
+C                  DELETE LOWER PRINT                                        592
+  791 IBKP=2                                                                 593
+      GO TO 780                                                              594
+  792 GO TO (793,794),IBKP                                                   595
+C                  DELETE UPPER PRINT                                        596
+  793 IBKP=3                                                                 597
+      GO TO 780                                                              598
+C                  LOWER IS ALREADY DELETED, SO DELETE BOTH                  599
+  794 IBKP=4                                                                 600
+      GO TO 780                                                              601
+  790 CONTINUE                                                               602
+      GO TO 10                                                               603
+C     ..................................................................     604
+  900 FORMAT (20I3)                                                          605
+  901 FORMAT (7F10.0)                                                        606
+  902 FORMAT(12A5 )                                                          607
+  903 FORMAT (/13X,4H PHI 14X,4H S E 12X,5H RHO  7X,7H LAMBDA   6X,          608
+  9031 25H ESTIMATED PARTIALS USED  / 5X,2E18.8, 2E13.3 )                   1608
+  904 FORMAT(/12H INCREMENTS 5E18.8/(12X,5E18.8) )                           609
+  905 FORMAT (13X,4H PHI 10X,7H LAMBDA 6X,7H GAMMA  6X, 7H LENGTH  /         610
+  9051 5X, E18.8, 3E13.3)                                                   1610
+  906 FORMAT(1X,1E9.2,86X,1E9.2 /1X,1H+ 99X,1H+ )                            611
+  907 FORMAT( 5H1N = I3,5X,5H K = I3,5X,5H P = I3,5X,5H M = I3,5X,           612
+  9071 7H IFP = I3,5X,13HGAMMA CRIT = E10.3/6H FF = E10.3,5X,5H T =         1612
+  9072E10.3,5X,5H E = E10.3,5X,7H TAU = E10.3,5X,6H XL = E10.3 /)           2612
+  908 FORMAT(/12H PARAMETERS 5E18.8/(12X,5E18.8) )                           613
+  909 FORMAT (/13X,4H PHI 14X,4H S E 12X, 5H RHO 7X,7H LAMBDA 6X,            614
+  9091 25H ANALYTIC PARTIALS USED   /5X, 2E18.8, 2E13.3)                    1614
+  910 FORMAT(1H /5X,9X,4H OBS 13X,5H PRED 13X,5H DIFF  )                     615
+  911 FORMAT (/13X,4H PHI 14X,4H S E 11X,7H LENGTH 6X, 7H GAMMA 6X,          616
+  9111 7H LAMBDA 6X, 25HESTIMATED PARTIALS USED  /5X, 2E18.8, 3E13.3)       1616
+  912 FORMAT (/13X,4H PHI 14X,4H S E 11X,7H LENGTH 6X, 7H GAMMA 6X,          617
+  9121 7H LAMBDA 6X, 24HANALYTIC PARTIALS USED  /5X, 2E18.8, 3E13.3)        1617
+  913 FORMAT(2X,I3,20H PARAMETER NOT USED   )                                618
+  914 FORMAT(2X,I3,12H NONE FOUND   )                                        619
+  915 FORMAT(2X,I3,36X,2E18.8  )                                             620
+  916 FORMAT(1H /13H PTP INVERSE )                                           621
+  917 FORMAT(1H /30H PARAMETER CORRELATION MATRIX  )                         622
+  918 FORMAT( 2X,I3,5E18.8/(5X,5E18.8))                                      623
+  919 FORMAT( 1H /1H / 13X,4H STD 17X, 16H ONE - PARAMETER 21X,              624
+  9191 14H SUPPORT PLANE / 3X, 2H B 7X,6H ERROR 12X, 6H LOWER 12X,           625
+  9192 6H UPPER 12X, 6H LOWER 12X, 6H UPPER   )                              626
+  920 FORMAT( 1H /1H /30H  NONLINEAR CONFIDENCE LIMITS  / /                  627
+  9201 16H PHI CRITICAL = E15.8     )                                        628
+  921 FORMAT(1H / 6H  PARA 6X,8H LOWER B 8X,10H LOWER PHI 10X,8H UPPER B     629
+  9211 8X,10H UPPER PHI  )                                                   630
+  923 FORMAT(14H EPSILON TEST  )                                             632
+  924 FORMAT(11H FORCE OFF  )                                                633
+  925 FORMAT(5X,5E18.8)                                                      634
+  926 FORMAT ( 40H BAD DATA, SUBSCRIPTS FOR UNUSED BS = 0   / / / )          635
+  927 FORMAT(2X,I3,5E18.8 )                                                  636
+  928 FORMAT(1H , 110A1  )                                                   637
+  929 FORMAT(10A1)                                                           638
+  930 FORMAT (7F10.0)                                                        639
+  931 FORMAT (7F10.0)                                                        640
+  932 FORMAT(1H1)                                                           1640
+  933 FORMAT( 5H1N = I3,5X,5H K = I3,5X,5H P = I3,5X,5H M = I3,5X,           641
+  9331                             /   6H FF = E10.3,5X,5H T = E10.3,        642
+  9332 5X,5H E = E10.3,5X,7H TAU = E10.3   /    )                            643
+      END(0,1,0,1,0)                                                         644

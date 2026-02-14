@@ -1,0 +1,1770 @@
+C     HARTREE-FOCK-SLATER SELF-CONSISTENT ATOMIC FIELD PROGRAM          HFS 001 
+C      ORIGINALLY  WRITTEN BY SHERWOOD SKILLMAN                         HFS 002 
+C      RCA LABORATORIES, PRINCETON, NEW JERSEY, SPRING 1961             HFS 003 
+C      MODIFIED BY FRANK HERMAN, SUMMER 1961                            HFS 004 
+C      FURTHER MODIFIED BY RICHARD KORTUM,  LOCKHEED RESEARCH           HFS 005 
+C       LABORATORIES, PALO ALTO, CALIFORNIA,  SUMMER 1962               HFS 006 
+C     ITERATION NUMBER,MEASURE OF SELF-CONSISTENCY,AND ATOMIC NUMBER Z  HFS 007 
+C     ARE ALWAYS PRINTED ON-LINE.                                       HFS 008 
+C     OUTPUT TAPE B-5 CONTAINS SELF-CONSISTENT ATOMIC POTENTIAL,        HFS 009 
+C      ENERGY EIGENVALUES, AND RADIAL WAVE FUNCTIONS                    HFS 010 
+C      SUCCESSIVE SOLUTIONS SEPARATED BY END OF FILE                    HFS 011 
+C     Z = ATOMIC NUMBER.  ION = IONICITY.  ZZZ = ION+1                  HFS 012 
+C     IF KEY = 0   NORMALIZED NUMERICAL ATOMIC POTENTIAL IS READ IN     HFS 013 
+C      FOR EVERY 4TH MESH POINT FROM 1 TO 437.                          HFS 014 
+C     IF KEY = 1     NUMERICAL ATOMIC POTENTIAL IS TO BE READ IN.       HFS 015 
+C     IF KEY = 2  EXTRAPOLATE FOR STARTING POTENTIAL                    HFS 016 
+C     IPRATT IS THE NUMBER OF CONSECUTIVE ITERATIONS TO USE THE PRATT   HFS 017 
+C      IMPROVEMENT SCHEME FOLLOWING EACH APPLICATION OF THE ARITHMETIC  HFS 018 
+C      AVERAGE SCHEME.                                                  HFS 019 
+C     MAXIT = MAXIMUM NO. OF ITERATIONS UNLESS MAXIT IS READ AS 0 ,     HFS 020 
+C      IN WHICH CASE MAXIT IS SET TO 20.                                HFS 021 
+C     NOCOPY =0, B-5 IS COPIED TO A-3. NOCOPY = 1, B-5 IS NOT COPIED.   HFS 022 
+C     KUT = 1, THE CUTOFF POTENTIAL IS -2(ION+1)/R.                     HFS 023 
+C     KUT = 0, NO CUTOFF POTENTIAL IS IMPOSED.                          HFS 024 
+      DIMENSION X(521),RSCORE(521),RUINL1(521), RU2(521), RU(521),      HFS 025 
+     1 NNLZ(24),R(521),RSVALE(521),RUFNL1(521), RU3(521), XI(521),      HFS 026 
+     2 WWNL(24),V(521),RSATOM(521),RUINL2(521),XNUM(521), XJ(521),      HFS 027 
+     3 NKKK(24),EE(24),RUEXCH(521),RUFNL2(521),DENM(521),               HFS 028 
+     4 SNL(24,521),      SNLO(521),A(4,5)                               HFS 029 
+      COMMON V,SNLO, R, RSCORE,RSVALE,RU,RUEXCH,XI,XJ,    RSATOM,  SNL, HFS 030 
+     1RUINL1,RUFNL1,RUINL2,RUFNL2,XNUM,DENM,RU2,RU3,NNLZ,WWNL,NKKK,EE,A HFS 031 
+      EQUIVALENCE (RSCORE,XNUM),(RSVALE,DENM)  ,(QQ,RSATOM)             HFS 032 
+    1 FORMAT(F8.5,9F7.5)                                                HFS 033 
+    2 FORMAT (I4,1P3E14.7,I4,1PE14.7)                                   HFS 034 
+    3 FORMAT(F4.0,3I4)                                                  HFS 035 
+    4 FORMAT(9F8.8)                                                     HFS 036 
+    5 FORMAT(6H WWW= F4.0,6H ZZZ= F4.0,6H   Z= F4.0,11H   NCORES= I4,   HFS 037 
+     1 11H   NVALES= I4,11H   NCSPVS= I4/25H CONTROL CARDS INCORRECT. ) HFS 038 
+    6 FORMAT(6F5.2,F10.3)                                               HFS 039 
+    7 FORMAT(I4,F4.0,F8.4)                                              HFS 040 
+    8 FORMAT(I7,F7.0,1PE14.7,0P2(I6,F9.3))                              HFS 041 
+    9 FORMAT(6(I5,1PE14.7))                                             HFS 042 
+   10 FORMAT(1PE15.7,1P4E14.7)                                          HFS 043 
+   11 FORMAT(10H  NCARDS= I4, 10H  MCARDS= I4)                          HFS 044 
+  100 FORMAT(I4,2F8.6,5I4)                                              HFS 045 
+  102 FORMAT(2F4.0,2F7.3)                                               HFS 046 
+  103 FORMAT(6H ZZ1= F4.0,8H   ZZ2= F4.0,10H   BETA1= F7.3,             HFS 047 
+     1 10H   BETA2= F7.3)                                               HFS 048 
+  203 FORMAT(8H  KEY = I4)                                              HFS 049 
+  908 FORMAT  (6H  ITER,7X,1HZ,4X5HDELTA,7X,30HI(DEL)  X(DEL)  I(CUT)  XHFS 050 
+     1(CUT)  )                                                          HFS 051 
+ 2002 FORMAT(I4,1P3E14.7,I4,1PE14.7,8X,1HZ,I3,I4)                       HFS 052 
+ 2003 FORMAT(F4.0,3I4,56X,1HZ,I3,I4)                                    HFS 053 
+ 2010 FORMAT(1PE15.7,1P4E14.7,1X,1HZ,I3,I4)                             HFS 054 
+ 2011 FORMAT (1PE15.7,57X,1HZ,I3,I4)                                    HFS 055 
+ 9000 FORMAT (72H                                                       HFS 056 
+     1                                )                                 HFS 057 
+       REWIND 25                                                        HFS 058 
+       NFILES =0                                                        HFS 059 
+   15  CONTINUE                                                         HFS 060 
+C     READ HEADING CARD.                                                HFS 061 
+      READ INPUT TAPE 5,9000                                            HFS 062 
+      WRITE OUTPUT TAPE 6,9000                                          HFS 063 
+C     READ CONTROL CARDS AND INPUT POTENTIALS. CALCULATE TRIAL POTENTIALHFS 064 
+      READ INPUT TAPE 5,100,KEY,TOL,THRESH,MESH,IPRATT,MAXIT,NOCOPY,KUT HFS 065 
+      NCARDS=90                                                         HFS 066 
+      PRINT 203,KEY                                                     HFS 067 
+      IF(MAXIT) 104,104,105                                             HFS 068 
+  104 MAXIT=20                                                          HFS 069 
+  105 CONTINUE                                                          HFS 070 
+  107 NBLOCK = (MESH)/40                                                HFS 071 
+C     CONSTRUCT X MESH AND R MESH                                       HFS 072 
+      I=1                                                               HFS 073 
+      X(I)=0.0                                                          HFS 074 
+      R(I)=0.0                                                          HFS 075 
+      DELTAX=0.0025                                                     HFS 076 
+      DO 25 J=1,NBLOCK                                                  HFS 077 
+      DO 24 K=1,40                                                      HFS 078 
+      I=I+1                                                             HFS 079 
+   24 X(I)=X(I-1)+DELTAX                                                HFS 080 
+   25 DELTAX=DELTAX+DELTAX                                              HFS 081 
+      IF(KEY-1)1203,208,14                                              HFS 082 
+   14 READ INPUT TAPE 5,10, (RU2(M),M=1,441)                            HFS 083 
+      READ INPUT TAPE 5,10, (RU3(M),M=1,441)                            HFS 084 
+      ZE2=-RU2(1)/2.0                                                   HFS 085 
+      ZE3=-RU3(1)/2.0                                                   HFS 086 
+      GO TO 205                                                         HFS 087 
+C     READ IN ATOMIC POTENTIAL                                          HFS 088 
+ 1203 READ INPUT TAPE 5,1,(RU2(M),M=1,437,4)                            HFS 089 
+      GO TO 205                                                         HFS 090 
+  208 READ INPUT TAPE 5,10,(RU3(M),M=1,441)                             HFS 091 
+      ZE3=-RU3(1)/2.0                                                   HFS 092 
+  205 READ INPUT TAPE 5,3,Z,NCORES,NVALES,ION                           HFS 093 
+      CALL TIME                                                         HFS 094 
+       IF (Z) 1000,15  ,206                                             HFS 095 
+  206  NFILES =NFILES+1                                                 HFS 096 
+      IZ=Z                                                              HFS 097 
+      NCSPVS=NCORES+NVALES                                              HFS 098 
+      C=0.88534138/Z**(1.0/3.0)                                         HFS 099 
+      TWOION=ION+ION                                                    HFS 100 
+      ZZZ=ION+1                                                         HFS 101 
+      TWOZZZ = ZZZ+ZZZ                                                  HFS 102 
+      DO 224 I=2,MESH                                                   HFS 103 
+  224 R(I)=C*X(I)                                                       HFS 104 
+  210 READ INPUT TAPE 5,7,(NNLZ(I),WWNL(I),EE(I),I=1,NCSPVS)            HFS 105 
+      WWW=0.0                                                           HFS 106 
+      DO 112 I=1,NCSPVS                                                 HFS 107 
+  112 WWW=WWW+WWNL(I)                                                   HFS 108 
+      IF(ABSF(Z+1.0-WWW-ZZZ)-0.001) 114,113,113                         HFS 109 
+  113 PRINT 5,WWW,ZZZ,Z,NCORES,NVALES,NCSPVS                            HFS 110 
+      CALL EXIT                                                         HFS 111 
+  114 CONTINUE                                                          HFS 112 
+      IF (KEY-1) 204,207,16                                             HFS 113 
+C     CONSTRUCT ATOMIC POTENIAL                                         HFS 114 
+   16  IF(ABSF(ZE3-ZE2-Z+ZE3)-0.001) 18,18,1818                         HFS 115 
+ 1818 WRITE OUTPUT TAPE 6,1817,Z,ZE2,ZE3                                HFS 116 
+ 1817 FORMAT (27H0STARTING POTENTIALS AND Z=,F4.0,9H IN ERROR,2F4.0)    HFS 117 
+      CALL EXIT                                                         HFS 118 
+   18 DO 21 I=1,441                                                     HFS 119 
+      RU(I) = RU3(I)+RU3(I)-RU2(I)                                      HFS 120 
+   21 CONTINUE                                                          HFS 121 
+      GO TO 211                                                         HFS 122 
+  204 TWOZ=Z+Z                                                          HFS 123 
+      DO 110 I=1,437,4                                                  HFS 124 
+  110 RU(I)=-RU2(I)*TWOZ                                                HFS 125 
+      RU(441)=RU(437)                                                   HFS 126 
+      RU(445)=RU(437)                                                   HFS 127 
+      M=9                                                               HFS 128 
+      DO111 I=1,437,4                                                   HFS 129 
+      M=M-1                                                             HFS 130 
+      IF(M) 1100,1101,1101                                              HFS 131 
+ 1100 RU(I+1)=(22.0*RU(I)+11.0*RU(I+4)-RU(I+8))/32.0                    HFS 132 
+      RU(I+2)=(10.0*RU(I)+15.0*RU(I+4)-RU(I+8))/24.0                    HFS 133 
+      RU(I+3)=( 6.0*RU(I)+27.0*RU(I+4)-RU(I+8))/32.0                    HFS 134 
+      M=9                                                               HFS 135 
+      GO TO 111                                                         HFS 136 
+ 1101 RU(I+1)=(21.0*RU(I)+14.0*RU(I+4)-3.0*RU(I+8))/32.0                HFS 137 
+      RU(I+2)=( 3.0*RU(I)+ 6.0*RU(I+4)-    RU(I+8))/ 8.0                HFS 138 
+      RU(I+3)=( 5.0*RU(I)+30.0*RU(I+4)-3.0*RU(I+8))/32.0                HFS 139 
+  111 CONTINUE                                                          HFS 140 
+      GO TO 211                                                         HFS 141 
+  207 IF(ABSF(ZE3-Z)-0.001)  215,215,220                                HFS 142 
+  215 DO 213 I=1,441                                                    HFS 143 
+      RU(I)=RU3(I)                                                      HFS 144 
+  213 CONTINUE                                                          HFS 145 
+      GO TO 211                                                         HFS 146 
+  220 ZOZ=Z/ZE3                                                         HFS 147 
+      DO 223 I=1,441                                                    HFS 148 
+      RU(I)=RU3(I)*ZOZ                                                  HFS 149 
+  223 CONTINUE                                                          HFS 150 
+  211 V(1)=-9.9E35                                                      HFS 151 
+      M=XMIN0F(441,MESH)                                                HFS 152 
+      IF(KUT) 1212,1260,1212                                            HFS 153 
+ 1212 DO 1213 I= 1,M                                                    HFS 154 
+ 1213 V(I)= RU(I)/R(I)                                                  HFS 155 
+      IF(MESH-M)1214,1214,1216                                          HFS 156 
+ 1214 DO 1215 I=442, MESH                                               HFS 157 
+ 1215 V(I)=-TWOION/R(I)                                                 HFS 158 
+ 1216 LIMIT=M                                                           HFS 159 
+      ICUT= MESH                                                        HFS 160 
+      IC=MESH                                                           HFS 161 
+      GO TO 268                                                         HFS 162 
+ 1260 CONTINUE                                                          HFS 163 
+      ICUT=0                                                            HFS 164 
+      DO 26 I=2,M                                                       HFS 165 
+      IF (ICUT) 261,261,263                                             HFS 166 
+  261  IF( TWOZZZ+RU(I)) 264,264,262                                    HFS 167 
+  262 ICUT =I                                                           HFS 168 
+  263 V(I)=-TWOZZZ/R(I)                                                 HFS 169 
+      GO TO 26                                                          HFS 170 
+  264 V(I)=RU(I)/R(I)                                                   HFS 171 
+   26 CONTINUE                                                          HFS 172 
+      IF(ICUT) 265,265,266                                              HFS 173 
+  265  ICUT=M                                                           HFS 174 
+  266 LIMIT=ICUT                                                        HFS 175 
+      IF(MESH-M) 268,268,267                                            HFS 176 
+  267 CONTINUE                                                          HFS 177 
+      DO 115 I=442,MESH                                                 HFS 178 
+  115 V(I)=-TWOZZZ/R(I)                                                 HFS 179 
+  268 CONTINUE                                                          HFS 180 
+      DELTA =1000000.                                                   HFS 181 
+      NITER=0                                                           HFS 182 
+      NONMON =3                                                         HFS 183 
+      IPRSW=0                                                           HFS 184 
+      PRINT 908                                                         HFS 185 
+C     START ITERATION                                                   HFS 186 
+   27 MCARDS=90                                                         HFS 187 
+      CALL TIME                                                         HFS 188 
+      IF(MAXIT-NITER) 405,28,28                                         HFS 189 
+  405 CONTINUE                                                          HFS 190 
+      WRITE OUTPUT TAPE 6,450                                           HFS 191 
+      DO 410 I=1,MESH,5                                                 HFS 192 
+      WRITE OUTPUT TAPE 6,451,I,X    (I),RU3(I),RUINL1(I),RUFNL1(I),    HFS 193 
+     1RUINL2(I),RUFNL2(I),RU(I)                                         HFS 194 
+  410 CONTINUE                                                          HFS 195 
+  450 FORMAT (40H1I,X,RU3,RUINL1,RUFNL1,RUINL2,RUFNL2,RU   )            HFS 196 
+  451 FORMAT (I8,F10.4,1P6E16.7)                                        HFS 197 
+      GO TO 205                                                         HFS 198 
+   28 DO 29 I=1,MESH                                                    HFS 199 
+      RSCORE(I)=0.0                                                     HFS 200 
+   29 RSVALE(I)=0.0                                                     HFS 201 
+C     SOLVE SCHROEDINGER EQUATION FOR EACH STATE IN TURN. ALSO CALCULATEHFS 202 
+C           CORE AND VALENCE CHARGE DENSITY.                            HFS 203 
+      DO 35 M=1,NCSPVS                                                  HFS 204 
+      E=EE(M)                                                           HFS 205 
+       NN=NNLZ(M)/100                                                   HFS 206 
+       LAM =NNLZ(M)/10 -10*NN                                           HFS 207 
+       XL= LAM                                                          HFS 208 
+       CALL SCHEQ(Z,E,LAM,NN,KKK,MESH,C,THRESH)                         HFS 209 
+      IF(M-NCORES)30,30,32                                              HFS 210 
+   30 DO 31 I=1,KKK                                                     HFS 211 
+   31 RSCORE(I)=RSCORE(I)+WWNL(M)*SNLO(I)**2                            HFS 212 
+      GO TO 34                                                          HFS 213 
+   32 DO 33 I=1,KKK                                                     HFS 214 
+   33 RSVALE(I)=RSVALE(I)+WWNL(M)*SNLO(I)**2                            HFS 215 
+   34 DO 201 I=1,KKK                                                    HFS 216 
+  201 SNL(M,I)=SNLO(I)                                                  HFS 217 
+      NKKK(M)=KKK                                                       HFS 218 
+      MCARDS=MCARDS+2+((KKK-1)/40)*8                                    HFS 219 
+   35 EE(M)=E                                                           HFS 220 
+C     CALCULATE TOTAL CHARGE DENSITY AND ATOMIC EXCHANGE POTENTIAL      HFS 221 
+      DO 37 I=1,MESH                                                    HFS 222 
+   36 RSATOM(I)=RSCORE(I)+RSVALE(I)                                     HFS 223 
+   37 RUEXCH(I)= -6.0*((3.0*R(I)*RSATOM(I))/315.82734)**(1.0/3.0)       HFS 224 
+C     CALCULATE ATOMIC COULOMB POTENTIAL                                HFS 225 
+      A1=0.0                                                            HFS 226 
+      ASUM=0.0                                                          HFS 227 
+      B1=0.0                                                            HFS 228 
+      BSUM=0.0                                                          HFS 229 
+      H=0.0025*C                                                        HFS 230 
+      I=1                                                               HFS 231 
+      XI(1)=0.0                                                         HFS 232 
+      XJ(1)=0.0                                                         HFS 233 
+      DO 39 J=1,NBLOCK                                                  HFS 234 
+      DO 38 K=1,40                                                      HFS 235 
+      I=I+1                                                             HFS 236 
+      A2=RSATOM(I)/2.0                                                  HFS 237 
+      A1=A1+A2                                                          HFS 238 
+      B2=RSATOM(I)/(2.0*R(I))                                           HFS 239 
+      B1=B1+B2                                                          HFS 240 
+      XI(I)=ASUM+A1*H                                                   HFS 241 
+      XJ(I)=BSUM+B1*H                                                   HFS 242 
+      A1=A1+A2                                                          HFS 243 
+   38 B1=B1+B2                                                          HFS 244 
+      ASUM=XI(I)                                                        HFS 245 
+      BSUM=XJ(I)                                                        HFS 246 
+      A1=A2                                                             HFS 247 
+      B1=B2                                                             HFS 248 
+   39 H=H+H                                                             HFS 249 
+   40 CONTINUE                                                          HFS 250 
+   41 DO 44 I=1,MESH                                                    HFS 251 
+      XI(I)=-2.0*Z+2.0*(XI(I)+R(I)*(XJ(MESH)-XJ(I)))                    HFS 252 
+      XJ(I)=XI(I)+RUEXCH(I)                                             HFS 253 
+   44 CONTINUE                                                          HFS 254 
+   74 DO 75 I=1,MESH                                                    HFS 255 
+      RUINL1(I)=RUINL2(I)                                               HFS 256 
+      RUFNL1(I)=RUFNL2(I)                                               HFS 257 
+      RUINL2(I)=RU(I)                                                   HFS 258 
+   75 RUFNL2(I)=XJ(I)                                                   HFS 259 
+   76 NITER=NITER+1                                                     HFS 260 
+      PDELTA =DELTA                                                     HFS 261 
+      DELTA =0.0                                                        HFS 262 
+      DO 48 I=1,LIMIT                                                   HFS 263 
+   45 SNLO(I)=RU(I)-XJ(I)                                               HFS 264 
+   46 XI(I)=ABSF(SNLO(I))                                               HFS 265 
+      IF (XI(I)-DELTA)48,48,47                                          HFS 266 
+   47 DELTA=XI(I)                                                       HFS 267 
+      IDELTA=I                                                          HFS 268 
+   48 CONTINUE                                                          HFS 269 
+      PRINT 8,NITER,Z,DELTA,IDELTA,X(IDELTA),ICUT,X(ICUT)               HFS 270 
+C     TEST SELF-CONSISTENCY OF ATOMIC POTENTIAL.                        HFS 271 
+   50 IF(DELTA-TOL) 58,51,51                                            HFS 272 
+C     IF SCF CRITERION NOT SATISFIED, CALCULATE NEXT TRIAL POTENTIAL.   HFS 273 
+   51 IF(IPRSW) 80,80,82                                                HFS 274 
+   80 DO 81 I=2,LIMIT                                                   HFS 275 
+   81 RU(I)=0.5*(RU(I)+XJ(I))                                           HFS 276 
+      IF (MESH-LIMIT)  280,280,270                                      HFS 277 
+  270 RUZM=XJ(MESH)                                                     HFS 278 
+      RATIO =(RUZM-RU(LIMIT))/(RUZM-XJ(LIMIT))                          HFS 279 
+      DO 271 I=LIMIT,MESH                                               HFS 280 
+  271 RU(I)=RUZM-RATIO*(RUZM-XJ(I))                                     HFS 281 
+      LIMIT =MESH                                                       HFS 282 
+  280 IPRSW=IPRATT                                                      HFS 283 
+      GO TO 87                                                          HFS 284 
+   82 CONTINUE                                                          HFS 285 
+  282 IF(NONMON) 80,80,183                                              HFS 286 
+  183 IF(PDELTA-DELTA)184,184,185                                       HFS 287 
+C     IF DELTA IS NOT MONOTONIC DECREASING FOUR TIMES, BYPASS           HFS 288 
+C       PRATT IMPROVEMENT SCHEME                                        HFS 289 
+  184 NONMON =NONMON-1                                                  HFS 290 
+      IF(NONMON)80,80,185                                               HFS 291 
+  185 ALPH=0.5                                                          HFS 292 
+C     PRATT IMPROVEMENT SCHEME                                          HFS 293 
+      DO 849 I=2,ICUT                                                   HFS 294 
+      XNUM(I)=RUINL1(I)*RUFNL2(I)-RUINL2(I)*RUFNL1(I)                   HFS 295 
+      DENM(I)=RUFNL2(I)-RUFNL1(I)-RUINL2(I)+RUINL1(I)                   HFS 296 
+  182 IF(ABSF(DENM(I)/RUINL2(I))-0.0001) 83,83,84                       HFS 297 
+   83 CONTINUE                                                          HFS 298 
+  832 ALPH=0.5                                                          HFS 299 
+      GO TO 846                                                         HFS 300 
+   84 ALPH=(XNUM(I)/DENM(I)-RUFNL2(I))/SNLO(I)                          HFS 301 
+      IF(ALPH) 841,845,842                                              HFS 302 
+  841 ALPH=0.0                                                          HFS 303 
+      GO TO 846                                                         HFS 304 
+  842 IF(0.5-ALPH) 843,845,845                                          HFS 305 
+  843 ALPH=0.5                                                          HFS 306 
+  845 CONTINUE                                                          HFS 307 
+  846 XI(I)=ALPH                                                        HFS 308 
+  849 CONTINUE                                                          HFS 309 
+      IPRSW=IPRSW-1                                                     HFS 310 
+      IF(KUT) 1873,1849,1873                                            HFS 311 
+ 1849 CONTINUE                                                          HFS 312 
+      IC=ICUT+20                                                        HFS 313 
+      IC1=ICUT+1                                                        HFS 314 
+       ADEL=XI(ICUT)/20.                                                HFS 315 
+      DO 873 I=IC1,IC                                                   HFS 316 
+      XI(I)=XI(I-1)-ADEL                                                HFS 317 
+  873 XJ(I)=XI(I)                                                       HFS 318 
+ 1873 CONTINUE                                                          HFS 319 
+      XJ(1)=0.5                                                         HFS 320 
+      XJ(2)=XI(2)                                                       HFS 321 
+      ASUM=XI(2)+XI(3)+XI(4)+XI(5)                                      HFS 322 
+      DO 874 I=3,ICUT                                                   HFS 323 
+      XJ(I)=ASUM*0.2                                                    HFS 324 
+  874 ASUM=ASUM-XI(I-2)+XI(I+3)                                         HFS 325 
+      IF(KUT) 1875,1874,1875                                            HFS 326 
+ 1874 CONTINUE                                                          HFS 327 
+      IC1=IC+1                                                          HFS 328 
+      DO 875 I=IC1,MESH                                                 HFS 329 
+      XJ(I)=0.0                                                         HFS 330 
+  875 RU(I)=RUFNL2(I)                                                   HFS 331 
+ 1875 CONTINUE                                                          HFS 332 
+      DO 876 I=2,IC                                                     HFS 333 
+  876 RU(I)= RUFNL2(I)+XJ(I)*SNLO(I)                                    HFS 334 
+   87 CONTINUE                                                          HFS 335 
+      IF(KUT) 2870,1870,2870                                            HFS 336 
+ 2870 ICUT=MESH                                                         HFS 337 
+      LIMIT=MESH                                                        HFS 338 
+      DO 2871 I=2,MESH                                                  HFS 339 
+      VLAST= V(I)                                                       HFS 340 
+      V(I)=RU(I)/R(I)                                                   HFS 341 
+ 2871 XI(I)=V(I)-VLAST                                                  HFS 342 
+      GO TO 1861                                                        HFS 343 
+ 1870 CONTINUE                                                          HFS 344 
+      ICUT =0                                                           HFS 345 
+      DO 86 I=2,MESH                                                    HFS 346 
+       VLAST=V(I)                                                       HFS 347 
+      IF(ICUT) 851,851,853                                              HFS 348 
+  851 IF(TWOZZZ+RU(I)) 854,854,852                                      HFS 349 
+  852 ICUT=I                                                            HFS 350 
+  853 V(I)=-TWOZZZ/R(I)                                                 HFS 351 
+      GO TO 86                                                          HFS 352 
+  854 V(I)=RU(I)/R(I)                                                   HFS 353 
+   86 XI(I)=V(I)-VLAST                                                  HFS 354 
+ 1861 CONTINUE                                                          HFS 355 
+      XI(1)=0.0                                                         HFS 356 
+C     NEXT TRIAL EIGENVALUES PREDICTED BY PERTURBATION THEORY           HFS 357 
+      NCARDS=90                                                         HFS 358 
+      DO 55 M=1,NCSPVS                                                  HFS 359 
+      K=(NKKK(M)-1)/40                                                  HFS 360 
+      H=0.0025*C                                                        HFS 361 
+      ASUM=0.0                                                          HFS 362 
+      A1=0.0                                                            HFS 363 
+      I=1                                                               HFS 364 
+      DO 54 J=1,K                                                       HFS 365 
+      DO 53 L=1,40                                                      HFS 366 
+      I=I+1                                                             HFS 367 
+      A2=XI(I)*SNL(M,I)**2                                              HFS 368 
+   53 A1=A1+A2*H                                                        HFS 369 
+      ASUM=ASUM+A1-(A2/2.0)*H                                           HFS 370 
+      H=H+H                                                             HFS 371 
+   54 A1=(A2/2.0)*H                                                     HFS 372 
+      EE(M)=EE(M)+ASUM                                                  HFS 373 
+   55 NCARDS=NCARDS+8*K+2                                               HFS 374 
+      GO TO 27                                                          HFS 375 
+C     RESULTS TRANSFERRED FROM INTERNAL MEMORY TO OUTPUT TAPE(S).       HFS 376 
+C     OUTPUT IS ON TAPE B-5 FOR OFFLINE PUNCHING (BCD), AND IS          HFS 377 
+C       COPIED TO NORMAL OUTPUT TAPE 6 (A3)                             HFS 378 
+   58 CONTINUE                                                          HFS 379 
+      CALL TIME                                                         HFS 380 
+  580 PRINT 11,NCARDS,MCARDS                                            HFS 381 
+      NC=1                                                              HFS 382 
+      WRITE OUTPUT TAPE 25,2003,Z,NCORES,NVALES,ION,IZ,NC               HFS 383 
+      DO 583 I=1,441                                                    HFS 384 
+      IF(TWOION+RUINL2(I)) 583,583,581                                  HFS 385 
+  581 DO 582 M=I,441                                                    HFS 386 
+  582 RUINL2(M)=-TWOION                                                 HFS 387 
+      GO TO 584                                                         HFS 388 
+  583 CONTINUE                                                          HFS 389 
+  584 CONTINUE                                                          HFS 390 
+      DO 588 MIN=1,440,5                                                HFS 391 
+      MAX= MIN+4                                                        HFS 392 
+      NC=NC+1                                                           HFS 393 
+      WRITE OUTPUT TAPE 25,2010,(RUINL2(M),M=MIN,MAX),IZ,NC             HFS 394 
+  588 CONTINUE                                                          HFS 395 
+      NC=NC+1                                                           HFS 396 
+      WRITE OUTPUT TAPE 25,2011,RUINL2(441),IZ,NC                       HFS 397 
+      DO 59 M=1,NCSPVS                                                  HFS 398 
+      NLZ=NNLZ(M)                                                       HFS 399 
+      KKK=NKKK(M)                                                       HFS 400 
+      XL=NLZ/10-10*(NLZ/100)                                            HFS 401 
+      LP=XL+1.0                                                         HFS 402 
+C     COMPUTE FIRST TERM OF SERIES. (SNL(R)/R**(LAM+1) AT R=0)          HFS 403 
+      DO 591 I=1,4                                                      HFS 404 
+      A(I,1)=1.0                                                        HFS 405 
+      A(I,2)=R(I+1)                                                     HFS 406 
+      A(I,3)=R(I+1)*R(I+1)                                              HFS 407 
+      A(I,4)=R(I+1)*A(I,3)                                              HFS 408 
+  591 A(I,5)=SNL (M,I+1)/R(I+1)**LP                                     HFS 409 
+      CALL CROSYM (4)                                                   HFS 410 
+      NC=NC+1                                                           HFS 411 
+      WRITE OUTPUT TAPE 25,2002,NLZ,XL,EE(M),WWNL(M),KKK,A(1,5),IZ,NC   HFS 412 
+      K1=KKK-1                                                          HFS 413 
+      DO598 MIN=1,K1 ,5                                                 HFS 414 
+      NC=NC+1                                                           HFS 415 
+      MAX= MIN+4                                                        HFS 416 
+      WRITE OUTPUT TAPE 25,2010,(SNL(M,I),I=MIN,MAX),IZ,NC              HFS 417 
+  598 CONTINUE                                                          HFS 418 
+      NC=NC+1                                                           HFS 419 
+      WRITE OUTPUT TAPE 25,2011,SNL(M,KKK),IZ,NC                        HFS 420 
+   59 CONTINUE                                                          HFS 421 
+      IF(KEY-1)  958,960,965                                            HFS 422 
+  958 KEY=1                                                             HFS 423 
+  960 DO 961 I=1,MESH                                                   HFS 424 
+  961 RU3(I)=RU(I)                                                      HFS 425 
+      ZE3=Z                                                             HFS 426 
+      GO TO 205                                                         HFS 427 
+  965 DO 966 I=1,MESH                                                   HFS 428 
+      RU2(I)=RU3(I)                                                     HFS 429 
+  966 RU3(I)=RU(I)                                                      HFS 430 
+      ZE2=ZE3                                                           HFS 431 
+      ZE3=Z                                                             HFS 432 
+      GO TO 205                                                         HFS 433 
+ 1000 CONTINUE                                                          HFS 434 
+       END FILE 25                                                      HFS 435 
+      IF(NOCOPY)1008,1008,1005                                          HFS 436 
+ 1008 CONTINUE                                                          HFS 437 
+       REWIND 25                                                        HFS 438 
+      IF(NFILES)1003,1003,1002                                          HFS 439 
+ 1002 CALL COPY(25,6)                                                   HFS 440 
+ 1003 CONTINUE                                                          HFS 441 
+ 1005 CALL UNLOAD(25)                                                   HFS 442 
+ 2005  CALL EXIT                                                        HFS 443 
+      END                                                               HFS 444 
+                                                                        SCH 000 
+C     SUBROUTINE SCHEQ                                                  SCH 001 
+C     COMPUTE ENERGY EIGENVALUE AND WAVE FUNCTION                       SCH 002 
+C      ORIGINALLY  WRITTEN BY SHERWOOD SKILLMAN                         SCH 003 
+C      RCA LABORATORIES, PRINCETON, NEW JERSEY, SPRING 1961             SCH 004 
+C      MODIFIED BY FRANK HERMAN, SUMMER 1961                            SCH 005 
+C      FURTHER MODIFIED BY RICHARD KORTUM,  LOCKHEED RESEARCH           SCH 006 
+C       LABORATORIES, PALO ALTO, CALIFORNIA,  SUMMER 1962               SCH 007 
+       SUBROUTINE SCHEQ(ZZ,EN,LAMBDA,NOFL,KKK,MESS,SCF,THRESH)          SCH 008 
+      DIMENSION                       P(5),Q(5),T(5),D(5)               SCH 009 
+      DIMENSION R(521),RSCORE(521),RUINL1(521), RU2(521), RU(521),      SCH 010 
+     1 NNLZ(24),       RSVALE(521),RUFNL1(521), RU3(521), XI(521),      SCH 011 
+     2 WWNL(24),V(521),RSATOM(521),RUINL2(521),XNUM(521), XJ(521),      SCH 012 
+     3 NKKK(24),EE(24),RUEXCH(521),RUFNL2(521),DENM(521),               SCH 013 
+     4 SNL(24,521),      SNLO(521) , QQ(521)                            SCH 014 
+      COMMON V,SNLO, R, RSCORE,RSVALE,RU,RUEXCH,XI,XJ,    RSATOM,  SNL, SCH 015 
+     1RUINL1,RUFNL1,RUINL2,RUFNL2,XNUM,DENM,RU2,RU3,NNLZ,WWNL,NKKK,EE   SCH 016 
+      EQUIVALENCE (RSCORE,XNUM),(RSVALE,DENM)  ,(QQ,RSATOM)             SCH 017 
+C     SET UP CONSTANTS AND INITIALIZE                                   SCH 018 
+       Z=ZZ                                                             SCH 019 
+       LAM=LAMBDA                                                       SCH 020 
+       NN=NOFL                                                          SCH 021 
+       MESH=MESS                                                        SCH 022 
+       C=SCF                                                            SCH 023 
+      MANY = 200                                                        SCH 024 
+   73 E=EN                                                              SCH 025 
+      MOREV=0                                                           SCH 026 
+      LESSV=0                                                           SCH 027 
+      EMORE=0.0                                                         SCH 028 
+      ELESS=0.0                                                         SCH 029 
+      MORE=0                                                            SCH 030 
+      LESS=0                                                            SCH 031 
+      DE=0.0                                                            SCH 032 
+      NPRINT=0                                                          SCH 033 
+      LAMM=LAM-1                                                        SCH 034 
+      LAMP=LAM+1                                                        SCH 035 
+      XLP=LAMP                                                          SCH 036 
+      NDCR=NN-LAMP                                                      SCH 037 
+      B=LAM*LAMP                                                        SCH 038 
+       OC=R(2)                                                          SCH 039 
+      H=OC                                                              SCH 040 
+      HSQ=H*H                                                           SCH 041 
+      B3=(V(3)-V(2))/H-Z/HSQ                                            SCH 042 
+      Y=H+H                                                             SCH 043 
+      FLPS=4*LAM+6                                                      SCH 044 
+      SLPT=6*LAM+12                                                     SCH 045 
+      ELPT=8*LAM+20                                                     SCH 046 
+      A1=-Z/XLP                                                         SCH 047 
+      YSQ=Y*Y                                                           SCH 048 
+       B1=-Z-Z                                                          SCH 049 
+      AB1=A1*B1                                                         SCH 050 
+      AB3=A1*B3                                                         SCH 051 
+C     RAISE H AND Y TO LAM+1                                            SCH 052 
+      HTL=H                                                             SCH 053 
+      YTL=Y                                                             SCH 054 
+      IF(LAM)77,1102,1100                                               SCH 055 
+ 1100 DO 1101 I=1,LAM                                                   SCH 056 
+      HTL=HTL*H                                                         SCH 057 
+ 1101  YTL=YTL*Y                                                        SCH 058 
+ 1102 H1=HSQ                                                            SCH 059 
+      BOHS=B/HSQ                                                        SCH 060 
+      BOH=B1/H                                                          SCH 061 
+      BTH=B3*H                                                          SCH 062 
+      BQ3=BOHS+BOH+BTH                                                  SCH 063 
+      BQ4=BOHS/4.+BOH/2.+BTH+BTH                                        SCH 064 
+      EPL=8+LAM                                                         SCH 065 
+      FPL=5+LAM                                                         SCH 066 
+      XIFC=C*.21701389E-4                                               SCH 067 
+C     START OUTWARD INTEGRATION                                         SCH 068 
+   10 NPRINT=NPRINT+1                                                   SCH 069 
+      EPS =E-EG                                                         SCH 070 
+      EG =E                                                             SCH 071 
+      IF(MANY-NPRINT)  900,75,75                                        SCH 072 
+  900 WRITE OUTPUT TAPE 6,901,NN,LAM ,Z                                 SCH 073 
+  901 FORMAT (20H   NO CONVERGENCE ON,I4,I1,F4.0)                       SCH 074 
+       CALL DUMP                                                        SCH 075 
+   77 NSTOP=77                                                          SCH 076 
+  777 WRITE OUTPUT TAPE 6,770,NSTOP                                     SCH 077 
+  770 FORMAT(5H0STOP,I4,8HIN SCHEQ)                                     SCH 078 
+      CALL DUMP                                                         SCH 079 
+   75 DO 11 I=1,MESH                                                    SCH 080 
+   11 SNLO(I)=0.0                                                       SCH 081 
+      IF(NPRINT-1) 77,500,529                                           SCH 082 
+  500 CONTINUE                                                          SCH 083 
+      DO 502  I= 4,MESH                                                 SCH 084 
+      QQ(I) = V(I)+B/(R(I)*R(I))-E                                      SCH 085 
+  502 CONTINUE                                                          SCH 086 
+  516 M= MESH                                                           SCH 087 
+      DO 520 I=4,MESH                                                   SCH 088 
+      IF(QQ(M)) 519,520,520                                             SCH 089 
+  519 IK=M+1                                                            SCH 090 
+      GO TO  525                                                        SCH 091 
+  520 M=M-1                                                             SCH 092 
+  521 NSTOP =521                                                        SCH 093 
+C     Q IS EVERYWHERE POSITIVE                                          SCH 094 
+      GO TO 777                                                         SCH 095 
+  525 IF(MESH-IK) 526,526,535                                           SCH 096 
+  526 EPS = QQ(MESH-40)                                                 SCH 097 
+      E = E+EPS                                                         SCH 098 
+  529 CONTINUE                                                          SCH 099 
+      DO 530 I=4,MESH                                                   SCH 100 
+  530 QQ(I) = QQ(I)-EPS                                                 SCH 101 
+      GO TO 516                                                         SCH 102 
+  535 CONTINUE                                                          SCH 103 
+   14 NCROSS=0                                                          SCH 104 
+      SIGN=1.0                                                          SCH 105 
+      H=OC                                                              SCH 106 
+      Y=H+H                                                             SCH 107 
+C     B= LAM*(LAM+1)                                                    SCH 108 
+C     B1= -2.*Z                                                         SCH 109 
+      B2=3.0*Z/H-E+2.0*V(2)-V(3)                                        SCH 110 
+C     B3=(V(3)-V(2))/H -Z/HSQ                                           SCH 111 
+C     A1= -Z/(LAM+1)                                                    SCH 112 
+      A2=(AB1+B2)/FLPS                                                  SCH 113 
+C     A2=(A1*B1+B2)/(4*LAM+6)                                           SCH 114 
+      A3=(A2*B1+A1*B2+B3)/SLPT                                          SCH 115 
+C     A3=(A2*B1+A1*B2+B3)/(6*LAM+12)                                    SCH 116 
+      A4=(A3*B1+A2*B2+AB3)/ELPT                                         SCH 117 
+C     A4=(A3*B1+A2*B2+A1*B3)/(8*LAM+20)                                 SCH 118 
+      P(3)=(1.0+H*(A1+H*(A2+H*(A3+H*A4))))*HTL                          SCH 119 
+C     P(3)=(1.0+A1*H+A2*H**2+A3*H**3+A4*H**4)*H**(XL+1.0)               SCH 120 
+      P(4)=(1.0+Y*(A1+Y*(A2+Y*(A3+Y*A4))))*YTL                          SCH 121 
+C     P(4)=(1.0+A1*Y+A2*Y**2+A3*Y**3+A4*Y**4)*Y**(XL+1.0)               SCH 122 
+      Q(3)=BQ3+B2                                                       SCH 123 
+C     Q(3)=(B+B1*H+B2*H**2+B3*H**3)/H**2                                SCH 124 
+      Q(4)=BQ4+B2                                                       SCH 125 
+C     Q(4)=(B+B1*Y+B2*Y**2+B3*Y**3)/Y**2                                SCH 126 
+      SNLO(2)=P(3)                                                      SCH 127 
+      SNLO(3)=P(4)                                                      SCH 128 
+      I=3                                                               SCH 129 
+       DX=OC                                                            SCH 130 
+      H1=H**2                                                           SCH 131 
+      H2=H1/12.0                                                        SCH 132 
+      T(3)=P(3)*(1.0-H2*Q(3))                                           SCH 133 
+      T(4)=P(4)*(1.0-H2*Q(4))                                           SCH 134 
+      D(4)=T(4)-T(3)                                                    SCH 135 
+      NCOUNT=3                                                          SCH 136 
+      NINT=2                                                            SCH 137 
+   15 I=I+1                                                             SCH 138 
+C     IF END OF MESH IS REACHED, MODIFY TRIAL EIGENVALUE                SCH 139 
+      IF(I-MESH) 16,3,3                                                 SCH 140 
+    3 IF(NDCR-NCROSS) 32,33,33                                          SCH 141 
+C     RETURN TO BEGINNING OF OUTWARD INTEGRATION IF NECESSARY           SCH 142 
+   16 Q(5) =QQ(I)                                                       SCH 143 
+      IF(IK-I)  29,29,21                                                SCH 144 
+   21 D(5)=D(4)+H1*Q(4)*P(4)                                            SCH 145 
+      T(5)=D(5)+T(4)                                                    SCH 146 
+      IF(1.0-ABSF(H2*Q(5))) 3,3,501                                     SCH 147 
+  501 P(5)=T(5)/(1.0-H2*Q(5))                                           SCH 148 
+      SNLO(I) = P(5)                                                    SCH 149 
+       IF(SIGN) 211,77,212                                              SCH 150 
+  211  IF(P(5))  23,23,22                                               SCH 151 
+  212  IF(P(5)) 22,23,23                                                SCH 152 
+   22 NCROSS=NCROSS+1                                                   SCH 153 
+C     COUNT CHANGES IN SIGN                                             SCH 154 
+      SIGN=-SIGN                                                        SCH 155 
+   23 NCOUNT=NCOUNT+1                                                   SCH 156 
+      IF(7-NCOUNT)77,24,25                                              SCH 157 
+   24 NCOUNT=2                                                          SCH 158 
+   25 NINT=NINT+1                                                       SCH 159 
+      IF(40-NINT)77,26,27                                               SCH 160 
+   26 DX=DX+DX                                                          SCH 161 
+      H=DX                                                              SCH 162 
+      H1=H**2                                                           SCH 163 
+      H2=H1/12.0                                                        SCH 164 
+      NINT=0                                                            SCH 165 
+      T(5)=P(5)*(1.0-H2*Q(5))                                           SCH 166 
+      T(3)=P(3)*(1.0-H2*Q(3))                                           SCH 167 
+      D(5)=T(5)-T(3)                                                    SCH 168 
+   27 DO 28 K=1,4                                                       SCH 169 
+      P(K)=P(K+1)                                                       SCH 170 
+      T(K)=T(K+1)                                                       SCH 171 
+      D(K)=D(K+1)                                                       SCH 172 
+   28 Q(K)=Q(K+1)                                                       SCH 173 
+      GO TO 15                                                          SCH 174 
+   29 IF(NCOUNT-2)77,30,21                                              SCH 175 
+   30 IF(NINT-4)21,21,31                                                SCH 176 
+C     MATCHING RADIUS HAS BEEN REACHED GOING OUT                        SCH 177 
+C     IF NDCR NOT EQUAL TO NCROSS, MODIFY TRIAL EIGENVALUE              SCH 178 
+   31 EIGEN=E                                                           SCH 179 
+      IF(NDCR-NCROSS) 32,35,33                                          SCH 180 
+   32 MORE=1                                                            SCH 181 
+C     TOO MANY CROSSINGS, INCREASE ABSF(E)                              SCH 182 
+      MOREV=MOREV+1                                                     SCH 183 
+       IF(MOREV-1) 50,53,52                                             SCH 184 
+   50 NSTOP=50                                                          SCH 185 
+      GO TO 777                                                         SCH 186 
+   52 IF(E -EMORE) 53,54,54                                             SCH 187 
+   53 EMORE=E                                                           SCH 188 
+   54  IF (LESS) 55,56,64                                               SCH 189 
+   55 NSTOP=55                                                          SCH 190 
+      GO TO 777                                                         SCH 191 
+   56 E=1.25*EG                                                         SCH 192 
+      GO TO 10                                                          SCH 193 
+   33 LESS=1                                                            SCH 194 
+C     TOO FEW  CROSSINGS, DECREASE ABSF(E)                              SCH 195 
+      LESSV=LESSV+1                                                     SCH 196 
+       IF(LESSV-1) 57,60,59                                             SCH 197 
+   57 NSTOP=57                                                          SCH 198 
+      GO TO 777                                                         SCH 199 
+   59 IF(ELESS- E) 60,61,61                                             SCH 200 
+   60 ELESS=E                                                           SCH 201 
+   61 IF(MORE) 62,63,64                                                 SCH 202 
+   62 NSTOP=62                                                          SCH 203 
+      GO TO 777                                                         SCH 204 
+   63 E=0.75*EG                                                         SCH 205 
+      GO TO 10                                                          SCH 206 
+   64 E=0.5*(EMORE+ELESS)                                               SCH 207 
+      GO TO 10                                                          SCH 208 
+   35  IF(ABSF(SNLO(I-1))-ABSF(SNLO(I-2))) 351,354,354                  SCH 209 
+C     CHECK TO SEE THAT WAVE IS IN THE DAMPED REGION (ABSOLUTE VALUE    SCH 210 
+C       DECREASING AND SIGNS ALIKE)                                     SCH 211 
+  351  IF (P(5)) 352,21 ,353                                            SCH 212 
+  352  IF(SNLO(I-2)) 401,21,21                                          SCH 213 
+  353  IF(SNLO(I-2)) 21,21,401                                          SCH 214 
+  354  IF(1.0E+25 -ABSF(P(5)))33,33,21                                  SCH 215 
+C     LARGE ABSOLUTE VALUE OF P IN WHAT SHOULD BE THE DAMPED REGION     SCH 216 
+C       INDICATES TOO FEW PEAKS, DECREASE ABSF(E)                       SCH 217 
+C     NOW NDCR = NCROSS AND MATCHING RADIUS LIES IN DAMPED REGION       SCH 218 
+  401 IMATCH=I-2                                                        SCH 219 
+      XMATCH=R(I-2)                                                     SCH 220 
+      PPOUT=(T(4)-T(2)-0.5*(P(4)-P(2)))/H                               SCH 221 
+      S2=PPOUT/P(3)                                                     SCH 222 
+C     INTEGRATION IS BY 8 APPLICATIONS OF NEWTON-COTES CLOSED           SCH 223 
+C       QUADRATURE FOR FIVE INTERVALS ON EACH BLOCK                     SCH 224 
+C       XIFC =(5*H(BLOCK 1)/288)/2 ,H(1) =0.0025*SCALE FACTOR           SCH 225 
+      SUM1=0.0                                                          SCH 226 
+      XIF=XIFC                                                          SCH 227 
+      I=1                                                               SCH 228 
+      VALUE=0.0                                                         SCH 229 
+   36 MM=8                                                              SCH 230 
+      SUM2=0.0                                                          SCH 231 
+      XIF=XIF+XIF                                                       SCH 232 
+   37 Y=VALUE                                                           SCH 233 
+      VALUE=SNLO(I+5)**2                                                SCH 234 
+      SUM2=SUM2+19.0*(VALUE+Y)+75.0*(SNLO(I+4)**2+SNLO(I+1)**2)         SCH 235 
+     1+50.0*(SNLO(I+2)**2+SNLO(I+3)**2)                                 SCH 236 
+      I=I+5                                                             SCH 237 
+       IF (IMATCH-I)  77,39,371                                         SCH 238 
+  371  MM=MM-1                                                          SCH 239 
+      IF(MM)77,38,37                                                    SCH 240 
+   38 SUM1=SUM2*XIF+SUM1                                                SCH 241 
+       GO TO 36                                                         SCH 242 
+   39  SUM1= SUM1+SUM2*XIF                                              SCH 243 
+   40 S1=SUM1/P(3)**2                                                   SCH 244 
+      PMATCH=P(3)                                                       SCH 245 
+      IF(NN-1)77,41,42                                                  SCH 246 
+   41 XINW=EPL*XMATCH                                                   SCH 247 
+C     FOR N =1, START INWARD INTEGRATION AT(8+LAM)*XMATCH OR X MAX      SCH 248 
+      GO TO 421                                                         SCH 249 
+   42 XINW=FPL*XMATCH                                                   SCH 250 
+C     FOR N NOT=1, START AT (5+LAM)*XMATCH OR X MAX (END OF MESH)       SCH 251 
+  421 DO 44  I= 41,MESH,40                                              SCH 252 
+      IF(XINW-R(I))  43,43,44                                           SCH 253 
+   43 KKK =I                                                            SCH 254 
+      GO TO 45                                                          SCH 255 
+   44 CONTINUE                                                          SCH 256 
+      KKK =MESH                                                         SCH 257 
+   45 I =KKK                                                            SCH 258 
+      DX =R(I-1)-R(I)                                                   SCH 259 
+      H =DX                                                             SCH 260 
+      XIF=0.17361111E-1*DX                                              SCH 261 
+      HSQ=H*H                                                           SCH 262 
+      HSQ12=HSQ/12.0                                                    SCH 263 
+      Q(3)= QQ(I)                                                       SCH 264 
+      P(3)= EXPF(-R(I)*SQRTF(Q(3)))                                     SCH 265 
+  402 SUM3=P(3)/Q(3)                                                    SCH 266 
+      I=I-1                                                             SCH 267 
+      Q(4) =QQ(I)                                                       SCH 268 
+  404 P(4)=EXPF(-R(I)*SQRTF(Q(4)))                                      SCH 269 
+      IF (ABSF(P(4))-1.0E-35) 4041,4041,405                             SCH 270 
+ 4041 KKK=KKK -40                                                       SCH 271 
+      IF(KKK -IMATCH) 4042,4042,45                                      SCH 272 
+ 4042 WRITE OUTPUT TAPE 6,4043,Z ,NN,LAM,KKK                            SCH 273 
+ 4043 FORMAT  (6H0AT Z=,F6.0,6H  NL =,I3,I1,7H  KKK =,I5,22H IS LESS THASCH 274 
+     1N IMATCH =,I5,43H INWARD INTEGRATION WILL BE TRIED AT KKK+40)     SCH 275 
+      KKK =KKK +40                                                      SCH 276 
+      P(4 ) = 1.5E-35                                                   SCH 277 
+      P(3) = 1.0E-35                                                    SCH 278 
+  405 IF(PMATCH)102,77,103                                              SCH 279 
+  102 P(3)=-P(3)                                                        SCH 280 
+      P(4)=-P(4)                                                        SCH 281 
+  103 SNLO(I+1)=P(3)                                                    SCH 282 
+      SNLO(I)=P(4)                                                      SCH 283 
+      T(3)=P(3)*(1.0-HSQ12 *Q(3))                                       SCH 284 
+      T(4)=P(4)*(1.0-HSQ12*Q(4))                                        SCH 285 
+      D(4)=T(4)-T(3)                                                    SCH 286 
+  104 DO 106 M=2,40                                                     SCH 287 
+      I=I-1                                                             SCH 288 
+      Q(5) =QQ(I)                                                       SCH 289 
+      D(5)=HSQ*Q(4)*P(4)+D(4)                                           SCH 290 
+      T(5)=D(5)+T(4)                                                    SCH 291 
+      P(5)=T(5)/(1.0-HSQ12*Q(5))                                        SCH 292 
+      IF(I-IMATCH+1)77,200,105                                          SCH 293 
+  105 SNLO(I)=P(5)                                                      SCH 294 
+      DO 106 K=1,4                                                      SCH 295 
+      P(K)=P(K+1)                                                       SCH 296 
+      T(K)=T(K+1)                                                       SCH 297 
+      D(K)=D(K+1)                                                       SCH 298 
+  106 Q(K)=Q(K+1)                                                       SCH 299 
+      Q(5) =QQ(I-2)                                                     SCH 300 
+      D(5)=HSQ*Q(4)*P(4)+D(4)                                           SCH 301 
+      T(5)=D(5)+T(4)                                                    SCH 302 
+       P(5)=T(5)/(1.0-HSQ12*Q(5))                                       SCH 303 
+      P(5)=1.09375*P(4)+0.2734375*P(5)-0.546875*P(3)+0.21875*P(2)-      SCH 304 
+     10.0390625*P(1)                                                    SCH 305 
+      I=I-1                                                             SCH 306 
+      DX=DX/2.0                                                         SCH 307 
+      Q(5) =QQ(I)                                                       SCH 308 
+      H=DX                                                              SCH 309 
+      HSQ=H*H                                                           SCH 310 
+      HSQ12=HSQ/12.0                                                    SCH 311 
+      T(5)=P(5)*(1.0-HSQ12*Q(5))                                        SCH 312 
+      T(4)=P(4)*(1.0-HSQ12*Q(4))                                        SCH 313 
+      D(5)=T(5)-T(4)                                                    SCH 314 
+      SNLO(I)=P(5)                                                      SCH 315 
+      DO 107 L=1,4                                                      SCH 316 
+      P(L)=P(L+1)                                                       SCH 317 
+      T(L)=T(L+1)                                                       SCH 318 
+      D(L)=D(L+1)                                                       SCH 319 
+  107 Q(L)=Q(L+1)                                                       SCH 320 
+      GO TO 104                                                         SCH 321 
+C     MATCHING RADIUS HAS BEEN REACHED COMING IN                        SCH 322 
+  200 K=KKK                                                             SCH 323 
+      VALUE=SNLO(K)**2                                                  SCH 324 
+      GO TO 202                                                         SCH 325 
+ 2001  CONTINUE                                                         SCH 326 
+  201  SUM3=SUM3+XIF*SUM4                                               SCH 327 
+       XIF =XIF*0.5                                                     SCH 328 
+  202 MM=8                                                              SCH 329 
+      SUM4 =0.0                                                         SCH 330 
+  203 Y=VALUE                                                           SCH 331 
+      VALUE=SNLO(K-5)**2                                                SCH 332 
+      SUM4=SUM4+19.0*(VALUE+Y)+75.0*(SNLO(K-1)**2+SNLO(K-4)**2)         SCH 333 
+     1+50.0*(SNLO(K-2)**2+SNLO(K-3)**2)                                 SCH 334 
+      K=K-5                                                             SCH 335 
+       IF(K-IMATCH) 77,2031,2030                                        SCH 336 
+ 2030  MM=MM-1                                                          SCH 337 
+       IF(MM)  77,2001,203                                              SCH 338 
+ 2031 SUM3=SUM3+XIF*SUM4                                                SCH 339 
+  204 S3=SUM3/P(4)**2                                                   SCH 340 
+      PPIN=(T(5)-T(3)-0.5*(P(5)-P(3)))/H                                SCH 341 
+      S4=PPIN/P(4)                                                      SCH 342 
+      DE=(S2-S4)/(S1-S3)                                                SCH 343 
+      IF(ABSF(DE/E)-THRESH) 300,205,205                                 SCH 344 
+  205 E=E+DE                                                            SCH 345 
+      IF(E)10,206,206                                                   SCH 346 
+  206 E=E-DE                                                            SCH 347 
+      DE=DE/2.0                                                         SCH 348 
+      GO TO 205                                                         SCH 349 
+C     IMPROVE TRIAL EIGENVALUE BY PERTURBATION THEORY IF NECESSARY      SCH 350 
+C     CALCULATE THE NORMALIZED WAVE FUNCTIONS                           SCH 351 
+  300  POP=PMATCH/P(4)                                                  SCH 352 
+      DO 302 J=IMATCH,KKK                                               SCH 353 
+  302 SNLO(J)=SNLO(J)*POP                                               SCH 354 
+      SUM1=0.0                                                          SCH 355 
+      J=1                                                               SCH 356 
+      XIF=XIFC                                                          SCH 357 
+      VALUE=0.0                                                         SCH 358 
+  303 MM=8                                                              SCH 359 
+      XIF=XIF+XIF                                                       SCH 360 
+      SUM2=0.0                                                          SCH 361 
+  304 Y=VALUE                                                           SCH 362 
+      VALUE=SNLO(J+5)**2                                                SCH 363 
+      SUM2=SUM2+19.0*(VALUE+Y)+75.0(SNLO(J+4)**2+SNLO(J+1)**2)          SCH 364 
+     1+50.0*(SNLO(J+2)**2+SNLO(J+3)**2)                                 SCH 365 
+      J=J+5                                                             SCH 366 
+      MM=MM-1                                                           SCH 367 
+      IF(MM)77,305,304                                                  SCH 368 
+  305 SUM1=SUM1+XIF*SUM2                                                SCH 369 
+      IF(KKK-J)77,307,303                                               SCH 370 
+  307 C1=SQRTF(SUM1)                                                    SCH 371 
+      IF(SNLO(3))308,77,310                                             SCH 372 
+  308 C1=-C1                                                            SCH 373 
+  310 DO 311 I=1,KKK                                                    SCH 374 
+  311 SNLO(I)=SNLO(I)/C1                                                SCH 375 
+      EN=E                                                              SCH 376 
+      RETURN                                                            SCH 377 
+      END                                                               SCH 378 
+      SUBROUTINE CROSYM(M)                                              CRO 001 
+C     SIMULTANEOUS EQUATION SOLVER                                      CRO 002 
+C     WRITTEN BY I.C. HANSON, SCIENTIFIC COMPUTATION DEPARTMENT,        CRO 003 
+C     LOCKHEED MISSLES AND SPACE COMPANY, SUNNYVALE, CALIFORNIA         CRO 004 
+C     SOLVE M SIMULTANEOUS EQUATIONS BY THE METHOD OF CROUT             CRO 005 
+      DIMENSION R(521),RSCORE(521),RUINL1(521), RU2(521), RU(521),      CRO 006 
+     1 NNLZ(24),       RSVALE(521),RUFNL1(521), RU3(521), XI(521),      CRO 007 
+     2 WWNL(24),V(521),RSATOM(521),RUINL2(521),           XJ(521),      CRO 008 
+     3 NKKK(24),EE(24),RUEXCH(521),RUFNL2(521),                         CRO 009 
+     4 SNL(24,521),      SNLO(521),A(4,5)                               CRO 010 
+      COMMON V,SNLO, R, RSCORE,RSVALE,RU,RUEXCH,XI,XJ,    RSATOM,  SNL, CRO 011 
+     1RUINL1,RUFNL1,RUINL2,RUFNL2,          RU2,RU3,NNLZ,WWNL,NKKK,EE,A CRO 012 
+      N=M+1                                                             CRO 013 
+      I1=1                                                              CRO 014 
+    1 I3=I1                                                             CRO 015 
+      SUM=ABSF(A(I1,I1))                                                CRO 016 
+      DO3I=I1,M                                                         CRO 017 
+      IF(SUM-ABSF(A(I,I1)))2,3,3                                        CRO 018 
+    2 I3=I                                                              CRO 019 
+      SUM=ABSF(A(I,I1))                                                 CRO 020 
+    3 CONTINUE                                                          CRO 021 
+      IF(I3-I1)4,6,4                                                    CRO 022 
+    4 DO 5J=1,N                                                         CRO 023 
+      SUM=-A(I1,J)                                                      CRO 024 
+      A(I1,J)=A(I3,J)                                                   CRO 025 
+    5 A(I3,J)=SUM                                                       CRO 026 
+    6 I3=I1+1                                                           CRO 027 
+      DO7I=I3,M                                                         CRO 028 
+    7 A(I,I1)=A(I,I1)/A(I1,I1)                                          CRO 029 
+   14 J2=I1-1                                                           CRO 030 
+      I3=I1+1                                                           CRO 031 
+      IF(J2)8,11,8                                                      CRO 032 
+    8 DO9J=I3,N                                                         CRO 033 
+      DO9I=1,J2                                                         CRO 034 
+    9 A(I1,J)=A(I1,J)-A(I1,I)*A(I,J)                                    CRO 035 
+      IF(I1-M)11,15,11                                                  CRO 036 
+   11 J2=I1                                                             CRO 037 
+      I1=I1+1                                                           CRO 038 
+      DO12I=I1,M                                                        CRO 039 
+      DO12J=1,J2                                                        CRO 040 
+   12 A(I,I1)=A(I,I1)-A(I,J)*A(J,I1)                                    CRO 041 
+      IF(I1-M)1,14,1                                                    CRO 042 
+   15 DO17I=1,M                                                         CRO 043 
+      J2=M-I                                                            CRO 044 
+      I3=J2+1                                                           CRO 045 
+      A(I3,N)=A(I3,N)/A(I3,I3)                                          CRO 046 
+      IF(J2)16,18,16                                                    CRO 047 
+   16 DO17J=1,J2                                                        CRO 048 
+   17 A(J,N)=A(J,N)-A(I3,N)*A(J,I3)                                     CRO 049 
+   18 RETURN                                                            CRO 050 
+      END                                                               CRO 051 
+C     TABULAR DISPLAY PROGRAM                                           TAB 001 
+C     ORIGINALLY WRITTEN BY FRANK HERMAN, RCA LABORATORIES,             TAB 002 
+C     PRINCETON, NEW JERSEY, SUMMER 1961                                TAB 003 
+C     MODIFIED BY RICHARD KORTUM, LOCKHEED RESEARCH LABORATORIES,       TAB 004 
+C     PALO ALTO, CALIFORNIA, SUMMER 1962                                TAB 005 
+C     PROGRAM TO PREPARE SELF-CONSISTENT FREE ATOM POTENTIALS           TAB 006 
+C     AND WAVE FUNCTIONS FOR TABULAR DISPLAY                            TAB 007 
+C                                                                       TAB 008 
+C     INPUT TAPE B-5 OR B-6                                             TAB 009 
+C     OUTPUT TAPE A-5                                                   TAB 010 
+      DIMENSION X(111),TSNL(441),SNL(9,20,111),SF(9),Z(9),NL(20),       TAB 011 
+     1INL(9,20),ENL(9,20),MNL(9,20),KNL(9,20)  ,LABEL(4)                TAB 012 
+      DIMENSION KMAXV(19),IMAXV(19),EMAXV(19),NLL(9),HEAD(12)           TAB 013 
+      COMMON X,TSNL,SNL,SF,Z,INL,ENL,MNL,KNL                            TAB 014 
+   10 FORMAT(13F9.4)                                                    TAB 015 
+   11 FORMAT(I2)                                                        TAB 016 
+   12 FORMAT(9F4.0)                                                     TAB 017 
+   13 FORMAT(8H1R(X) X ,12A6)                                           TAB 018 
+   14 FORMAT(1H )                                                       TAB 019 
+   15 FORMAT(8H1U(X) X ,12A6)                                           TAB 020 
+   16 FORMAT(1H ,F6.2,1H ,9F8.5)                                        TAB 021 
+   17 FORMAT(1H ,F6.2,1H ,9F8.4)                                        TAB 022 
+   18 FORMAT(1H ,F6.2,1H ,9F8.3)                                        TAB 023 
+   19 FORMAT(F4.0,2I4)                                                  TAB 024 
+   20 FORMAT(1PE15.7,1P4E14.7)                                          TAB 025 
+   21 FORMAT(12A6)                                                      TAB 026 
+   23 FORMAT(8H1P(X) X ,12A6)                                           TAB 027 
+   24 FORMAT(1H )                                                       TAB 028 
+   25 FORMAT(1H /1H /1H /1H /1H /1H )                                   TAB 029 
+   26 FORMAT(1H /1H /1H /1H /4X4HX   ,9(8H  U(X)  )/1H )                TAB 030 
+  401 FORMAT        (8H  SHELL ,9(3H  (,I1,2HS),I2)/1H )                TAB 031 
+  402 FORMAT        (8H  SHELL ,9(3H  (,I1,2HP),I2)/1H )                TAB 032 
+  403 FORMAT        (8H  SHELL ,9(3H  (,I1,2HD),I2)/1H )                TAB 033 
+  404 FORMAT        (8H  SHELL ,9(3H  (,I1,2HF),I2)/1H )                TAB 034 
+  301 FORMAT(8H  (- E) ,9F8.4/1H /4X4HX   ,9(8H  P(X)  ))               TAB 035 
+  302 FORMAT(8H  (- E) ,9F8.3/1H /4X4HX   ,9(8H  P(X)  ))               TAB 036 
+  303 FORMAT(8H  (- E) ,9F8.2/1H /4X4HX   ,9(8H  P(X)  ))               TAB 037 
+  304 FORMAT(8H  (- E) ,9F8.1/1H /4X4HX   ,9(8H  P(X)  ))               TAB 038 
+  305 FORMAT(8H  (- E) ,9F8.0/1H /4X4HX   ,9(8H  P(X)  ))               TAB 039 
+  306 FORMAT(1H ,F6.2,1H ,9F8.4)                                        TAB 040 
+      NL(1)=100                                                         TAB 041 
+      NL(2)=200                                                         TAB 042 
+      NL(3)=210                                                         TAB 043 
+      NL(4)=300                                                         TAB 044 
+      NL(5)=310                                                         TAB 045 
+      NL(6)=320                                                         TAB 046 
+      NL(7)=400                                                         TAB 047 
+      NL(8)=410                                                         TAB 048 
+      NL(9)=420                                                         TAB 049 
+      NL(10)=430                                                        TAB 050 
+      NL(11)=500                                                        TAB 051 
+      NL(12)=510                                                        TAB 052 
+      NL(13)=520                                                        TAB 053 
+      NL(14)=530                                                        TAB 054 
+      NL(15)=600                                                        TAB 055 
+      NL(16)=610                                                        TAB 056 
+      NL(17)=620                                                        TAB 057 
+      NL(18)=700                                                        TAB 058 
+      NL(19)=710                                                        TAB 059 
+      NL(20)=999                                                        TAB 060 
+   50 DELTAX=0.01                                                       TAB 061 
+      X(1)=0.0                                                          TAB 062 
+      I=1                                                               TAB 063 
+      DO 54 J=1,11                                                      TAB 064 
+      DO 53 K=1,10                                                      TAB 065 
+      I=I+1                                                             TAB 066 
+   53 X(I)=X(I-1)+DELTAX                                                TAB 067 
+   54 DELTAX=DELTAX+DELTAX                                              TAB 068 
+      ITAPE =-100                                                       TAB 069 
+   55 NTAPE =ITAPE                                                      TAB 070 
+      READ INPUT TAPE 5,900,ITAPE,LABEL                                 TAB 071 
+  900 FORMAT (I2,4A6)                                                   TAB 072 
+      IF(ITAPE) 1100,1100,1008                                          TAB 073 
+ 1008  IF(ITAPE-12) 1100,1007,1000                                      TAB 074 
+ 1000 IF(ITAPE-NTAPE) 1001,1006,1001                                    TAB 075 
+ 1001 N=ITAPE-20                                                        TAB 076 
+      IF (N-5) 1002,1003,1002                                           TAB 077 
+ 1002 M=5                                                               TAB 078 
+      GO TO 1004                                                        TAB 079 
+ 1003 M=6                                                               TAB 080 
+ 1004 PRINT 901, LABEL,N,M                                              TAB 081 
+  901 FORMAT (17H THE TAPE LABELED,4A6,27H SHOULD BE LOADED ON UNIT B,I2TAB 082 
+     1///48H  THE NEXT TAPE,IF ANY, MAY BE LOADED ON UNIT B,I2///)      TAB 083 
+       REWIND ITAPE                                                     TAB 084 
+ 1007 IF(NTAPE)1006,1006,1005                                           TAB 085 
+ 1005 CALL UNLOAD (NTAPE)                                               TAB 086 
+ 1006 CONTINUE                                                          TAB 087 
+   56 READ INPUT TAPE 5,12,(Z(J),J=1,9)                                 TAB 088 
+      READ INPUT TAPE 5,21,HEAD                                         TAB 089 
+      DO 46 I=1,20                                                      TAB 090 
+      DO 46 J=1,9                                                       TAB 091 
+      ENL(J,I)=0.0                                                      TAB 092 
+   46 INL(J,I)=0                                                        TAB 093 
+   58 DO 59 J=1,9                                                       TAB 094 
+      IF(Z(J))47,48,49                                                  TAB 095 
+   47 NSTOP =47                                                         TAB 096 
+      GO TO 6200                                                        TAB 097 
+   48 SF(J)=0.0                                                         TAB 098 
+      GO TO 59                                                          TAB 099 
+   49 SF(J)=0.88534138/Z(J)**(1.0/3.0)                                  TAB 100 
+   59 CONTINUE                                                          TAB 101 
+C     CALCULATE R VALUES                                                TAB 102 
+      DO 60 K=1,9                                                       TAB 103 
+      DO 60 L=1,110                                                     TAB 104 
+   60 SNL(K,1,L)=SF(K)*X(L)                                             TAB 105 
+   64 WRITE OUTPUT TAPE 15,13,HEAD                                      TAB 106 
+      WRITE OUTPUT TAPE 15,14                                           TAB 107 
+      DO 63 L=1,9                                                       TAB 108 
+      IF(Z(L))62,63,61                                                  TAB 109 
+   63 CONTINUE                                                          TAB 110 
+   62 NSTOP =62                                                         TAB 111 
+ 6200 WRITE OUTPUT TAPE 6,6201,NSTOP                                    TAB 112 
+ 6201 FORMAT (5H0STOP,I5)                                               TAB 113 
+      CALL EXIT                                                         TAB 114 
+   61 J=0                                                               TAB 115 
+      DO 98 M=1,22                                                      TAB 116 
+      DO 93 K=1,5                                                       TAB 117 
+      J=J+1                                                             TAB 118 
+      IF(SNL(L,1,J)-1.0)81,67,67                                        TAB 119 
+   67 IF(SNL(L,1,J)-10.0)82,68,68                                       TAB 120 
+   68 IF(SNL(L,1,J)-100.0)83,84,84                                      TAB 121 
+   81 WRITE OUTPUT TAPE 15,16,(X(J),(SNL (N,1,J),N=1,9))                TAB 122 
+      GO TO 93                                                          TAB 123 
+   82 WRITE OUTPUT TAPE 15,16,(X(J),(SNL (N,1,J),N=1,9))                TAB 124 
+      GO TO 93                                                          TAB 125 
+   83 WRITE OUTPUT TAPE 15,17,(X(J),(SNL (N,1,J),N=1,9))                TAB 126 
+      GO TO 93                                                          TAB 127 
+   84 WRITE OUTPUT TAPE 15,18,(X(J),(SNL (N,1,J),N=1,9))                TAB 128 
+   93 CONTINUE                                                          TAB 129 
+   96 WRITE OUTPUT TAPE 15,14                                           TAB 130 
+      IF(M-10) 98,72,70                                                 TAB 131 
+   70 IF(M-20) 98,72,71                                                 TAB 132 
+   71 IF(M-22) 98,75,98                                                 TAB 133 
+   72 WRITE OUTPUT TAPE 15,13,HEAD                                      TAB 134 
+      WRITE OUTPUT TAPE 15,14                                           TAB 135 
+      GO TO 98                                                          TAB 136 
+   75 WRITE OUTPUT TAPE 15,26                                           TAB 137 
+   98 CONTINUE                                                          TAB 138 
+C     READ TAPE   AND STORE POTENTIALS AND WAVE FUNCTIONS               TAB 139 
+      DO 78 I=1,9                                                       TAB 140 
+      DO 78 J=1,19                                                      TAB 141 
+      INL(I,J)=0                                                        TAB 142 
+      ENL(I,J)=0.0                                                      TAB 143 
+      MNL(I,J)=0                                                        TAB 144 
+      KNL(I,J)=0                                                        TAB 145 
+      DO 78 K=1,111                                                     TAB 146 
+   78 SNL(I,J,K)=0.0                                                    TAB 147 
+  100 DO 199 J=1,9                                                      TAB 148 
+      NLL(J)=0                                                          TAB 149 
+  170 IF(Z(J))171,198,99                                                TAB 150 
+  171 NSTOP= 171                                                        TAB 151 
+      GO TO 6200                                                        TAB 152 
+  198 DO 197 J1=1,111                                                   TAB 153 
+  197 SNL(J,20,J1)=0.0                                                  TAB 154 
+  172 GO TO 199                                                         TAB 155 
+   99 READ INPUT TAPE ITAPE,19,ZT,NCORES,NVALES                         TAB 156 
+  173 IF(ABSF(Z(J)-ZT)-0.001)102,101,101                                TAB 157 
+  101 NSTOP= 101                                                        TAB 158 
+      GO TO 6200                                                        TAB 159 
+  102 READ INPUT TAPE ITAPE,20,(TSNL(I),I=1,441)                        TAB 160 
+      DO 107 I=1,441                                                    TAB 161 
+      IF(2.0+TSNL(I)) 107,107,106                                       TAB 162 
+  106 TSNL(I)=-2.0                                                      TAB 163 
+  107 CONTINUE                                                          TAB 164 
+      LQ=0                                                              TAB 165 
+      DO 136 I=17,437,20                                                TAB 166 
+      IF(LQ-1) 132,136,131                                              TAB 167 
+  131 NSTOP =131                                                        TAB 168 
+      GO TO 6200                                                        TAB 169 
+  132 IF(TSNL(I)+2.0) 134,135,133                                       TAB 170 
+  133 NSTOP= 133                                                        TAB 171 
+      GO TO 6200                                                        TAB 172 
+  134 NLL(J)=NLL(J)+1                                                   TAB 173 
+      GO TO 136                                                         TAB 174 
+  135 NLL(J)=NLL(J)+1                                                   TAB 175 
+      LQ=1                                                              TAB 176 
+  136 CONTINUE                                                          TAB 177 
+      TT=TSNL(1)                                                        TAB 178 
+      DO 103 I=1,441                                                    TAB 179 
+  103 TSNL(I)=TSNL(I)/TT                                                TAB 180 
+      L=0                                                               TAB 181 
+      DO 104 I=1,437,4                                                  TAB 182 
+      L=L+1                                                             TAB 183 
+  104 SNL(J,20,L)=TSNL(I)                                               TAB 184 
+      NCSPVS=NCORES+NVALES                                              TAB 185 
+      DO 190 I1=1,NCSPVS                                                TAB 186 
+      READ INPUT TAPE ITAPE,109,NLZ,XL,E,W,KKK                          TAB 187 
+  109 FORMAT(I4,1P3E14.7,I4)                                            TAB 188 
+      READ INPUT TAPE ITAPE,110,(TSNL(I),I=1,KKK)                       TAB 189 
+  110 FORMAT(1PE15.7,1P4E14.7)                                          TAB 190 
+      DO 189 K2=1,19                                                    TAB 191 
+      IF(NLZ-NL(K2)) 189,113,189                                        TAB 192 
+  113 INL(J,K2)=1                                                       TAB 193 
+      ENL(J,K2)=-E                                                      TAB 194 
+      MNL(J,K2)=W                                                       TAB 195 
+      KNL(J,K2)=(KKK-1)/20                                              TAB 196 
+      M=0                                                               TAB 197 
+      DO 114 I=1,KKK,4                                                  TAB 198 
+      M=M+1                                                             TAB 199 
+  114 SNL(J,K2,M)=TSNL(I)                                               TAB 200 
+  189 CONTINUE                                                          TAB 201 
+  190 CONTINUE                                                          TAB 202 
+  199 CONTINUE                                                          TAB 203 
+C     PREPARE OUTPUT TAPE WITH  NORMALIZED POTENTIAL VALUES. OBTAIN NN. TAB 204 
+      NMAXV=NLL(1)                                                      TAB 205 
+      DO 130 J=2,9                                                      TAB 206 
+      IF(NLL(J)-NMAXV)130,130,129                                       TAB 207 
+  129 NMAXV=NLL(J)                                                      TAB 208 
+  130 CONTINUE                                                          TAB 209 
+      DO 108 J=1,9                                                      TAB 210 
+  108 NLL(J)=0                                                          TAB 211 
+      I=0                                                               TAB 212 
+      DO 299 M=1,NMAXV                                                  TAB 213 
+      IF(M-8) 144,141,140                                               TAB 214 
+  140 IF(M-18) 144,141,144                                              TAB 215 
+  141 WRITE OUTPUT TAPE 15,15,HEAD                                      TAB 216 
+      WRITE OUTPUT TAPE 15,24                                           TAB 217 
+  144 CONTINUE                                                          TAB 218 
+      DO 298 M1=1,5                                                     TAB 219 
+      I=I+1                                                             TAB 220 
+  205 WRITE OUTPUT TAPE 15,16,(X(I),(SNL(J,20,I),J=1,9))                TAB 221 
+  298 CONTINUE                                                          TAB 222 
+  207 WRITE OUTPUT TAPE 15,14                                           TAB 223 
+      IF(NMAXV-7)208,208,209                                            TAB 224 
+  208 NN=NMAXV+3                                                        TAB 225 
+      GO TO 299                                                         TAB 226 
+  209 IF(NMAXV-17)212,212,213                                           TAB 227 
+  212 NN=NMAXV-7                                                        TAB 228 
+      GO TO 299                                                         TAB 229 
+  213 IF(NMAXV-22)217,217,216                                           TAB 230 
+  216 NSTOP= 216                                                        TAB 231 
+      GO TO 6200                                                        TAB 232 
+  217 NN=NMAXV-17                                                       TAB 233 
+  299 CONTINUE                                                          TAB 234 
+C     MODIFY RADIAL WAVE FUNCTIONS                                      TAB 235 
+      DO 234 J=1,9                                                      TAB 236 
+      DO 234 K=1,19                                                     TAB 237 
+      DO 220 I=1,111                                                    TAB 238 
+  220 SNL(J,20,I)=0.0                                                   TAB 239 
+      L=5*KNL(J,K)+2                                                    TAB 240 
+      IQ=5*KNL(J,K)+1                                                   TAB 241 
+      DO 221 I=1,IQ                                                     TAB 242 
+      L=L-1                                                             TAB 243 
+  221 SNL(J,20,L)=SNL(J,K,I)                                            TAB 244 
+      MM=0                                                              TAB 245 
+      DO 226 M=1,IQ                                                     TAB 246 
+      IF(MM-1)222,226,225                                               TAB 247 
+  222 IF(ABSF(SNL(J,20,M))-0.0001)223,224,224                           TAB 248 
+  223 SNL(J,20,M)=0.0                                                   TAB 249 
+      GO TO 226                                                         TAB 250 
+  224 MM=1                                                              TAB 251 
+      GO TO 226                                                         TAB 252 
+  225 NSTOP= 225                                                        TAB 253 
+      GO TO 6200                                                        TAB 254 
+  226 CONTINUE                                                          TAB 255 
+      I=5*KNL(J,K)+2                                                    TAB 256 
+      DO 227 L=1,IQ                                                     TAB 257 
+      I=I-1                                                             TAB 258 
+  227 SNL(J,K,I)=SNL(J,20,L)                                            TAB 259 
+      KK=0                                                              TAB 260 
+      KM=0                                                              TAB 261 
+      DO 233 L=6,IQ,5                                                   TAB 262 
+      IF(KM-0)230,228,233                                               TAB 263 
+  230 NSTOP= 230                                                        TAB 264 
+      GO TO 6200                                                        TAB 265 
+  228 IF(ABSF(SNL(J,20,L))-0.0)231,229,232                              TAB 266 
+  231 NSTOP= 231                                                        TAB 267 
+      GO TO 6200                                                        TAB 268 
+  229 KK=KK+1                                                           TAB 269 
+      GO TO 233                                                         TAB 270 
+  232 KM=1                                                              TAB 271 
+  233 CONTINUE                                                          TAB 272 
+  234 KNL(J,K)=KNL(J,K)-KK                                              TAB 273 
+      DO 125 K=1,19                                                     TAB 274 
+      KMAXV(K)=KNL(1,K)                                                 TAB 275 
+      IMAXV(K)=INL(1,K)                                                 TAB 276 
+      EMAXV(K)=ENL(1,K)                                                 TAB 277 
+      DO 125 J=2,9                                                      TAB 278 
+      IF(KNL(J,K)-KMAXV(K))121,121,120                                  TAB 279 
+  120 KMAXV(K)=KNL(J,K)                                                 TAB 280 
+  121 IF(INL(J,K)-IMAXV(K))123,123,122                                  TAB 281 
+  122 IMAXV(K)=INL(J,K)                                                 TAB 282 
+  123 IF(ENL(J,K)-EMAXV(K))125,125,124                                  TAB 283 
+  124 EMAXV(K)=ENL(J,K)                                                 TAB 284 
+  125 CONTINUE                                                          TAB 285 
+C     PREPARE OUTPUT TAPE WITH DESIRED RADIAL WAVE FUNCTIONS            TAB 286 
+      DO 371 K=1,19                                                     TAB 287 
+      NNL=NL(K)/10                                                      TAB 288 
+      IF(IMAXV(K))307,308,309                                           TAB 289 
+  307 NSTOP= 307                                                        TAB 290 
+      GO TO 6200                                                        TAB 291 
+  308 GO TO 371                                                         TAB 292 
+  309 IF(K-1)320,321,322                                                TAB 293 
+  320 NSTOP= 320                                                        TAB 294 
+      GO TO 6200                                                        TAB 295 
+  321 N=NN                                                              TAB 296 
+  322 N=N+1                                                             TAB 297 
+      IF(N-11)311,366,310                                               TAB 298 
+  310 NSTOP= 310                                                        TAB 299 
+      GO TO 6200                                                        TAB 300 
+  311 IF(N-10)405,313,312                                               TAB 301 
+  312 NSTOP= 312                                                        TAB 302 
+      GO TO 6200                                                        TAB 303 
+  313 WRITE OUTPUT TAPE 15,25                                           TAB 304 
+  366 WRITE OUTPUT TAPE 15,23,HEAD                                      TAB 305 
+      WRITE OUTPUT TAPE 15,24                                           TAB 306 
+      N=1                                                               TAB 307 
+  405 IF(NNL-10) 406,406,407                                            TAB 308 
+  406 NLQ=1                                                             TAB 309 
+      GO TO 421                                                         TAB 310 
+  407 IF(NNL-21) 408,408,409                                            TAB 311 
+  408 NLQ=2                                                             TAB 312 
+      GO TO 421                                                         TAB 313 
+  409 IF(NNL-32) 410,410,411                                            TAB 314 
+  410 NLQ=3                                                             TAB 315 
+      GO TO 421                                                         TAB 316 
+  411 IF(NNL-43) 412,412,413                                            TAB 317 
+  412 NLQ=4                                                             TAB 318 
+      GO TO 421                                                         TAB 319 
+  413 IF(NNL-53) 414,414,415                                            TAB 320 
+  414 NLQ=5                                                             TAB 321 
+      GO TO 421                                                         TAB 322 
+  415 IF(NNL-62) 416,416,417                                            TAB 323 
+  416 NLQ=6                                                             TAB 324 
+      GO TO 421                                                         TAB 325 
+  417 IF(NNL-71) 418,418,420                                            TAB 326 
+  418 NLQ=7                                                             TAB 327 
+  419 GO TO 421                                                         TAB 328 
+  420 NSTOP= 420                                                        TAB 329 
+      GO TO 6200                                                        TAB 330 
+  421 LL=NNL-10*NLQ+1                                                   TAB 331 
+  422 DO 423 J=1,9                                                      TAB 332 
+  423 NLL(J)=NLQ                                                        TAB 333 
+  323 GO TO (501,502,503,504),LL                                        TAB 334 
+  501 WRITE OUTPUT TAPE 15,401,(NLL(J),MNL(J,K),J=1,9)                  TAB 335 
+      GO TO 329                                                         TAB 336 
+  502 WRITE OUTPUT TAPE 15,402,(NLL(J),MNL(J,K),J=1,9)                  TAB 337 
+      GO TO 329                                                         TAB 338 
+  503 WRITE OUTPUT TAPE 15,403,(NLL(J),MNL(J,K),J=1,9)                  TAB 339 
+      GO TO 329                                                         TAB 340 
+  504 WRITE OUTPUT TAPE 15,404,(NLL(J),MNL(J,K),J=1,9)                  TAB 341 
+  329 IF(EMAXV(K)-1.0E01) 330,326,326                                   TAB 342 
+  326 IF(EMAXV(K)-1.0E02) 333,327,327                                   TAB 343 
+  327 IF(EMAXV(K)-1.0E03) 336,328,328                                   TAB 344 
+  328 IF(EMAXV(K)-1.0E04) 339,342,342                                   TAB 345 
+  330 WRITE OUTPUT TAPE 15,301,(ENL(J,K),J=1,9)                         TAB 346 
+      GO TO 345                                                         TAB 347 
+  333 WRITE OUTPUT TAPE 15,302,(ENL(J,K),J=1,9)                         TAB 348 
+      GO TO 345                                                         TAB 349 
+  336 WRITE OUTPUT TAPE 15,303,(ENL(J,K),J=1,9)                         TAB 350 
+      GO TO 345                                                         TAB 351 
+  339 WRITE OUTPUT TAPE 15,304,(ENL(J,K),J=1,9)                         TAB 352 
+      GO TO 345                                                         TAB 353 
+  342 WRITE OUTPUT TAPE 15,305,(ENL(J,K),J=1,9)                         TAB 354 
+  345 WRITE OUTPUT TAPE 15,14                                           TAB 355 
+      I=0                                                               TAB 356 
+      L=KMAXV(K)                                                        TAB 357 
+      DO 361 M=1,L                                                      TAB 358 
+  350 N=N+1                                                             TAB 359 
+      IF(N-11) 351,356,360                                              TAB 360 
+  351 DO 353 M1=1,5                                                     TAB 361 
+      I=I+1                                                             TAB 362 
+  353 WRITE OUTPUT TAPE 15,306,(X(I),(SNL(J,K,I),J=1,9))                TAB 363 
+  355 WRITE OUTPUT TAPE 15,14                                           TAB 364 
+      GO TO 361                                                         TAB 365 
+  356 WRITE OUTPUT TAPE 15,23,HEAD                                      TAB 366 
+      WRITE OUTPUT TAPE 15,24                                           TAB 367 
+      N=0                                                               TAB 368 
+      GO TO 350                                                         TAB 369 
+  360 NSTOP= 360                                                        TAB 370 
+      GO TO 6200                                                        TAB 371 
+  361 CONTINUE                                                          TAB 372 
+  371 CONTINUE                                                          TAB 373 
+      GO TO 55                                                          TAB 374 
+ 1100 IF(NTAPE) 1102,1102,1101                                          TAB 375 
+ 1101 CALL UNLOAD (NTAPE)                                               TAB 376 
+      END FILE 15                                                       TAB 377 
+      CALL UNLOAD (15)                                                  TAB 378 
+      PRINT 902                                                         TAB 379 
+  902 FORMAT(52H0 TAPE A-5 IS TO BE RESERVED OR LISTED AS INSTRUCTED//) TAB 380 
+ 1102 CALL EXIT                                                         TAB 381 
+      END                                                               TAB 382 
+C     CALCULATE RELATIVISTIC AND SPIN ORBIT CORRECTIONS FOR FREE ATOMS  REL 001 
+C     ORIGINALLY WRITTEN BY FRANK HERMAN  FALL 1961                     REL 002 
+C     MODIFIED BY RICHARD KORTUM   FALL 1962                            REL 003 
+      DIMENSION X(521),T(521),P(521),DT(521),DP(521),ARG(521),B(521),   REL 004 
+     1Z(9),NLL(9),NL(20),HEAD(12),EQ(7,9,19),ENL(9,19),INL(9,19),       REL 005 
+     2MNL(9,19),EMAXV(19),IMAXV(19),SF(9)                               REL 006 
+      COMMON X,T,P,DT,DP,ARG,B,C,CC,E,KKK,SF,Z,NLL,NL,EQ,ENL,INL,MNL,XL REL 007 
+   10 FORMAT(13F9.4)                                                    REL 008 
+   12 FORMAT(9F4.0)                                                     REL 009 
+   13 FORMAT(8H1 ATOM   ,12A6)                                          REL 010 
+   14 FORMAT(1H )                                                       REL 011 
+   19 FORMAT(F4.0,2I4)                                                  REL 012 
+   20 FORMAT(1PE15.7,1P4E14.7)                                          REL 013 
+   21 FORMAT(12A6)                                                      REL 014 
+   31 FORMAT(8H -E(NRL),9F8.5/8H -E(VEL),9F8.5/8H -E(DAR),9F8.5/        REL 015 
+     1       8H -E(S-O),9F8.5)                                          REL 016 
+   32 FORMAT(8H -E(NRL),9F8.4/8H -E(VEL),9F8.4/8H -E(DAR),9F8.4/        REL 017 
+     1       8H -E(S-O),9F8.4)                                          REL 018 
+   33 FORMAT(8H -E(NRL),9F8.3/8H -E(VEL),9F8.3/8H -E(DAR),9F8.3/        REL 019 
+     1       8H -E(S-O),9F8.3)                                          REL 020 
+   34 FORMAT(8H -E(NRL),9F8.2/8H -E(VEL),9F8.2/8H -E(DAR),9F8.2/        REL 021 
+     1       8H -E(S-O),9F8.2)                                          REL 022 
+   35 FORMAT(8H -E(NRL),9F8.1/8H -E(VEL),9F8.1/8H -E(DAR),9F8.1/        REL 023 
+     1       8H -E(S-O),9F8.1)                                          REL 024 
+   36 FORMAT(8H -E(NRL),9F8.5/8H -E(VEL),9F8.5/8H -E(DAR),9F8.5/        REL 025 
+     1       8H -E(1/2),9F8.5,//)                                       REL 026 
+   37 FORMAT(8H -E(NRL),9F8.4/8H -E(VEL),9F8.4/8H -E(DAR),9F8.4/        REL 027 
+     1       8H -E(1/2),9F8.4,//)                                       REL 028 
+   38 FORMAT(8H -E(NRL),9F8.3/8H -E(VEL),9F8.3/8H -E(DAR),9F8.3/        REL 029 
+     1       8H -E(1/2),9F8.3,//)                                       REL 030 
+   39 FORMAT(8H -E(NRL),9F8.2/8H -E(VEL),9F8.2/8H -E(DAR),9F8.2/        REL 031 
+     1       8H -E(1/2),9F8.2,//)                                       REL 032 
+   40 FORMAT(8H -E(NRL),9F8.1/8H -E(VEL),9F8.1/8H -E(DAR),9F8.1/        REL 033 
+     1       8H -E(1/2),9F8.1,//)                                       REL 034 
+   41 FORMAT(4H -E(,I1,3H/2),9F8.5/4H -E(,I1,3H/2),9F8.5/1H )           REL 035 
+   42 FORMAT(4H -E(,I1,3H/2),9F8.4/4H -E(,I1,3H/2),9F8.4/1H )           REL 036 
+   43 FORMAT(4H -E(,I1,3H/2),9F8.3/4H -E(,I1,3H/2),9F8.3/1H )           REL 037 
+   44 FORMAT(4H -E(,I1,3H/2),9F8.2/4H -E(,I1,3H/2),9F8.2/1H )           REL 038 
+   45 FORMAT(4H -E(,I1,3H/2),9F8.1/4H -E(,I1,3H/2),9F8.1/1H )           REL 039 
+  109 FORMAT(I4,1P3E14.7,I4)                                            REL 040 
+  110 FORMAT(1PE15.7,1P4E14.7)                                          REL 041 
+  401 FORMAT        (8H  SHELL ,9(3H  (,I1,2HS),I2)/1H )                REL 042 
+  402 FORMAT        (8H  SHELL ,9(3H  (,I1,2HP),I2)/1H )                REL 043 
+  403 FORMAT        (8H  SHELL ,9(3H  (,I1,2HD),I2)/1H )                REL 044 
+  404 FORMAT        (8H  SHELL ,9(3H  (,I1,2HF),I2)/1H )                REL 045 
+      READ INPUT TAPE 5,9,IN,IT,SW1,SW2,SW3                             REL 046 
+    9 FORMAT (2I2,3F4.0)                                                REL 047 
+      IF(IN)1000,1000,1001                                              REL 048 
+ 1000 IN=12                                                             REL 049 
+      GO TO 1010                                                        REL 050 
+ 1001 IF(IN-12)1002,1010,1002                                           REL 051 
+ 1002 N= IN-10                                                          REL 052 
+      PRINT 1003,N                                                      REL 053 
+ 1003 FORMAT (13H INPUT TAPE A,I2,28H MUST BE LOADED AS INDICATED//31H  REL 054 
+     1PAUSE, PUSH START TO CONTINUE///)                                 REL 055 
+      PAUSE                                                             REL 056 
+      REWIND IN                                                         REL 057 
+ 1010 IF(IT)1012,1011,1012                                              REL 058 
+ 1011 IT =13                                                            REL 059 
+      GO TO 1020                                                        REL 060 
+ 1012 IF (IT-13)1013,1020,1013                                          REL 061 
+ 1013 N= IT-20                                                          REL 062 
+      PRINT 1014,N                                                      REL 063 
+ 1014 FORMAT (14H OUTPUT TAPE B,I2,15H MUST BE LOADED///30H PAUSE  PUSH REL 064 
+     1START TO CONTINUE///)                                             REL 065 
+      PAUSE                                                             REL 066 
+      REWIND IT                                                         REL 067 
+ 1020 CONTINUE                                                          REL 068 
+      NL(1)=100                                                         REL 069 
+      NL(2)=200                                                         REL 070 
+      NL(3)=210                                                         REL 071 
+      NL(4)=300                                                         REL 072 
+      NL(5)=310                                                         REL 073 
+      NL(6)=320                                                         REL 074 
+      NL(7)=400                                                         REL 075 
+      NL(8)=410                                                         REL 076 
+      NL(9)=420                                                         REL 077 
+      NL(10)=430                                                        REL 078 
+      NL(11)=500                                                        REL 079 
+      NL(12)=510                                                        REL 080 
+      NL(13)=520                                                        REL 081 
+      NL(14)=530                                                        REL 082 
+      NL(15)=600                                                        REL 083 
+      NL(16)=610                                                        REL 084 
+      NL(17)=620                                                        REL 085 
+      NL(18)=700                                                        REL 086 
+      NL(19)=710                                                        REL 087 
+      NL(20)=999                                                        REL 088 
+      CC=1.33126E-05                                                    REL 089 
+      DELTAX=0.0025                                                     REL 090 
+      X(1)=0.0                                                          REL 091 
+      I=1                                                               REL 092 
+      DO 51 J=1,13                                                      REL 093 
+      DO 50 K=1,40                                                      REL 094 
+      I=I+1                                                             REL 095 
+   50 X(I)=X(I-1)+DELTAX                                                REL 096 
+   51 DELTAX=DELTAX+DELTAX                                              REL 097 
+      IF(SW1) 52,53,52                                                  REL 098 
+   52 WRITE OUTPUT TAPE 6,10,(X(J),J=1,521)                             REL 099 
+   53 READ INPUT TAPE 5,12,GOTO                                         REL 100 
+      IF(GOTO) 900,900,153                                              REL 101 
+  900 IF(IN-12) 901,902,901                                             REL 102 
+  901 CALL UNLOAD(IN)                                                   REL 103 
+      N=IN-10                                                           REL 104 
+      PRINT 903,N                                                       REL 105 
+  903 FORMAT (8H1 TAPE A,I2,12H IS UNLOADED)                            REL 106 
+  902 IF(GOTO)910,1900,153                                              REL 107 
+  910 IF(IT-13)911,920,911                                              REL 108 
+  911 END FILE IT                                                       REL 109 
+      CALL UNLOAD (IT)                                                  REL 110 
+  920 CONTINUE                                                          REL 111 
+      CALL EXIT                                                         REL 112 
+ 1900 READ INPUT TAPE 5,9,IN                                            REL 113 
+      IF(IN)2000,2000,2001                                              REL 114 
+ 2000 IN=12                                                             REL 115 
+      GO TO 2010                                                        REL 116 
+ 2001 IF(IN-12)2002,2010,2002                                           REL 117 
+ 2002 N= IN-10                                                          REL 118 
+      PRINT 1003,N                                                      REL 119 
+      PAUSE                                                             REL 120 
+      REWIND IN                                                         REL 121 
+ 2010 CONTINUE                                                          REL 122 
+  153 CONTINUE                                                          REL 123 
+      READ INPUT TAPE 5,12,(Z(J),J=1,9)                                 REL 124 
+      READ INPUT TAPE 5,21,HEAD                                         REL 125 
+      DO 57 J=1,9                                                       REL 126 
+      IF(Z(J))54,55,56                                                  REL 127 
+   54 NSTOP= 54                                                         REL 128 
+      GO TO 9000                                                        REL 129 
+   55 SF(J)=0.0                                                         REL 130 
+      GO TO 57                                                          REL 131 
+   56 SF(J)=0.88534138/Z(J)**(1.0/3.0)                                  REL 132 
+   57 CONTINUE                                                          REL 133 
+      DO 58 J=1,9                                                       REL 134 
+      DO 58 K=1,19                                                      REL 135 
+      ENL(J,K)=0.0                                                      REL 136 
+      INL(J,K)=0                                                        REL 137 
+      MNL(J,K)=0                                                        REL 138 
+      DO 58 I=1,7                                                       REL 139 
+   58 EQ(I,J,K)=0.0                                                     REL 140 
+      IF(SW2) 80,60,80                                                  REL 141 
+   60 DO 79 J=1,9                                                       REL 142 
+      C=SF(J)                                                           REL 143 
+      IF(Z(J)) 61,79,62                                                 REL 144 
+   61 NSTOP= 61                                                         REL 145 
+      GO TO 9000                                                        REL 146 
+   62 READ INPUT TAPEIN,19,ZT,NCORES,NVALES                             REL 147 
+      IF(ABSF(Z(J)-ZT)-0.001) 64,63,63                                  REL 148 
+   63 NSTOP= 63                                                         REL 149 
+      GO TO 9000                                                        REL 150 
+   64 READ INPUT TAPEIN,20,(T(I),I=1,441)                               REL 151 
+      DO 66 I=1,441                                                     REL 152 
+      IF(2.0+T(I)) 66,66,65                                             REL 153 
+   65 T(I)=-2.0                                                         REL 154 
+   66 CONTINUE                                                          REL 155 
+      DO 67 I=442,521                                                   REL 156 
+      DT(I)=0.0                                                         REL 157 
+   67 T(I)=-2.0                                                         REL 158 
+C     CALCULATION OF FIRST DERIVATIVE DT(J)                             REL 159 
+      DT(1)=(-22.0*T(1)+36.0*T(2)-18.0*T(3)+4.0*T(4))/(12.0*0.0025)     REL 160 
+      DX=0.0025                                                         REL 161 
+      DO 620K=5,445,4                                                   REL 162 
+      JJJS=K-1                                                          REL 163 
+      DT(K-3)=(-22.0*T(K-3)+36.0*T(K-2)-18.0*T(K-1)+4.0*T(K))/(12.0*DX) REL 164 
+      DT(K-2)=(-4.0*T(K-3)-6.0*T(K-2)+12.0*T(K-1)-2.0*T(K))/(12.0*DX)   REL 165 
+      DT(K-1)=(2.0*T(K-3)-12.0*T(K-2)+6.0*T(K-1)+4.0*T(K))/(12.0*DX)    REL 166 
+      DT(K)=(-4.0*T(K-3)+18.0*T(K-2)-36.0*T(K-1)+22.0*T(K))/(12.0*DX)   REL 167 
+      IF(XMODF(JJJS,40))620,610,620                                     REL 168 
+  610 DX=DX+DX                                                          REL 169 
+  620 CONTINUE                                                          REL 170 
+      NCSPVS=NCORES+NVALES                                              REL 171 
+      DO 78 K=1,NCSPVS                                                  REL 172 
+      READ INPUT TAPEIN,109,NLZ,XL,E,W,KKK                              REL 173 
+      XLP=XL+1.0                                                        REL 174 
+      TLP=XL+XLP                                                        REL 175 
+      READ INPUT TAPEIN,110,(P(I),I=1,KKK)                              REL 176 
+      DO 77 L=1,19                                                      REL 177 
+      IF(NLZ-NL(L)) 77,68,77                                            REL 178 
+   68 INL(J,L)=1                                                        REL 179 
+      ENL(J,L)=-E                                                       REL 180 
+      MNL(J,L)=W                                                        REL 181 
+      CALL RELTVY (Q1,Q2,Q3,SW3)                                        REL 182 
+      EQ(1,J,L)=-E                                                      REL 183 
+      EQ(2,J,L)= CC*Q1                                                  REL 184 
+      EQ(3,J,L)=CC*(Q3-Q2)                                              REL 185 
+      EQ(6,J,L)=-E+EQ(2,J,L)+EQ(3,J,L)                                  REL 186 
+      IF(ABSF(XL)-0.0001) 77,70,71                                      REL 187 
+   70 NSTOP= 70                                                         REL 188 
+      GO TO 9000                                                        REL 189 
+   71 ESPIN=-CC*Q2                                                      REL 190 
+      EQ(7,J,L)=EQ(6,J,L)+ESPIN*XL                                      REL 191 
+      EQ(6,J,L)=EQ(6,J,L)-ESPIN*XLP                                     REL 192 
+      EQ(4,J,L)=ESPIN                                                   REL 193 
+   77 CONTINUE                                                          REL 194 
+   78 CONTINUE                                                          REL 195 
+   79 CONTINUE                                                          REL 196 
+      GO TO 120                                                         REL 197 
+C     PERFORM TEST USING HYDROGENIC SOLUTIONS                           REL 198 
+   80 DO 92 J=1,9                                                       REL 199 
+      C=SF(J)                                                           REL 200 
+      DO 81 I=1,521                                                     REL 201 
+      DT(I)=0.0                                                         REL 202 
+   81 T(I)=-2.0*Z(J)                                                    REL 203 
+      DO 91 K=1,3                                                       REL 204 
+      XL=NL(K)/10-10*(NL(K)/100)                                        REL 205 
+      XLP=XL+1.0                                                        REL 206 
+      TLP=XL+XLP                                                        REL 207 
+      XNL=NL(K)                                                         REL 208 
+      XN=XNL/100.0-XL/10.0                                              REL 209 
+      INL(J,K)=1                                                        REL 210 
+      E=-(Z(J)/XN)**2                                                   REL 211 
+      ENL(J,K)=-E                                                       REL 212 
+      MNL(J,K)=1                                                        REL 213 
+      KKK=521                                                           REL 214 
+      GO TO (82,84,86),K                                                REL 215 
+   82 DO 83 I=1,521                                                     REL 216 
+   83 P(I)=C*X(I)*(Z(J)**1.5)*2.0*EXPF(-Z(J)*C*X(I))                    REL 217 
+      GO TO 88                                                          REL 218 
+   84 DO 85 I=1,521                                                     REL 219 
+   85 P(I)=C*X(I)*((Z(J)/2.0)**1.5)*(2.0-Z(J)*C*X(I))*                  REL 220 
+     1                            EXPF(-Z(J)*C*X(I)/2.0)                REL 221 
+      GO TO 88                                                          REL 222 
+   86 DO 87 I=1,521                                                     REL 223 
+   87 P(I)=C*X(I)*((Z(J)/2.0)**1.5)*(Z(J)*C*X(I)/1.7320509)*            REL 224 
+     1                            EXPF(-Z(J)*C*X(I)/2.0)                REL 225 
+   88 CALL RELTVY (Q1,Q2,Q3,SW3)                                        REL 226 
+      EQ(1,J,K)=-E                                                      REL 227 
+      EQ(2,J,K)=-CC*Q1                                                  REL 228 
+      EQ(3,J,K)=CC*(Q3-Q2)                                              REL 229 
+   89 EQ(5,J,K)=-E+EQ(2,J,K)+EQ(3,J,K)                                  REL 230 
+      IF(ABSF(XL)-0.0001) 91,100,90                                     REL 231 
+  100 NSTOP= 100                                                        REL 232 
+      GO TO 9000                                                        REL 233 
+   90 ESPIN=-CC*Q2                                                      REL 234 
+      EQ(7,J,K)=EQ(6,J,K)+ESPIN*XL                                      REL 235 
+      EQ(6,J,K)=EQ(6,J,K)-ESPIN*XLP                                     REL 236 
+      EQ(4,J,K)=ESPIN                                                   REL 237 
+   91 CONTINUE                                                          REL 238 
+   92 CONTINUE                                                          REL 239 
+  120 DO 125 K=1,19                                                     REL 240 
+      IMAXV(K)=INL(1,K)                                                 REL 241 
+      EMAXV(K)= EQ(6,1,K)                                               REL 242 
+      DO 125 J=2,9                                                      REL 243 
+      IF(Z(J))121,125,121                                               REL 244 
+  121 IF(INL(J,K)-IMAXV(K))123,123,122                                  REL 245 
+  122 IMAXV(K)=INL(J,K)                                                 REL 246 
+  123 IF(EMAXV(K)-EQ(6,J,K))124,125,125                                 REL 247 
+  124 EMAXV(K)= EQ(6,J,K)                                               REL 248 
+  125 CONTINUE                                                          REL 249 
+      LINES =0                                                          REL 250 
+      K=0                                                               REL 251 
+      DO 371 KA=1,19                                                    REL 252 
+      K=K+1                                                             REL 253 
+      NNL=NL(K)/10                                                      REL 254 
+      IF(IMAXV(K))307,308,309                                           REL 255 
+  307 NSTOP= 307                                                        REL 256 
+      GO TO 9000                                                        REL 257 
+  308 GO TO 371                                                         REL 258 
+  309 IF(NNL-10) 406,406,407                                            REL 259 
+  406 NLQ=1                                                             REL 260 
+      GO TO 421                                                         REL 261 
+  407 IF(NNL-21) 408,408,409                                            REL 262 
+  408 NLQ=2                                                             REL 263 
+      GO TO 421                                                         REL 264 
+  409 IF(NNL-32) 410,410,411                                            REL 265 
+  410 NLQ=3                                                             REL 266 
+      GO TO 421                                                         REL 267 
+  411 IF(NNL-43) 412,412,413                                            REL 268 
+  412 NLQ=4                                                             REL 269 
+      GO TO 421                                                         REL 270 
+  413 IF(NNL-53) 414,414,415                                            REL 271 
+  414 NLQ=5                                                             REL 272 
+      GO TO 421                                                         REL 273 
+  415 IF(NNL-62) 416,416,417                                            REL 274 
+  416 NLQ=6                                                             REL 275 
+      GO TO 421                                                         REL 276 
+  417 IF(NNL-71) 418,418,420                                            REL 277 
+  418 NLQ=7                                                             REL 278 
+  419 GO TO 421                                                         REL 279 
+  420 NSTOP= 420                                                        REL 280 
+      GO TO 9000                                                        REL 281 
+  421 LL=NNL-10*NLQ+1                                                   REL 282 
+      LX=LL-1                                                           REL 283 
+      LA=2*LL-3                                                         REL 284 
+      LB=2*LL-1                                                         REL 285 
+  422 DO 423 J=1,9                                                      REL 286 
+  423 NLL(J)=NLQ                                                        REL 287 
+      IF(LINES) 1422,1422,1423                                          REL 288 
+ 1422 CONTINUE                                                          REL 289 
+      WRITE OUTPUT TAPEIT,13,HEAD                                       REL 290 
+      WRITE OUTPUT TAPEIT,14                                            REL 291 
+      LINES=53                                                          REL 292 
+ 1423 CONTINUE                                                          REL 293 
+      GO TO (801,802,803,804), LL                                       REL 294 
+  801 WRITE OUTPUT TAPEIT,401,(NLL(J),MNL(J,K),J=1,9)                   REL 295 
+      LINES=LINES-7                                                     REL 296 
+      GO TO 329                                                         REL 297 
+  802 WRITE OUTPUT TAPEIT,402,(NLL(J),MNL(J,K),J=1,9)                   REL 298 
+      LINES=LINES-9                                                     REL 299 
+      GO TO 329                                                         REL 300 
+  803 WRITE OUTPUT TAPEIT,403,(NLL(J),MNL(J,K),J=1,9)                   REL 301 
+      LINES=LINES-9                                                     REL 302 
+      GO TO 329                                                         REL 303 
+  804 WRITE OUTPUT TAPEIT,404,(NLL(J),MNL(J,K),J=1,9)                   REL 304 
+      LINES=LINES-9                                                     REL 305 
+  329 IF(EMAXV(K)-1.0E01) 330,326,326                                   REL 306 
+  326 IF(EMAXV(K)-1.0E02) 333,327,327                                   REL 307 
+  327 IF(EMAXV(K)-1.0E03) 336,328,328                                   REL 308 
+  328 IF(EMAXV(K)-1.0E04) 339,342,342                                   REL 309 
+  330 IF (LX) 511,512,513                                               REL 310 
+  511 NSTOP= 511                                                        REL 311 
+      GO TO 9000                                                        REL 312 
+  512 WRITE OUTPUT TAPEIT,36,((EQ(I,J,K),J=1,9),I=1,3),                 REL 313 
+     1(EQ(6,J,K),J=1,9)                                                 REL 314 
+      GO TO 345                                                         REL 315 
+  513 WRITE OUTPUT TAPEIT,31,((EQ(I,J,K),J=1,9),I=1,4)                  REL 316 
+      WRITE OUTPUT TAPEIT,41,(LA,(EQ(6,J,K),J=1,9),LB,(EQ(7,J,K),J=1,9))REL 317 
+  514 GO TO 345                                                         REL 318 
+  333 IF (LX) 521,522,523                                               REL 319 
+  521 NSTOP= 521                                                        REL 320 
+      GO TO 9000                                                        REL 321 
+  522 WRITE OUTPUT TAPEIT,37,((EQ(I,J,K),J=1,9),I=1,3),                 REL 322 
+     1(EQ(6,J,K),J=1,9)                                                 REL 323 
+      GO TO 345                                                         REL 324 
+  523 WRITE OUTPUT TAPEIT,32,((EQ(I,J,K),J=1,9),I=1,4)                  REL 325 
+      WRITE OUTPUT TAPEIT,42,(LA,(EQ(6,J,K),J=1,9),LB,(EQ(7,J,K),J=1,9))REL 326 
+  524 GO TO 345                                                         REL 327 
+  336 IF (LX) 531,532,533                                               REL 328 
+  531 NSTOP= 531                                                        REL 329 
+      GO TO 9000                                                        REL 330 
+  532 WRITE OUTPUT TAPEIT,38,((EQ(I,J,K),J=1,9),I=1,3),                 REL 331 
+     1(EQ(6,J,K),J=1,9)                                                 REL 332 
+      GO TO 345                                                         REL 333 
+  533 WRITE OUTPUT TAPEIT,33,((EQ(I,J,K),J=1,9),I=1,4)                  REL 334 
+      WRITE OUTPUT TAPEIT,43,(LA,(EQ(6,J,K),J=1,9),LB,(EQ(7,J,K),J=1,9))REL 335 
+  534 GO TO 345                                                         REL 336 
+  339 IF (LX) 541,542,543                                               REL 337 
+  541 NSTOP= 541                                                        REL 338 
+      GO TO 9000                                                        REL 339 
+  542 WRITE OUTPUT TAPEIT,39,((EQ(I,J,K),J=1,9),I=1,3),                 REL 340 
+     1(EQ(6,J,K),J=1,9)                                                 REL 341 
+      GO TO 345                                                         REL 342 
+  543 WRITE OUTPUT TAPEIT,34,((EQ(I,J,K),J=1,9),I=1,4)                  REL 343 
+      WRITE OUTPUT TAPEIT,44,(LA,(EQ(6,J,K),J=1,9),LB,(EQ(7,J,K),J=1,9))REL 344 
+  544 GO TO 345                                                         REL 345 
+  342 IF (LX) 551,552,553                                               REL 346 
+  551 NSTOP= 551                                                        REL 347 
+      GO TO 9000                                                        REL 348 
+  552 WRITE OUTPUT TAPEIT,40,((EQ(I,J,K),J=1,9),I=1,3),                 REL 349 
+     1(EQ(6,J,K),J=1,9)                                                 REL 350 
+      GO TO 345                                                         REL 351 
+  553 WRITE OUTPUT TAPEIT,35,((EQ(I,J,K),J=1,9),I=1,4)                  REL 352 
+      WRITE OUTPUT TAPEIT,45,(LA,(EQ(6,J,K),J=1,9),LB,(EQ(7,J,K),J=1,9))REL 353 
+  345 CONTINUE                                                          REL 354 
+  371 CONTINUE                                                          REL 355 
+      GO TO 53                                                          REL 356 
+ 9000 WRITE OUTPUT TAPE 6,9001,NSTOP                                    REL 357 
+ 9001 FORMAT(6H0STOP ,I5)                                               REL 358 
+      CALL EXIT                                                         REL 359 
+      END                                                               REL 360 
+      SUBROUTINE  RELTVY (Q1,Q2,Q3,SW3)                                 RLV 001 
+C     ORIGINALLY WRITTEN BY FRED HERZFELD (RCA)  FALL 1961              RLV 002 
+C     MODIFIED BY RICHARD KORTUM   FALL 1962                            RLV 003 
+      DIMENSION X(521),T(521),P(521),DT(521),DP(521),ARG(521),B(521),   RLV 004 
+     1Z(9),NLL(9),NL(20),HEAD(12),EQ(7,9,19),ENL(9,19),INL(9,19),       RLV 005 
+     2MNL(9,19),EMAXV(19),IMAXV(19),SF(9),QP1(521),QP2(521),QP3(521)    RLV 006 
+     3,DDP(521),BIN(42)                                                 RLV 007 
+      COMMON X,T,P,DT,DP,ARG,B,C,CC,E,KKK,SF,Z,NLL,NL,EQ,ENL,INL,MNL,XL RLV 008 
+  301 FORMAT(1P6E19.7)                                                  RLV 009 
+  305 FORMAT(1P3E19.7)                                                  RLV 010 
+  306 FORMAT(I5,1P5E19.7)                                               RLV 011 
+  307 FORMAT(1P5E19.7)                                                  RLV 012 
+C                                                                       RLV 013 
+C     SENSE LIGHT 1 IS ON WHILE PROGRAM IS IN RELTVY SUBROUTINE         RLV 014 
+      SENSE LIGHT 1                                                     RLV 015 
+C     CALCULATION OF SECOND DERIVATIVE DDP(J) AND X(J)                  RLV 016 
+      DDP(1)=(2.0/0.0025**2)*(P(1)-2.5*P(2)+2.0*P(3)-0.5*P(4))          RLV 017 
+      DO 57 J=2,KKK                                                     RLV 018 
+      DDP(J)=C*T(J)*P(J)/X(J)+XL*(XL+1.0)*P(J)/(X(J)**2)                RLV 019 
+     1-(C**2)*E  *P(J)                                                  RLV 020 
+   57 CONTINUE                                                          RLV 021 
+C     CALCULATION OF FIRST DERIVATIVE DP(J)                             RLV 022 
+C                                                                       RLV 023 
+      DP(1)=(-22.0*P(1)+36.0*P(2)-18.0*P(3)+4.0*P(4))/(0.03)            RLV 024 
+      KKK2=KKK-2                                                        RLV 025 
+      DX=0.0025                                                         RLV 026 
+      DO 89 J=1,KKK2                                                    RLV 027 
+      IF(XMODF(J,40))87,88,87                                           RLV 028 
+   87 DP(J+1)=(P(J+2)-P(J  ))/(2.0*DX)-(DDP(J+2)-DDP(J  ))*(DX/12.0)    RLV 029 
+      GO TO 89                                                          RLV 030 
+   88 DX=DX+DX                                                          RLV 031 
+      DP(J+1)=(P(J+2)-P(J-1))/(2.0*DX)-(DDP(J+2)-DDP(J-1))*(DX/12.0)    RLV 032 
+   89 CONTINUE                                                          RLV 033 
+      KKK1=KKK-1                                                        RLV 034 
+   90 DP(KKK)=(P(KKK)-P(KKK1))/2.0/DX                                   RLV 035 
+      Q1=0.0                                                            RLV 036 
+      Q2=0.0                                                            RLV 037 
+      Q3=0.0                                                            RLV 038 
+      DX=0.0025                                                         RLV 039 
+      ALPHA= DX/3.0                                                     RLV 040 
+      QP1(1)=0.0                                                        RLV 041 
+      QP2(1)=0.0                                                        RLV 042 
+      QP3(1)=0.0                                                        RLV 043 
+      KKKST=KKK-2                                                       RLV 044 
+      IF(SW3)600,601,600                                                RLV 045 
+  600 CONTINUE                                                          RLV 046 
+      ZS=-T(1)/2.0                                                      RLV 047 
+      XMQ1=5.0*(ZS**4)                                                  RLV 048 
+      WRITE OUTPUT TAPE 6,307,(ZS,C,CC,E,GAM)                           RLV 049 
+  601 CONTINUE                                                          RLV 050 
+  100 DO 202 J=1,KKKST,2                                                RLV 051 
+      TER2=C*X(J+2)*E-T(J+2)                                            RLV 052 
+      B(J+2)=C*X(J+2)                                                   RLV 053 
+      QP1(J+2)=((P(J+2)*TER2)**2)/(B(J+2)*  X(J+2))                     RLV 054 
+      QP2(J+2)=((P(J+2)/B(J+2))**2)*(DT(J+2)  -T(J+2)/(  X(J+2)))       RLV 055 
+      QP3(J+2)=P(J+2)*(DP(J+2)  )*(X(J+2)*DT(J+2)-T(J+2))/B(J+2)**2     RLV 056 
+      TER1=C*X(J+1)*E-T(J+1)                                            RLV 057 
+      B(J+1)=C*X(J+1)                                                   RLV 058 
+      QP1(J+1)=((P(J+1)*TER1)**2)/(B(J+1)*  X(J+1))                     RLV 059 
+      QP2(J+1)=((P(J+1)/B(J+1))**2)*(DT(J+1)  -T(J+1)/(  X(J+1)))       RLV 060 
+      QP3(J+1)=P(J+1)*(DP(J+1)  )*(X(J+1)*DT(J+1)-T(J+1))/B(J+1)**2     RLV 061 
+      Q1=Q1+ALPHA*(QP1(J)+4.0*QP1(J+1)+QP1(J+2))                        RLV 062 
+      Q2=Q2+ALPHA*(QP2(J)+4.0*QP2(J+1)+QP2(J+2))                        RLV 063 
+      Q3=Q3+ALPHA*(QP3(J)+4.0*QP3(J+1)+QP3(J+2))                        RLV 064 
+      IF(SW3)602,603,602                                                RLV 065 
+  602 CONTINUE                                                          RLV 066 
+      EQ1=(ZS**4)*(5.0-(5.0-6.0*ZS*C*X(J+2)+2.0*((ZS*C*X(J+2))**2)      RLV 067 
+     1*EXPF(-2.0*ZS*C*X(J+2))))                                         RLV 068 
+      EXQ1=(ZS**4)*(5.0-6.0*ZS*C*X(J+2)+2.0((ZS*C*X(J+2))**2))          RLV 069 
+     1*EXPF(-2.0*ZS*C*X(J+2))                                           RLV 070 
+      XQ1=XMQ1-Q1                                                       RLV 071 
+      JP=J+2                                                            RLV 072 
+      WRITE OUTPUT TAPE 6,306,(JP,Q1,EQ1,XQ1,EXQ1,ALPHA)                RLV 073 
+  603 CONTINUE                                                          RLV 074 
+      JJJ=J+1                                                           RLV 075 
+  200 IF(XMODF(JJJ,40))202 ,201,202                                     RLV 076 
+  201 ALPHA=ALPHA+ALPHA                                                 RLV 077 
+  202 CONTINUE                                                          RLV 078 
+      DO 513 L=1,41                                                     RLV 079 
+  513 BIN(L)=1.0                                                        RLV 080 
+      CORR1=QP1(2)                                                      RLV 081 
+      CORR2=QP2(2)                                                      RLV 082 
+      CORR3=QP3(2)                                                      RLV 083 
+      ASSIGN 5032 TO KFIR                                               RLV 084 
+      ASSIGN 5072 TO KSEC                                               RLV 085 
+      ASSIGN 5112 TO KTHIRD                                             RLV 086 
+      ERROR1=0.0                                                        RLV 087 
+      ERROR2=0.0                                                        RLV 088 
+      ERROR3=0.0                                                        RLV 089 
+      DO 514 L=2,40                                                     RLV 090 
+      COR1=CORR1                                                        RLV 091 
+      COR2=CORR2                                                        RLV 092 
+      COR3=CORR3                                                        RLV 093 
+      CORR1=0.0                                                         RLV 094 
+      CORR2=0.0                                                         RLV 095 
+      CORR3=0.0                                                         RLV 096 
+      BETA=1.0                                                          RLV 097 
+      DO 516 J=1,L                                                      RLV 098 
+      CORR1=CORR1+QP1(J+1)*BIN(J)*BETA                                  RLV 099 
+      CORR2=CORR2+QP2(J+1)*BIN(J)*BETA                                  RLV 100 
+      CORR3=CORR3+QP3(J+1)*BIN(J)*BETA                                  RLV 101 
+      BETA=-BETA                                                        RLV 102 
+  516 CONTINUE                                                          RLV 103 
+      GO TO KFIR,(5032,501,504)                                         RLV 104 
+  501 XMAG1=ABSF(CORR1)-ABSF(COR1)                                      RLV 105 
+      XMAS1=ABSF(CORR1)*10.0**9/QP1(2)-1.0                              RLV 106 
+      IF(XMAG1)502,503,503                                              RLV 107 
+  502 IF(XMAS1)503,503,5031                                             RLV 108 
+  503 ASSIGN 504 TO KFIR                                                RLV 109 
+      GO TO 504                                                         RLV 110 
+ 5032 ASSIGN 501 TO KFIR                                                RLV 111 
+ 5031 ERROR1=ERROR1+COR1                                                RLV 112 
+  504 CONTINUE                                                          RLV 113 
+      GO TO KSEC,(5072,505,508)                                         RLV 114 
+  505 XMAG2=ABSF(CORR2)-ABSF(COR2)                                      RLV 115 
+      XMAS2=ABSF(CORR2)*10.0**9/QP2(2)-1.0                              RLV 116 
+      IF(XMAG2) 506,507,507                                             RLV 117 
+  506 IF(XMAS2) 507,507,5071                                            RLV 118 
+  507 ASSIGN 508 TO KSEC                                                RLV 119 
+      GO TO 508                                                         RLV 120 
+ 5072 ASSIGN 505 TO KSEC                                                RLV 121 
+ 5071 ERROR2=ERROR2+COR2                                                RLV 122 
+  508 CONTINUE                                                          RLV 123 
+      GO TO KTHIRD,(5112,509,512)                                       RLV 124 
+  509 XMAG3=ABSF(CORR3)-ABSF(COR3)                                      RLV 125 
+      XMAS3=ABSF(CORR3)*10.0**9/QP3(2)-1.0                              RLV 126 
+      IF(XMAG3) 510,511,511                                             RLV 127 
+  510 IF(XMAS3) 511,511,5111                                            RLV 128 
+  511 ASSIGN 512 TO KTHIRD                                              RLV 129 
+      GO TO 512                                                         RLV 130 
+ 5112 ASSIGN 509 TO KTHIRD                                              RLV 131 
+ 5111 ERROR3=ERROR3+COR3                                                RLV 132 
+  512 CONTINUE                                                          RLV 133 
+      IF(SW3)604,605,604                                                RLV 134 
+  604 WRITE OUTPUT TAPE 6,305,(ERROR1,ERROR2,ERROR3)                    RLV 135 
+  605 CONTINUE                                                          RLV 136 
+      DO 515 M=2,L                                                      RLV 137 
+      N=L-M                                                             RLV 138 
+  515 BIN(N+2)=BIN(N+2)+BIN(N+1)                                        RLV 139 
+  514 CONTINUE                                                          RLV 140 
+      Q1=Q1+0.0025*ERROR1/3.0                                           RLV 141 
+      Q2=Q2+0.0025*ERROR2/3.0                                           RLV 142 
+      Q3=Q3+0.0025*ERROR3/3.0                                           RLV 143 
+  300 IF(SW3)3011,304,3011                                              RLV 144 
+ 3011 FKKK=KKK                                                          RLV 145 
+      WRITE OUTPUT TAPE 6,301,(XL,E,FKKK,Q1,Q2,Q3)                      RLV 146 
+  302 DO 303 J=1,KKK                                                    RLV 147 
+      WRITE OUTPUT TAPE 6,301,(X(J),P(J),DP(J),DDP(J),T(J),DT(J))       RLV 148 
+      WRITE OUTPUT TAPE 6,305,(QP1(J),QP2(J),QP3(J))                    RLV 149 
+  303  CONTINUE                                                         RLV 150 
+  304 CONTINUE                                                          RLV 151 
+      SENSE LIGHT 0                                                     RLV 152 
+  203 RETURN                                                            RLV 153 
+      END                                                               RLV 154 

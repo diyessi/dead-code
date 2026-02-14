@@ -1,0 +1,967 @@
+C     NON-LINEAR  REGRESSION -  DIFFERENTIAL EQUATIONS                  NLR10001
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10002
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10003
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10004
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10005
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10006
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10007
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10008
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10009
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21)           NLR10010
+     3, DELTA(20),SIGM2(20), NOCO(20)                                   NLR10011
+     4,S(20,20),D(21,21),JJ(20)                                         NLR10012
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10013
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10014
+C     X= DATA, T= TIME , C = UNKNOWNS                                   NLR10015
+    1 CALL DATIN1                                                       NLR10016
+      KL = 1                                                            NLR10017
+      PRINT 6, MODNO                                                    NLR10018
+      WRITE OUTPUT TAPE 9,6,MODNO                                       NLR10019
+    6 FORMAT(13H1MODEL NUMBER   I5)                                     NLR10020
+C     NOX = NO  DATA VARIABLES, NOC= NO UNKNOWS, NOT  = NO  TIMES       NLR10021
+      NOVAR  =  NOC  + 1                                                NLR10022
+      NODATA =  NOX  *  NOT                                             NLR10023
+   10 WRITE OUTPUT TAPE 9, 1010, NOT, NOC, PCT, EFIN, NOX, NOTVAR, NOZ  NLR10024
+      INTMD=INTMD                                                       NLR10025
+      GO TO (11,12), INTMD                                              NLR10026
+   11 WRITE OUTPUT TAPE 9,1019                                          NLR10027
+      GO TO 13                                                          NLR10028
+   12 WRITE OUTPUT TAPE 9,1020                                          NLR10029
+   13 DO 14  I=1,NOT                                                    NLR10030
+   14 WRITE OUTPUT TAPE 9, 1017, T(I),(Z(I,J),J=1,NOZ)                  NLR10031
+   15 WRITE OUTPUT TAPE 9,1011,(CMIN(I),I=1,NOC)                        NLR10032
+   16 WRITE OUTPUT TAPE 9,1012,(CMAX(I),I=1,NOC)                        NLR10033
+      IF(KMIN) 17, 17, 18                                               NLR10034
+   17 KNOC=1                                                            NLR10035
+      GO TO 20                                                          NLR10036
+   18 KNOC=NOC                                                          NLR10037
+   20 WRITE OUTPUT TAPE 9,1013,(ABSM(I),I=1,KNOC)                       NLR10038
+      PCT = .01*PCT                                                     NLR10039
+      PCHAVT = .01*PCHAVT                                               NLR10040
+      PCDBLT = .01*PCDBLT                                               NLR10041
+      PCTOLC = .01*PCTOLC                                               NLR10042
+      PCTOLS = .01*PCTOLS                                               NLR10043
+      GO TO (21,23), INTMD                                              NLR10044
+   21 CALL MODEL (C,Y)                                                  NLR10045
+      GO TO 24                                                          NLR10046
+   23 CALL MODEL 1 (C,Y)                                                NLR10047
+   24 SS = 0.0                                                          NLR10048
+      DO 25     I3  = 1, NOT                                            NLR10049
+      DO 25    J3  = 1, NOX                                             NLR10050
+      YP(I3,J3)   = (X(I3,J3)  - Y(I3,J3)) *W(J3)                       NLR10051
+   25 SS  =  SS  +  YP(I3,J3) ** 2                                      NLR10052
+       WRITE OUTPUT TAPE 9,1015,  SS,(C(I), I=1,NOC)                    NLR10053
+      WRITE OUTPUT TAPE 9, 1016                                         NLR10054
+      DO 30 I = 1, NOT                                                  NLR10055
+   30 WRITE OUTPUT TAPE 9, 1017, (Y(I,J), J = 1, NOX)                   NLR10056
+      NM=1                                                              NLR10057
+      K5 = 1                                                            NLR10058
+      REWIND 3                                                          NLR10059
+   90 DO 94 I=1,NOC                                                     NLR10060
+   91 DELTA (I) = C(I)*PCT                                              NLR10061
+      IF (ABSF(DELTA(I))-ABSM(I))93,94,94                               NLR10062
+   93 DELTA(I)=ABSM(I)                                                  NLR10063
+   94 CONTINUE                                                          NLR10064
+      DO 940 M=1,NOC                                                    NLR10065
+  940 JJ(M)=0.0                                                         NLR10066
+      IF (KCC) 942,942,941                                              NLR10067
+  941 READ 1018, (JJ(L),L=1,NOC)                                        NLR10068
+  942 DO 100 I=1,NOC                                                    NLR10069
+      IF(JJ(I)-1)95,96,96                                               NLR10070
+   96 DO 98 LL=1,NOT                                                    NLR10071
+      DO 98 MM=1,NOX                                                    NLR10072
+  98  YP(LL,MM)=0.0                                                     NLR10073
+      GO TO 115                                                         NLR10074
+   95 CI  = C(I)                                                        NLR10075
+      C(I) = C(I) + DELTA(I)                                            NLR10076
+      GO TO (102,104), INTMD                                            NLR10077
+  102 CALL MODEL (C,YP)                                                 NLR10078
+      GO TO 105                                                         NLR10079
+  104 CALL MODEL 1 (C,YP)                                               NLR10080
+  105 C(I) = CI                                                         NLR10081
+      YPS = 0.0                                                         NLR10082
+      DO  111    I2 =  1, NOT                                           NLR10083
+      DO  111    J2 =  1, NOX                                           NLR10084
+  110 YP(I2,J2) = ((YP(I2,J2) - Y(I2,J2)) / DELTA(I))*W(J2)             NLR10085
+       IF(ABSF(YP(I2,J2))-10.0E15) 111,111,147                          NLR10086
+  111 YPS=YPS+ABSF (YP(I2,J2))                                          NLR10087
+      IF(YPS-.0001) 112,112,115                                         NLR10088
+  112 GO TO (113,115), K5                                               NLR10089
+  113 IF (ABSF(DELTA(I))-ABSM(I))114,114,1140                           NLR10090
+  114  DELTA (I) = ABSM(I) * 5.0                                        NLR10091
+       GO TO 1141                                                       NLR10092
+ 1140  DELTA (I) = C(I) * PCT * 5.0                                     NLR10093
+ 1141  K 5 = 2                                                          NLR10094
+      GO TO 95                                                          NLR10095
+  115 WRITE TAPE 3 , ((YP(I2, J2), J2 = 1,NOX ), I2 = 1, NOT)           NLR10096
+      K5 = 1                                                            NLR10097
+  100 CONTINUE                                                          NLR10098
+      SS  =  0.0                                                        NLR10099
+      DO 120    I3  = 1, NOT                                            NLR10100
+      DO 120   J3  = 1, NOX                                             NLR10101
+      YP(I3,J3)   = (X(I3,J3)  - Y(I3,J3)) *W(J3)                       NLR10102
+  120 SS  =  SS  +  YP(I3,J3) ** 2                                      NLR10103
+      WRITE   TAPE  3,((YP(I3,J3), J3 = 1, NOX), I3 = 1, NOT)           NLR10104
+      END FILE 3                                                        NLR10105
+      REWIND  3                                                         NLR10106
+      K2=0                                                              NLR10107
+      CALL ST3REG                                                       NLR10108
+      IF (K2)140,140, 150                                               NLR10109
+  150 CALL NWTRL1                                                       NLR10110
+      IF (COEN(1)) 140,140,130                                          NLR10111
+  130 IF(NM-NOIT)135,145,145                                            NLR10112
+  135 IF(SENSE SWITCH 2) 152,138                                        NLR10113
+  152 KL = 2                                                            NLR10114
+      GO TO 140                                                         NLR10115
+  138 NM =NM + 1                                                        NLR10116
+      REWIND 3                                                          NLR10117
+      GO TO  90                                                         NLR10118
+  140 CALL ENDR1                                                        NLR10119
+      GO TO (1  ,155), KL                                               NLR10120
+  145  WRITE OUTPUT TAPE 9, 900                                         NLR10121
+  900  FORMAT (48H THE MAXIMUM NO. OF ITERATIONS HAS BEEN REACHED  )    NLR10122
+  146  GO TO 140                                                        NLR10123
+  147  WRITE OUTPUT TAPE 9,901                                          NLR10124
+  901  FORMAT ( 44H0THE PARTIAL DERIVATIVES HAVE EXCEEDED LIMIT )       NLR10125
+  148 GO TO 1                                                           NLR10126
+ 1010 FORMAT (18HO NO.OF DATA PTS.= I5,17H     NO.OF COEF.= I5,30H     PNLR10127
+     1ER CENT CHANGE IN COEF.=F8.5,                14H     F LEVEL =F8. NLR10128
+     25/17H  NO.OF DEP.VAR.=I5,21H       NO.OF DERIVS.=I5,24H      NO.0 NLR10129
+     3F INDEP.VAR.= I5 )                                                NLR10130
+ 1011 FORMAT (/18H  MINIMUM ON COEF. /(8E14.6) )                        NLR10131
+ 1012 FORMAT (  18H  MAXIMUM ON COEF. / (8E 14.6) )                     NLR10132
+ 1013 FORMAT (22H  MIN. CHANGE IN COEF. /(8 E14.6))                     NLR10133
+ 1015 FORMAT(14H0 INITIAL SS = E12.6/15H  INITIAL COEF. / (1H 8E14.6))  NLR10134
+ 1016 FORMAT (18H0 PREDICTED VALUES )                                   NLR10135
+ 1017 FORMAT (10F12.5)                                                  NLR10136
+ 1018 FORMAT(20I3)                                                      NLR10137
+ 1019 FORMAT (34H  INTEGRATION METHOD = RUNGE KUTTA /24H    TIMES     INNLR10138
+     1DEP.VAR. /)                                                       NLR10139
+ 1020 FORMAT (36H  INTEGRATION METHOD = ADAMS MOULTON /24H    TIMES     NLR10140
+     1INDEP.VAR. /)                                                     NLR10141
+ 1021 FORMAT(50H  OPERATOR - PLEASE PUT SWITCH 2 UP AND PUSH START )    NLR10142
+  155 PRINT 1021                                                        NLR10143
+      PAUSE                                                             NLR10144
+      GO TO 1                                                           NLR10145
+      END(2,2,2,2,2)                                                    NLR10146
+      SUBROUTINE DATIN1                                                 NLR10147
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10148
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10149
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10150
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10151
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10152
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10153
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10154
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10155
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21),          NLR10156
+     3            SIGM2(20), NOCO(20)                                   NLR10157
+     4,S(20,20),D(21,21)                                                NLR10158
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10159
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10160
+      READ 1,NOC,NOT,NOX,NOTVAR,NOZ,KBYP,LL, NOIT,MODNO,INTMD,INTERP,KCCNLR10161
+      DO 27 I = 1,NOT                                                   NLR10162
+   27 READ 3, T(I),(X(I,J),J=1,NOX)                                     NLR10163
+      READ3,(W(J),J=1,NOX)                                              NLR10164
+      DO  30 I=1,   NOT                                                 NLR10165
+   30 READ3, (Z(I,J),J=1,NOZ)                                           NLR10166
+      READ 5 , (  C(I),  I  = 1, NOC )                                  NLR10167
+      READ 5 , ( CMIN(I),CMAX(I), I  = 1, NOC )                         NLR10168
+      IF(INTMD-1) 35,35,32                                              NLR10169
+   32   READ 10, DT, EMAX, EMIN                                         NLR10170
+        GO TO 40                                                        NLR10171
+   35 READ 7,NOSTEP,DT,PCHAVT,HALVDT,PCDBLT,DBLEDT                      NLR10172
+   40 READ8,TOL,EFIN,PCTOLC,PCTOLS,ABTOLS                               NLR10173
+      READ 9,PCT,DELMIN,KMIN                                            NLR10174
+      DO 100 I = 1, NOC                                                 NLR10175
+  100 ABSM(I)=DELMIN                                                    NLR10176
+      IF(KMIN)200,200,150                                               NLR10177
+  150 DO 160 I = 1, KMIN                                                NLR10178
+  160 READ 6, J, ABSM (J)                                               NLR10179
+    1 FORMAT(14I5)                                                      NLR10180
+    3 FORMAT (6F12.5)                                                   NLR10181
+    5 FORMAT(6E12.5)                                                    NLR10182
+    6 FORMAT (I12,E12.5)                                                NLR10183
+    7 FORMAT (I 12, 5F12.5)                                             NLR10184
+    8 FORMAT(4F12.5,E12.5)                                              NLR10185
+    9 FORMAT(F12.5,E12.5,I12)                                           NLR10186
+   10  FORMAT (F12.5, 2 E 12.5)                                         NLR10187
+  200 RETURN                                                            NLR10188
+      END(2,2,2,2,2)                                                    NLR10189
+      SUBROUTINE MODEL (C,Y)                                            NLR10190
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10191
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10192
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10193
+     3Q,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10194
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10195
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10196
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10197
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),Q(43,10),     NLR10198
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21),          NLR10199
+     3RUNGE(10), CORR(10), TY(10), CON(2,3), SIGM2(20), NOCO(20)        NLR10200
+     4, S(20, 20), D(21, 21), DERTP(10), DIFDER(10),DERMX(10),DERMN(10) NLR10201
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10202
+      EQUIVALENCE (Q,A), (YP,B,S) , (VECTOR,D) ,(DIFDER,DERMX)          NLR10203
+    1 CON(1,1) = .5                                                     NLR10204
+      CON(1,2) = .5                                                     NLR10205
+      CON(1,3) = 1.0                                                    NLR10206
+      CON(2,1) = .16666667                                              NLR10207
+      CON(2,2) = .33333333                                              NLR10208
+      CON(2,3) = .33333333                                              NLR10209
+      I3=1                                                              NLR10210
+   2   DO 145 I=1,NOT                                                   NLR10211
+    6 JJ = 1                                                            NLR10212
+    7 I2=I                                                              NLR10213
+   10 IF(KBYP) 25, 25, 15                                               NLR10214
+   15 IF(Z(I,1)) 150,150,25                                             NLR10215
+   25 CALL INIT (C,Y)                                                   NLR10216
+   26 TDT = DT                                                          NLR10217
+      SDT = DT                                                          NLR10218
+  261 IF (TIME-T(I))  27,145,145                                        NLR10219
+   27 IF(TIME+TDT-T(I)) 30, 125, 125                                    NLR10220
+   30 CONTINUE                                                          NLR10221
+   33 CALL DERIV (C,Y,DER)                                              NLR10222
+      KK = 1                                                            NLR10223
+   35 DO 45 J=1,NOTVAR                                                  NLR10224
+      GO TO (300,40,320),KK                                             NLR10225
+  300 IF (NOSTEP-I3) 310,310,305                                        NLR10226
+  305 KK=2                                                              NLR10227
+      GO TO 40                                                          NLR10228
+  310 KK=3                                                              NLR10229
+  320 DERTP(J)=DER(J)                                                   NLR10230
+      DERMX(J)=DER(J)                                                   NLR10231
+      DERMN(J)=DER(J)                                                   NLR10232
+   40 CORR(J)=0.0                                                       NLR10233
+   45 TY(J)=Y(I,J)                                                      NLR10234
+   47 TME = TIME                                                        NLR10235
+   50 DO775 II=1,3                                                      NLR10236
+      TIME =TME + CON (1,II) *TDT                                       NLR10237
+   55 DO 70 J=1,NOTVAR                                                  NLR10238
+   60 RUNGE(J) = DER(J)*TDT                                             NLR10239
+   65 Y(I,J) = RUNGE(J)*CON(1,II)+TY(J)                                 NLR10240
+   70 CORR(J) = RUNGE(J) * CON(2,II)+ CORR(J)                           NLR10241
+   75 CALL DERIV (C,Y,DER)                                              NLR10242
+      GO TO (758,775,758),KK                                            NLR10243
+  758 DO 774 J = 1, NOTVAR                                              NLR10244
+      IF (DERMX(J)-DER(J))760,774,765                                   NLR10245
+  760 DERMX(J)=DER(J)                                                   NLR10246
+      GO TO 774                                                         NLR10247
+  765 IF (DERMN(J)-DER(J))774,774,770                                   NLR10248
+  770 DERMN(J)=DER(J)                                                   NLR10249
+  774 CONTINUE                                                          NLR10250
+  775 CONTINUE                                                          NLR10251
+      TIME=TME + TDT                                                    NLR10252
+   76 DO 77 J=1,NOTVAR                                                  NLR10253
+   77 CORR(J) = CORR(J) + (DER(J) * TDT * .16666667)                    NLR10254
+   80 DO 115 J=1,NOTVAR                                                 NLR10255
+   85 Y(I,J) = TY(J) + CORR(J)                                          NLR10256
+   90 IF(ABSF(Y(I,J))-1.E15) 115,115,95                                 NLR10257
+   95 IF (Y(I,J))100,100,110                                            NLR10258
+  100 Y(I,J) = -1.E15                                                   NLR10259
+ 105  GO TO 115                                                         NLR10260
+  110 Y(I,J) = 1.E15                                                    NLR10261
+  115 CONTINUE                                                          NLR10262
+  620 GO TO (690,690,630),KK                                            NLR10263
+  630 I 3 = 1                                                           NLR10264
+      DO 635 M = 1, NOTVAR                                              NLR10265
+  635 DIFDER(M)=DERMX(M)-DERMN(M)                                       NLR10266
+      DO 645 M = 1, NOTVAR                                              NLR10267
+  640 IF(DERMX(M) * DERMN (M)) 645,645,642                              NLR10268
+  642 IF(ABSF (DIFDER(M) /DERTP(M))-PCHAVT) 645,645,668                 NLR10269
+  645 CONTINUE                                                          NLR10270
+      DO 660 M = 1, NOTVAR                                              NLR10271
+  650 IF(DERMX(M) *DERMN(M)) 660,660,652                                NLR10272
+  652 IF(ABSF (DIFDER(M)/DERTP(M))-PCDBLT) 660,660,27                   NLR10273
+  660 CONTINUE                                                          NLR10274
+  662 IF(TDT*1.5-DBLEDT)665,665,27                                      NLR10275
+  665 TDT = 1.5*TDT                                                     NLR10276
+      GO TO 27                                                          NLR10277
+  668 IF(TDT*.667-HALVDT)27 ,670,670                                    NLR10278
+  670 TIME = TIME -TDT                                                  NLR10279
+      TDT = .667* TDT                                                   NLR10280
+      JJ=1                                                              NLR10281
+      DO 675 J=1,NOTVAR                                                 NLR10282
+      CORR(J)=0.0                                                       NLR10283
+      DER(J)=DERTP(J)                                                   NLR10284
+      DERMX(J)=DER(J)                                                   NLR10285
+  675 DERMN(J)=DER(J)                                                   NLR10286
+      GO TO 47                                                          NLR10287
+  690 I3 = I3 + 1                                                       NLR10288
+  120 GO TO 27                                                          NLR10289
+  125 GO TO (130,145), JJ                                               NLR10290
+  130 SDT = TDT                                                         NLR10291
+      TDT = T(I) - TIME                                                 NLR10292
+  135 JJ = 2                                                            NLR10293
+  140 GO TO 30                                                          NLR10294
+  145 CONTINUE                                                          NLR10295
+  146 RETURN                                                            NLR10296
+  150 DO 155 K=1,NOTVAR                                                 NLR10297
+  155 Y(I,K)=Y(I-1,K)                                                   NLR10298
+  160 TDT = SDT                                                         NLR10299
+  165 GO TO261                                                          NLR10300
+      END(2,2,2,2,2)                                                    NLR10301
+      SUBROUTINE MODEL1(C,Y)                                            NLR10302
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10303
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10304
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10305
+     3Q,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10306
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10307
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10308
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10309
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),Q(43,10),     NLR10310
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21),          NLR10311
+     3SIGM2(20),NOCO(20),S(20,20),D(21,21),DEBUG(25),P(27,5),           NLR10312
+     4DER1(10),DER2(10),DER3(10),DER4(10),DER5(10),                     NLR10313
+     5 CR(9,5), XK(27), KASE(3), E(10)                                  NLR10314
+      EQUIVALENCE (Q,A), (YP,B,S) , (VECTOR,D)                          NLR10315
+      KL1=41                                                            NLR10316
+      KL2=42                                                            NLR10317
+      KL3=43                                                            NLR10318
+   10 DO 300 I=1,NOT                                                    NLR10319
+   30 IF(KBYP)60,60,40                                                  NLR10320
+   40 IF(Z(I,1))142,142,60                                              NLR10321
+   60 KASE(1) = -1                                                      NLR10322
+      KASE(2) = -1                                                      NLR10323
+      KASE(3) = 0                                                       NLR10324
+   70 M = 0                                                             NLR10325
+   80 TDT = DT                                                          NLR10326
+   90 I2=I                                                              NLR10327
+      CALL INIT (C,Y)                                                   NLR10328
+  100 IF (TIME-T(I)) 101,300,300                                        NLR10329
+  101 DO 102 J=1,NOTVAR                                                 NLR10330
+  102  Y(KL1,J)= Y(I,J)                                                 NLR10331
+  103 DO 104 J = 1,NOTVAR                                               NLR10332
+  104 E(J) = 0.0                                                        NLR10333
+       I2=KL1                                                           NLR10334
+  105 CALL DERIV(C,Y,DER1)                                              NLR10335
+       I2=KL2                                                           NLR10336
+      DO 115  J=1,NOTVAR                                                NLR10337
+  115 Y(I2,J)=Y(KL1,J) + (TDT/4.0)*DER1(J)                              NLR10338
+      TIME = TIME + TDT/4.0                                             NLR10339
+      CALL DERIV(C,Y,DER2)                                              NLR10340
+      DO 120 J=1,NOTVAR                                                 NLR10341
+  120 Y(KL2,J)=Y(KL2,J)+(TDT/8.0*(3.0*DER2(J)-DER1(J)))                 NLR10342
+      TIME=TIME+TDT/4.0                                                 NLR10343
+      CALL DERIV(C,Y,DER3)                                              NLR10344
+      DO 125 J=1,NOTVAR                                                 NLR10345
+  125 Y(KL2,J)=Y(KL2,J)+(TDT/12.0)*(19.0*DER3(J)-20.0*DER2(J)+7.0*DER1(JNLR10346
+     1))                                                                NLR10347
+      TIME=TIME+ TDT/2.0                                                NLR10348
+      CALL DERIV(C,Y,DER4)                                              NLR10349
+       I2=KL3                                                           NLR10350
+      DO 130  J=1,NOTVAR                                                NLR10351
+  130 Y(KL3,J)=Y(KL1,J)+TDT/384.0*(37.0*DER1(J)+72.0*DER2(J)-14.0*DER3(JNLR10352
+     1)+DER4(J))                                                        NLR10353
+      TIME=TIME-0.75*TDT                                                NLR10354
+      CALL DERIV(C,Y,DER2)                                              NLR10355
+      DO 135 J=1,NOTVAR                                                 NLR10356
+  135 Y(KL3,J)=Y(KL3,J)+(TDT/384.0)*(-5.0*DER1(J)+56.0*DER2(J)+46.0*    NLR10357
+     1DER3(J)-DER4(J))                                                  NLR10358
+      TIME=TIME+TDT/4.0                                                 NLR10359
+      CALL DERIV(C,Y,DER3)                                              NLR10360
+      DO 140 J=1,NOTVAR                                                 NLR10361
+  140 Y(KL3,J)=Y(KL3,J)+(TDT/12.0)*(DER1(J)-4.0*DER2(J)+7.0*DER3(J)+2.0*NLR10362
+     1DER4(J))                                                          NLR10363
+      TIME=TIME + TDT/2.0                                               NLR10364
+  142 DO 145 J=1,NOTVAR                                                 NLR10365
+  145 Y(KL1,J)=Y(KL3,J)-E(J)                                            NLR10366
+       I2=KL1                                                           NLR10367
+  150 CALL DERIV(C,Y,DER4)                                              NLR10368
+  152 K=14-(9*KASE(1)+3*KASE(2)+KASE(3))                                NLR10369
+      DO 155 J=1,NOTVAR                                                 NLR10370
+  155 Y(KL2,J)=Y(KL1,J)+(TDT/P(K,1))*(P(K,2)*DER4(J)-P(K,3)*DER3(J)+    NLR10371
+     1P(K,4)*DER2(J)-P(K,5)*DER1(J))                                    NLR10372
+  160 TIME=TIME+TDT                                                     NLR10373
+       I2=KL2                                                           NLR10374
+      CALL DERIV(C,Y,DER5)                                              NLR10375
+  165 KK=5-(3*KASE(1)+KASE(2))                                          NLR10376
+      DO 170 J=1,NOTVAR                                                 NLR10377
+  170 Y(KL3,J)=Y(KL1,J)+(TDT/CR(KK,1))*(CR(KK,2)*DER5(J)+CR(KK,3)*DER4(JNLR10378
+     1)-CR(KK,4)*DER3(J)+CR(KK,5)*DER2(J))                              NLR10379
+      DO 175 J=1,NOTVAR                                                 NLR10380
+      IF(Y(KL3,J)- 1.0)171,171,172                                      NLR10381
+  171 WT = 1.0                                                          NLR10382
+      GO TO 175                                                         NLR10383
+  172 IF(Y(KL3,J)-100.0)173,173,174                                     NLR10384
+  173  WT=1.0                                                           NLR10385
+      GO TO 175                                                         NLR10386
+  174  WT=1.0                                                           NLR10387
+  175 E(J)=WT*XK(K)*(Y(KL3,J)-Y(KL2,J))                                 NLR10388
+  180 XMAXE = ABSF(E(1))                                                NLR10389
+      JJ=1                                                              NLR10390
+      DO 190  J=2,NOTVAR                                                NLR10391
+      IF(XMAXE-ABSF(E(J)))185,190,190                                   NLR10392
+  185 XMAXE=ABSF(E(J))                                                  NLR10393
+  187 JJ=J                                                              NLR10394
+  190 CONTINUE                                                          NLR10395
+  195 IF(XMAXE-EMAX)200,205,245                                         NLR10396
+  200 IF(XMAXE-EMIN)270,205,205                                         NLR10397
+  205 KASE(3)=KASE(2)                                                   NLR10398
+      KASE(2)=KASE(1)                                                   NLR10399
+      KASE(1)=0                                                         NLR10400
+  207 DO 230 J=1,NOTVAR                                                 NLR10401
+      IF(ABSF(Y(KL3,J))-1.E15)225,225,210                               NLR10402
+  210 IF(Y(KL3,J))215,215,222                                           NLR10404
+  215 Y(KL3,J)=-1.E15                                                   NLR10405
+  220 GO TO 225                                                         NLR10406
+  222 Y(KL3,J)=1.E15                                                    NLR10407
+  225 DER1(J) = DER2(J)                                                 NLR10408
+      DER2(J) = DER3(J)                                                 NLR10409
+  230 DER3(J) = DER4(J)                                                 NLR10410
+  235 M = 1                                                             NLR10411
+  240 IF(TIME-T(I))142,290,302                                          NLR10412
+  302  I2= KL3                                                          NLR10413
+      CALL DERIV(C,Y,DER4)                                              NLR10414
+  305 IF(KASE(1)) 310,315,320                                           NLR10415
+  310 HMIN1 = TDT/2.0                                                   NLR10416
+      GO TO 325                                                         NLR10417
+  315 HMIN1= TDT                                                        NLR10418
+      GO TO 325                                                         NLR10419
+  320 HMIN1 = TDT*2.0                                                   NLR10420
+  325 IF(KASE(2))330,335,340                                            NLR10421
+  330 HMIN2 = HMIN1/2.0                                                 NLR10422
+      GO TO 345                                                         NLR10423
+  335 HMIN2 = HMIN1                                                     NLR10424
+      GO TO 345                                                         NLR10425
+  340 HMIN2 = HMIN1*2.0                                                 NLR10426
+  345 IF(KASE(3)) 350,355,360                                           NLR10427
+  350 HMIN3 = HMIN2/2.0                                                 NLR10428
+      GO TO 365                                                         NLR10429
+  355 HMIN3 = HMIN2                                                     NLR10430
+      GO TO 365                                                         NLR10431
+  360 HMIN3 = HMIN2*2.0                                                 NLR10432
+  365 AKMIN1 = HMIN1 + HMIN2                                            NLR10433
+      AKMIN2 = HMIN2 + HMIN3                                            NLR10434
+  370 ALMIN1 = TDT + HMIN1 + HMIN2                                      NLR10435
+  375 UMIN1 = T(I)-(TIME - HMIN1)                                       NLR10436
+  380 UMIN1S = UMIN1**2                                                 NLR10437
+      UMIN1C = UMIN1**3                                                 NLR10438
+  385 DENOM1 = HMIN1*AKMIN1*ALMIN1*12.0                                 NLR10439
+      DENOM2=HMIN1*HMIN2*AKMIN2*12.0                                    NLR10440
+      DENOM3 = HMIN2*HMIN3*AKMIN1*12.0                                  NLR10441
+      DENOM4 = HMIN3*AKMIN2*ALMIN1*12.0                                 NLR10442
+  390 FIRSTM = 3.0*UMIN1C+4.0*(HMIN2+AKMIN2)*UMIN1S+                    NLR10443
+     16.0*HMIN2*AKMIN2*UMIN1                                            NLR10444
+  395 SECTRM = 3.0*UMIN1C-4.0*(HMIN1-HMIN2-AKMIN2)*UMIN1S-6.0*(HMIN1*   NLR10445
+     1HMIN2-HMIN2*AKMIN2+AKMIN2*HMIN1)*UMIN1-DENOM2                     NLR10446
+  400 THRDTM = 3.0*UMIN1C-4.0*(HMIN1-AKMIN2)*UMIN1S-6.0*(HMIN1*AKMIN2*  NLR10447
+     1UMIN1)                                                            NLR10448
+  405 FOURTM = 3.0*UMIN1C-4.0*(HMIN1-HMIN2)*UMIN1S-6.0*(HMIN1*HMIN2*    NLR10449
+     1UMIN1)                                                            NLR10450
+      DO 416 J=1,NOTVAR                                                 NLR10451
+  410 Y(I,J) = (FIRSTM/DENOM1)*DER4(J)*UMIN1-UMIN1*(SECTRM/DENOM2)*     NLR10452
+     1DER3(J)+UMIN1*(THRDTM/DENOM3)*DER2(J)-UMIN1*(FOURTM/DENOM4)*      NLR10453
+     2DER1(J)+Y(KL1,J)                                                  NLR10454
+  411 IF(ABSF(Y(I,J))-1.E15)416,416,412                                 NLR10455
+  412 IF(Y(I,J))414,414,415                                             NLR10456
+  414 Y(I,J)=-1.E15                                                     NLR10457
+      GO TO 416                                                         NLR10458
+  415 Y(I,J)=1.E15                                                      NLR10459
+  416 CONTINUE                                                          NLR10460
+  420 GO TO 300                                                         NLR10461
+  270 TDT= 2.0*TDT                                                      NLR10462
+      KASE(3) = KASE(2)                                                 NLR10463
+      KASE(2) = KASE(1)                                                 NLR10464
+      KASE(1) = -1                                                      NLR10465
+      GO TO 207                                                         NLR10466
+  245 TIME = TIME- TDT                                                  NLR10467
+      TDT = 0.5*TDT                                                     NLR10468
+  247 M = M+1                                                           NLR10469
+      GO TO (90,265,260,262),M                                          NLR10470
+  260 IF(TDT-DT) 259, 259, 261                                          NLR10471
+  261 TDT = DT                                                          NLR10472
+  259 KASE(1) = -1                                                      NLR10473
+      KASE(2) = -1                                                      NLR10474
+      KASE(3) = 0                                                       NLR10475
+      GO TO 103                                                         NLR10476
+  262 DO 263 J=1,NOTVAR                                                 NLR10477
+  263 Y(I,J) = 1.0E15                                                   NLR10478
+      GO TO 309                                                         NLR10479
+  265 KASE(1) =  KASE(1)+1                                              NLR10480
+      GO TO 152                                                         NLR10481
+  290 DO 295 J=1,NOTVAR                                                 NLR10482
+  295 Y(I,J)=Y(KL3,J)-E(J)                                              NLR10483
+  300 CONTINUE                                                          NLR10484
+  309 RETURN                                                            NLR10485
+      END(2,2,2,2,2)                                                    NLR10486
+      SUBROUTINE ST3REG                                                 NLR10487
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10488
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10489
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10490
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10491
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10492
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10493
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10494
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10495
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21)           NLR10496
+     3,SIGM2(20),NOCO(20),S(20,20),D(21,21) ,XT(21)                     NLR10497
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10498
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10499
+      NOVMI = NOVAR - 1                                                 NLR10500
+      DO  101    I  =  1, NOVMI                                         NLR10501
+      DO  110    I6 =  1, I                                             NLR10502
+      READ TAPE  3,(A(I3),I3=1,NODATA)                                  NLR10503
+  110 CONTINUE                                                          NLR10504
+      SS = A(1) * A(1)                                                  NLR10505
+      DO   120    I4  = 2, NODATA                                       NLR10506
+  120 SS = SS +  A(I4) * A(I4)                                          NLR10507
+      VECTOR(I,I)  = SS                                                 NLR10508
+      I5 = I +1                                                         NLR10509
+      DO   130   J =  I5 , NOVAR                                        NLR10510
+      READ TAPE  3,(B(I3), I3 = 1, NODATA)                              NLR10511
+      SS = A(1) * B(1)                                                  NLR10512
+      DO   140   I4  = 2, NODATA                                        NLR10513
+  140 SS  =  SS  + A(I4) * B(I4)                                        NLR10514
+      VECTOR (I,J) =  SS                                                NLR10515
+  130 VECTOR (J,I) =  SS                                                NLR10516
+      REWIND 3                                                          NLR10517
+  101 CONTINUE                                                          NLR10518
+      SS = B(1) * B(1)                                                  NLR10519
+      DO 150   I4 = 2, NODATA                                           NLR10520
+  150 SS =   SS  + B(I4) * B(I4)                                        NLR10521
+      VECTOR(NOVAR,NOVAR) =   SS                                        NLR10522
+      DO 200 I = 1, NOVMI                                               NLR10523
+      IF(VECTOR(I,I)- 1.E-25) 155, 160, 160                             NLR10524
+  155 PRINT 1097, I                                                     NLR10525
+      NOCO(I) =-I                                                       NLR10526
+      GO TO 170                                                         NLR10527
+ 1097 FORMAT(56H DERIVATIVE  INSUFFICIENT  TO FIND  EFFECT  OF VARIABLE NLR10528
+     1I6 )                                                              NLR10529
+  160 NOCO(I) = I                                                       NLR10530
+  170 XT(I) =  VECTOR(I,I)  *  TOL                                      NLR10531
+  200 SIGMCO (I) = VECTOR (I,I)                                         NLR10532
+  780 NOSTP  =  0                                                       NLR10533
+  781 K2  = 0                                                           NLR10534
+  782 DEFR=NODATA                                                       NLR10535
+      L = 1                                                             NLR10536
+ 1000 NOSTP  =  NOSTP +  1                                              NLR10537
+ 1001 IF (NOSTP  - NOVMI ) 1002,1002,1670                               NLR10538
+ 1002 IF(VECTOR(NOVAR,NOVAR)) 1800,1650,1010                            NLR10539
+ 1010 DEFR=DEFR-1.0                                                     NLR10540
+ 1020 VMAX = 0.0                                                        NLR10541
+      NOMAX = 0                                                         NLR10542
+ 1040 DO 1050  I = 1,NOVMI                                              NLR10543
+ 1055 IF(NOCO(I)) 1050, 1050, 1060                                      NLR10544
+ 1060 IF( VECTOR(I,I) - XT(I)) 1095, 1080, 1080                         NLR10545
+ 1080 IF(VECTOR(I,I) -1.E-25) 1095, 1090, 1090                          NLR10546
+ 1095 NOCO(I) = -I                                                      NLR10547
+ 1096 PRINT  1098,  I                                                   NLR10548
+ 1098 FORMAT(39H TOO MUCH INTERCORRELATION OF VARIABLE  I6 )            NLR10549
+      GO TO 1050                                                        NLR10550
+ 1090 VAR = VECTOR(I,NOVAR)**2/VECTOR(I,I)                              NLR10551
+ 1110 IF (VAR - VMAX)1050,1050,1210                                     NLR10552
+ 1210 VMAX = VAR                                                        NLR10553
+ 1220 NOMAX = I                                                         NLR10554
+ 1050 CONTINUE                                                          NLR10555
+      IF(VMAX) 1670, 1670, 1070                                         NLR10556
+ 1070 GO TO (1350,1370),L                                               NLR10557
+ 1350 FLEVEL = VMAX * DEFR / (VECTOR(NOVAR,NOVAR)-  VMAX)               NLR10558
+ 1360 IF(EFIN - FLEVEL ) 1374, 1374, 1645                               NLR10559
+ 1374 K2  = K2 + 1                                                      NLR10560
+ 1370 NOCO(NOMAX)=0                                                     NLR10561
+ 1375 K = NOMAX                                                         NLR10562
+ 1400 DO 1410   I = 1,NOVAR                                             NLR10563
+ 1420 IF (I-K) 1430,1410,1430                                           NLR10564
+ 1430 DO 1440   J = 1, NOVAR                                            NLR10565
+ 1450 IF (J-K) 1460,1440,1460                                           NLR10566
+ 1460 VECTOR(I,J) = VECTOR(I,J) - (VECTOR(I,K) * VECTOR (K,J) / VECTOR  NLR10567
+     -(K,K))                                                            NLR10568
+ 1440 CONTINUE                                                          NLR10569
+ 1410 CONTINUE                                                          NLR10570
+ 1470 DO 1480  I = 1, NOVAR                                             NLR10571
+ 1490 IF (I-K) 1500,1480,1500                                           NLR10572
+ 1500 VECTOR (I,K)  =  -  VECTOR (I,K) / VECTOR (K,K)                   NLR10573
+ 1480 CONTINUE                                                          NLR10574
+ 1510 DO 1520 J = 1, NOVAR                                              NLR10575
+ 1530 IF (J-K) 1540,1520,1540                                           NLR10576
+ 1540 VECTOR(K,J) =   VECTOR (K,J) / VECTOR (K,K)                       NLR10577
+ 1520 CONTINUE                                                          NLR10578
+ 1550 VECTOR(K,K) =  1.0 / VECTOR(K,K)                                  NLR10579
+ 1560 GO TO 1000                                                        NLR10580
+ 1800 K2  = -1                                                          NLR10581
+      GO TO  1820                                                       NLR10582
+ 1645 L = 2                                                             NLR10583
+ 1650 DO 1640 I = 1, NOVMI                                              NLR10584
+ 1655 IF(NOCO(I)) 1602, 1600, 1602                                      NLR10585
+ 1600 COEN(I)=VECTOR(I,NOVAR)                                           NLR10586
+      GO TO 1640                                                        NLR10587
+ 1602 COEN(I)=0.0                                                       NLR10588
+ 1640 CONTINUE                                                          NLR10589
+      GO TO ( 1820,1370), L                                             NLR10590
+ 1670 SY  =  SQRTF (VECTOR(NOVAR,NOVAR)/DEFR)                           NLR10591
+      DO  1680  I = 1, NOVMI                                            NLR10592
+ 1675 IF(NOCO(I)) 1615, 1610, 1620                                      NLR10593
+ 1615 SIGM2(I) = 0.0                                                    NLR10594
+      SIGMCO(I) =  0.0                                                  NLR10595
+      GO TO 1680                                                        NLR10596
+ 1620 SIGM2(I) = -9999.99                                               NLR10597
+      GO TO 1630                                                        NLR10598
+ 1610 SIGM2(I) = SY * SQRTF(VECTOR(I,I))                                NLR10599
+ 1630 SIGMCO(I)  = SY/ SQRTF(SIGMCO(I))                                 NLR10600
+ 1680 CONTINUE                                                          NLR10601
+ 1690 GO TO (1650,1820), L                                              NLR10602
+ 1820 ESS=VECTOR(NOVAR,NOVAR)                                           NLR10603
+      RETURN                                                            NLR10604
+      END(2,2,2,2,2)                                                    NLR10605
+      SUBROUTINE NWTRL1                                                 NLR10606
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10607
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10608
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10609
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10610
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10611
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10612
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10613
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10614
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21)           NLR10615
+     3,R1(20),SIGM2(20),NOCO(20)                                        NLR10616
+     4,S(20,20),D(21,21)                                                NLR10617
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10618
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10619
+      IF (INTERP) 105,105,100                                           NLR10620
+  100 L5 = 3                                                            NLR10621
+      GO TO 110                                                         NLR10622
+  105 L5 = 1                                                            NLR10623
+      L 2  =  1                                                         NLR10624
+      L 3  =  1                                                         NLR10625
+  110 DO 200 I = 1, NOC                                                 NLR10626
+  200 CTR(I)  =  C(I) + COEN(I)                                         NLR10627
+  730 TTOLC=0.0                                                         NLR10628
+      DO 735 I = 1, NOC                                                 NLR10629
+      IF (ABSF(COEN(I)/C(I))-PCTOLC)735, 735, 740                       NLR10630
+  735 CONTINUE                                                          NLR10631
+      GO TO 745                                                         NLR10632
+  740 TTOLC = 1.0                                                       NLR10633
+  745 IF (TTOLC)700,700,751                                             NLR10634
+  751 L = 1                                                             NLR10635
+      PRINT   4,  NM, L, SS, ( C(I),  I  = 1 , NOC)                     NLR10636
+       WRITE OUTPUT TAPE 9,4,NM,L,SS,(C(I), I=1,NOC)                    NLR10637
+       WRITE OUTPUT TAPE 9,5,NM,L,ESS,(CTR(I), I=1,NOC)                 NLR10638
+      SZ = SS                                                           NLR10639
+  450 R = 1.0                                                           NLR10640
+      DO 460 I = 1, NOC                                                 NLR10641
+      IF (CTR(I) - CMIN(I))470,460,480                                  NLR10642
+  470 RP = (C(I) - CMIN(I))/(C(I)-CTR(I))                               NLR10643
+      GO TO 500                                                         NLR10644
+  480 IF (CTR(I) - CMAX(I)) 460,460,490                                 NLR10645
+  490 RP = (CMAX(I) - C(I))/(CTR(I)-C(I))                               NLR10646
+  500 IF (R-RP) 460,460,510                                             NLR10647
+  510 R = RP                                                            NLR10648
+  460 CONTINUE                                                          NLR10649
+      IF (R-1.0)515,330,330                                             NLR10650
+  515 IF(R-.1)516,520,520                                               NLR10651
+  516 R=.1                                                              NLR10652
+  520 DO 540 I = 1, NOC                                                 NLR10653
+  540 CTR(I) = C(I) + R * (CTR(I) - C(I))                               NLR10654
+  205 DO  210    I =  1, NOC                                            NLR10655
+      IF (CTR(I) - CMIN(I))  220, 210, 230                              NLR10656
+  220 CTR(I)  =  CMIN(I)                                                NLR10657
+      GO  TO   210                                                      NLR10658
+  230 IF ( CTR(I) - CMAX(I))  210, 210, 240                             NLR10659
+  240 CTR(I)  =  CMAX(I)                                                NLR10660
+  210 CONTINUE                                                          NLR10661
+  330 GO TO (334,331), INTMD                                            NLR10662
+  331 CALL MODEL1 (CTR,Y)                                               NLR10663
+      GO TO 335                                                         NLR10664
+  334 CALL MODEL (CTR,Y)                                                NLR10665
+  335 SSA = 0.0                                                         NLR10666
+      DO 250   I2 = 1, NOT                                              NLR10667
+      DO 250   J2 = 1, NOX                                              NLR10668
+  250 SSA  = SSA  +(( X(I2,J2) - Y(I2,J2))*W(J2))**2                    NLR10669
+  251 WRITE OUTPUT TAPE 9, 6, NM, L, SSA, (CTR(I),I=1,NOC)              NLR10670
+      GO TO (560, 570, 750), L5                                         NLR10671
+  570 IF (SSA - SMIN) 590, 590, 580                                     NLR10672
+  580 DO 600 I = 1, NOC                                                 NLR10673
+      CTR(I)=R1(I)                                                      NLR10674
+  600 C(I) = R1(I)                                                      NLR10675
+      DO 610 I = 1, NOT                                                 NLR10676
+      DO 610 J = 1, NOX                                                 NLR10677
+  610 Y(I,J) = YP(I,J)                                                  NLR10678
+      SSA = SMIN                                                        NLR10679
+      GO TO 251                                                         NLR10680
+  590 IF (     ((SZ-SSA)/SZ) - PCTOLS) 710,710,592                      NLR10681
+  592 IF (      SZ-SSA  - ABTOLS)720,720,594                            NLR10682
+  594 GO TO 435                                                         NLR10683
+  710 WRITE OUTPUT TAPE 9, 1003                                         NLR10684
+      GO TO 311                                                         NLR10685
+  720 WRITE OUTPUT TAPE 9, 1004                                         NLR10686
+      GO TO 311                                                         NLR10687
+ 1003 FORMAT (43H0 CHANGE IN SS LESS THAN PER CENT TOLERANCE )          NLR10688
+ 1004 FORMAT (43H0 CHANGE IN SS LESS THAN ABSOLUTE TOLERANCE)           NLR10689
+  560 CONTINUE                                                          NLR10690
+      L =  L + 1                                                        NLR10691
+      IF (SSA - SS)  260, 270, 270                                      NLR10692
+  270 IF (L3 -2)  280,390, 290                                          NLR10693
+  280 IF (L - LL) 300,300, 310                                          NLR10694
+  300 DO  320   I  = 1, NOC                                             NLR10695
+  320 CTR(I) =  C(I)  + .5 * (CTR(I) - C(I)   )                         NLR10696
+      SS2  =  SSA                                                       NLR10697
+      L2 = L2 + 1                                                       NLR10698
+      GO TO   330                                                       NLR10699
+  260 DO 550 I = 1, NOC                                                 NLR10700
+  550 R1(I) = CTR(I)                                                    NLR10701
+      DO 551 I = 1, NOT                                                 NLR10702
+      DO 551 J = 1, NOX                                                 NLR10703
+  551 YP(I,J) = Y(I,J)                                                  NLR10704
+      SMIN = SSA                                                        NLR10705
+      IF (L2 - 1 ) 340, 340, 350                                        NLR10706
+  340 L 3  = L 3 + 1                                                    NLR10707
+      IF (L  - LL)   370, 370, 360                                      NLR10708
+  370 DO  380   I  = 1, NOC                                             NLR10709
+  380 CTR(I) =  C(I) +   2.0 * (CTR(I) - C(I))                          NLR10710
+      SS1 = SS                                                          NLR10711
+      SS  = SSA                                                         NLR10712
+      GO  TO   205                                                      NLR10713
+  390 R =  ( SS - .75 * SZ -.25 * SSA )/ ( 2.0 * SS - SZ  - SSA )       NLR10714
+  420 DO   400   I = 1, NOC                                             NLR10715
+      C(I)  =  C(I) +  R * ( CTR(I) - C(I))                             NLR10716
+  400 CTR(I) = C(I)                                                     NLR10717
+      GO  TO   410                                                      NLR10718
+  350 R  = ( 2. * SSA - 1.5 * SZ - .5 * SS2)/  ( 2.* SSA  -  SZ  - SS2 )NLR10719
+      GO  TO   420                                                      NLR10720
+  290 R  = (15. * SS - 12. * SS1  - 3. * SSA)/(24.* SS - 16.*SS1 - 8.0  NLR10721
+     1* SSA)                                                            NLR10722
+      GO  TO   420                                                      NLR10723
+  310 WRITE OUTPUT TAPE 9,900,LL,NM                                     NLR10724
+  900 FORMAT (1H I6, 4H ON I6,34H CYCLE  WITH LAST  SS  STILL  MIN./)   NLR10725
+  311 COEN(1) = -1.0                                                    NLR10726
+      SS=SSA                                                            NLR10727
+      GO  TO  440                                                       NLR10728
+  360 WRITE OUTPUT TAPE 9,910,LL,NM                                     NLR10729
+  910 FORMAT (1H I6, 4H ON I6,36H CYCLE  WITH  SS  STILL  DECREASING. / NLR10730
+     121H LAST EXTRP.PT.USED  / )                                       NLR10731
+  430 R = 1.0                                                           NLR10732
+      GO TO  420                                                        NLR10733
+  410 L5 = 2                                                            NLR10734
+      GO TO 330                                                         NLR10735
+    4 FORMAT(1H ///1H I6, 7H  ITER. I6,22H  CYCLE. START SS =   E12.6 / NLR10736
+     1 13H   OLD  COEF /(1H  8E 14.6 ))                                 NLR10737
+    5 FORMAT( 1H0I6, 7H  ITER. I6,22H  CYCLE. REGR. SS =   E12.6  /     NLR10738
+     1 13H   NEW  COEF /(1H  8E 14.6 ))                                 NLR10739
+    6 FORMAT( 1H0I6, 7H  ITER  I6,22H  CYCLE  CALC, SS =   E12.6  /     NLR10740
+     1 13H   NEW  COEF /(1H  8E 14.6))                                  NLR10741
+  435 COEN (1) = 1.0                                                    NLR10742
+      SS=SSA                                                            NLR10743
+  415  WRITE OUTPUT TAPE 9,1000                                         NLR10744
+ 1000  FORMAT (18H PREDICTED VALUES  )                                  NLR10745
+  416  DO 417  I=1,NOT                                                  NLR10746
+  417  WRITE OUTPUT TAPE 9, 1001,(Y(I,J), J=1,NOX)                      NLR10747
+ 1001 FORMAT(10F12.5)                                                   NLR10748
+  440 RETURN                                                            NLR10749
+  700 WRITE OUTPUT TAPE 9, 1002                                         NLR10750
+ 1002 FORMAT (47H0 CHANGE IN COEFS. LESS THAN PER CENT TOLERANCE )      NLR10751
+      GO TO 311                                                         NLR10752
+  750 DO 760 I=1, NOC                                                   NLR10753
+  760 C(I)=CTR(I)                                                       NLR10754
+      GO TO 590                                                         NLR10755
+      END(2,2,2,2,2)                                                    NLR10756
+      SUBROUTINE ENDR1                                                  NLR10757
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10758
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10759
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10760
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10761
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10762
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10763
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10764
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10765
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21)           NLR10766
+     3,SIGM2(20),NOCO(20),S(20,20),D(21,21),SX(20)                      NLR10767
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10768
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10769
+      GO TO (50,55), INTMD                                              NLR10770
+   50 CALL MODEL (C,Y)                                                  NLR10771
+   52 GO TO 60                                                          NLR10772
+   55 CALL MODEL 1 (C,Y)                                                NLR10773
+   60 SS = 0.0                                                          NLR10774
+      DO 100   I  = 1, NOT                                              NLR10775
+      DO 100   J  = 1, NOX                                              NLR10776
+  100 SS =  SS  + ((Y(I,J) - X(I,J))* W(J))**2                          NLR10777
+  101 WRITE OUTPUT TAPE 9, 900, NM, SS, (I,C(I),SIGM2(I),SIGMCO(I)      NLR10778
+     1 , I = 1, NOC)                                                    NLR10779
+  102  WRITE OUTPUT TAPE 9, 903                                         NLR10780
+       DO 103  I=1,NOT                                                  NLR10781
+  103  WRITE OUTPUT TAPE 9,901, T(I), (X(I,J), J=1,NOX)                 NLR10782
+  104 WRITE OUTPUT TAPE 9, 902                                          NLR10783
+      DO 105  I=1,NOT                                                   NLR10784
+  105 WRITE OUTPUT TAPE 9, 901, T(I), (Y(I,J), J=1,NOX)                 NLR10785
+  900 FORMAT(18H FINAL TABULATION / 7H CYCLE I6/9H SUM SQ = E14.6 //    NLR10786
+     160H COEF NO    VALUE       MAX. DEVIATION      MIN.  DEVIATION   /NLR10787
+     2(1H  I5, 3E18.6 ))                                                NLR10788
+  901 FORMAT(1H F9.3,10F11.5)                                           NLR10789
+  902 FORMAT(29H0   TIMES    PREDICTED VALUES)                          NLR10790
+  903 FORMAT(26H0   TIMES    ACTUAL VALUES)                             NLR10791
+      WRITE OUTPUT TAPE 9,910                                           NLR10792
+  910 FORMAT ( 21H0  LOCAL  EXPLORATION  )                              NLR10793
+      IP=0                                                              NLR10794
+  110 DO 120 I = 1, NOC                                                 NLR10795
+      IF(NOCO(I))120,130,120                                            NLR10796
+  130 IP=IP + 1                                                         NLR10797
+      JP=0                                                              NLR10798
+      DO 140 J = 1, NOC                                                 NLR10799
+      IF(NOCO(J))140, 150, 140                                          NLR10800
+  150 JP = JP + 1                                                       NLR10801
+      VECTOR (JP,IP) = VECTOR(J,I)                                      NLR10802
+  140 CONTINUE                                                          NLR10803
+  120 CONTINUE                                                          NLR10804
+      N = IP                                                            NLR10805
+      DO 160 I = 1, N                                                   NLR10806
+  160 SX(I) = SQRTF( 1.0 / VECTOR (I,I))                                NLR10807
+      DO 170 I =1, N                                                    NLR10808
+      DO 170 J = 1, N                                                   NLR10809
+  170 VECTOR(I,J) = VECTOR(I,J)*SX(I)*SX(J)                             NLR10810
+      CALL CVV(N)                                                       NLR10811
+      IP= 0                                                             NLR10812
+      DO 180 I=1, NOC                                                   NLR10813
+      IF(NOCO(I)) 180,190,180                                           NLR10814
+  190 IP = IP + 1                                                       NLR10815
+      SER = SQRTF(VECTOR(IP,IP))                                        NLR10816
+      JP = 0                                                            NLR10817
+      DO 200 J = 1, NOC                                                 NLR10818
+      IF(NOCO(J)) 210,220,210                                           NLR10819
+  210 CMIN(J) = C(J)                                                    NLR10820
+      CMAX(J) = C(J)                                                    NLR10821
+      GO TO 200                                                         NLR10822
+  220 JP = JP+1                                                         NLR10823
+      DLT=(SER*S(IP,JP)*SY/SX(JP))*2.0                                  NLR10824
+      CMIN(J) = C(J) - DLT                                              NLR10825
+      CMAX(J) = C(J) + DLT                                              NLR10826
+  200 CONTINUE                                                          NLR10827
+      GO TO (202,205), INTMD                                            NLR10828
+  202 CALL MODEL (CMIN, Y)                                              NLR10829
+      GO TO 206                                                         NLR10830
+  205 CALL MODEL 1 (CMIN, Y)                                            NLR10831
+  206 SSM = 0.0                                                         NLR10832
+      DO 230 J2 = 1, NOX                                                NLR10833
+      DO 230 J3 = 1, NOT                                                NLR10834
+  230 SSM = SSM +((X(J3,J2) - Y(J3,J2))*W(J2))**2                       NLR10835
+      GO TO (232,235), INTMD                                            NLR10836
+  232 CALL MODEL (CMAX, Y)                                              NLR10837
+      GO TO 236                                                         NLR10838
+  235 CALL MODEL 1 (CMAX, Y)                                            NLR10839
+  236 SSP = 0.0                                                         NLR10840
+      DO 240 J2 = 1, NOX                                                NLR10841
+      DO 240 J3 = 1, NOT                                                NLR10842
+  240 SSP = SSP + ((X(J3,J2) - Y(J3,J2))*W(J2))**2                      NLR10843
+      DM = SSM-SS                                                       NLR10844
+      DP = SSP - SS                                                     NLR10845
+      WRITE OUTPUT TAPE 9,920,IP,SER ,SSM,DM,SSP,DP ,                   NLR10846
+     1(CMIN(J), J = 1, NOC)                                             NLR10847
+      WRITE OUTPUT TAPE 9,930,(CMAX(J), J = 1, NOC)                     NLR10848
+  920 FORMAT (12H0 VECTOR NO. I5,17H    EIGENVALUE =  E15.6 //          NLR10849
+     119H PLUS VECTOR  SS = E15.6, 10H  CHANGE = E15.6 /                NLR10850
+     219H MINUS VECTOR SS = E15.6, 10H  CHANGE = E15.6 /                NLR10851
+     314H  PLUS VECTOR  /(1H  8E12.4 ) )                                NLR10852
+  930 FORMAT(15H  MINUS VECTOR  /( 1H  8 E 12.4))                       NLR10853
+  180 CONTINUE                                                          NLR10854
+      RETURN                                                            NLR10855
+      END(2,2,2,2,2)                                                    NLR10856
+C     SUBROUTINE - CVV CHARACTERISTIC VALUES AND VECTORS    JACOBI ITE  NLR10857
+C    1RATION                                                            NLR10858
+      SUBROUTINE   CVV(N)                                               NLR10859
+      COMMON I2, TIME, COEFX,Z,DER,NOC,NOT,NOX,NOTVAR,T,DT,KBYP,        NLR10860
+     1NOZ,LL,NOIT,MODNO,X,W,C,CMIN,CMAX,TOL,EFIN,PCT,DELMIN,KMIN,       NLR10861
+     2J,ABSM,NOSTEP,HALVDT,DBLEDT,PCTOLC,PCTOLS,ABTOLS,                 NLR10862
+     3Y,YP,NM,SIGMCO,COEN,CTR,SS,ESS,NOVAR,NODATA,SY,A,B,               NLR10863
+     4K2, VECTOR, SIGM2, NOCO ,D,S,PCHAVT,PCDBLT,DEBUG                  NLR10864
+     5,EMAX,EMIN,P,CR,XK,INTMD,INTERP,KCC,I                             NLR10865
+      DIMENSION COEFX(20),Z(40,5),DER(10),T(40),X(40,10),W(10),         NLR10866
+     1C(20),CMIN(20),CMAX(20),ABSM(20),Y(43,10),YP(43,10),              NLR10867
+     2SIGMCO(20),COEN(20),CTR(20),A(430),B(400),VECTOR(21,21),          NLR10868
+     3 SIGM2(20),NOCO(20),S(20,20),D(21,21)                             NLR10869
+     4,BK(20),BM(20),SK(20),SM(20)                                      NLR10870
+     5 ,DEBUG (25), P(27,5), CR(9,5), XK(27)                            NLR10871
+      EQUIVALENCE (Y,A), (YP,B,S) , (VECTOR,D)                          NLR10872
+     1,(BK,SK),(BM,SM)                                                  NLR10873
+      TEL = .001                                                        NLR10874
+      IQ = 20                                                           NLR10875
+   12 N2 = N - 1                                                        NLR10876
+      DO 10 I=1,N                                                       NLR10877
+      DO 10 J=1,N                                                       NLR10878
+   10 S(I,J) =0.0                                                       NLR10879
+      DO 15 I=1,N                                                       NLR10880
+   15 S(I,I) =1.0                                                       NLR10881
+C     SET S = IDENTITY MATRIX                                           NLR10882
+      NOITER = 0                                                        NLR10883
+   18 NOITER = NOITER + 1                                               NLR10884
+      DO 100 K = 1,N2                                                   NLR10885
+      NP = K + 1                                                        NLR10886
+      DO 100 M = NP,N                                                   NLR10887
+      IF(ABSF(D(K,M)) - TEL) 100,100,20                                 NLR10888
+   20 IF(ABSF(D(K,M)) - ABSF(D(M,M) - D(K,K)) / 2.0) 30,30,40           NLR10889
+   30 BETA=2.0*D(K,M)/(D(M,M)-D(K,K))                                   NLR10890
+      SINE=BETA*SQRTF(1.0/(2.0*(1.0 + BETA**2 +SQRTF(1.0 + BETA**2))))  NLR10891
+      GO TO 45                                                          NLR10892
+   40 BETA=(D(M,M)-D(K,K))/(2.0*D(K,M))                                 NLR10893
+      SINE = SIGNF (SQRTF(1.0/(2.0*(1.0 + BETA**2 + ABSF(BETA)*SQRTF(1.0NLR10894
+     1+ BETA**2)))),BETA)                                               NLR10895
+   45 CSO=SQRTF(1.0-SINE**2)                                            NLR10896
+   47 DO 50 J=1,N                                                       NLR10897
+      BK(J)=D(J,K)*CSO-D(J,M)*SINE                                      NLR10898
+      BM(J)=D(J,K)*SINE+D(J,M)*CSO                                      NLR10899
+   50 CONTINUE                                                          NLR10900
+       DO 55 J = 1,N                                                    NLR10901
+      D(J,K)=BK(J)                                                      NLR10902
+      D(K,J)=D(J,K)                                                     NLR10903
+      D(J,M)=BM(J)                                                      NLR10904
+   55 D(M,J) = D(J,M)                                                   NLR10905
+      D(K,K)=BK(K)*CSO-BK(M)*SINE                                       NLR10906
+      D(M,M)=BM(K)*SINE+BM(M)*CSO                                       NLR10907
+      D(M,K)=0.0                                                        NLR10908
+      D(K,M)=0.0                                                        NLR10909
+      DO 60 J=1,N                                                       NLR10910
+      SK(J)=S(K,J)*CSO-S(M,J)*SINE                                      NLR10911
+   60 SM(J)=S(K,J)*SINE+S(M,J)*CSO                                      NLR10912
+      DO 70 J=1,N                                                       NLR10913
+      S(K,J)=SK(J)                                                      NLR10914
+      S(M,J)=SM(J)                                                      NLR10915
+   70 CONTINUE                                                          NLR10916
+  100 CONTINUE                                                          NLR10917
+      BIGAU=D(1,2)                                                      NLR10918
+      DO 110 K = 1,N2                                                   NLR10919
+      NP = K + 1                                                        NLR10920
+      DO 110 M = NP,N                                                   NLR10921
+      IF(ABSF(BIGAU) - ABSF(D(K,M)))105, 110, 110                       NLR10922
+  105 BIGAU=D(K,M)                                                      NLR10923
+  110 CONTINUE                                                          NLR10924
+      BIGAL=BIGAU                                                       NLR10925
+      DO 120  M = 1, N2                                                 NLR10926
+      NP = M + 1                                                        NLR10927
+      DO 120 K = NP,N                                                   NLR10928
+      IF(ABSF(BIGAL) - ABSF(D(K,M)))115, 120, 120                       NLR10929
+  115 BIGAL=D(K,M)                                                      NLR10930
+  120 CONTINUE                                                          NLR10931
+C     FIND MAX OFF DIAGONAL ELEMENT AND TEST                            NLR10932
+  130 IF(ABSF(BIGAL) - TEL) 2  ,2  ,140                                 NLR10933
+  140 IF(IQ - NOITER) 305,305,18                                        NLR10934
+  305 WRITE OUTPUT TAPE 9,1009                                          NLR10935
+    2 WRITE OUTPUT TAPE 9,1008, BIGAL                                   NLR10936
+ 1001 FORMAT (1H 35H  CHARACTERISTIC VALUES AND VECTORS///)             NLR10937
+ 1008 FORMAT (1H 20H MAXIMUM OF A(K,M) = F12.4///)                      NLR10938
+ 1009 FORMAT (1H 15H NO CONVERGENCE)                                    NLR10939
+      RETURN                                                            NLR10940
+      END(2,2,2,2,2)                                                    NLR10941
+       REM CONSTANTS - VALUES FOR COMMON VARIABLE XK - USED IN MODEL1   NLR10942
+       ORG 30135                                                        NLR10943
+       DEC .1445,.1300,.1127,.1170,.1033,.0838,.0882,.0742,.0564,.1059  NLR10944
+       DEC .0953,.0792,.0822,.0704,.0547,.0573,.0469,.0344,.0694,.0613  NLR10945
+       DEC .0497,.0511,.0430,.0327,.0339,.0273,.0197                    NLR10946
+       REM CONSTANTS - VALUES FOR COMMON VARIABLE CR                    NLR10947
+       DEC 64.0,1.0,4.0,4.0                                             NLR10948
+       DEC 1.0,1.0,5.0,1.0,5.0,140.0,4.0,40.0,10.0,5.0,14.0,14.0,6.0    NLR10949
+       DEC 91.0,161.0,7.0,95.0,25.0,19.0,72.0,94.0,61.0,1246.0,41.0     NLR10950
+       DEC 2.0,31.0,11.0,9.0,37.0,59.0,40.0,856.0,126.0,6.0,90.0,30.0   NLR10951
+       DEC 24.0,96.0,144.0,96.0,2016.0                                  NLR10952
+       REM CONSTANTS - VALUES FOR COMMON VARIABLE P                     NLR10953
+       DEC 1312.0,41.0,82.0,128.0,8.0,2.0                               NLR10954
+       DEC 31.0,31.0,31.0,704.0,11.0,44.0,36.0,9.0,9.0,37.0,37.0,37.0   NLR10955
+       DEC 236.0,59.0,59.0,40.0,25.0,25.0,107.0,107.0,107.0,2492.0      NLR10956
+       DEC 128.0,550.0,275.0,31.0,19.0,76.0,150.0,413.0,1372.0,36.0     NLR10957
+       DEC 320.0,80.0,37.0,94.0,94.0,190.0,539.0,469.0,200.0,455.0      NLR10958
+       DEC 91.0,107.0,278.0,278.0,570.0,1645.0,1505.0,116.0,665.0       NLR10959
+       DEC 260.0,44.0,36.0,140.0,415.0,1526.0,889.0,35.0,415.0,85.0     NLR10960
+       DEC 59.0,200.0,206.0,625.0,2366.0,322.0,206.0,625.0,106.0,187.0  NLR10961
+       DEC 648.0,694.0,2135.0,8218.0,388.0,35.0,242.0,143.0,27.0,25.0   NLR10962
+       DEC 131.0,416.0,1648.0,347.0,16.0,229.0,71.0,55.0,211.0,293.0    NLR10963
+       DEC 952.0,3880.0,215.0,161.0,589.0,151.0,297.0,1163.0,1675.0     NLR10964
+       DEC 5512.0,22808.0,63.0,6.0,45.0,30.0,6.0,6.0,36.0,120.0,504.0   NLR10965
+       DEC 126.0,6.0,90.0,30.0,24.0,96.0,144.0,480.0,2016.0,126.0,96.0  NLR10966
+       DEC 360.0,96.0,192.0,768.0,1152.0,3840.0,16128.0                 NLR10967
+       END                                                              NLR10968

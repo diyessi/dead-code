@@ -1,0 +1,208 @@
+C                X-RAY INTENSITY DATA CORRECTION PROGRAM                ERLPA001
+C                                                                       ERLPA002
+C       THIS ROUTINE IS WRITTEN FOR THE IB FORTRAN MONITOR SYSTEM       ERLPA003
+C     THE INPUT IS EXPECTED FROM TAPE 5, THE OUTPUT GOES ON TAPE 6.     ERLPA004
+C       SUBROUTINES SUPPLIED WITH THE DECK ARE     ABSNRT, EFGHI.       ERLPA005
+C                                                                       ERLPA006
+C     CORRECTS FOR ABSORPTION                                           ERLPA007
+C                  LORENTZ-POLARIZATION                                 ERLPA008
+C                  SHARPENING OF DATA                                   ERLPA009
+C                  FOR EQUI-INCLINATION AND NORMAL-BEAM DATA.           ERLPA010
+C                                                                       ERLPA011
+C                                                                       ERLPA012
+C                  BTEMP  = 0     NO SHARPENING FOR TEMP FACTOR         ERLPA013
+C                         ) 0     SHARPEN DATA FOR TEMP EFFECT          ERLPA014
+C                  NGENR  = 0     READ INPUT FROM TAPE 5                ERLPA015
+C                         = 1     GENERATE INDICES WITHIN EWALD SPHERE  ERLPA016
+C                  NOREQ  = 0     EQUI-INCLINATION DATA                 ERLPA017
+C                         = 1     NORMAL BEAM LP CORRECTION             ERLPA018
+C                  NABSN  = 0     NO ABSORPTION CORRECTION APPLIED      ERLPA019
+C                         = 1     ABSORPTION FOR CYLINDRICAL SPECIMENS. ERLPA020
+C                         = 2     ABSORPTION FOR SPHERICAL SPECIMENS.   ERLPA021
+C                  NCARDS = 0     OUTPUT ON TAPE 6 ONLY                 ERLPA022
+C                         = 1     PUNCHED CARDS OUTPUT ALSO             ERLPA023
+C                                                                       ERLPA024
+C                  VAN DEN HENDE  C.B.R.L.       1961                   ERLPA025
+C                  ESSO RESEARCH AND ENGINEERING COMPANY                ERLPA026
+C                                                                       ERLPA027
+      DIMENSION A(3), COSA(6), SINA(6), COSAS(3), SINAS(6), AS(3),      ERLPA028
+     1 JK(1),FLAMB(1),FE(18),FF(18),FG(18),FH(18),FI(18),FN(3),FNZ(1),  ERLPA029
+     2 JOBNO(12),FMUR(18)                                               ERLPA030
+      COMMON        NABSN,FMUR,FE,FF,FG,FH,FI                           ERLPA031
+C                                                                       ERLPA032
+100   READ INPUT TAPE 5, 4,(JOBNO(I),I=1,12)                            ERLPA033
+4     FORMAT(12A6)                                                      ERLPA034
+99    READ INPUT TAPE 5,7, (A(I),I=1,3),(COSA(J),J=1,3)                 ERLPA035
+7     FORMAT(3F6.3,3F6.5)                                               ERLPA036
+      READ INPUT TAPE 5,3, JK,FLAMB,BTEMP,NGENR,NOREQ,NABSN,NCARDS      ERLPA037
+    3 FORMAT(I4,F8.5,F6.3,6I1)                                          ERLPA038
+C                                                                       ERLPA039
+C      EXECUTION STARTS HERE - WRITE TITLE AND CALCULATE CELL DATA.     ERLPA040
+C                                                                       ERLPA041
+104   WRITE OUTPUT TAPE 6,4, JOBNO                                      ERLPA042
+      IF(NCARDS) 5020,120,5020                                          ERLPA043
+5020  PUNCH 4, JOBNO                                                    ERLPA044
+120   DO 121 I = 1,3                                                    ERLPA045
+      SINA(I) = SQRTF ( 1.0 - COSA(I)**2 )                              ERLPA046
+      COSA(I+3) = COSA(I)                                               ERLPA047
+121   SINA(I+3) = SINA(I)                                               ERLPA048
+130   DO 131 I = 1,3                                                    ERLPA049
+      COSAS(I) = (COSA(I+1)*COSA(I+2) - COSA(I)) / (SINA(I+1)*SINA(I+2))ERLPA050
+      SINAS(I) = SQRTF ( 1.0 - COSAS(I) ** 2 )                          ERLPA051
+131   SINAS(I+3) = SINAS(I)                                             ERLPA052
+      DO 132 I = 1, 3                                                   ERLPA053
+132   AS(I) = 1.0 / (A(I) * SINA(I+1) * SINAS(I+2))                     ERLPA054
+      WRITE OUTPUT TAPE 6,8,(JK,FLAMB,BTEMP,NGENR,NOREQ,NABSN,NCARDS),  ERLPA055
+     1 (A(I),I=1,3),(COSA(I),I=1,3),(AS(I),I=1,3),(COSAS(I),I=1,3)      ERLPA056
+    8 FORMAT(52H0  JK, LAMBDA, TEMP.F, NGENR, NOREQ, NABSN, NCARDS =I4,FERLPA057
+     110.5,F8.3,3H   4I3/36H0  A, B, C, COSA, COSB, COSC =      3F8.3,3FERLPA058
+     210.5/36H0  A*, B*, C*, COSA*, COSB*, COSC* =3F8.5,3F10.5)         ERLPA059
+      IF(NABSN-1) 3000,3001,3001                                        ERLPA060
+ 3000 ASSIGN 4100 TO NLOC                                               ERLPA061
+      ABSN=1.0                                                          ERLPA062
+      GO TO 3010                                                        ERLPA063
+ 3001 ASSIGN 3100 TO NLOC                                               ERLPA064
+      READ INPUT TAPE 5,4000,(FMUR(I),I=1,18)                           ERLPA065
+ 4000 FORMAT(18F4.2)                                                    ERLPA066
+      CALL ABSNRT(DUMMY)                                                ERLPA067
+       WRITE OUTPUT TAPE 6, 4001                                        ERLPA068
+ 4001 FORMAT(91H0  ABSORPTION CORRECTION APPLIED FOR      E           F ERLPA069
+     1          G           H           I //)                           ERLPA070
+      DO 3007 I=1,18                                                    ERLPA071
+      IF(FMUR(I))  3007,3007,3002                                       ERLPA072
+ 3002 NLAYER=I-1                                                        ERLPA073
+      WRITE OUTPUT TAPE 6,4002, NLAYER,FMUR(I),FE(I),FF(I),FG(I),FH(I), ERLPA074
+     1 FI(I)                                                            ERLPA075
+ 4002 FORMAT(10X,I6,14H LAYER, MU*R =F6.2,5E12.4)                       ERLPA076
+ 3007 CONTINUE                                                          ERLPA077
+       IF(NABSN-1) 3010,3008,3009                                       ERLPA078
+3008  WRITE OUTPUT TAPE 6,4008                                          ERLPA079
+ 4008 FORMAT(25H0  CYLINDRICAL SPECIMEN - )                             ERLPA080
+      GO TO 3011                                                        ERLPA081
+3009  WRITE OUTPUT TAPE 6, 4009                                         ERLPA082
+ 4009 FORMAT(23H0  SPHERICAL SPECIMEN - )                               ERLPA083
+      GO TO 3011                                                        ERLPA084
+3010  WRITE OUTPUT TAPE 6, 4010                                         ERLPA085
+ 4010 FORMAT(25H0  NO ABSORPTION APPLIED  )                             ERLPA086
+ 3011 IF(NOREQ) 136,137,136                                             ERLPA087
+136   WRITE OUTPUT TAPE 6,20                                            ERLPA088
+   20 FORMAT(1H+,26X,19HNORMAL-BEAM METHOD. )                           ERLPA089
+      GO TO 138                                                         ERLPA090
+137   WRITE OUTPUT TAPE 6,21                                            ERLPA091
+   21 FORMAT(1H+,26X,24HEQUI-INCLINATION METHOD. )                      ERLPA092
+138   WRITE OUTPUT TAPE 6,10                                            ERLPA093
+10    FORMAT(105H1         H     K     L   F.CORR  OBS.INT    SHRP.F    ERLPA094
+     1SHRP.I     SINTH     ABSN      1/LP          D*    /1H0)          ERLPA095
+      LINE = 0                                                          ERLPA096
+      NREFL = 0                                                         ERLPA097
+C                                                                       ERLPA098
+C          GENERATE INDICES OR READ INPUT TAPE 5                        ERLPA099
+C                                                                       ERLPA100
+140   IF(NGENR) 250,150,250                                             ERLPA101
+C                                                                       ERLPA102
+C                                                                       ERLPA103
+150   READ INPUT TAPE 5, 11, NEXIT,NWT,NH,NK,NL,FINT                    ERLPA104
+11    FORMAT(5I6,F6.2)                                                  ERLPA105
+      IF (NEXIT)  900,151,900                                           ERLPA106
+151   NREFL = NREFL +1                                                  ERLPA107
+      FN(1) = NH                                                        ERLPA108
+      FN (2) = NK                                                       ERLPA109
+      FN (3) = NL                                                       ERLPA110
+      AH = FN(1) * AS(1)                                                ERLPA111
+      BK = FN(2) * AS(2)                                                ERLPA112
+      CL = FN(3) * AS(3)                                                ERLPA113
+      SSQ = AH*AH + BK*BK + CL*CL + 2.0*BK*CL*COSAS(1) +                ERLPA114
+     1  2.0*AH*CL*COSAS(2)  +  2.0*AH*BK*COSAS(3)                       ERLPA115
+      STHOL = SSQ / 4.0                                                 ERLPA116
+      SSQTH = STHOL * (FLAMB**2)                                        ERLPA117
+      STH = SQRTF (SSQTH)                                               ERLPA118
+      DSTAR=2.*STH/FLAMB                                                ERLPA119
+      IF(STH-1.) 160,260,260                                            ERLPA120
+260   IF(NGENR) 290,190,290                                             ERLPA121
+160   FNZ = FN(JK)                                                      ERLPA122
+      NZ = FNZ                                                          ERLPA123
+      I = XABSF(NZ) + 1                                                 ERLPA124
+      AXIS = A(JK)                                                      ERLPA125
+      GO TO NLOC,(3100,4100)                                            ERLPA126
+ 3100 IF(I-18) 170,170,190                                              ERLPA127
+  170 STH4=SSQTH*SSQTH                                                  ERLPA128
+      ABSN=   1./(FE(I)+FF(I)*SSQTH+FG(I)*STH4+FH(I)*STH4*SSQTH+FI(I)*  ERLPA129
+     1 STH4*STH4)                                                       ERLPA130
+      GO TO 4101                                                        ERLPA131
+ 4100 ABSN=1.0                                                          ERLPA132
+ 4101 CONTINUE                                                          ERLPA133
+      ZETAS = ((FNZ*FLAMB)/AXIS)**2                                     ERLPA134
+      IF(NOREQ) 172,173,172                                             ERLPA135
+172   FLP = SQRTF(2.0*SSQTH*(1.0-SSQTH) - ZETAS) /                      ERLPA136
+     1 ( 1.0 + (1.0 - 2.0 * SSQTH)**2 )                                 ERLPA137
+      GO TO 174                                                         ERLPA138
+173   FLP = SQRTF ( (1.0 - SSQTH) * (4.0 * SSQTH - ZETAS) ) /           ERLPA139
+     1 ( 1.0 + (1.0 - 2.0 * SSQTH)**2 )                                 ERLPA140
+174   FOBSR = SQRTF(FINT*FLP*10.0*ABSN)                                 ERLPA141
+      IF (BTEMP)  1002,1002,1001                                        ERLPA142
+1001  SHRPF = FOBSR * EXPF (BTEMP * STHOL)                              ERLPA143
+      SHRPI = SHRPF ** 2                                                ERLPA144
+      GO TO 1003                                                        ERLPA145
+1002  SHRPF = 0.                                                        ERLPA146
+      SHRPI = FOBSR ** 2                                                ERLPA147
+1003  WRITE OUTPUT TAPE 6,12,NH,NK,NL,FOBSR,FINT,SHRPF,SHRPI,STH,ABSN,  ERLPA148
+     1 FLP,DSTAR                                                        ERLPA149
+12    FORMAT(I11,2I6,2F9.2,2F10.2,F10.5,F10.3,F10.5,F13.5)              ERLPA150
+      IF(NCARDS) 5000,5010,5000                                         ERLPA151
+5000  PUNCH 5001, NH,NK,NL,DSTAR,NWT,FOBSR,SHRPF                        ERLPA152
+5001  FORMAT(3I4,F8.5,I4,2F8.2,40X)                                     ERLPA153
+5010  CONTINUE                                                          ERLPA154
+180   LINE = LINE + 1                                                   ERLPA155
+      IF(LINE-50) 183,175,175                                           ERLPA156
+175   LINE = 0                                                          ERLPA157
+       WRITE OUTPUT TAPE 6, 10                                          ERLPA158
+183   IF(NGENR) 290,150,290                                             ERLPA159
+190   WRITE OUTPUT TAPE 6, 22, NH, NK, NL                               ERLPA160
+22    FORMAT(18H      REFLECTION ( 3I4,10H) EXCLUDED)                   ERLPA161
+      GO TO 180                                                         ERLPA162
+C                                                                       ERLPA163
+C         GENERATE INDICES WITHIN SPHERE OF REFLECTION                  ERLPA164
+C                                                                       ERLPA165
+250   READ INPUT TAPE 5, 15, NHMIN, NHMAX, NKMIN, NKMAX, NLMIN, NLMAX   ERLPA166
+15    FORMAT(6I6)                                                       ERLPA167
+      NHLIM = NHMAX - NHMIN + 1                                         ERLPA168
+      NKLIM = NKMAX - NKMIN + 1                                         ERLPA169
+      NLLIM = NLMAX - NLMIN  + 1                                        ERLPA170
+      FINT = 10.0                                                       ERLPA171
+      IF (NHLIM)  255,255,251                                           ERLPA172
+251   IF (NKLIM) 255,255,252                                            ERLPA173
+252   IF (NLLIM) 255,255,256                                            ERLPA174
+255   WRITE OUTPUT TAPE 6, 16                                           ERLPA175
+16    FORMAT(29H1     LIMITS INCORRECT, CHECK)                          ERLPA176
+      GO TO 999                                                         ERLPA177
+256   DO 290 K = 1,NLLIM                                                ERLPA178
+      DO 290 J = 1,NKLIM                                                ERLPA179
+      DO 290 M = 1, NHLIM                                               ERLPA180
+      NH = NHMIN + M - 1                                                ERLPA181
+      NK = NKMIN + J - 1                                                ERLPA182
+      NL = NLMIN + K - 1                                                ERLPA183
+       IF (NH)  2572,2571,2572                                          ERLPA184
+2571  NH = +0                                                           ERLPA185
+2572  IF (NK) 2582,2581,2582                                            ERLPA186
+2581  NK = +0                                                           ERLPA187
+2582  IF (NL) 2592,2591,2592                                            ERLPA188
+2591  NL = +0                                                           ERLPA189
+2592  GO TO 151                                                         ERLPA190
+290   CONTINUE                                                          ERLPA191
+C                                                                       ERLPA192
+C                                                                       ERLPA193
+C     END OF THIS JOB     -      EXIT TO MONITOR.                       ERLPA194
+C                                                                       ERLPA195
+900   WRITE OUTPUT TAPE 6, 17, NREFL                                    ERLPA196
+17    FORMAT(14H0     NREFL = I6/1H1)                                   ERLPA197
+       WRITE OUTPUT TAPE 6, 18                                          ERLPA198
+18    FORMAT(21H0     END OF THIS JOB/1H1)                              ERLPA199
+      IF(NCARDS) 5002,903,5002                                          ERLPA200
+5002  NH=1000                                                           ERLPA201
+       PUNCH 5001, NH, NK, NL, DSTAR,NWT,FOBSR,SHRPF                    ERLPA202
+903   CONTINUE                                                          ERLPA203
+C                                                                       ERLPA204
+C     RETURN TO THE MONITOR.                                            ERLPA205
+999   CALL EXIT                                                         ERLPA206
+      END                                                               ERLPA207
+                                                                        9       

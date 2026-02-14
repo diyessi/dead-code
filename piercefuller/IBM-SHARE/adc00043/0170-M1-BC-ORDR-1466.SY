@@ -1,0 +1,376 @@
+*      LABEL                                                            ORDR 001
+*      FAP                                                              ORDR 002
+*SORT          (L2,POCK,N,MODE,INC,JSUB,M1,M2,M3,M4)                    ORDR 003
+*              RANKING SUBROUTINES                                      ORDR 004
+*      L2      ... = OUTPUT LIST OF SUBSCRIPTS                          ORDR 005
+*      POCK    ... = 513 WORDS OF ERASEABLE STORAGE                     ORDR 006
+*      N       NUMBER OF ARGUMENTS IN EACH LEVEL                        ORDR 007
+*      MODE    0 FOR LOGICAL SORT, 1 FOR ALGEBRAIC                      ORDR 008
+*      INC     INCREMENT BETWEEN ARGUMENTS - FIXED FOR ALL LEVELS       ORDR 009
+*      JSUB    0    IF L2(J) = I*INC.  IN THIS CASE IF                  ORDR 010
+*                                      K=L2(J)-INC+1,  THEN             ORDR 011
+*                                      M1(K) IS J-TH IN RANK            ORDR 012
+*      JSUB    1    IF L2(J) = I                                        ORDR 013
+*      M1,M2,M3,M4 ...       ADDRESSES OF FIRST ARG IN EACH LEVEL       ORDR 014
+*                                                                       ORDR 015
+*                                                                       ORDR 016
+       ENTRY   ORDER1                                                   ORDR 017
+       ENTRY   ORDER2                                                   ORDR 018
+       ENTRY   ORDER3                                                   ORDR 019
+       ENTRY   ORDER4                                                   ORDR 020
+*                                                                       ORDR 021
+ NPOCK EQU     512           SIMULATED POCKET SORTER                    ORDR 022
+       PMC     ON                                                       ORDR 023
+*              MACROS FOR RANKING SUBROUTINES                           ORDR 024
+*              19N+4093 CYCLES                                          ORDR 025
+POCKET MACRO   PASS,PP1,PP2,PP3,PP4,P1,P2,INC                           ORDR 026
+       PAX     0,4                                                      ORDR 027
+       PXD     0,0                                                      ORDR 028
+       LGL     9                                                        ORDR 029
+       PAX     0,2                                                      ORDR 030
+ PP1   CLA     POCK-1,2                                                 ORDR 031
+       ADD     =1                                                       ORDR 032
+ PP2   STO     POCK-1,2                                                 ORDR 033
+ PP3   CLA     POCK-1,4                                                 ORDR 034
+       ADD     =1B17                                                    ORDR 035
+ PP4   STO     POCK-1,4                                                 ORDR 036
+ INC   TIX     PASS,1,*-*                                               ORDR 037
+       CLA     =O1000001                                                ORDR 038
+       AXT     1,2                                                      ORDR 039
+       STO*    PPPA                                                     ORDR 040
+ P1    ADD     POCK,2                                                   ORDR 041
+ P2    STO     POCK,2                                                   ORDR 042
+       TXI     *+1,2,1                                                  ORDR 043
+       TXL     P1,2,NPOCK-1                                             ORDR 044
+POCKET END                                                              ORDR 045
+*                                                                       ORDR 046
+ SIGN1 MACRO   MA,MB         6N CYCLES                                  ORDR 047
+ MA    CLS     M1+1,1                                                   ORDR 048
+       TMI     *+2                                                      ORDR 049
+       COM                                                              ORDR 050
+ MB    STO     M1+1,1                                                   ORDR 051
+ SIGN1 END                                                              ORDR 052
+*                                                                       ORDR 053
+ SIGN2 MACRO   MA,MB         6N CYCLES                                  ORDR 054
+ MA    CLS     M1+1,1                                                   ORDR 055
+       TPL     *+2                                                      ORDR 056
+       COM                                                              ORDR 057
+ MB    STO     M1+1,1                                                   ORDR 058
+ SIGN2 END                                                              ORDR 059
+*                                                                       ORDR 060
+NEXTWD MACRO                                                            ORDR 061
+       TSX     RPOCK,6       12 CYCLES                                  ORDR 062
+       TSX     PASS1,6                                                  ORDR 063
+       TSX     PASS2,6                                                  ORDR 064
+       TSX     LPOCK,6                                                  ORDR 065
+       TSX     PASS3,6                                                  ORDR 066
+       TSX     PASS4,6                                                  ORDR 067
+NEXTWD END                                                              ORDR 068
+*                                                                       ORDR 069
+ LINK  MACRO   SORTL,MA,MB,MC,MD,LEVEL                                  ORDR 070
+ SORTL SXA     X7,7                                                     ORDR 071
+       AXT     LEVEL,7                                                  ORDR 072
+       CLA*    5,4                                                      ORDR 073
+       ARS     18                                                       ORDR 074
+       ADM     LEVEL+6,4                                                ORDR 075
+       STA     MA                                                       ORDR 076
+       STA     MB                                                       ORDR 077
+       STA     MC                                                       ORDR 078
+       STA     MD                                                       ORDR 079
+       IFF     0,LEVEL,1                                                ORDR 080
+       TRA     *+3                                                      ORDR 081
+ LINK  END                                                              ORDR 082
+*                                                                       ORDR 083
+ MID   MACRO   MA,LEVEL                                                 ORDR 084
+       LXA     MA,5                                                     ORDR 085
+       TXL     LASTWD,7,LEVEL                                           ORDR 086
+       NEXTWD                                                           ORDR 087
+ MID   END                                                              ORDR 088
+       EJECT                                                            ORDR 089
+*              CALL RPOCK - SET POCKETS FOR RIGHT 1/2                   ORDR 090
+ RPOCK SXA     RPOK,5                                                   ORDR 091
+       AXT     NPOCK+1,2     26N+6152 CYCLES                            ORDR 092
+ PPPA  STZ     POCK+1,2                                                 ORDR 093
+       TIX     *-1,2,1                                                  ORDR 094
+       LXD     NLIM,1                                                   ORDR 095
+ RPOK  CAL     *-*,1                                                    ORDR 096
+       ANA     =O777777                                                 ORDR 097
+       LGR     9                                                        ORDR 098
+       POCKET  RPOK,PPA,PPB,PPC,PPD,PA,PB,INC4                          ORDR 099
+       TRA     1,6                                                      ORDR 100
+*              CALL LPOCK - SET POCKETS FOR LEFT 1/2                    ORDR 101
+ LPOCK SXA     LPOK,5                                                   ORDR 102
+       AXT     NPOCK+1,2     24N+6152 CYCLES                            ORDR 103
+ PPPB  STZ     POCK+1,2                                                 ORDR 104
+       TIX     *-1,2,1                                                  ORDR 105
+       LXD     NLIM,1                                                   ORDR 106
+ LPOK  LDQ     *-*,1                                                    ORDR 107
+       PXD     0,0                                                      ORDR 108
+       LGL     9                                                        ORDR 109
+       POCKET  LPOK,PPE,PPF,PPG,PPH,PC,PD,INC5                          ORDR 110
+       TRA     1,6                                                      ORDR 111
+*              CALL PASS1 - SORT BITS 27-35                             ORDR 112
+ PASS1 AXT     1,1                                                      ORDR 113
+       SXA     PAS1,5              5+23N CYCLES                         ORDR 114
+ L2A   CLA     L2+1,1                                                   ORDR 115
+       PDX     0,3                                                      ORDR 116
+ PAS1  CAL     *-*,3                                                    ORDR 117
+       ANA     =O777000777                                              ORDR 118
+       PAX     0,2                                                      ORDR 119
+ PE    CLA     POCK,2                                                   ORDR 120
+       PAX     0,4                                                      ORDR 121
+       ADD     =1                                                       ORDR 122
+ PF    STO     POCK,2                                                   ORDR 123
+       PXA     0,3                                                      ORDR 124
+ L2B   STA     L2+1,4                                                   ORDR 125
+       TXI     *+1,1,1                                                  ORDR 126
+ N1    TXL     L2A,1,(N)                                                ORDR 127
+       TRA     1,6                                                      ORDR 128
+*              CALL PASS2 - SORT BITS 18-26                             ORDR 129
+ PASS2 AXT     1,1                                                      ORDR 130
+       SXA     PAS2,5              5+25N CYCLES                         ORDR 131
+ L2C   CLA     L2+1,1                                                   ORDR 132
+       PAX     0,3                                                      ORDR 133
+ PAS2  CAL     *-*,3                                                    ORDR 134
+       ARS     9                                                        ORDR 135
+       ANA     =O777000777                                              ORDR 136
+       PAX     0,2                                                      ORDR 137
+ PG    CLA     POCK,2                                                   ORDR 138
+       PDX     0,4                                                      ORDR 139
+       ADD     =1B17                                                    ORDR 140
+ PH    STO     POCK,2                                                   ORDR 141
+       PXD     0,3                                                      ORDR 142
+ L2D   STD     L2+1,4                                                   ORDR 143
+       TXI     *+1,1,1                                                  ORDR 144
+ N2    TXL     L2C,1,(N)                                                ORDR 145
+       TRA     1,6                                                      ORDR 146
+*              CALL PASS3 - SORT BITS 9-17                              ORDR 147
+ PASS3 AXT     1,1                                                      ORDR 148
+       SXA     PAS3,5              5+23N CYCLES                         ORDR 149
+ L2E   CLA     L2+1,1                                                   ORDR 150
+       PDX     0,3                                                      ORDR 151
+ PAS3  CAL     *-*,3                                                    ORDR 152
+       ANA     =O777000777                                              ORDR 153
+       PDX     0,2                                                      ORDR 154
+ PI    CLA     POCK,2                                                   ORDR 155
+       PAX     0,4                                                      ORDR 156
+       ADD     =1                                                       ORDR 157
+ PJ    STO     POCK,2                                                   ORDR 158
+       PXA     0,3                                                      ORDR 159
+ L2F   STA     L2+1,4                                                   ORDR 160
+       TXI     *+1,1,1                                                  ORDR 161
+ N3    TXL     L2E,1,(N)                                                ORDR 162
+       TRA     1,6                                                      ORDR 163
+*              CALL PASS4 - SORT BITS S,1-8                             ORDR 164
+ PASS4 AXT     1,1                                                      ORDR 165
+       SXA     PAS4,5              5+22N CYCLES                         ORDR 166
+ L2G   CLA     L2+1,1                                                   ORDR 167
+       PAX     0,3                                                      ORDR 168
+ PAS4  CAL     *-*,3                                                    ORDR 169
+       ARS     9                                                        ORDR 170
+       PDX     0,2                                                      ORDR 171
+ PK    CLA     POCK,2                                                   ORDR 172
+       PDX     0,4                                                      ORDR 173
+       ADD     =1B17                                                    ORDR 174
+ PL    STO     POCK,2                                                   ORDR 175
+       PXD     0,3                                                      ORDR 176
+ L2H   STD     L2+1,4                                                   ORDR 177
+       TXI     *+1,1,1                                                  ORDR 178
+ N4    TXL     L2G,1,(N)                                                ORDR 179
+       TRA     1,6                                                      ORDR 180
+*              CALL PASS0 - INITIAL SORT PASS                           ORDR 181
+ PASS0 LXD     INC3,1                                                   ORDR 182
+       SXA     PAS0,5              5+20N CYCLES                         ORDR 183
+ PAS0  CAL     *-*,1                                                    ORDR 184
+       ANA     =O777000777                                              ORDR 185
+       PAX     0,2                                                      ORDR 186
+ PM    CLA     POCK,2                                                   ORDR 187
+       PAX     0,4                                                      ORDR 188
+       ADD     =1                                                       ORDR 189
+ PN    STO     POCK,2                                                   ORDR 190
+       PXA     0,1                                                      ORDR 191
+ L2I   STO     L2+1,4                                                   ORDR 192
+ INC3  TXI     *+1,1,(INC)                                              ORDR 193
+ NLIM  TXL     PAS0,1,(NLIM)                                            ORDR 194
+       TRA     1,6                                                      ORDR 195
+*              CALL PASSF - FINAL SORT PASS                             ORDR 196
+ PASSF AXT     1,1                                                      ORDR 197
+       SXA     PASF,5                                                   ORDR 198
+ L2J   CLA     L2+1,1        5+ 24N                                     ORDR 199
+       PAX     0,3                                                      ORDR 200
+ PASF  CAL     *-*,3                                                    ORDR 201
+       ARS     9                                                        ORDR 202
+       PDX     0,2                                                      ORDR 203
+ PO    CLA     POCK,2                                                   ORDR 204
+       PDX     0,4                                                      ORDR 205
+       ADD     =1B17                                                    ORDR 206
+ PQ    STO     POCK,2                                                   ORDR 207
+       PXD     0,3                                                      ORDR 208
+ L2K   STD     L2+1,4                                                   ORDR 209
+ L2L   STA     L2+1,1                                                   ORDR 210
+       TXI     *+1,1,1                                                  ORDR 211
+ N     TXL     L2J,1,(N)                                                ORDR 212
+       TRA     1,6                                                      ORDR 213
+       EJECT                                                            ORDR 214
+*              (L2,POCK,N,MODE,INC,JSUB,M1,M2,M3,M4)                    ORDR 215
+       LINK    SORT4,M4A,M4B,M4C,M4D,4                                  ORDR 216
+       LINK    SORT3,M3A,M3B,M3C,M3D,3                                  ORDR 217
+       LINK    SORT2,M2A,M2B,M2C,M2D,2                                  ORDR 218
+       LINK    SORT1,M1A,M1B,M1C,M1D,1                                  ORDR 219
+       SXA     X1,1                                                     ORDR 220
+       SXA     X2,2                                                     ORDR 221
+       SXA     X3,3                                                     ORDR 222
+       SXA     X4,4                                                     ORDR 223
+       SXA     X5,5                                                     ORDR 224
+       SXA     X6,6                                                     ORDR 225
+       CAL     1,4                                                      ORDR 226
+       ADM     =1                  L2+1                                 ORDR 227
+       STA     L2A                                                      ORDR 228
+       STA     L2B                                                      ORDR 229
+       STA     L2C                                                      ORDR 230
+       STA     L2D                                                      ORDR 231
+       STA     L2E                                                      ORDR 232
+       STA     L2F                                                      ORDR 233
+       STA     L2G                                                      ORDR 234
+       STA     L2H                                                      ORDR 235
+       STA     L2I                                                      ORDR 236
+       STA     L2J                                                      ORDR 237
+       STA     L2K                                                      ORDR 238
+       STA     L2L                                                      ORDR 239
+       STA     L2M                                                      ORDR 240
+       STA     L2N                                                      ORDR 241
+       CAL     2,4                 POCK                                 ORDR 242
+       STA     PA                                                       ORDR 243
+       STA     PB                                                       ORDR 244
+       STA     PC                                                       ORDR 245
+       STA     PD                                                       ORDR 246
+       STA     PE                                                       ORDR 247
+       STA     PF                                                       ORDR 248
+       STA     PG                                                       ORDR 249
+       STA     PH                                                       ORDR 250
+       STA     PI                                                       ORDR 251
+       STA     PJ                                                       ORDR 252
+       STA     PK                                                       ORDR 253
+       STA     PL                                                       ORDR 254
+       STA     PM                                                       ORDR 255
+       STA     PN                                                       ORDR 256
+       STA     PO                                                       ORDR 257
+       STA     PQ                                                       ORDR 258
+       SBM     =1                  POCK-1                               ORDR 259
+       STA     PPA                                                      ORDR 260
+       STA     PPB                                                      ORDR 261
+       STA     PPC                                                      ORDR 262
+       STA     PPD                                                      ORDR 263
+       STA     PPE                                                      ORDR 264
+       STA     PPF                                                      ORDR 265
+       STA     PPG                                                      ORDR 266
+       STA     PPH                                                      ORDR 267
+       ADM     =2                  POCK+1                               ORDR 268
+       STA     PPPA                                                     ORDR 269
+       STA     PPPB                                                     ORDR 270
+       CLA*    3,4                                                      ORDR 271
+       STD     N1                                                       ORDR 272
+       STD     N2                                                       ORDR 273
+       STD     N3                                                       ORDR 274
+       STD     N4                                                       ORDR 275
+       STD     N                                                        ORDR 276
+       XCA                         N IN MQ                              ORDR 277
+       CLA*    4,4                                                      ORDR 278
+       STO     MODE                                                     ORDR 279
+       CLA*    5,4                                                      ORDR 280
+       STD     INC1                                                     ORDR 281
+       STD     INC2                                                     ORDR 282
+       STD     INC3                                                     ORDR 283
+       STD     INC4                                                     ORDR 284
+       STD     INC5                                                     ORDR 285
+       PDX     0,1                                                      ORDR 286
+       SXA     INCR,1                                                   ORDR 287
+       AXT     THERE,2                                                  ORDR 288
+       TXL     XCA,1,1             IF INC=1,SKIP MULTIPLY               ORDR 289
+       MPY     INCR                                                     ORDR 290
+       ZET*    6,4                 IF JSUB=1,REPLACE                    ORDR 291
+       AXT     DECR,2              REL. ADDRESSES BY SUBSCRIPTS         ORDR 292
+ XCA   XCA                                                              ORDR 293
+       STD     NLIM                                                     ORDR 294
+       SXA     WHERE,2                                                  ORDR 295
+       CLA     SINTRA+1,7                                               ORDR 296
+       STA     INC1                                                     ORDR 297
+       CLA     SYNTRA+1,7                                               ORDR 298
+       STA     INC2                                                     ORDR 299
+       NZT     MODE                                                     ORDR 300
+       TRA     START                                                    ORDR 301
+       LXD     NLIM,1              CONVERT TO LOGICAL LIST              ORDR 302
+       TRA*    SINTRA+1,7                                               ORDR 303
+ LOG4  SIGN1   M4A,M4B             6N                                   ORDR 304
+ LOG3  SIGN1   M3A,M3B             6N                                   ORDR 305
+ LOG2  SIGN1   M2A,M2B             6N                                   ORDR 306
+ LOG1  SIGN1   M1A,M1B             6N                                   ORDR 307
+ INC1  TIX     *-*,1,(INC)         2N                                   ORDR 308
+ START LXA     M1A,5               SORT LEVEL 1                         ORDR 309
+       TSX     RPOCK,6             26N+6154                             ORDR 310
+       TSX     PASS0,6             20N+7                                ORDR 311
+       TSX     PASS2,6             25N+7                                ORDR 312
+       TSX     LPOCK,6             24N+6154                             ORDR 313
+       TSX     PASS3,6             23N+7                                ORDR 314
+       TXL     LASPAS,7,1                                               ORDR 315
+       TSX     PASS4,6                                                  ORDR 316
+       MID     M2A,2                                                    ORDR 317
+       MID     M3A,3                                                    ORDR 318
+       LXA     M4A,5               SORT LEVEL 4                         ORDR 319
+LASTWD TSX     RPOCK,6                                                  ORDR 320
+       TSX     PASS1,6                                                  ORDR 321
+       TSX     PASS2,6                                                  ORDR 322
+       TSX     LPOCK,6                                                  ORDR 323
+       TSX     PASS3,6                                                  ORDR 324
+LASPAS TSX     PASSF,6             24N+5                                ORDR 325
+ WHERE TRA     THERE                                                    ORDR 326
+*                            RESTORE THE BLOODY SUBSCRIPTS              ORDR 327
+ DECR  LXD     N,1                                                      ORDR 328
+       PXD     0,0                                                      ORDR 329
+ L2M   LDQ     L2+1,1        ABOUT 16N CYCLES                           ORDR 330
+       DVH     INCR                                                     ORDR 331
+ L2N   STQ     L2+1,1                                                   ORDR 332
+       TIX     L2M,1,1                                                  ORDR 333
+ THERE NZT     MODE                                                     ORDR 334
+       TRA     X1                                                       ORDR 335
+       LXD     NLIM,1                                                   ORDR 336
+       TRA*    SYNTRA+1,7                                               ORDR 337
+ ALG4  SIGN2   M4C,M4D                                                  ORDR 338
+ ALG3  SIGN2   M3C,M3D                                                  ORDR 339
+ ALG2  SIGN2   M2C,M2D                                                  ORDR 340
+ ALG1  SIGN2   M1C,M1D                                                  ORDR 341
+ INC2  TIX     *-*,1,(INC)                                              ORDR 342
+ X1    AXT     *-*,1                                                    ORDR 343
+ X2    AXT     *-*,2                                                    ORDR 344
+ X3    AXT     *-*,3                                                    ORDR 345
+ X4    AXT     *-*,4                                                    ORDR 346
+ X5    AXT     *-*,5                                                    ORDR 347
+ X6    AXT     *-*,6                                                    ORDR 348
+       XEC     RETURN+1,7                                               ORDR 349
+ X7    AXT     *-*,7                                                    ORDR 350
+       TRA     11,4                                                     ORDR 351
+       NOP                                                              ORDR 352
+       TXI     X7,4,1                                                   ORDR 353
+       TXI     X7,4,2                                                   ORDR 354
+RETURN TXI     X7,4,3                                                   ORDR 355
+       PZE     LOG4                                                     ORDR 356
+       PZE     LOG3                                                     ORDR 357
+       PZE     LOG2                                                     ORDR 358
+SINTRA PZE     LOG1                                                     ORDR 359
+       PZE     ALG4                                                     ORDR 360
+       PZE     ALG3                                                     ORDR 361
+       PZE     ALG2                                                     ORDR 362
+SYNTRA PZE     ALG1                                                     ORDR 363
+ INCR  PZE     0                                                        ORDR 364
+ MODE  BSS     1                                                        ORDR 365
+ORDER1 SYN     SORT1                                                    ORDR 366
+ORDER2 SYN     SORT2                                                    ORDR 367
+ORDER3 SYN     SORT3                                                    ORDR 368
+ORDER4 SYN     SORT4                                                    ORDR 369
+ M1    EQU     0                                                        ORDR 370
+ L2    EQU     0                                                        ORDR 371
+ (N)   EQU     0                                                        ORDR 372
+ (INC) EQU     0                                                        ORDR 373
+ POCK  EQU     0                                                        ORDR 374
+(NLIM) EQU     0                                                        ORDR 375
+       END                                                              ORDR 376

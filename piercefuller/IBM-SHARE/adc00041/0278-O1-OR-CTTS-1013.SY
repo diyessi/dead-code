@@ -1,0 +1,436 @@
+ORCTTS REM 0436 10140                                                   CTTS0001
+       ORG 144                                                          CTTS0002
+COMMON BSS +96                                                          CTTS0003
+       RCD                                                              CTTS0004
+       CPY GO+1                                                         CTTS0005
+GO     TSX CTTS,4                                                       CTTS0006
+       PZE STAPE,,BTAPE                                                 CTTS0007
+       TRA SETID             FIRST HOLLERITH RETURN                     CTTS0008
+       TRA *-3               EMPTY RETURN                               CTTS0009
+       TRA *-4               NORMAL RETURN                              CTTS0010
+ SETID CLA COMMON+6          SET ID FOR COL. BINARY                     CTTS0011
+       STO COMMON+92                                                    CTTS0012
+       CLA COMMON+7                                                     CTTS0013
+       STO COMMON+93                                                    CTTS0014
+       TRA 0,4                                                          CTTS0015
+****** REM *************************************************************CTTS0016
+       REM SUBROUTINE TO SIMULATE THE CARD TO TAPE CONVERTER AND ALSO   CTTS0017
+       REM TO CONVERT ROW BINARY CARDS TO COLUMN BINARY CARDS ON A      CTTS0018
+       REM TAPE SUITABLE FOR OFF LINE PUNCHING.                         CTTS0019
+       REM CALLING SEQUENCE=  TSX CTTS,4                                CTTS0020
+       REM                    PZE STAPE,,BTAPE                          CTTS0021
+       REM                    (RETURN ON FIRST HOLLERITH CARD)          CTTS0022
+       REM                    (RETURN IF CARD READER IS EMPTY)          CTTS0023
+       REM                    (RETURN ON END OF FILE)                   CTTS0024
+       REM STAPE IS THE NO OF THE TAPE TO BE USED FOR SIMULATION.       CTTS0025
+       REM BTAPE IS THE NUMBER OF THE TAPE THAT ROW CARDS ARE TO BE     CTTS0026
+       REM     WRITTEN ON.  USE ZERO IF NO TAPE IS ASSIGNED.            CTTS0027
+       REM THE FIRST HOLLERITH RETURN IS USED TO SET ID INTO COL. 73-80 CTTS0028
+       REM THE IMAGE OF THE FIRST HOLLERITH CARD IN COLUMN BINARY FORM  CTTS0029
+       REM IS LOCATED IN COMMON+4 THRU COMMON+27. AT THIS RETURN,       CTTS0030
+       REM TRANSFER ANY TWO WORDS FROM THIS REGION INTO COMMON+92 AND   CTTS0031
+       REM COMMON+93 FOR ID ON THE ROW CONVERTED CARDS.  THEN RETURN TO CTTS0032
+       REM CTTS BY TRA 0,4.                                             CTTS0033
+       REM                                                              CTTS0034
+       REM ASSIGNMENT OF COMMON STORAGE                                 CTTS0035
+       EQU COMMON+00 TO +03  TEMP. USE                                  CTTS0036
+       EQU COMMON+04 TO +27  COLUMN IMAGE AREA                          CTTS0037
+       EQU COMMON+28 TO +39  LEFT ROW AREA                              CTTS0038
+       EQU COMMON+40 TO +51  RIGHT ROW AREA                             CTTS0039
+       EQU COMMON+52 TO +65  HOLLERITH BCD AREA                         CTTS0040
+       EQU COMMON+66 TO 67   HOLLERITH WORK AREA                        CTTS0041
+       EQU COMMON+68 TO +81  BCD IMAGE OUTPUT AREA                      CTTS0042
+       EQU COMMON+82                                                    CTTS0043
+       EQU COMMON+68 TO +95  BINARY IMAGE OUTPUT AREA                   CTTS0044
+       EQU COMMON+95                                                    CTTS0045
+CTTS   SXD X1,1                                                         CTTS0046
+       SXD X2,2                                                         CTTS0047
+       SXD X4,4                                                         CTTS0048
+       SLT 1                 RESET 80 COL. INDICATOR                    CTTS0049
+       NOP                                                              CTTS0050
+       SLN 2                 SET FIRST HOL. CARD INDICATOR              CTTS0051
+       SLN 3                 SET FIRST SIMULTANEOUS WRITE INDICATOR.    CTTS0052
+       SLN 4                 SET FIRST RECORD IN INDICATOR              CTTS0053
+       CAL TXL                                                          CTTS0054
+       STP EOF                                                          CTTS0055
+       REM INIT. TAPE ADDRESS                                           CTTS0056
+ ITA   CLA 1,4                                                          CTTS0057
+       ORA TAPED             FORM BCD TAPE ADDRESS                      CTTS0058
+       STA WH                                                           CTTS0059
+       ORA TAPED+1           FORM BINARY                                CTTS0060
+       STA WTB                                                          CTTS0061
+       STA WTB2                                                         CTTS0062
+       STA WTB3                                                         CTTS0063
+       STA TS1               END OF FILE                                CTTS0064
+       ARS 18                                                           CTTS0065
+       TNZ *+2               IF NO TAPE ADDRESS IS                      CTTS0066
+       CLA TXL               GIVEN, FORM TAGLESS TXH                    CTTS0067
+       STP TB1                                                          CTTS0068
+       STP TB2                                                          CTTS0069
+       STP TB3                                                          CTTS0070
+       STP TB4                                                          CTTS0071
+       ORA TAPED+1           FORM BINARY ADDRESS                        CTTS0072
+       STA TB1               END OF FILE                                CTTS0073
+       STA TB2               SPACE AT LOAD POINT                        CTTS0074
+       STA TB4                                                          CTTS0075
+       ORA TAPED+2                                                      CTTS0076
+       STA TB3               WTS ADDRESS                                CTTS0077
+*HOLL  REM HOLLERITH ROUTINE                                            CTTS0078
+ HOLL  RCD                                                              CTTS0079
+       LXA A12,4                                                        CTTS0080
+       CLA *+9                                                          CTTS0081
+       CPY COMMON                                                       CTTS0082
+ X1    TXL *+2,,**                                                      CTTS0083
+ X2    TXL EOF,,**                                                      CTTS0084
+       STP EOF               SET TO INDICATE INFORMATION READ           CTTS0085
+       STQ COMMON+40,4       LEFT ROW                                   CTTS0086
+       CPY COMMON+1                                                     CTTS0087
+       STQ COMMON+52,4       RIGHT ROW                                  CTTS0088
+X4     TXL RTH,,**                                                      CTTS0089
+       TXH *-9,,*+1                                                     CTTS0090
+ CRSW2 TXL *+2               COLUMN/ROW SWITCH                          CTTS0091
+TXL    TXL ROWP                                                         CTTS0092
+       TSX TSTCV,4           TEST FOR START CONVERSION                  CTTS0093
+       CLA COMMON+28         TEST 9L FOR COLUMN BINARY                  CTTS0094
+       TPL T80               NOT COL                                    CTTS0095
+       CLA COMMON+30         TEST 7L                                    CTTS0096
+       TPL T80               NOT COL                                    CTTS0097
+       CLA *+7                                                          CTTS0098
+ RTCR  LXD D12,4             CONVERT TO COLUMN FORMAT                   CTTS0099
+       LDQ COMMON+40,4       LEFT ROW                                   CTTS0100
+       STQ COMMON                                                       CTTS0101
+       LDQ COMMON+52,4       RIGHT ROW                                  CTTS0102
+       STQ COMMON+1                                                     CTTS0103
+       TXL RTC                                                          CTTS0104
+       PZE *-5,,COL1+5                                                  CTTS0105
+T80    CLA COMMON+52         TEST 1ST BCD WORD FOR 80/84                CTTS0106
+       SUB 2FLAG                                                        CTTS0107
+       TZE TWO                                                          CTTS0108
+       TSX SETH,4            SET LOOK AHEAD                             CTTS0109
+       SLT 2                 TEST FOR FIRST HOLLERITH CARD              CTTS0110
+ D11   TXL *+2,,11                                                      CTTS0111
+       TXL FIRST             SET UP COL. 73-80 ON BTAPE                 CTTS0112
+ THTI  LXD D12,4             TRANSFER HOLLERITH TO IMAGE                CTTS0113
+       CLA COMMON+64,4       BCD                                        CTTS0114
+       STO COMMON+80,4       OUTPUT IMAGE                               CTTS0115
+       TIX *-2,4,1                                                      CTTS0116
+       CLA BLANK                                                        CTTS0117
+       STO COMMON+80                                                    CTTS0118
+       STO COMMON+81                                                    CTTS0119
+       SLT 1                 TEST FOR TWO                               CTTS0120
+       TXL HOLL              ONE                                        CTTS0121
+       CLA COMMON+66         TRANSFER SAVED COL. 73-80                  CTTS0122
+       STO COMMON+80         TO IMAGE OUTPUT AREA                       CTTS0123
+       CLA COMMON+67                                                    CTTS0124
+       STO COMMON+81                                                    CTTS0125
+       TXL HOLL                                                         CTTS0126
+ TWO   CLA COMMON+53         TRANSFER COL. 73-80                        CTTS0127
+       STO COMMON+66                                                    CTTS0128
+       CLA COMMON+54                                                    CTTS0129
+       STO COMMON+67                                                    CTTS0130
+       SLN 1                 SET TWO INDICATOR                          CTTS0131
+       TXL HOLL                                                         CTTS0132
+ COLN  RCD                   COLUMN READ                                CTTS0133
+       LXA A12,4                                                        CTTS0134
+       CLA COL1                                                         CTTS0135
+       CPY COMMON                                                       CTTS0136
+ WX    TXL *+2,,14                                                      CTTS0137
+       TXL EOF                                                          CTTS0138
+       STQ COMMON+40,4       LEFT ROW                                   CTTS0139
+       CPY COMMON+1                                                     CTTS0140
+       STQ COMMON+52,4       RIGHT ROW                                  CTTS0141
+       TXL RTC               READ ROW TO COLUMN                         CTTS0142
+ COL1  PZE *-7,,*+1                                                     CTTS0143
+       CAL COMMON+4          FIRST COLUMN WORD                          CTTS0144
+       ANA 97BT                                                         CTTS0145
+       SUB 97BT                                                         CTTS0146
+       TNZ *+7                                                          CTTS0147
+       TSX SETB,4            COLUMN CARD                                CTTS0148
+       LXD D24,4                                                        CTTS0149
+       CLA COMMON+28,4       TRANSFER COL. TO OUTPUT                    CTTS0150
+       STO COMMON+92,4                                                  CTTS0151
+       TIX *-2,4,1                                                      CTTS0152
+ D24   TXL COLN,,24                                                     CTTS0153
+       TSX TSTCV,4           TEST FOR START CONVERSION                  CTTS0154
+       LXD D12,4                                                        CTTS0155
+       CLA *+6                                                          CTTS0156
+       LDQ COMMON+40,4       LEFT ROW                                   CTTS0157
+       STQ COMMON                                                       CTTS0158
+       LDQ COMMON+52,4       RIGHT ROW                                  CTTS0159
+       STQ COMMON+1                                                     CTTS0160
+       TXL RTH               CONVERT ROW TO HOL.                        CTTS0161
+       PZE *-5,,T80          TEST FOR 80 COLUMNS AFTER CONVERSION       CTTS0162
+*ROWP  REM ROW PROCESS                                                  CTTS0163
+ ROWP  TSX TSPCV,4           TEST FOR STOP CONVERSION                   CTTS0164
+       TSX SETB,4            SET LOOK AHEAD                             CTTS0165
+       CAL COMMON+28         FIRST LEFT ROW WORD                        CTTS0166
+       PDX ,2                                                           CTTS0167
+       ORA 97BT              ADD COL. BINARY BITS                       CTTS0168
+       SLW COMMON+28                                                    CTTS0169
+ TXH   TXH *+6,2,22          TEST FOR NO CHECK SUM                      CTTS0170
+       LXD D11,4                                                        CTTS0171
+       ACL COMMON+40,4       RUN UP NEW CHECK SUM                       CTTS0172
+       ACL COMMON+52,4                                                  CTTS0173
+       TIX *-2,4,1                                                      CTTS0174
+       SLW COMMON+40         9R                                         CTTS0175
+       LXD D24,2                                                        CTTS0176
+       LXD D12,4                                                        CTTS0177
+       CAL COMMON+40,4       TRANSFER ROW TO OUTPUT IMAGE               CTTS0178
+       SLW COMMON+92,2                                                  CTTS0179
+       CAL COMMON+52,4                                                  CTTS0180
+       SLW COMMON+93,2                                                  CTTS0181
+       TXI *+1,2,-2                                                     CTTS0182
+       TIX *-5,4,1                                                      CTTS0183
+       TXL HOLL                                                         CTTS0184
+ SETB  SLT 4                 SET BINARY LOOK AHEAD                      CTTS0185
+       TXL *+6                                                          CTTS0186
+       LXD D28,2                                                        CTTS0187
+       SXD WXD,2                                                        CTTS0188
+       CAL IM26              SET INITIAL CARD COUNT                     CTTS0189
+       SLW COMMON+94         COLUMNS 79-81 IN OUTPUT IMAGE              CTTS0190
+       TXL WTB1+1                                                       CTTS0191
+       LXD WX,2                                                         CTTS0192
+ D14   TXL SETB1,2,14                                                   CTTS0193
+       CAL COMMON+94         BINARY FOLLOWING BINARY                    CTTS0194
+       ANA LHBB                                                         CTTS0195
+       ORA LHBB+1                                                       CTTS0196
+       SLW COMMON+94                                                    CTTS0197
+       CAL LHBB+2                                                       CTTS0198
+       SLW COMMON+95                                                    CTTS0199
+ CRSW1 TXL WTB               COLUMN-ROW SWITCH                          CTTS0200
+       SLT 3                 TEST FOR FIRST TIME                        CTTS0201
+D12    TXL *+7,,12                                                      CTTS0202
+ TB2   WTB BTAPE             GET TAPE AWAY FROM LOAD POINT              CTTS0203
+       CPY *                                                            CTTS0204
+ TB4   BST BTAPE                                                        CTTS0205
+WTB2   WTB STAPE             INSURE THAT THE SIMULATED TAPE IS NOT      CTTS0206
+       CPY *                    AT THE LOAD POINT.                      CTTS0207
+WTB3   BST STAPE                                                        CTTS0208
+       CLA EOFSW             SET TO WRITE EOF ON BTAPE                  CTTS0209
+       SLW EOFSW                                                        CTTS0210
+ TB3   WTS BTAPE                                                        CTTS0211
+       REM INCREMENT TWO DIGIT CARD COUNT (XX0)                         CTTS0212
+       CAL COMMON+94         CARD COUNT                                 CTTS0213
+       LRS 11                                                           CTTS0214
+       ARS 1                                                            CTTS0215
+       LXD *+2,1                                                        CTTS0216
+       LBT                   IF LOW BIT, DIGIT IS 9                     CTTS0217
+       TXL *+5,,24                                                      CTTS0218
+       ACL BUMP              SO ADD 1777 TO CONVERT TO 11               CTTS0219
+       LRS 12                AND SHIFT T O CONVERT 11 TO 0              CTTS0220
+       TIX *-4,1,12          THE LOOK AT THE NEXT HIGHER DIGIT          CTTS0221
+ D28   TXL *+2,,28                                                      CTTS0222
+       LRS 12                IF DIGIT NOT 9, INCREMENT BY 1,            CTTS0223
+       LGL 48,1                                                         CTTS0224
+       SLW COMMON+94         AND STORE                                  CTTS0225
+ WTB   WTB STAPE             WRITE BINARY                               CTTS0226
+       CPY COMMON+96,2       COPY BINARY IMAGE                          CTTS0227
+       TIX *-1,2,1                                                      CTTS0228
+ WTB1  LXD WXD,2             SET NEXT IMAGE LENGTH                      CTTS0229
+       SXD WX,2                                                         CTTS0230
+       CAL CRSW2                                                        CTTS0231
+       STP CRSW1                                                        CTTS0232
+       IOD                                                              CTTS0233
+       TRA 1,4                                                          CTTS0234
+ SETB1 CAL COMMON+81         BINARY FOLLOWING HOL.                      CTTS0235
+       ANA LHHB                                                         CTTS0236
+       ORA LHHB+1                                                       CTTS0237
+       SLW COMMON+81                                                    CTTS0238
+       LXD D28,1             SAVE NEXT IMAGE LENGTH                     CTTS0239
+       SXD WXD,1                                                        CTTS0240
+ WH    WTD STAPE                                                        CTTS0241
+       CPY COMMON+82,2       COPY BCD IMAGE                             CTTS0242
+       TIX *-1,2,1                                                      CTTS0243
+       TXL WTB1                                                         CTTS0244
+ SETH  LXD WX,2              SET HOL. LOOK A HEAD                       CTTS0245
+       SLT 4                                                            CTTS0246
+       TXL *+3                                                          CTTS0247
+       LXD D14,2                                                        CTTS0248
+       TXL SETB+3                                                       CTTS0249
+       TXL SETH1,2,14                                                   CTTS0250
+       CAL COMMON+94         SET BINARY TO HOLLERITH                    CTTS0251
+       ANA LHBB                                                         CTTS0252
+       ORA LHBH                                                         CTTS0253
+       SLW COMMON+94                                                    CTTS0254
+       CAL LHBH+1                                                       CTTS0255
+       SLW COMMON+95                                                    CTTS0256
+       LXD D14,1                                                        CTTS0257
+       SXD WXD,1                                                        CTTS0258
+ WXD   TXL CRSW1,,**                                                    CTTS0259
+ SETH1 CAL COMMON+81         SET HOL. TO HOL.                           CTTS0260
+       ANA LHHB                                                         CTTS0261
+       ORA LHHH                                                         CTTS0262
+       SLW COMMON+81                                                    CTTS0263
+       TXL WH                                                           CTTS0264
+****** REM *************************************************************CTTS0265
+       REM THIS PROGRAM CRIBBED FROM DS CBL1                            CTTS0266
+ RTC   TXL *+8,4,11                                                     CTTS0267
+       STA RTC1              SET INTERMEDIATE RETURN                    CTTS0268
+       ARS 18                                                           CTTS0269
+       STA RTC2              SET FINAL RETURN                           CTTS0270
+       STZ COMMON+16,4       CLEAR COLUMN AREA                          CTTS0271
+       STZ COMMON+28,4                                                  CTTS0272
+       TIX *-2,4,1                                                      CTTS0273
+       TXI *+1,4,11                                                     CTTS0274
+       LXD D24,1                                                        CTTS0275
+       LDQ COMMON                                                       CTTS0276
+       LXA A12,2                                                        CTTS0277
+ A12   PXD 12                                                           CTTS0278
+       LGL 1                                                            CTTS0279
+       ALS 11                                                           CTTS0280
+       LGL 1                                                            CTTS0281
+       ALS 11                                                           CTTS0282
+       LGL 1                                                            CTTS0283
+       ALS 12,4                                                         CTTS0284
+       ORS COMMON+28,1                                                  CTTS0285
+       TXI *+1,1,-1                                                     CTTS0286
+       TIX *-9,2,1                                                      CTTS0287
+       TXL *+3,1,1                                                      CTTS0288
+       LDQ COMMON+1                                                     CTTS0289
+       TXL *-13                                                         CTTS0290
+ RTC1  TIX **,4,1                                                       CTTS0291
+ RTC2  TRA **                                                           CTTS0292
+****** REM *************************************************************CTTS0293
+       REM  THIS PROGRAM CRIBBED FROM CE I41                            CTTS0294
+ RTH   TXL H2BCDH,4,11                                                  CTTS0295
+       STA H2BCDT            SET INTERMEDIATE                           CTTS0296
+       ARS 18                                                           CTTS0297
+       STA H2BCDK            SET FINAL RETURN                           CTTS0298
+       LXA H2BCDG,1                                                     CTTS0299
+       SXD H2BCD3,1                                                     CTTS0300
+       SXD H2BCD6,1                                                     CTTS0301
+       LXA H2BCDJ,1                                                     CTTS0302
+H2BCDI STZ COMMON+66,1       BCD AREA                                   CTTS0303
+       TIX H2BCDI,1,1                                                   CTTS0304
+H2BCDH SXD H2BCDF,4                                                     CTTS0305
+       CAL H2BCDA+12,4                                                  CTTS0306
+       STO H2BCDD                                                       CTTS0307
+H2BCD3 TXL H2BCD8,4,3                                                   CTTS0308
+       CAL COMMON                                                       CTTS0309
+       ORS COMMON+58                                                    CTTS0310
+       CAL COMMON+1                                                     CTTS0311
+H2BCDN ORS COMMON+59                                                    CTTS0312
+H2BCDS LDQ COMMON                                                       CTTS0313
+       LXA H2BCD5,4                                                     CTTS0314
+H2BCD4 LXA H2BCDE,1                                                     CTTS0315
+H2BCDL CLM                                                              CTTS0316
+       LGL 3                                                            CTTS0317
+H2BCDJ PAX 14,2                                                         CTTS0318
+       CLA H2BCDD                                                       CTTS0319
+       ANA H2BCDC+7,2                                                   CTTS0320
+       ALS 18                                                           CTTS0321
+       ORS COMMON+74,5                                                  CTTS0322
+       LGL 3                                                            CTTS0323
+H2BCD5 PAX 16,2                                                         CTTS0324
+       CLA H2BCDD                                                       CTTS0325
+       ANA H2BCDC+7,2                                                   CTTS0326
+       ORS COMMON+74,5                                                  CTTS0327
+       TIX H2BCDL,1,1                                                   CTTS0328
+       LDQ COMMON+1                                                     CTTS0329
+       TIX H2BCD4,4,8                                                   CTTS0330
+       LXD H2BCDF,4                                                     CTTS0331
+H2BCD6 TXL H2BCD7,4,3                                                   CTTS0332
+H2BCDT TIX **,4,1                                                       CTTS0333
+       CLA H2BCDB                                                       CTTS0334
+       STO H2BCDD                                                       CTTS0335
+       STD H2BCDF                                                       CTTS0336
+       CAL COMMON+58                                                    CTTS0337
+       COM                                                              CTTS0338
+       SLW COMMON                                                       CTTS0339
+       CAL COMMON+59                                                    CTTS0340
+       COM                                                              CTTS0341
+       SLW COMMON+1                                                     CTTS0342
+       TRA H2BCDS                                                       CTTS0343
+H2BCD7 TXL H2BCD9,4,0                                                   CTTS0344
+       CLM                                                              CTTS0345
+       STD H2BCD3                                                       CTTS0346
+       STD H2BCD6                                                       CTTS0347
+       TRA H2BCDT                                                       CTTS0348
+H2BCD8 CAL COMMON                                                       CTTS0349
+       SLW COMMON+2                                                     CTTS0350
+       ANA COMMON+58                                                    CTTS0351
+       SLW COMMON                                                       CTTS0352
+       CAL COMMON+2                                                     CTTS0353
+       ORS COMMON+58                                                    CTTS0354
+       CAL COMMON+1                                                     CTTS0355
+       SLW COMMON+2                                                     CTTS0356
+       ANA COMMON+59                                                    CTTS0357
+       SLW COMMON+1                                                     CTTS0358
+       CAL COMMON+2                                                     CTTS0359
+       TRA H2BCDN                                                       CTTS0360
+H2BCD9 LXA H2BCDE,4                                                     CTTS0361
+       CAL COMMON+66,4                                                  CTTS0362
+       SLW COMMON+64,4                                                  CTTS0363
+       TIX H2BCD9+1,4,1                                                 CTTS0364
+H2BCDK TXL **                FINAL RETURN                               CTTS0365
+H2BCDE HTR 6                                                            CTTS0366
+H2BCDF HTR 12                                                           CTTS0367
+H2BCDG DEC 3                                                            CTTS0368
+H2BCDA OCT 111111,101010,070707,060606,050505                           CTTS0369
+       OCT 040404,030303,020202,010101                                  CTTS0370
+H2BCDB OCT 606060,404040,202020                                         CTTS0371
+H2BCDC OCT 7777777,777700,770077,770000,7777,7700,77,0                  CTTS0372
+H2BCDD PZE                                                              CTTS0373
+****** REM *************************************************************CTTS0374
+ TSPCV CAL LSTOP             TEST FOR STOP CONVERSION                   CTTS0375
+       TXL *+2                                                          CTTS0376
+ TSTCV CAL LSTRT             TEST FOR START CONVERSION                  CTTS0377
+       SLW COMMON                                                       CTTS0378
+       STA TSTSP                                                        CTTS0379
+       LXD D12,1                                                        CTTS0380
+       CLA COMMON+40,1       LEFT ROW                                   CTTS0381
+ TSTSP CAS **,1                                                         CTTS0382
+       TRA 1,4                                                          CTTS0383
+       TXL *+2                                                          CTTS0384
+       TRA 1,4                                                          CTTS0385
+       CLA COMMON+52,1       RIGHT ROW                                  CTTS0386
+       CAS ZERO                                                         CTTS0387
+       TRA 1,4                                                          CTTS0388
+       TXL *+2                                                          CTTS0389
+       TRA 1,4                                                          CTTS0390
+       TIX TSTSP-1,1,1                                                  CTTS0391
+       CAL COMMON                                                       CTTS0392
+       STP CRSW2                                                        CTTS0393
+       TXL HOLL                                                         CTTS0394
+ LSTOP TXL SPCV                                                         CTTS0395
+ LSTRT TXH STCV                                                         CTTS0396
+ EOF   TXL EOF1                                                         CTTS0397
+       TSX SETH,4                                                       CTTS0398
+ TS1   WEF STAPE                                                        CTTS0399
+ EOFSW TXL *+4               TEST FOR USE OF BTAPE                      CTTS0400
+ TB1   WEF BTAPE                                                        CTTS0401
+       CLS *-2                                                          CTTS0402
+       STO *-3                                                          CTTS0403
+       LXD X4,4                                                         CTTS0404
+ END   LXD X1,1                                                         CTTS0405
+       LXD X2,2                                                         CTTS0406
+       TRA 4,4                                                          CTTS0407
+ EOF1  LXD X4,4              GIVE EMPTY RETURN                          CTTS0408
+       TXI END,4,-1                                                     CTTS0409
+ FIRST CLA *+2               SET COL. 73-78 FOR COLUMN BINARY           CTTS0410
+       TXL RTCR                                                         CTTS0411
+       PZE RTCR+1,,*+1                                                  CTTS0412
+       REM SET UP FOR FIRST RETURN                                      CTTS0413
+       LXD X4,2                                                         CTTS0414
+       LXD MTHTI,4                                                      CTTS0415
+       TRA 2,2                                                          CTTS0416
+ 97BT  DEC 5B11              9,7 BITS                                   CTTS0417
+ LHBB  OCT 777777770000,5,100050004 LOOK A HEAD BINARY-BINARY           CTTS0418
+ LHHB  OCT 777700000000,11110707 LOOK A HEAD HOL.-BINARY                CTTS0419
+ LHBH  OCT 4,10000           LOOK A HEAD BIN-HOL                        CTTS0420
+ LHHH  BCD 100               LOOK A HEAD HOL-HOL                        CTTS0421
+       OCT 40120000000,,,2010000000,1604000000,,224000000000            CTTS0422
+       OCT -40000000,100000000000,620440000000,43114000000,104220000000 CTTS0423
+ STCV  SYN *                 START CONVERSION                           CTTS0424
+       OCT 240000000,,40000000000,104020000000,3410000000               CTTS0425
+       OCT ,210000000000,-100000000,,601100000000,146230000000          CTTS0426
+       OCT 10440000000                                                  CTTS0427
+ SPCV  SYN *                 STOP CONVERSION                            CTTS0428
+ ZERO  SYN SPCV-4                                                       CTTS0429
+ 2FLAG OCT 171717171717      TWO CARD HOLLERITH FLAG                    CTTS0430
+ IM26  OCT 100010000000                                                 CTTS0431
+ TAPED OCT 200,220,320       TAPE ADDRESS FORMERS                       CTTS0432
+ MTHTI PZE ,,-THTI                                                      CTTS0433
+ BLANK BCD 1                                                            CTTS0434
+ BUMP  OCT 1777                                                         CTTS0435
+       END GO-2                                                         CTTS0436

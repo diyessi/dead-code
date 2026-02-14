@@ -1,0 +1,313 @@
+*                                       MTTR                                0001
+*                            MULTIPLE TAPE TEST ROUTINE                     0002
+*                                                                           0003
+*                                                                           0004
+*              NUMBER OF UNITS TO TEST ON CHNL A GOES IN KEYS 14-17.        0005
+*              NUMBER OF UNITS TO TEST ON CHNL B GOES IN KEYS 32-35.        0006
+*                                                                           0007
+*              ALARMS WILL PRINT ONLINE AND THE UNITS CAUSING THEM          0008
+*              WILL EITHER STOP OR REWIND,OTHER UNITS WILL CONTINUE.        0009
+*                                                                           0010
+*              TO CONTINUE TESTING UNIT WHICH HAS REWOUND OR CAUSED         0011
+*              AN ALARM,PUT ITS NUMBER IN KEYS 14-17 OR 32-35 AS            0012
+*              PER CHNL.THEN PUT SS1 ON UNTIL UNIT IS WRITTEN ON.           0013
+*                                                                           0014
+*              TO REWIND A TAPE WHICH IS MOVING FORWARD, PUT ITS            0015
+*              NUMBER IN THE KEYS 14-17 OR 32-35 AS PER CHANNEL.            0016
+*              THEN PUT SS6 ON UNTIL THE UNIT REWINDS.                      0017
+*                                                                           0018
+*              THE ONLINE PRINTER CARRIAGE CONTROL TAPE MUST HAVE SOME      0019
+*                            TYPE OF PUNCH IN CHANNEL 2.                    0020
+*                                                                           0021
+*              UNITS ON EACH CHANNEL MUST BE NUMBERED CONSECUTIVELY         0022
+*                                  FROM ONE UP.                             0023
+*                                                                           0024
+*                                                                           0025
+ LOAD  IOCD    GO,,-1             LOAD BINARY DECK                          0026
+       TCOA    1                                                            0027
+       TRA     GO                                                           0028
+ GO    TRCA    *+1                TURN OFF TAPE CHECK INDICATORS            0029
+       TRCB    *+1                                                          0030
+       SWT     1                  IF ON,RETEST A HALTED UNIT                0031
+       TRA     *+2                SS1 OFF                                   0032
+       TRA     BCHNL-4            SS1 ON                                    0033
+       CLA     FILLA              SET UP TAPE CHECK TRAP LOCATIONS          0034
+       STO     11                                                           0035
+       CLA     FILLB                                                        0036
+       STO     13                                                           0037
+       CLA     WORD               SET UP WRITE TAPE AREA                    0038
+       AXT     50,4                                                         0039
+       STO     BLOCK+50,4                                                   0040
+       TIX     *-1,4,1                                                      0041
+       AXT     11,4               SET UNIT TEST AREAS TO ZERO               0042
+       STZ     AX+11,4                                                      0043
+       STZ     BX+11,4                                                      0044
+       TIX     *-2,4,1                                                      0045
+       ENK                        PICK UP NUM. OF UNITS                     0046
+       XCA                        NUM. TO AC                                0047
+       PDC     ,1                                                           0048
+       PAC     ,2                                                           0049
+       PXA     ,0                 CLEAR AC                                  0050
+       ENB     TCKAB              ENABLE TRAPS                              0051
+       TXL     *+2,1,0            COMPUTE CHANNEL IDENTIFIER                0052
+       CLA     ONE                                                          0053
+       TXL     *+2,2,0                                                      0054
+       ADD     TWO                                                          0055
+       PAX     ,4                 CHNL IDENT. TO XR4                        0056
+       SXD     UNITS,1            SAVE ORIGINAL NUM. OF UNITS,COMP.         0057
+       SXA     UNITS,2                                                      0058
+       ETTA                       TURN OFF INDICATORS                       0059
+       NOP                                                                  0060
+       ETTB                                                                 0061
+       NOP                                                                  0062
+       TXL     OUT,4,0            NO UNIT ASSIGNED                          0063
+       TXH     ACHNL,4,2          CHNL A AND B                              0064
+       TXH     BCHNL,4,1          AT LEAST CHNL B                           0065
+ ACHNL SXA     FILLX,4            SAVE XR4                                  0066
+       TSX     TEST2,4            TO ACTIVE CHANNEL TEST                    0067
+       XEC     FILLX              RESTORE XR4                               0068
+       ETTA                                                                 0069
+       TRA     ROUTA              EOT                                       0070
+       TCOA    *-2                NO EOT                                    0071
+       PXD     ,0                 TEST FOR ACTIVE UNIT                      0072
+       PXD     ,1                                                           0073
+       SUB     AX,1                                                         0074
+       TZE     *+4                INACTIVE                                  0075
+       WTBA    0,1                WRITE TAPE                                0076
+       RCHA    COM1                                                         0077
+       SXD     LAST,1             SAVE COMP.NUM. OF LAST TAPE WRITTEN ON    0078
+       TXI     *+1,1,1            INCREASE COMP.                            0079
+       TXH     *+2,1,0            COMP. DOES NOT=0                          0080
+       LXD     UNITS,1            COMP.=0, RESTORE ORIGINAL COUNT COMP.     0081
+       SXA     *+2,4              SAVE XR                                   0082
+       TSX     TEST,4             TO SS1 TEST                               0083
+       AXT     **0,4              RESTORE XR                                0084
+       TRA     ACHNL-1            TRY BCHNL                                 0085
+ BCHNL SXA     FILLX,4            SAVE XR                                   0086
+       TSX     TEST2,4            TO ACTIVE CHANNEL TEST                    0087
+       XEC     FILLX              RESTORE XR                                0088
+       ETTB                                                                 0089
+       TRA     ROUTB              EOT                                       0090
+       TCOB    *-2                NO EOT                                    0091
+       PXA     ,0                                                           0092
+       PXA     ,2                 TEST FOR ACTIVE UNIT                      0093
+       SUB     BX,2                                                         0094
+       TZE     *+4                INACTIVE                                  0095
+       WTBB    0,2                WRITE TAPE                                0096
+       RCHB    COM1                                                         0097
+       SXA     LAST,2             SAVE COMP NUM OF LAST TAPE WRITTEN ON     0098
+       TXI     *+1,2,1            INCREASE COMP                             0099
+       TXH     *+2,2,0            XR NOT =0                                 0100
+       LXA     UNITS,2            XR =0, RESTORE ORIGINAL COUNT COMP.       0101
+       SXA     *+2,4                                                        0102
+       TSX     TEST,4             TO SS1 TEST                               0103
+       AXT     **0,4                                                        0104
+       TRA     ACHNL-2            TRY ACHNL                                 0105
+ TEST  SWT     1                                                            0106
+       TRA     1,4                SS1 OFF                                   0107
+       TRA     ANEW               SS1 ON                                    0108
+ TPCKA OCT     76000001352        RESET DATA CHANNEL A                      0109
+       CRQ     0,,15              DELAY                                     0110
+       LXD     LAST,1             MAKE UNIT INACTIVE                        0111
+       PXD     ,1                                                           0112
+       STD     AX,1                                                         0113
+ MODA  SXA     HOLD,1             SAVE XR                                   0114
+       LAC     HOLD,1             LOAD TRUE NUM.                            0115
+       PXA     ,1                 FORM CARD IMAGE UNIT NUM                  0116
+       ALS     1                                                            0117
+       PAX     ,1                                                           0118
+       TXL     *+3,1,19           UNIT NOT A0                               0119
+       PXA     ,0                                                           0120
+       PAX     ,1                                                           0121
+       CLA     MASK                                                         0122
+       ORS     MESSA+18,1                                                   0123
+       WPDA                       PRINT ALARM                               0124
+       RCHA    COMA                                                         0125
+       TCOA    *                                                            0126
+       WPDA                                                                 0127
+       SPRA    2                  SPACE PAPER                               0128
+       TCOA    *                                                            0129
+       CAL     MASK               CLEAR CARD IMAGE UNIT NUM.                0130
+       COM                                                                  0131
+       ANS     MESSA+18,1                                                   0132
+       LXA     HOLD,1             RESTORE XR                                0133
+       XEC     FILLX              IN CASE TRAP OCCURED IN TSX,4 AREA.       0134
+       RCT                        POSSIBLE TAPE CHECK OTHER CHNL.           0135
+       ENB     TCKAB              RE-ENABLE                                 0136
+       TXI     BCHNL-6,1,1                                                  0137
+ TPCKB OCT     76000002352        RESET DATA CHANNEL B                      0138
+       CRQ     0,,15              DELAY                                     0139
+       LXA     LAST,2                                                       0140
+       PXA     ,2                                                           0141
+       STA     BX,2               MAKE UNIT INACTIVE                        0142
+ MODB  SXA     HOLD,2                                                       0143
+       LAC     HOLD,2             FORM CARD IMAGE UNIT NUM.                 0144
+       PXA     ,2                                                           0145
+       ALS     1                                                            0146
+       PAX     ,2                                                           0147
+       TXL     *+3,2,19           UNIT NOT B0                               0148
+       PXA     ,0                                                           0149
+       PAX     ,2                                                           0150
+       CLA     MASK                                                         0151
+       ORS     MESSB+18,2                                                   0152
+       WPDA                       PRINT ALARM                               0153
+       RCHA    COMB                                                         0154
+       TCOA    *                                                            0155
+       WPDA                       SPACE PAPER                               0156
+       SPRA    2                                                            0157
+       TCOA    *                                                            0158
+       CAL     MASK               CLEAR CARD IMAGE UNIT NUM.                0159
+       COM                                                                  0160
+       ANS     MESSB+18,2                                                   0161
+       LXA     HOLD,2                                                       0162
+       XEC     FILLX              IN CASE TRAP OCCURED IN TSX,4 AREA.       0163
+       RCT                        POSSIBLE TAPE CHECK OTHER CHNL.           0164
+       ENB     TCKAB              RE-ENABLE                                 0165
+       TXI     TEST-6,2,1                                                   0166
+ ANEW  ENK                        PICK UP INACTIVE UNIT NUM. IN MQ.         0167
+       PXD     ,4                 XR4 TO AC                                 0168
+       XCA                        SWITCH                                    0169
+       PDC     ,4                 UNIT NUM,CHNL A,TO XR4,COMP.              0170
+       TXL     *+3,4,0            XR=0                                      0171
+       TXL     *+2,4,-11          IGNORE ILLEGAL NUMBER                     0172
+       STZ     AX,4               MAKE UNIT ACTIVE                          0173
+       PAC     ,4                 UNIT NUM,CHNL B,TO XR4,COMP.              0174
+       TXL     *+3,4,0            XR=0                                      0175
+       TXL     *+2,4,-11          IGNORE ILLEGAL NUMBER                     0176
+       STZ     BX,4               MAKE UNIT ACTIVE                          0177
+       XCA                        SWITCH                                    0178
+       PDX     ,4                 RESTORE XR4                               0179
+       TRA     1,4                RETURN                                    0180
+ ROUTA SXA     *+13,1             REW AT EOT SUBROUTINE CHNL A              0181
+       LXD     LAST,1             LOAD LAST UNIT                            0182
+       OCT     76000001352        RDCA                                      0183
+       CRQ     0,,15              DELAY                                     0184
+       WPDA                       PRINT MESSAGE                             0185
+       RCHA    COM2                                                         0186
+       TCOA    *                                                            0187
+       WPDA                       SPACE PAPER                               0188
+       SPRA    2                                                            0189
+       TCOA    *                                                            0190
+       REWA    0,1                REW UNIT                                  0191
+       PXD     ,1                 MAKE UNIT INACTIVE                        0192
+       STD     AX,1                                                         0193
+       AXT     **0,1              RESTORE XR                                0194
+       ENB     TCKAB              RE-ENABLE                                 0195
+       TRA     ACHNL                                                        0196
+ ROUTB SXA     *+13,2             REWB AT EOT SUBROUTINE                    0197
+       LXA     LAST,2             LOAD LAST UNIT                            0198
+       OCT     76000002352        RDCB                                      0199
+       CRQ     0,,15              DELAY                                     0200
+       WPDA                       PRINT MESSAGE                             0201
+       RCHA    COM2                                                         0202
+       TCOA    *                                                            0203
+       WPDA                                                                 0204
+       SPRA    2                  SPACE PAPER                               0205
+       TCOA    *                                                            0206
+       REWB    0,2                REW UNIT                                  0207
+       PXA     ,2                 MAKE UNIT INACTIVE                        0208
+       STA     BX,2                                                         0209
+       AXT     **0,2              RESTORE XR                                0210
+       ENB     TCKAB              RE-ENABLE                                 0211
+       TRA     BCHNL                                                        0212
+ OUT   HPR     -1                 HPR 77777  NO ACTIVE UNITS                0213
+       TRA     GO                                                           0214
+ TEST2 SXA     MORE,1             SAVE XR1                                  0215
+       SWT     6                                                            0216
+       TRA     *+2                SS6 OFF                                   0217
+       TRA     REWA               SS6 ON, REWIND UNITS IN KEYS              0218
+       LXD     UNITS,1            LOAD NUM OF CHNL A UNITS COMP.            0219
+       TXL     CHB,1,0            XR1=0, TRY CHNL B.                        0220
+ ZETA  ZET     AX,1               XR1 NOT ZERO,LOOK FOR LOCATION=0          0221
+       TRA     NEXTA              LOC NOT=0, TRY NEXT LOC.                  0222
+       TRA     MORE               LOC=0,MEANS CHANNEL STILL ACTIVE.         0223
+ NEXTA TXI     *+1,1,1                                                      0224
+       TXH     ZETA,1,0                                                     0225
+ CHB   LXA     UNITS,1            TRY CHNL B                                0226
+       TXL     NEXTB+2,1,0        XR1=0                                     0227
+ ZETB  ZET     BX,1               XR1 NOT=0, LOOK FOR LOC=0                 0228
+       TRA     NEXTB              LOC NOT=0, TRY NEXT LOC.                  0229
+       TRA     MORE               LOC=0,CHNL STILL ACTIVE.                  0230
+ NEXTB TXI     *+1,1,1                                                      0231
+       TXH     ZETB,1,0                                                     0232
+       XEC     MORE               RESTORE XR1                               0233
+       XEC     FILLX              RESTORE XR4                               0234
+       TRA     OUT                NO ACTIVE CHNLS.                          0235
+ MORE  AXT     **0,1              CONTINUE                                  0236
+       TXH     *+2,1,0            IN CASE TRAP OCCURED IN BAD SPOT.         0237
+       LXD     UNITS,1            IN CASE TRAP OCCURED IN BAD SPOT.         0238
+       TXH     *+2,2,0            IN CASE TRAP OCCURED IN BAD SPOT.         0239
+       LXA     UNITS,2            IN CASE TRAP OCCURED IN BAD SPOT.         0240
+       TRA     1,4                                                          0241
+ REWA  ENK                                                                  0242
+       XCA                        UNITS TO REWIND TO AC                     0243
+       PDC     ,1                 CHNL A UNIT TO XR, COMP.                  0244
+       TXL     REWB,1,0           NO CHNL A UNIT TO REWIND                  0245
+       TXL     REWB,1,-11         ILLEGAL UNIT                              0246
+       ZET     AX,1                                                         0247
+       TRA     REWB               UNIT INACTIVE                             0248
+       REWA    0,1                REWIND UNIT                               0249
+       XCA                        SAVE UNIT NUM. ON CHNL B                  0250
+       PXD     ,1                                                           0251
+       STD     AX,1               MAKE UNIT INACTIVE                        0252
+       XCA                        CHNL B NUM. TO AC                         0253
+ REWB  PAC     ,1                 CHNL B NUM. TO XR, COMP.                  0254
+       TXL     TEST2+4,1,0        NO CHNL B UNIT                            0255
+       TXL     TEST2+4,1,-11      ILLEGAL UNIT                              0256
+       ZET     BX,1                                                         0257
+       TRA     TEST2+4            INACTIVE UNIT                             0258
+       REWB    0,1                                                          0259
+       PXA     ,1                                                           0260
+       STA     BX,1               MAKE UNIT INACTIVE                        0261
+       TRA     TEST2+4                                                      0262
+ FILLX AXT     **0,4                                                        0263
+ MESSA BSS     48                 CARD IMAGE CHNL A ALARM                   0264
+ MESSB BSS     48                 CARD IMAGE CHNL B ALARM                   0265
+ STOP  BSS     24                 CARD IMAGE EOT ALARM                      0266
+ AX    BSS     11                 TAPE ACTIVE TEST AREA                     0267
+ BX    BSS     11                 *                                         0268
+ BLOCK BSS     50                 WRITE TAPE BLOCK                          0269
+ TCKAB PZE     0,,3               TAPE CHECK TRAP Y LOC.                    0270
+ FILLA TRA     TPCKA                                                        0271
+ FILLB TRA     TPCKB                                                        0272
+ ONE   PZE     1                                                            0273
+ TWO   PZE     2                                                            0274
+ LAST  PZE                                                                  0275
+ MASK  PZE     0,1                CARD IMAGE MASK FOR UNIT NUM.             0276
+ HOLD  PZE                                                                  0277
+ UNITS PZE                                                                  0278
+ WORD  MTH     -1,7,-1                                                      0279
+ COMA  IOCD    MESSA,,48                                                    0280
+ COMB  IOCD    MESSB,,48                                                    0281
+ COM1  IOCD    BLOCK,,50                                                    0282
+ COM2  IOCD    STOP,,24                                                     0283
+ COM3  IOCP    MESSA,,48          READ ALARM CARDS COMMAND                  0284
+       IOCP    MESSB,,48                                                    0285
+       IOCD    STOP,,24                                                     0286
+ COM4  IOCP    LOAD,,24           PUNCH BINARY DECK COM.                    0287
+       IOCP    LOAD+24,,24                                                  0288
+       IOCP    LOAD+48,,24                                                  0289
+       IOCP    LOAD+72,,24                                                  0290
+       IOCP    LOAD+96,,24                                                  0291
+       IOCP    LOAD+120,,24                                                 0292
+       IOCP    LOAD+144,,24                                                 0293
+       IOCP    LOAD+168,,24                                                 0294
+       IOCP    LOAD+192,,24                                                 0295
+       IOCP    LOAD+216,,24                                                 0296
+       IOCP    LOAD+240,,24                                                 0297
+       IOCP    LOAD+264,,24                                                 0298
+       IOCP    LOAD+288,,24                                                 0299
+       IOCP    LOAD+312,,24                                                 0300
+       IOCP    LOAD+336,,24                                                 0301
+       IOCP    LOAD+360,,24                                                 0302
+       IOCP    LOAD+384,,24                                                 0303
+       IOCP    LOAD+408,,24                                                 0304
+       IOCD    LOAD+432,,12                                                 0305
+ READ  RCDA                       READ ALARM CARDS                          0306
+       RCHA    COM3                                                         0307
+ PUNCH WPUA                       PUNCH BINARY DECK                         0308
+       RCHA    COM4                                                         0309
+       TCOA    *                                                            0310
+       TRA     SYSTEM                                                       0311
+       END     READ                                                         0312
+                                                                            0313

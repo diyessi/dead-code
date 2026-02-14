@@ -1,0 +1,119 @@
+C     ANGLE SETTING PROGRAM FOR THE G E  SINGLE CRYSTAL ORIENTER        ERSCO000
+C                                                                       ERSCO001
+C     THE INPUT CARDS ARE READ IN THE FOLLOWING SEQUENCE ....           ERSCO002
+C     1)      JOB WITH 12A6                                             ERSCO003
+C     2)      CELL WITH 3F6.3,3F6.5                                     ERSCO004
+C     3)      WAVELENGTH,HMIN,HMAX,KMIN,KMAX,LMIN,LMAX,BRAVAIS          ERSCO005
+C             WITH FORMAT (F9.5, 6I3, A1)                               ERSCO006
+C                                                                       ERSCO007
+      DIMENSION A(3),COSA(6),SINA(6),COSAS(6),SINAS(6), AS(3) ,JOB(12)  ERSCO008
+      READ INPUT TAPE 5,1,JOB                                           ERSCO009
+1     FORMAT(12A6)                                                      ERSCO010
+      WRITE OUTPUT TAPE 6,1,JOB                                         ERSCO011
+      NPAGE=0                                                           ERSCO012
+      LINE=50                                                           ERSCO013
+      READ INPUT TAPE 5,2,(A(I),I=1,3),(COSA(I),I=1,3)                  ERSCO014
+2     FORMAT(3F6.3,3F6.5)                                               ERSCO015
+      DO 3 I=1,3                                                        ERSCO016
+      SINA(I)= SQRTF(1.-COSA(I)**2)                                     ERSCO017
+      SINA(I+3)=SINA(I)                                                 ERSCO018
+3     COSA(I+3)=COSA(I)                                                 ERSCO019
+      DO 4 I=1,3                                                        ERSCO020
+      COSAS(I)=(COSA(I+1)*COSA(I+2)-COSA(I))/(SINA(I+1)*SINA(I+2))      ERSCO021
+      SINAS(I)= SQRTF(1.-COSAS(I)**2)                                   ERSCO022
+4     SINAS(I+3)=SINAS(I)                                               ERSCO023
+      DO 5 I=1,3                                                        ERSCO024
+5     AS(I)=1./(A(I)*SINA(I+1)*SINAS(I+2))                              ERSCO025
+      X1=AS(1)                                                          ERSCO026
+      X2=AS(2)*COSAS(3)                                                 ERSCO027
+      X3=AS(3)*COSAS(2)                                                 ERSCO028
+      Y1=0.                                                             ERSCO029
+      Y2=AS(2)*SINAS(3)                                                 ERSCO030
+      Y3=-AS(3)*COSA(1)*SINAS(2)                                        ERSCO031
+      Z1=0.                                                             ERSCO032
+      Z2=0.                                                             ERSCO033
+      Z3=AS(3)*SINA(1)*SINAS(2)                                         ERSCO034
+      WRITE OUTPUT TAPE 6,8,(A(I),I=1,3),(COSA(I),I=1,3),(AS(I),I=1,3), ERSCO035
+     1                      (COSAS(I),I=1,3),X1,X2,X3,Y1,Y2,Y3,Z1,Z2,Z3 ERSCO036
+8     FORMAT(32H0   A, B, C, COSA, COSB, COSC = 3F10.3,3F10.5//38H0   A*ERSCO037
+     1, B*, C*, COSA*, COSB*, COSC* = 6F10.6//26H0   MATRIX RECIPROCAL CERSCO038
+     2ELL //(3(F13.5,2F10.5//))///)                                     ERSCO039
+      READ INPUT TAPE 5,6,WAVE,MINH,MAXH,MINK,MAXK,MINL,MAXL,BRAVS      ERSCO040
+6     FORMAT(F9.5,6I3,A1)                                               ERSCO041
+      CALL TYPE(BRAVS)                                                  ERSCO042
+      WRITE OUTPUT TAPE 6,7,WAVE,MINH,MAXH,MINK,MAXK,MINL,MAXL,BRAVS    ERSCO043
+7     FORMAT(15H0   WAVELENGTH F8.4,10H ANGSTROMS/28H0   LIMIT VALUES OFERSCO044
+     1 H, K, L  6I4/26H0   BRAVAIS LATTICE TYPE  A1)                    ERSCO045
+      WAVE = WAVE*.5                                                    ERSCO046
+      NH=MAXH-MINH+1                                                    ERSCO047
+      NK=MAXK-MINK+1                                                    ERSCO048
+      NL=MAXL-MINL+1                                                    ERSCO049
+      DO 100 III=1,NL                                                   ERSCO050
+      M3=MINL+III-1                                                     ERSCO051
+      IF(M3) 12,11,12                                                   ERSCO052
+11    M3=+0                                                             ERSCO053
+12    FL=M3                                                             ERSCO054
+      CL=FL*AS(3)                                                       ERSCO055
+      DO 100 II=1,NK                                                    ERSCO056
+      M2=MINK+II-1                                                      ERSCO057
+      IF(M2)14,13,14                                                    ERSCO058
+13    M2=+0                                                             ERSCO059
+14    FK=M2                                                             ERSCO060
+      BK=FK*AS(2)                                                       ERSCO061
+      DO 100 I=1,NH                                                     ERSCO062
+      M1=MINH+I-1                                                       ERSCO063
+      IF(M1) 16,15,16                                                   ERSCO064
+15    M1=+0                                                             ERSCO065
+16    FH=M1                                                             ERSCO066
+C                                                                       ERSCO067
+C      TEST FOR LATTICE EXTINCTION                                      ERSCO068
+C                                                                       ERSCO069
+       CALL EXTINC(M1,M2,M3,NXTNCT)                                     ERSCO070
+      IF(NXTNCT)   100,101,100                                          ERSCO071
+101   CONTINUE                                                          ERSCO072
+      AH=FH*AS(1)                                                       ERSCO073
+      DSTSQ=AH**2+BK**2+CL**2+2.*BK*CL*COSAS(1)+2.*AH*CL*COSAS(2)+      ERSCO074
+     1      2.*AH*BK*COSAS(3)                                           ERSCO075
+      SINTH=WAVE*SQRTF(DSTSQ)                                           ERSCO076
+      IF(SINTH-1.) 17,100,100                                           ERSCO077
+17    SSQTH=SINTH**2                                                    ERSCO078
+      D=(SQRTF(SSQTH*(1.-SSQTH)))/(1.-2.*SSQTH*(1.-SSQTH))              ERSCO079
+      TWOTH=2.*(90.-(SQRTF(1.-SINTH))*(1.5707288-SINTH*.2121144+        ERSCO080
+     1     SINTH*SINTH*.0742610-SINTH*SINTH*SINTH*.0187293)*57.2957795) ERSCO081
+      X=FH*X1+FK*X2+FL*X3                                               ERSCO082
+      Y=FK*Y2+FL*Y3                                                     ERSCO083
+      Z=FL*Z3                                                           ERSCO084
+      P=SQRTF(X*X+Y*Y)                                                  ERSCO085
+      Q=SQRTF(P*P+Z*Z)                                                  ERSCO086
+      T=ABSF(Z/Q)                                                       ERSCO087
+C     T = SINE CHI                                                      ERSCO088
+      S=ABSF(Y/P)                                                       ERSCO089
+C     S = SINE PHI                                                      ERSCO090
+      CHI=90.-(SQRTF(1.-T))*(1.5707288-T*.2121144+T*T*.0742610-         ERSCO091
+     1     T*T*T*.0187293)*57.2957795                                   ERSCO092
+      PHI=90.-(SQRTF(1.-S))*(1.5707288-S*.2121144+S*S*.0742610-         ERSCO093
+     1     S*S*S*.0187293)*57.2957795                                   ERSCO094
+      IF(X) 70,60,60                                                    ERSCO095
+60    IF(Y) 61,80,80                                                    ERSCO096
+61    PHI=360.-PHI                                                      ERSCO097
+      GO TO 80                                                          ERSCO098
+70    IF(Y) 71,76,76                                                    ERSCO099
+71    PHI=PHI+180.                                                      ERSCO100
+      GO TO 80                                                          ERSCO101
+76    PHI = 180.-PHI                                                    ERSCO102
+80     CONTINUE                                                         ERSCO103
+      IF(LINE-50) 50,49,49                                              ERSCO104
+49    LINE=0                                                            ERSCO105
+      NPAGE=NPAGE+1                                                     ERSCO106
+      WRITE OUTPUT TAPE 6,19,JOB,NPAGE                                  ERSCO107
+19    FORMAT(1H112A6,36X4HPAGEI5)                                       ERSCO108
+      WRITE OUTPUT TAPE 6, 18                                           ERSCO109
+18    FORMAT(100H0 H1  H2  H3    X       Y       Z        PHI     CHI   ERSCO110
+     12THETA    H1  H2  H3   1/LP                     //)               ERSCO111
+50    WRITE OUTPUT TAPE 6,20,M1,M2,M3,X,Y,Z,PHI,CHI,TWOTH,M1,M2,M3,D    ERSCO112
+20    FORMAT(3I4,3F8.4, F9.2,2F8.2,2X3I4,F9.5)                          ERSCO113
+      LINE=LINE+1                                                       ERSCO114
+100   CONTINUE                                                          ERSCO115
+C     RETURN TO MONITOR                                                 ERSCO116
+       CALL EXIT                                                        ERSCO117
+      END                                                               ERSCO118

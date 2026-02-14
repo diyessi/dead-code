@@ -1,0 +1,581 @@
+C     RADIATION CONFIGURATION FACTORS 1 (2781)                          27810001
+C     NO MORE THAN 20 SECTIONS MAY BE USED                              27810002
+C                                                                       27810003
+C     THE TOTAL NUMBER OF ELEMENTAL AREAS OR FLAT PLATES ON ALL SECTIONS27810004
+C     MUST NOT EXCEED 2800.                                             27810005
+C                                                                       27810006
+C     DATA CARDS SHOULD BE IN NUMERICAL ORDER BY SECTION NUMBER.        27810007
+C                                                                       27810008
+      COMMON A,ALAM1,ALAM2,ALAM3,TR2,XC,YC,ZC,ZERO,NM                   27810009
+      DIMENSION A(2800),ALAM1(2800),ALAM2(2800),ALAM3(2800),DPI(20),    27810010
+     1DRL(20),DX0(20),DYA(20),DY0(20),DZ0(20),ICD(20),IICB(20),IICE(20),27810011
+     2IIRB(20),IIRE(20),ISS(20),KEM(20),KSH(20),KRE(20),PIT(20),ROL(20),27810012
+     3SUMA(20),SWITCH(20),TR2(2800),XC(2800),X0(20),YAW(20),YC(2800),   27810013
+     4Y0(20),Z0(20),ZC(2800),TMS(3,3,20),NM(20),     ISS1(20),ISS2(20)  27810014
+      DEFINE TM(3,3),VALAM(3),VC(3),VCOM(3),VER(3),VLE1(3),VLR1(3),     27810015
+     1AMT(3,3),BMT(3,3)                                                 27810016
+      PI=3.14159265                                                     27810017
+      RAD=57.2957795                                                    27810018
+      WRITE OUTPUT TAPE 6,5                                             27810019
+   5  FORMAT (40X,40HRADIATION CONFIGURATION FACTORS 1 (2781)//86H EMITT27810020
+     1ER CONFIGURATION FACTOR- THE CONFIGURATION FACTOR OF THE EMITTER T27810021
+     2O THE RECEIVER/86H RECEIVER CONFIGURATION FACTOR-THE CONFIGURATION27810022
+     3 FACTOR OF THE RECEIVER TO THE EMITTER/1X)                        27810023
+      READ INPUT TAPE 5,19,PRINT                                        27810024
+C                                 READ SPECIFICATION CARD               27810025
+   6  READ INPUT TAPE 5,7,L,TE,TR                                       27810026
+   7  FORMAT (I10,2F10.0)                                               27810027
+      WRITE OUTPUT TAPE 6,8,L,TE,TR                                     27810028
+   8  FORMAT (////3H L=I2,7H    TE=1PE12.6,7H    TR=E12.6)              27810029
+C                                                                       27810030
+C                                 COMPUTE CONFIGURATION INFORMATION     27810031
+      KSHF=0                                                            27810032
+      DO 636 IX=1,L                                                     27810033
+      READ INPUT TAPE 5,10,IS,ICD(IX),AM,IIRB(IX),IIRE(IX),AN,IICB(IX), 27810034
+     1IICE(IX),KEM(IX),KSH(IX),KRE(IX)                                  27810035
+  10  FORMAT (2I5,F5.0,2I5,F5.0,5I5)                                    27810036
+  106 IF(IS-IX)107,109,107                                              27810037
+  107 WRITE OUTPUT TAPE 6,108,IX,IS                                     27810038
+  108 FORMAT (15H0SECTION NUMBER,I3,12H IS NUMBEREDI3)                  27810039
+      GO TO 85                                                          27810040
+  109 KSHF=KSHF+KSH(IS)                                                 27810041
+      M=AM                                                              27810042
+      N=AN                                                              27810043
+      WRITE OUTPUT TAPE 6,11,IS,M,IIRB(IS),IIRE(IS),N,IICB(IS),IICE(IS),27810044
+     1KEM(IS),KSH(IS),KRE(IS)                                           27810045
+  11  FORMAT (4H0SEC,I2,I5,5H ROWS,12H   FIRST ROW,I4,11H   LAST ROW,I4,27810046
+     1I6,6H COLS.,15H   FIRST COLUMN,I4,14H   LAST COLUMN,I4,7H   KEM=I127810047
+     2,7H   KSH=I1,7H   KRE=I1)                                         27810048
+      IRB=IIRB(IS)                                                      27810049
+      IRE=IIRE(IS)                                                      27810050
+      ICB=IICB(IS)                                                      27810051
+      ICE=IICE(IS)                                                      27810052
+      M=IRE-IRB+1                                                       27810053
+      N=ICE-ICB+1                                                       27810054
+      IF(FLOATF(M)-AM)14,14,12                                          27810055
+  12  WRITE OUTPUT TAPE 6,13,IS                                         27810056
+  13  FORMAT (45H0THERE ARE TOO MANY ROWS SPECIFIED ON SECTION,I2)      27810057
+      GO TO 85                                                          27810058
+  14  IF(FLOATF(N)-AN)17,17,15                                          27810059
+  15  WRITE OUTPUT TAPE 6,16,IS                                         27810060
+  16  FORMAT (48H0THERE ARE TOO MANY COLUMNS SPECIFIED ON SECTION,I2)   27810061
+      GO TO 85                                                          27810062
+  17  NM(IS)=NM(IS-1)+N*M                                               27810063
+      SUMA(IS)=0.                                                       27810064
+      K=ICD(IS)                                                         27810065
+      GO TO (18,22,25,31,42,45,48,54),K                                 27810066
+C                                                                       27810067
+C                                 CYLINDER CONFIGURATION(1)             27810068
+  18  READ INPUT TAPE 5,19,R,AL                                         27810069
+  19  FORMAT (7F10.0)                                                   27810070
+      WRITE OUTPUT TAPE 6,20,R,AL                                       27810071
+  20  FORMAT (24H CYLINDER        RADIUS=1PE12.6,14H       LENGTH=E12.6)27810072
+      OVM=2.*PI/AM                                                      27810073
+      AREA=OVM*R/AN*AL                                                  27810074
+      TESTR2=((OVM*R)**2+(AL/AN)**2)/4.                                 27810075
+      DO 21 I=IRB,IRE                                                   27810076
+      PHI=OVM*(FLOATF(I)-.5)                                            27810077
+      SINP=SINF(PHI)                                                    27810078
+      COSP=COSF(PHI)                                                    27810079
+      DO 21 J=ICB,ICE                                                   27810080
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810081
+      ALAM1(INDEX)=0.                                                   27810082
+      ALAM2(INDEX)=SINP                                                 27810083
+      ALAM3(INDEX)=COSP                                                 27810084
+      XC(INDEX)=AL/AN*(FLOATF(J)-.5)                                    27810085
+      YC(INDEX)=R*SINP                                                  27810086
+      ZC(INDEX)=R*COSP                                                  27810087
+      TR2(INDEX)=TESTR2                                                 27810088
+  21  A(INDEX)=AREA                                                     27810089
+      SUMA(IS)=FLOATF(N*M)*AREA                                         27810090
+      GO TO 63                                                          27810091
+C                                 CONE CONFIGURATION(2)                 27810092
+  22  READ INPUT TAPE 5,19,R,AL                                         27810093
+      WRITE OUTPUT TAPE 6,23,R,AL                                       27810094
+  23  FORMAT (24H CONE            RADIUS=1PE12.6,14H       LENGTH=E12.6)27810095
+      SIDE=SQRTF(R**2+AL**2)                                            27810096
+      COSCON=AL/SIDE                                                    27810097
+      SINCON=-R/SIDE                                                    27810098
+      OVM=2.*PI/AM                                                      27810099
+      COM2=R/AN*OVM/2.                                                  27810100
+      COM3=SIDE/AN*R/AN*OVM                                             27810101
+      COM4=(SIDE/AN/2.)**2                                              27810102
+      DO 24 I=IRB,IRE                                                   27810103
+      PHI=OVM*(FLOATF(I)-.5)                                            27810104
+      SINP=SINF(PHI)                                                    27810105
+      COSP=COSF(PHI)                                                    27810106
+      DO 24 J=ICB,ICE                                                   27810107
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810108
+      ALAM1(INDEX)=SINCON                                               27810109
+      ALAM2(INDEX)=COSCON*SINP                                          27810110
+      ALAM3(INDEX)=COSCON*COSP                                          27810111
+      FJ=FLOATF(J)                                                      27810112
+      XC(INDEX)=AL/AN*(FJ-.5)                                           27810113
+      YC(INDEX)=XC(INDEX)/AL*R*SINP                                     27810114
+      ZC(INDEX)=XC(INDEX)/AL*R*COSP                                     27810115
+      TR2(INDEX)=COM4+(COM2*FJ)**2                                      27810116
+      A(INDEX)=COM3*(FJ-.5)                                             27810117
+  24  SUMA(IS)=SUMA(IS)+A(INDEX)                                        27810118
+      GO TO 63                                                          27810119
+C                                 SPHERE CONFIGURATION(3)               27810120
+  25  READ INPUT TAPE 5,19,R                                            27810121
+      WRITE OUTPUT TAPE 6,26,R                                          27810122
+  26  FORMAT (24H SPHERE          RADIUS=1PE12.6)                       27810123
+      OVM=PI/AN                                                         27810124
+      COM1=(OVM*R)**2                                                   27810125
+      COM2=2.*PI/AM                                                     27810126
+      DO 30 J=ICB,ICE                                                   27810127
+      FJ=FLOATF(J)                                                      27810128
+      IF(KSH(IS))267,291,267                                            27810129
+  267 IF(J-XFIXF(AN)/2)27,27,28                                         27810130
+  27  PSI=OVM*FJ                                                        27810131
+      GO TO 29                                                          27810132
+  28  PSI=OVM*(FJ-1.)                                                   27810133
+  29  TESTR2=(COM1+(COM2*R*SINF(PSI))**2)/4.                            27810134
+  291 PSI=OVM*(FJ-.5)                                                   27810135
+      SINPSI=SINF(PSI)                                                  27810136
+      AREA=OVM*COM2*R*R*SINPSI                                          27810137
+      SUMA(IS)=SUMA(IS)+FLOATF(M)*AREA                                  27810138
+      DO 30 I=IRB,IRE                                                   27810139
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810140
+      PHI=OVM*(FLOATF(I)-.5)                                            27810141
+      ALAM1(INDEX)=SINPSI*COSF(PHI)                                     27810142
+      ALAM2(INDEX)=SINPSI*SINF(PHI)                                     27810143
+      ALAM3(INDEX)=COSF(PSI)                                            27810144
+      XC(INDEX)=R*ALAM1(INDEX)                                          27810145
+      YC(INDEX)=R*ALAM2(INDEX)                                          27810146
+      ZC(INDEX)=R*ALAM3(INDEX)                                          27810147
+      TR2(INDEX)=TESTR2                                                 27810148
+  30  A(INDEX)=AREA                                                     27810149
+      GO TO 63                                                          27810150
+C                                 ELLIPSOID CONFIGURATION(4)            27810151
+  31  READ INPUT TAPE 5,19,SMOLLA,B                                     27810152
+      WRITE OUTPUT TAPE 6,32,SMOLLA,B                                   27810153
+  32  FORMAT (24H ELLIPSOID            A=1PE12.6,14H            B=E12.6)27810154
+      COM1=4.*PI/AM*SMOLLA/AN*B                                         27810155
+      COM2=2.*PI/AN                                                     27810156
+      DO 41 I=IRB,IRE                                                   27810157
+      COY=FLOATF(2*I-1)/AM-1.                                           27810158
+      SIY=SQRTF(1.-COY**2)                                              27810159
+      TANU=SMOLLA/B*SIY/COY                                             27810160
+      COSU=1./SQRTF(TANU**2+1.)                                         27810161
+      IF(COY)35,36,36                                                   27810162
+  35  COSU=-COSU                                                        27810163
+  36  SINU=COSU*TANU                                                    27810164
+      AREA=COM1*SIY/SINU                                                27810165
+  360 FI=FLOATF(I)                                                      27810166
+      IF(KSH(IS))361,40,361                                             27810167
+  361 IF(I-XFIXF(AM)/2)37,37,38                                         27810168
+  37  X=SMOLLA/AM*FI*2.                                                 27810169
+      GO TO 39                                                          27810170
+  38  X=2.*SMOLLA/AM*(FI-1.)                                            27810171
+  39  Y=B*SQRTF((X/SMOLLA)*(2.-(X/SMOLLA)))                             27810172
+      TESTR2=((Y*COM2/2.)**2+(SMOLLA/AM/SINU)**2)                       27810173
+  40  X=2.*SMOLLA/AM*(FI-.5)                                            27810174
+      Y=B*SQRTF((X/SMOLLA)*(2.-(X/SMOLLA)))                             27810175
+      DO 41 J=ICB,ICE                                                   27810176
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810177
+      PHI=COM2*(FLOATF(J)-.5)                                           27810178
+      SINP=SINF(PHI)                                                    27810179
+      COSP=COSF(PHI)                                                    27810180
+      ALAM1(INDEX)=COSU                                                 27810181
+      ALAM2(INDEX)=SINU*SINP                                            27810182
+      ALAM3(INDEX)=SINU*COSP                                            27810183
+      XC(INDEX)=X                                                       27810184
+      YC(INDEX)=Y*SINP                                                  27810185
+      ZC(INDEX)=Y*COSP                                                  27810186
+      TR2(INDEX)=TESTR2                                                 27810187
+      A(INDEX)=AREA                                                     27810188
+  41  SUMA(IS)=SUMA(IS)+A(INDEX)                                        27810189
+      GO TO 63                                                          27810190
+C                                 FLAT PLATE CONFIGURATION(5)           27810191
+C                                                                       27810192
+C     THE VECTOR REPRESENTING THE FLAT PLATE CONFIGURATION POINTS IN THE27810193
+C     +Z DIRECTION, UNLESS SWITCH=-1.                                   27810194
+C                                                                       27810195
+  42  READ INPUT TAPE 5,19,AL,W                                         27810196
+      WRITE OUTPUT TAPE 6,43,AL,W                                       27810197
+  43  FORMAT (24H FLAT PLATE      LENGTH=1PE12.6,14H        WIDTH=E12.6)27810198
+      TESTR2=((AL/AM)**2+(W/AN)**2)/4.                                  27810199
+      AREA=AL/AM*W/AN                                                   27810200
+      DO 44 I=IRB,IRE                                                   27810201
+      DO 44 J=ICB,ICE                                                   27810202
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810203
+      ALAM1(INDEX)=0.                                                   27810204
+      ALAM2(INDEX)=0.                                                   27810205
+      ALAM3(INDEX)=1.                                                   27810206
+      XC(INDEX)=AL/AM*(FLOATF(I)-.5)                                    27810207
+      YC(INDEX)=W/AN*(FLOATF(J)-.5)                                     27810208
+      ZC(INDEX)=0.                                                      27810209
+      TR2(INDEX)=TESTR2                                                 27810210
+  44  A(INDEX)=AREA                                                     27810211
+      SUMA(IS)=FLOATF(N*M)*AREA                                         27810212
+      GO TO 63                                                          27810213
+C                                 DISK CONFIGURATION(6)                 27810214
+C                                                                       27810215
+C     THE VECTOR REPRESENTING THE DISK CONFIGURATION POINTS IN THE +Z   27810216
+C     DIRECTION, UNLESS SWITCH=-1.                                      27810217
+C                                                                       27810218
+  45  READ INPUT TAPE 5,19,R                                            27810219
+      WRITE OUTPUT TAPE 6,46,R                                          27810220
+  46  FORMAT (24H DISK            RADIUS=1PE12.6)                       27810221
+      COM2=(R/2./AN)**2                                                 27810222
+      COM3=2.*PI/AM*R/AN                                                27810223
+      DO 47 I=IRB,IRE                                                   27810224
+      PHI=2.*PI/AM*(FLOATF(I)-.5)                                       27810225
+      SINP=SINF(PHI)                                                    27810226
+      COSP=COSF(PHI)                                                    27810227
+      DO 47 J=ICB,ICE                                                   27810228
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810229
+      ALAM1(INDEX)=0.                                                   27810230
+      ALAM2(INDEX)=0.                                                   27810231
+      ALAM3(INDEX)=1.                                                   27810232
+      FJ=FLOATF(J)                                                      27810233
+      COM1=R/AN*(FJ-.5)                                                 27810234
+      XC(INDEX)=COM1*COSP                                               27810235
+      YC(INDEX)=COM1*SINP                                               27810236
+      ZC(INDEX)=0.                                                      27810237
+      A(INDEX)=COM1*COM3                                                27810238
+      SUMA(IS)=SUMA(IS)+A(INDEX)                                        27810239
+  47  TR2(INDEX)=(PI/AM*R/AN*FJ)**2+COM2                                27810240
+      GO TO 63                                                          27810241
+C                                 TOROID CONFIGURATION(7)               27810242
+  48  READ INPUT TAPE 5,19,SR,R                                         27810243
+      WRITE OUTPUT TAPE 6,49,SR,R                                       27810244
+  49  FORMAT (24H TOROID    SMALL RADIUS=1PE12.6,14H LARGE RADIUS=E12.6)27810245
+      COM1=4.*PI**2*SR/AN/AM                                            27810246
+      COM2=(PI/AM*SR)**2                                                27810247
+      DO 53 J=ICB,ICE                                                   27810248
+      PHI=2.*PI/AN*(FLOATF(J)-.5)                                       27810249
+      SINP=SINF(PHI)                                                    27810250
+      COSP=COSF(PHI)                                                    27810251
+      DO 53 I=IRB,IRE                                                   27810252
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810253
+      FI=FLOATF(I)                                                      27810254
+      PSI=2.*PI/AM*(FI-.5)                                              27810255
+      COSPSI=COSF(PSI)                                                  27810256
+      ALAM1(INDEX)=COSPSI*COSP                                          27810257
+      ALAM2(INDEX)=COSPSI*SINP                                          27810258
+      ALAM3(INDEX)=SINF(PSI)                                            27810259
+      XC(INDEX)=COSP*(R+SR*COSPSI)                                      27810260
+      YC(INDEX)=SINP*(R+SR*COSPSI)                                      27810261
+      ZC(INDEX)=SR*ALAM3(INDEX)                                         27810262
+      A(INDEX)=COM1*(R+SR*COSPSI)                                       27810263
+      SUMA(IS)=SUMA(IS)+A(INDEX)                                        27810264
+      IF(KSH(IS))491,53,491                                             27810265
+  491 IF(I-XFIXF(AM)/2)51,51,50                                         27810266
+  50  PSI=2.*PI/AM*FI                                                   27810267
+      GO TO 52                                                          27810268
+  51  PSI=2.*PI/AM*(FI-1.)                                              27810269
+  52  TR2(INDEX)=COM2+(PI/AN*(R+SR*COSPSI))**2                          27810270
+  53  CONTINUE                                                          27810271
+      GO TO 63                                                          27810272
+C                              POLYNOMIAL OF REVOLUTION CONFIGURATION(8)27810273
+  54  READ INPUT TAPE 5,19,AL,A0,A1,A2,A3,A4,A5                         27810274
+      WRITE OUTPUT TAPE 6,55,AL,A0,A1,A2,A3,A4,A5                       27810275
+  55  FORMAT (24H POLYNOMIAL      LENGTH=1PE12.6/4H A0=E13.6,5H  A1=    27810276
+     1E13.6,5H  A2=E13.6,5H  A3=E13.6,5H  A4=E13.6,5H  A5=E13.6)        27810277
+      OVM=2.*PI/AM                                                      27810278
+      X=AL/AN*FLOATF(ICB-1)                                             27810279
+      PR=A0+A1*X+A2*X**2+A3*X**3+A4*X**4+A5*X**5                        27810280
+      DO 62 J=ICB,ICE                                                   27810281
+      FJ=FLOATF(J)                                                      27810282
+      X=AL/AN*FJ                                                        27810283
+      R=A0+A1*X+A2*X**2+A3*X**3+A4*X**4+A5*X**5                         27810284
+      IF(R-PR)57,56,57                                                  27810285
+  56  SINPSI=1.                                                         27810286
+      COSPSI=0.                                                         27810287
+      GO TO 58                                                          27810288
+  57  TANPSI=AL/AN/(PR-R)                                               27810289
+      COSPSI=1./SQRTF(1.+TANPSI**2)                                     27810290
+      IF(TANPSI)571,572,572                                             27810291
+  571 COSPSI=-COSPSI                                                    27810292
+  572 SINPSI=TANPSI*COSPSI                                              27810293
+  58  COM1=(OVM*PR)**2                                                  27810294
+      COM2=(OVM*R)**2                                                   27810295
+      COM3=(AL/AN)**2+(R-PR)**2                                         27810296
+      IF(R-PR)59,60,60                                                  27810297
+  59  TESTR2=(COM1+COM3)/4.                                             27810298
+      GO TO 61                                                          27810299
+  60  TESTR2=(COM2+COM3)/4.                                             27810300
+  61  PR=R                                                              27810301
+      X=AL/AN*(FJ-.5)                                                   27810302
+      R=A0+A1*X+A2*X**2+A3*X**3+A4*X**4+A5*X**5                         27810303
+      AREA=OVM*R*SQRTF(COM3)                                            27810304
+      SUMA(IS)=SUMA(IS)+AREA*FLOATF(M)                                  27810305
+      DO 62 I=IRB,IRE                                                   27810306
+      INDEX=NM(IS-1)+N*(I-IRB)+J-ICB+1                                  27810307
+      PHI=OVM*(FLOATF(I)-.5)                                            27810308
+      SINP=SINF(PHI)                                                    27810309
+      COSP=COSF(PHI)                                                    27810310
+      ALAM1(INDEX)=COSPSI                                               27810311
+      ALAM2(INDEX)=SINPSI*COSP                                          27810312
+      ALAM3(INDEX)=SINPSI*SINP                                          27810313
+      XC(INDEX)=X                                                       27810314
+      YC(INDEX)=R*COSP                                                  27810315
+      ZC(INDEX)=R*SINP                                                  27810316
+      TR2(INDEX)=TESTR2                                                 27810317
+  62  A(INDEX)=AREA                                                     27810318
+  63  IF(IRE-XFIXF(AM))633,633,631                                      27810319
+  631 WRITE OUTPUT TAPE 6,632,IS                                        27810320
+  632 FORMAT (26H0IRE EXCEEDS AM ON SECTION,I3)                         27810321
+      GO TO 85                                                          27810322
+  633 IF(ICE-XFIXF(AN))636,636,634                                      27810323
+  634 WRITE OUTPUT TAPE 6,635,IS                                        27810324
+  635 FORMAT (26H0ICE EXCEEDS AN ON SECTION,I3)                         27810325
+      GO TO 85                                                          27810326
+  636 CONTINUE                                                          27810327
+      IF(NM(L)-2800)639,639,637                                         27810328
+  637 WRITE OUTPUT TAPE 6,638                                           27810329
+  638 FORMAT (69H0THERE ARE MORE THAN 2800 FLAT PLATES CONSIDERED ON ALL27810330
+     1 THE SECTIONS.)                                                   27810331
+      GO TO 85                                                          27810332
+  639 IDC=0                                                             27810333
+  64  NMIX=0                                                            27810334
+      READ INPUT TAPE 5,10,IFLAG,NMI                                    27810335
+      IF(NMI)651,656,651                                                27810336
+C                               READ TRANSFORMATION INCREMENTATION CARDS27810337
+  651 DO 6511 IS=1,L                                                    27810338
+ 6511 ISS(IS)=IS                                                        27810339
+      DO 6533 IX=1,L                                                    27810340
+  652 READ INPUT TAPE 5,653,IS,(DPI(IS),DYA(IS),DRL(IS),DX0(IS),DY0(IS),27810341
+     1DZ0(IS))                                                          27810342
+  653 FORMAT (I10,6F10.0)                                               27810343
+      IF(IS-ISS(IS))6531,6533,6531                                      27810344
+ 6531 WRITE OUTPUT TAPE 6,6532,L                                        27810345
+ 6532 FORMAT (119H0EITHER THERE ARE 2 TRANSFORMATION INCREMENTATION CARD27810346
+     1S WITH THE SAME SECTION NUMBER OR A TRANSFORMATION INCREMENTATION/27810347
+     230H CARD IS NUMBERED GREATER THAN,I2)                             27810348
+      GO TO 85                                                          27810349
+ 6533 ISS(IS)=0                                                         27810350
+      WRITE OUTPUT TAPE 6,654                                           27810351
+  654 FORMAT (1X)                                                       27810352
+      WRITE OUTPUT TAPE 6,655,(IS,DPI(IS),DYA(IS),DRL(IS),DX0(IS),      27810353
+     1DY0(IS),DZ0(IS),IS=1,L)                                           27810354
+  655 FORMAT (4H IS=I2,7H   DPI=0PF8.4,7H   DYA=F8.4,7H   DRL=F8.4,7H   27810355
+     1DX0=1PE13.6,7H   DY0=E13.6,7H   DZO=E13.6)                        27810356
+C                                                                       27810357
+C                               READ TRANSFORMATION CARDS               27810358
+  656 DO 657 IS=1,L                                                     27810359
+  657 ISS(IS)=IS                                                        27810360
+      DO 69 IX=1,L                                                      27810361
+      READ INPUT TAPE 5,66,IS,(SWITCH(IS),PIT(IS),YAW(IS),ROL(IS),X0(IS)27810362
+     1,Y0(IS),Z0(IS))                                                   27810363
+  66  FORMAT (I5,F5.0,6F10.0)                                           27810364
+      IF(IS-ISS(IS))67,680,67                                           27810365
+  67  WRITE OUTPUT TAPE 6,68,L                                          27810366
+  68  FORMAT (106H0EITHER THERE ARE 2 TRANSFORMATION CARDS WITH THE SAME27810367
+     1 SECTION NUMBER OR A TRANSFORMATION CARD IS NUMBERED/13H GREATER T27810368
+     2HAN,I2)                                                           27810369
+      GO TO 85                                                          27810370
+  680 IF(SWITCH(IS))681,682,682                                         27810371
+  681 SWITCH(IS)=-1.                                                    27810372
+      GO TO 69                                                          27810373
+  682 SWITCH(IS)=1.                                                     27810374
+  69  ISS(IS)=0                                                         27810375
+  70  WRITE OUTPUT TAPE 6,71,(IS,SWITCH(IS),PIT(IS),YAW(IS),ROL(IS),    27810376
+     1X0(IS),Y0(IS),Z0(IS),IS=1,L)                                      27810377
+  71  FORMAT(/86H0SECTION  SWITCH    PIT       YAW       ROL           X27810378
+     10             Y0             Z0/(I5,0PF9.0,2X,3F10.4,1P3E15.6))   27810379
+C                                                                       27810380
+C                                 SET UP MATRIX TRANSFORMS              27810381
+      DO 72 IS=1,L                                                      27810382
+      PIX=PIT(IS)/RAD                                                   27810383
+      YAX=YAW(IS)/RAD                                                   27810384
+      RLX=ROL(IS)/RAD                                                   27810385
+      SINP=SINF(PIX)                                                    27810386
+      COSP=COSF(PIX)                                                    27810387
+      SINY=SINF(YAX)                                                    27810388
+      COSY=COSF(YAX)                                                    27810389
+      SINR=SINF(RLX)                                                    27810390
+      COSR=COSF(RLX)                                                    27810391
+      IF(IDC)711,713,711                                                27810392
+  711 DO 712 I=1,3                                                      27810393
+      DO 712 J=1,3                                                      27810394
+  712 AMT(I,J)=TMS(I,J,IS)                                              27810395
+  713 TMS(1,1,IS)=COSP*COSY                                             27810396
+      TMS(1,2,IS)= COSR*SINY-SINP*COSY*SINR                             27810397
+      TMS(1,3,IS)=-SINR*SINY-SINP*COSY*COSR                             27810398
+      TMS(2,1,IS)=-COSP*SINY                                            27810399
+      TMS(2,2,IS)= COSY*COSR+SINP*SINY*SINR                             27810400
+      TMS(2,3,IS)=-COSY*SINR+SINP*SINY*COSR                             27810401
+      TMS(3,1,IS)=SINP                                                  27810402
+      TMS(3,2,IS)=COSP*SINR                                             27810403
+      TMS(3,3,IS)=COSP*COSR                                             27810404
+      IF(IDC)716,714,716                                                27810405
+  714 DO 715 I=1,3                                                      27810406
+      DO 715 J=1,3                                                      27810407
+  715 TM(I,J)=TMS(I,J,IS)                                               27810408
+      GO TO 718                                                         27810409
+  716 DO 717 I=1,3                                                      27810410
+      DO 717 J=1,3                                                      27810411
+  717 BMT(I,J)=TMS(I,J,IS)                                              27810412
+      TM=BMT*TRS(AMT)                                                   27810413
+C                                 TRANSFORM ALL CONFIGURATION INFORMA-  27810414
+C                                 TION TO THE BASE COORDINATE SYSTEM.   27810415
+  718 IRB=IIRB(IS)                                                      27810416
+      IRE=IIRE(IS)                                                      27810417
+      ICB=IICB(IS)                                                      27810418
+      ICE=IICE(IS)                                                      27810419
+      DO 72 I=IRB,IRE                                                   27810420
+      DO 72 J=ICB,ICE                                                   27810421
+      INDEX=NM(IS-1)+(ICE-ICB+1)*(I-IRB)+J-ICB+1                        27810422
+      VALAM(1)=ALAM1(INDEX)                                             27810423
+      VALAM(2)=ALAM2(INDEX)                                             27810424
+      VALAM(3)=ALAM3(INDEX)                                             27810425
+      VALAM=SWITCH(IS)*TM*VALAM                                         27810426
+      ALAM1(INDEX)=VALAM(1)                                             27810427
+      ALAM2(INDEX)=VALAM(2)                                             27810428
+      ALAM3(INDEX)=VALAM(3)                                             27810429
+      VC(1)=XC(INDEX)                                                   27810430
+      VC(2)=YC(INDEX)                                                   27810431
+      VC(3)=ZC(INDEX)                                                   27810432
+      VC=TM*VC                                                          27810433
+      XC(INDEX)=VC(1)+X0(IS)                                            27810434
+      YC(INDEX)=VC(2)+Y0(IS)                                            27810435
+  72  ZC(INDEX)=VC(3)+Z0(IS)                                            27810436
+C                                 COMPUTE CONFIGURATION FACTOR          27810437
+      AREAE=0.                                                          27810438
+      AREAR=0.                                                          27810439
+      SFX=0.                                                            27810440
+      DSFX=0.                                                           27810441
+      DO 79 ME=1,L                                                      27810442
+      IF(KRE(ME))721,722,721                                            27810443
+  721 AREAR=AREAR+SUMA(ME)                                              27810444
+  722 IF(KEM(ME))723,79,723                                             27810445
+  723 AREAE=AREAE+SUMA(ME)                                              27810446
+      IRBE=IIRB(ME)                                                     27810447
+      IREE=IIRE(ME)                                                     27810448
+      ICBE=IICB(ME)                                                     27810449
+      ICEE=IICE(ME)                                                     27810450
+      DO 789 IE=IRBE,IREE                                               27810451
+      DO 788 JE=ICBE,ICEE                                               27810452
+      INDEXE=NM(ME-1)+(ICEE-ICBE+1)*(IE-IRBE)+JE-ICBE+1                 27810453
+      DO 787 MR=1,L                                                     27810454
+      IF(KRE(MR))73,787,73                                              27810455
+  73  IRBR=IIRB(MR)                                                     27810456
+      IRER=IIRE(MR)                                                     27810457
+      ICBR=IICB(MR)                                                     27810458
+      ICER=IICE(MR)                                                     27810459
+      DO 786 IR=IRBR,IRER                                               27810460
+      DO 785 JR=ICBR,ICER                                               27810461
+      INDEXR=NM(MR-1)+(ICER-ICBR+1)*(IR-IRBR)+JR-ICBR+1                 27810462
+      VER(1)=XC(INDEXR)-XC(INDEXE)                                      27810463
+      VER(2)=YC(INDEXR)-YC(INDEXE)                                      27810464
+      VER(3)=ZC(INDEXR)-ZC(INDEXE)                                      27810465
+      IF(ABSF(VER(1))+ABSF(VER(2))+ABSF(VER(3)))731,731,733             27810466
+  731 WRITE OUTPUT TAPE 6,732                                           27810467
+  732 FORMAT (38H0AN EMITTER AND RECEIVER ARE TOUCHING.)                27810468
+      GO TO 81                                                          27810469
+  733 VLE1(1)=ALAM1(INDEXE)                                             27810470
+      VLE1(2)=ALAM2(INDEXE)                                             27810471
+      VLE1(3)=ALAM3(INDEXE)                                             27810472
+      VLR1(1)=ALAM1(INDEXR)                                             27810473
+      VLR1(2)=ALAM2(INDEXR)                                             27810474
+      VLR1(3)=ALAM3(INDEXR)                                             27810475
+      VCOM=UNIT(VER)                                                    27810476
+      COSE=VCOM.VLE1                                                    27810477
+      IF(COSE)785,785,74                                                27810478
+  74  COSR=-VCOM.VLR1                                                   27810479
+      IF(COSR)785,785,75                                                27810480
+  75  IF(KSHF)751,781,751                                               27810481
+  751 DO 78 MS=1,L                                                      27810482
+      IF(KSH(MS))76,78,76                                               27810483
+  76  IRBS=IIRB(MS)                                                     27810484
+      IRES=IIRE(MS)                                                     27810485
+      ICBS=IICB(MS)                                                     27810486
+      ICES=IICE(MS)                                                     27810487
+      DO 779 IS=IRBS,IRES                                               27810488
+      DO 778 JS=ICBS,ICES                                               27810489
+      INDEXS=NM(MS-1)+(ICES-ICBS+1)*(IS-IRBS)+JS-ICBS+1                 27810490
+      IF(VER(1))769,761,769                                             27810491
+  761 IF(VER(2))767,765,767                                             27810492
+  765 IF(ALAM3(INDEXS))766,778,766                                      27810493
+  766 XP=XC(INDEXE)                                                     27810494
+      YP=YC(INDEXE)                                                     27810495
+      ZP=(ALAM1(INDEXS)*(XC(INDEXS)-XC(INDEXE))+ALAM2(INDEXS)*(YC(INDEXS27810496
+     1)-YC(INDEXE))+ALAM3(INDEXS)*ZC(INDEXS))/ALAM3(INDEXS)             27810497
+      GO TO 774                                                         27810498
+  767 COM1=VER(3)/VER(2)                                                27810499
+      COM2=ALAM2(INDEXS)+ALAM3(INDEXS)*COM1                             27810500
+      IF(COM2)768,778,768                                               27810501
+  768 XP=XC(INDEXE)                                                     27810502
+      YP=(ALAM1(INDEXS)*(XC(INDEXS)-XC(INDEXE))+ALAM2(INDEXS)*YC(INDEXS)27810503
+     1+ALAM3(INDEXS)*(COM1*YC(INDEXE)+ZC(INDEXS)-ZC(INDEXE)))/COM2      27810504
+      ZP=ZC(INDEXE)+COM1*(YP-YC(INDEXE))                                27810505
+      GO TO 774                                                         27810506
+  769 COM1=VER(2)/VER(1)                                                27810507
+      COM2=VER(3)/VER(1)                                                27810508
+      COM3=ALAM1(INDEXS)+COM1*ALAM2(INDEXS)+COM2*ALAM3(INDEXS)          27810509
+      IF(COM3)77,778,77                                                 27810510
+  77  XP=(ALAM1(INDEXS)*XC(INDEXS)+ALAM2(INDEXS)*(COM1*XC(INDEXE)       27810511
+     1-YC(INDEXE)+YC(INDEXS))+ALAM3(INDEXS)*(COM2*XC(INDEXE)-ZC(INDEXE) 27810512
+     2+ZC(INDEXS)))/COM3                                                27810513
+      YP=COM1*(XP-XC(INDEXE))+YC(INDEXE)                                27810514
+      ZP=COM2*(XP-XC(INDEXE))+ZC(INDEXE)                                27810515
+  774 COM4=(XP-XC(INDEXS))**2+(YP-YC(INDEXS))**2+(ZP-ZC(INDEXS))**2     27810516
+      IF(COM4-TR2(INDEXS))775,775,778                                   27810517
+  775 VCOM(1)=XP-XC(INDEXE)                                             27810518
+      VCOM(2)=YP-YC(INDEXE)                                             27810519
+      VCOM(3)=ZP-ZC(INDEXE)                                             27810520
+      IF(VER.VCOM)778,778,776                                           27810521
+  776 IF(MAG(VCOM)-MAG(VER))785,778,778                                 27810522
+  778 CONTINUE                                                          27810523
+  779 CONTINUE                                                          27810524
+  78  CONTINUE                                                          27810525
+  781 DSFX=COSE*COSR/(VER.VER)*A(INDEXE)*A(INDEXR)                      27810526
+      SFX=SFX+DSFX                                                      27810527
+C                      THE LOW ORDER PART OF THIS ADDITION IS CARRIED   27810528
+C                      ALONG BY A HAND CORRECTION.                      27810529
+  785 CONTINUE                                                          27810530
+  786 CONTINUE                                                          27810531
+  787 CONTINUE                                                          27810532
+  788 CONTINUE                                                          27810533
+  789 CONTINUE                                                          27810534
+  79  CONTINUE                                                          27810535
+C                                                                       27810536
+      SFER=SFX/AREAE/PI                                                 27810537
+      SFRE=SFX/AREAR/PI                                                 27810538
+      WRITE OUTPUT TAPE 6,791,SFER,SFRE,AREAE,AREAR                     27810539
+  791 FORMAT (/27X,7HEMITTER,12X,8HRECEIVER/21H CONFIGURATION FACTOR    27810540
+     11PE15.6,E20.6/19H AREA (SQUARE FEET)E17.6,E20.6)                  27810541
+      IF(TE+TR)792,80,792                                               27810542
+  792 Q=1.713E-09*AREAE*SFER*(TE**4-TR**4)                              27810543
+      WRITE OUTPUT TAPE 6,793,TE,TR,Q                                   27810544
+  793 FORMAT (22H TEMPERATURE (RANKINE)1PE14.6,E20.6/26H BLACK BODY HEAT27810545
+     1 FLOW RATEE13.6,9H BTU/HOUR)                                      27810546
+  80  IDC=1                                                             27810547
+      IF(NMIX-NMI)83,81,81                                              27810548
+  81  IF(IFLAG-1)85,82,83                                               27810549
+  82  IF(PRINT)821,6,821                                                27810550
+  821 WRITE OUTPUT TAPE 6,822                                           27810551
+  822 FORMAT (1H1)                                                      27810552
+      GO TO 6                                                           27810553
+C                                 INCREMENT TRANSFORMATIONS AND         27810554
+C                                 INITIALIZE CONFIGURATION DATA         27810555
+  83  DO 832 IS=1,L                                                     27810556
+      IRB=IIRB(IS)                                                      27810557
+      IRE=IIRE(IS)                                                      27810558
+      ICB=IICB(IS)                                                      27810559
+      ICE=IICE(IS)                                                      27810560
+      DO 832 I=IRB,IRE                                                  27810561
+      DO 832 J=ICB,ICE                                                  27810562
+      INDEX=NM(IS-1)+(ICE-ICB+1)*(I-IRB)+J-ICB+1                        27810563
+      ALAM1(INDEX)=SWITCH(IS)*ALAM1(INDEX)                              27810564
+      ALAM2(INDEX)=SWITCH(IS)*ALAM2(INDEX)                              27810565
+      ALAM3(INDEX)=SWITCH(IS)*ALAM3(INDEX)                              27810566
+      XC(INDEX)=XC(INDEX)-X0(IS)                                        27810567
+      YC(INDEX)=YC(INDEX)-Y0(IS)                                        27810568
+  832 ZC(INDEX)=ZC(INDEX)-Z0(IS)                                        27810569
+      IF(NMIX-NMI)833,64,64                                             27810570
+  833 NMIX=NMIX+1                                                       27810571
+      DO 84 IS=1,L                                                      27810572
+      PIT(IS)=PIT(IS)+DPI(IS)                                           27810573
+      YAW(IS)=YAW(IS)+DYA(IS)                                           27810574
+      ROL(IS)=ROL(IS)+DRL(IS)                                           27810575
+      X0(IS)=X0(IS)+DX0(IS)                                             27810576
+      Y0(IS)=Y0(IS)+DY0(IS)                                             27810577
+  84  Z0(IS)=Z0(IS)+DZ0(IS)                                             27810578
+      GO TO 70                                                          27810579
+  85  CALL EXIT                                                         27810580
+      END                                                               27810581

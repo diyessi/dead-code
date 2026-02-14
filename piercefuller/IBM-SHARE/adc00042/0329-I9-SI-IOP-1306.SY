@@ -1,0 +1,1332 @@
+       COUNT   100                                                      SEL00000
+       LBL     IOSEL,X                                                  SEL00010
+*IOSEL  I-O SELECT SUBPROGRAM FOR IOPAR - SAO - NORRIS - JULY 61        SEL00020
+*                                                                       SEL00030
+*       SELECT SUPERVISOR FOR ASYNCRONOUS BI-CHANNEL OPERATION          SEL00040
+*       WITH OVERLAP OF MAIN PROGRAM EXECUTION.                         SEL00050
+*                                                                       SEL00060
+*      TSX     IOSEL,4                                                  SEL00070
+*      TSX     SYMUNT   LOC OF SYMBOLIC OR REAL UNIT DESIGNATION        SEL00080
+*      TSX     CDWRD    LOC OF CODE WORD, ADR=L(CHN PRG), DEC=SELCT CODESEL00090
+*      TSX     CKTSX    LOC OF TSX TO ANY CHECKING PRG TO PRECEED IOSCF SEL00100
+*      TSX     ERROR    LOC OF 4 WORD BSS     ARRAY FOR ERROR INF.      SEL00110
+*                                                                       SEL00120
+*                                                                       SEL00130
+*       SELECT CODE, BITS 3-11 ON FOR - REWX, BSFX, BSRX, RUNX, RDSX,   SEL00140
+*       RCHX, WEFX, WRSX, RCHX /BIT 12 CKTSX IS TO BE USED /BIT 13 ON   SEL00150
+*       TO INDICATE BINARY MODE (TAPE ONLY)                             SEL00160
+*       BIT 14 ON - DO NOT USE IOSCC AFTER IOSCF                        SEL00170
+*       BIT 17 ON - CHANGE TAPE REELS WHENEVER NECESSARY                SEL00180
+*       C(SYMUNT) - SYM UNIT IN DEC PLUS MODE IN ADR OR JUST REAL UNIT  SEL00190
+*       IN ADR                                                          SEL00200
+*                                                                       SEL00210
+       ENTRY   IOSEL                                                    SEL00220
+       ENTRY   ERROR                                                    SEL00230
+*                                                                       SEL00240
+IOSEL  SXD     IOSEL-2,4                                                SEL00250
+       SXA     XR2,2                                                    SEL00260
+       STI     SAVIND                                                   SEL00270
+ONCE5  TRA     *+1                                                      SEL00280
+       CAL*    $SCNAC                                                   SEL00290
+       STA     WSCNAC                                                   SEL00300
+       CAL*    $CHIND                                                   SEL00310
+       STA     WCHIND                                                   SEL00320
+       CAL*    $CHERR                                                   SEL00330
+       STA     WCHERR                                                   SEL00340
+       STL     ONCE5                                                    SEL00350
+       LDI*    2,4                                                      SEL00360
+       CLM                                                              SEL00370
+       LNT     20                                                       SEL00380
+       TRA     SELA                                                     SEL00390
+       LDI*    1,4                                                      SEL00400
+       RNT     200                                                      SEL00410
+       TRA     SELA                                                     SEL00420
+       RNT     100                                                      SEL00430
+       CAL     BNTAP                                                    SEL00440
+SELA   ORA*    1,4                                                      SEL00450
+       CALL    IOSUP                                                    SEL00460
+       SLW     CHNEL                                                    SEL00470
+       PDX     0,2                                                      SEL00480
+       TSX     $FINIO,4                                                 SEL00490
+       TSX     *-1,0                                                    SEL00500
+       CAL     CHNEL                                                    SEL00510
+       CALL    IOSUP                                                    SEL00520
+       SLW     CHNEL                                                    SEL00530
+       PDX     0,2                                                      SEL00540
+       LXD     IOSEL-2,4                                                SEL00550
+       SLW*    1,4                                                      SEL00560
+       CAL     4,4                                                      SEL00570
+       STA*    ERROR                                                    SEL00580
+       CAL*    3,4                                                      SEL00590
+       ORA     =O074000400000                                           SEL00600
+WSCNAC SLW     ..,2                                                     SEL00610
+WCHERR STZ     ..,2                                                     SEL00620
+       LDI*    2,4                                                      SEL00630
+WCHIND STI     ..,2                                                     SEL00640
+       LFT     040000                                                   SEL00650
+       XEC*    $REWX                                                    SEL00660
+       LFT     020000                                                   SEL00670
+       XEC*    $BSFX                                                    SEL00680
+       LFT     010000                                                   SEL00690
+       XEC*    $BSRX                                                    SEL00700
+       LFT     004000                                                   SEL00710
+       XEC*    $RUNX                                                    SEL00720
+       LNT     003000                                                   SEL00730
+       TTR     RD2                                                      SEL00740
+       PIA                                                              SEL00750
+       PAC     0,4                                                      SEL00760
+       XEC*    $RDSX                                                    SEL00770
+       XEC*    $RCHX                                                    SEL00780
+       TRA     WRITE                                                    SEL00790
+RD2    LFT     002000                                                   SEL00800
+       XEC*    $RDSX                                                    SEL00810
+WRITE  LFT     000400                                                   SEL00820
+       XEC*    $WEFX                                                    SEL00830
+       LNT     000300                                                   SEL00840
+       TTR     WR2                                                      SEL00850
+       PIA                                                              SEL00860
+       PAC     0,4                                                      SEL00870
+       XEC*    $WRSX                                                    SEL00880
+       XEC*    $RCHX                                                    SEL00890
+       TRA     SEE                                                      SEL00900
+WR2    LFT     000200                                                   SEL00910
+       XEC*    $WRSX                                                    SEL00920
+SEE    IOT                                                              SEL00930
+       CALL    IOTER                                                    SEL00940
+       LXD     IOSEL-2,4                                                SEL00950
+XR2    AXT     ..,2                                                     SEL00960
+       LDI     SAVIND                                                   SEL00970
+       XEC*    $ENB                                                     SEL00980
+       TRA     5,4                                                      SEL00990
+BNTAP  OCT     20                                                       SEL01000
+CHNEL  PZE                                                              SEL01010
+SAVIND PZE                                                              SEL01020
+       PZE                                                              SEL01030
+       PZE                                                              SEL01040
+ERROR  CAL     *,2                                                      SEL01050
+..     EQU     0                                                        SEL01060
+       END                                                              SEL01070
+       COUNT   50                                                       END00000
+       LBL     ENDIO,X                                                  END00010
+*ENDIO  I-O COMPLETION    SUBP. FOR FORTRAN USAGE OF IOPAR-NORRIS-SAO   END00020
+*                                                                       END00030
+*      TSX     $ENDIO,4                                                 END00040
+*      TSX     CHANEL     DEC OF LOC CHANEL = CHANNEL INDEX (1 OR 2).   END00050
+*      TSX     FLAG       LOC FLAG (AND ACT IS SET TO ZERO IF CHANNEL   END00060
+*        RETURN            IS FREE, SET TO NONZERO IF BUSY, SET MINUS   END00070
+*                          IF CHANNEL INDEX WRONG.                      END00080
+*                                                                       END00090
+       ENTRY   ENDIO                                                    END00100
+*                                                                       END00110
+ENDIO  EQU     *                                                        END00120
+       SXD     ENDIO-2,4                                                END00130
+       SXA     XRB,2                                                    END00140
+       CLA*    1,4                                                      END00150
+       PDX     0,2                                                      END00160
+       TXL     ERR,2,0                                                  END00170
+       TXH     ERR,2,2                                                  END00180
+       TSX     $FINIO,4                                                 END00190
+       TSX     BUSY                                                     END00200
+       PXA     0,0                                                      END00210
+OUT    EQU     *                                                        END00220
+       LXD     ENDIO-2,4                                                END00230
+       STO*    2,4                                                      END00240
+XRB    AXT     **,2                                                     END00250
+       XEC*    $ENB                                                     END00260
+       TRA     3,4                                                      END00270
+BUSY   EQU     *                                                        END00280
+CAL    CAL     CLA                                                      END00290
+       TRA     OUT                                                      END00300
+ERR    EQU     *                                                        END00310
+CLA    CLA     CAL                                                      END00320
+       TRA     OUT                                                      END00330
+       END                                                              END00340
+       COUNT   60                                                       FIN00000
+       LBL     FINIO,X                                                  FIN00010
+*FINIO  I-O SUBPROGRAM FOR IOPAR - SAO - NORRIS - JULY 61               FIN00020
+*                                                                       FIN00030
+*       RETURNS 1,4 IF       CHANNEL IN OPERATION                       FIN00040
+*       FREES NON-OPERATIVE CHANNEL BY COMPLETING   PREVIOUS ACTION     FIN00050
+*                                                                       FIN00060
+*      LXD     CHANEL,2       LOAD CHANNEL INDEX                        FIN00070
+*      TSX     $FINIO,4                                                 FIN00080
+*      TSX     *-1,0                   RETURN IF CHANNEL IN OPERATION   FIN00090
+*      XEC* $ENB        POINT OF RETURN                                 FIN00100
+*                                                                       FIN00110
+*                                                                       FIN00120
+       ENTRY   FINIO                                                    FIN00130
+*                                                                       FIN00140
+FINIO  EQU     *                                                        FIN00150
+       XEC*    $DSB                                                     FIN00160
+       SXD     FINIO-2,4                                                FIN00170
+       STI     SAVIND                                                   FIN00180
+ONCE5  TRA     *+1                                                      FIN00190
+       CAL*    $SCNAC                                                   FIN00200
+       STA     WSCNAC                                                   FIN00210
+       CAL*    $CHIND                                                   FIN00220
+       STA     WCHIND                                                   FIN00230
+       CAL*    $CHERR                                                   FIN00240
+       STA     WCHERR                                                   FIN00250
+       STL     ONCE5                                                    FIN00260
+WCHIND LDI     **,2                                                     FIN00270
+       AXC     TFIN,4                                                   FIN00280
+       XEC*    $TCOX                                                    FIN00290
+WSCNAC CLA     **,2                                                     FIN00300
+       TZE     FIN                                                      FIN00310
+       LNT     40                                                       FIN00320
+       TRA     CHEK2                                                    FIN00330
+       STA     CHECK                                                    FIN00340
+CHECK  CALL    IOSCF                                                    FIN00350
+WCHERR LDI     **,2                                                     FIN00360
+       CALL    IOSCF                                                    FIN00370
+       OSI*    WCHERR                                                   FIN00380
+       STI*    WCHERR                                                   FIN00390
+       LDI*    WCHIND                                                   FIN00400
+       LFT     10                                                       FIN00410
+       TTR     PASS                                                     FIN00420
+       CALL    IOSCC                                                    FIN00430
+PASS   EQU     *                                                        FIN00440
+       AXC     TFIN,4                                                   FIN00450
+       XEC*    $TCOX                                                    FIN00460
+       STZ*    WSCNAC                                                   FIN00470
+       TRA     FIN                                                      FIN00480
+TFIN   LXD     FINIO-2,4                                                FIN00490
+       TXI     *+1,4,1                                                  FIN00500
+       TRA     *+2                                                      FIN00510
+FIN    LXD     FINIO-2,4                                                FIN00520
+       LDI     SAVIND                                                   FIN00530
+       TRA     2,4                                                      FIN00540
+SAVIND PZE                                                              FIN00550
+WAT    EQU     WCHIND                                                   FIN00560
+CHEK2  EQU     WCHERR                                                   FIN00570
+       END                                                              FIN00580
+       COUNT   180                                                      SUP00000
+       LBL     IOSUP,X                                                  SUP00010
+*IOSUP  I-O SUPERVISOR FOR IOPAR - SAO - NORRIS - JULY 61               SUP00020
+*                                                                       SUP00030
+*      CLA    SYMTAP  ( SYMTAPE IN DEC PLUS MODE IN ADR, OR UNIT IN ADR)SUP00040
+*      TSX    IOSUP,4                                                   SUP00050
+*      XEC* $ENB        POINT OF RETURN                                 SUP00060
+*      STO    CHANEL  ( CHANNEL IN DEC, UNIT IN ADR, NEG IF IOSUP BUSY) SUP00070
+*                                                                       SUP00080
+       ENTRY   IOSUP                                                    SUP00090
+       ENTRY  -RDSX                                                     SUP00100
+       ENTRY  -WRSX                                                     SUP00110
+       ENTRY  -WEFX                                                     SUP00120
+       ENTRY  -BSRX                                                     SUP00130
+       ENTRY  -BSFX                                                     SUP00140
+       ENTRY  -REWX                                                     SUP00150
+       ENTRY  -RUNX                                                     SUP00160
+       ENTRY  -RCHX                                                     SUP00170
+       ENTRY  -LCHX                                                     SUP00180
+       ENTRY  -SCHX                                                     SUP00190
+       ENTRY  -RDCX                                                     SUP00200
+       ENTRY  -TCOX                                                     SUP00210
+       ENTRY  -TEFX                                                     SUP00220
+       ENTRY  -TRCX                                                     SUP00230
+       ENTRY  -BTTX                                                     SUP00240
+       ENTRY  -ETTX                                                     SUP00250
+       ENTRY  -SCNAC                                                    SUP00260
+       ENTRY  -CHIND                                                    SUP00270
+       ENTRY  -CHREG                                                    SUP00280
+       ENTRY  -CHERR                                                    SUP00290
+*                                                                       SUP00300
+IOSUP  EQU     *                                                        SUP00310
+       XEC*   $DSB                                                      SUP00320
+       SXD     IOSUP-2,4                                                SUP00330
+       SXA     XR2,2                                                    SUP00340
+       TNZ     *+3                                                      SUP00350
+       CAL     AC                                                       SUP00360
+       TRA     PASS                                                     SUP00370
+AGAIN  SLW     AC             SAVE AC                                   SUP00380
+ONCE6  TRA     *+1                                                      SUP00390
+       AXT     0,4            ZER0 TO INDEX                             SUP00400
+       XEC*    $UNIT                                                    SUP00410
+       STD     LIMIT          INITIALIZE FOR SIZE UNIT TABLE            SUP00420
+       CAL     AC                                                       SUP00430
+       STL     ONCE6          SET TRA TO BYPASS THIS NEXT TIME          SUP00440
+       ANA     =O777757                                                 SUP00450
+       TZE     SYMTAP         UNIT NOT GIVEN, SYMBOLIC TAPE GIVEN       SUP00460
+       ORA     AC                                                       SUP00470
+       TRA     RESUME         UNIT GIVEN                                SUP00480
+SYMTAP CAL     AC                                                       SUP00490
+       PDX     0,4                                                      SUP00500
+LIMIT  TXH     STOP,4,..      TEST FOR ILLEGAL SYMBOLIC UNIT            SUP00510
+       TXL     STOP,4,0                                                 SUP00520
+       TXL     *+3,4,20                                                 SUP00530
+       AXT     0,2                                                      SUP00540
+       SXA     AC,2                                                     SUP00550
+       XEC*    $UNIT                                                    SUP00560
+       TZE     STOP           TEST FOR EMPTY ENTRY                      SUP00570
+       ORS     AC                                                       SUP00580
+RESUME ARS     9                                                        SUP00590
+       ANA     =O17                                                     SUP00600
+       PAX     0,2                                                      SUP00610
+       SXD     AC,2           SET DEC TO CHANNEL                        SUP00620
+       CAL     AC             CHANNEL AND UNIT TO AC                    SUP00630
+       XEC     SCNAC          IS CHANNEL FREE.                          SUP00640
+       TRA     PASS           CHANNEL NOT FREE.                         SUP00650
+       STA*    RDSX                                                     SUP00660
+       STA*    WRSX                                                     SUP00670
+       STA*    WEFX                                                     SUP00680
+       STA*    BSRX                                                     SUP00690
+       STA*    BSFX                                                     SUP00700
+       STA*    REWX                                                     SUP00710
+       STA*    RUNX                                                     SUP00720
+PASS   XEC     SCNAC                                                    SUP00730
+       SSM              AC MINUS IF CHANNEL NOT FREE                    SUP00740
+OUT    LXD     IOSUP-2,4      RETURN WITH CHANNEL PLUS UNIT IN AC       SUP00750
+XR2    AXT     ..,2                                                     SUP00760
+       TRA     1,4                                                      SUP00770
+STOP   EQU     *                                                        SUP00780
+       CAL     =O20                                                     SUP00790
+       ANS     AC                                                       SUP00800
+       XCL                                                              SUP00810
+       HPR     0,6                                                      SUP00820
+       ENK                                                              SUP00830
+       XCL                                                              SUP00840
+       ORA     AC                                                       SUP00850
+       TRA     AGAIN                                                    SUP00860
+AC     BSS     1                                                        SUP00870
+..     EQU     0                                                        SUP00880
+*                                                                       SUP00890
+*                   CHANNEL TABLES                                      SUP00900
+*                                                                       SUP00910
+       RTDB    5                                                        SUP00920
+       RTDA    5                                                        SUP00930
+       NOP                                                              SUP00940
+RDSX   XEC     *-1,2                                                    SUP00950
+       WTDB    5                                                        SUP00960
+       WTDA    5                                                        SUP00970
+       NOP                                                              SUP00980
+WRSX   XEC     *-1,2                                                    SUP00990
+       WEFB    5                                                        SUP01000
+       WEFA    5                                                        SUP01010
+       NOP                                                              SUP01020
+WEFX   XEC     *-1,2                                                    SUP01030
+       BSRB    5                                                        SUP01040
+       BSRA    5                                                        SUP01050
+       NOP                                                              SUP01060
+BSRX   XEC     *-1,2                                                    SUP01070
+       BSFB                                                             SUP01080
+       BSFA                                                             SUP01090
+       NOP                                                              SUP01100
+BSFX   XEC     *-1,2                                                    SUP01110
+       REWB    5                                                        SUP01120
+       REWA    5                                                        SUP01130
+       NOP                                                              SUP01140
+REWX   XEC     *-1,2                                                    SUP01150
+       OCT     477200000000                                             SUP01160
+       OCT     477200000000                                             SUP01170
+       NOP                                                              SUP01180
+RUNX   XEC     *-1,2                                                    SUP01190
+       OCT     076000002352                                             SUP01200
+       OCT     076000001352                                             SUP01210
+       NOP                                                              SUP01220
+RDCX   XEC     *-1,2                                                    SUP01230
+       RCHB    0,4                                                      SUP01240
+       RCHA    0,4                                                      SUP01250
+       NOP                                                              SUP01260
+RCHX   XEC     *-1,2                                                    SUP01270
+       LCHB    0,4                                                      SUP01280
+       LCHA    0,4                                                      SUP01290
+       NOP                                                              SUP01300
+LCHX   XEC     *-1,2                                                    SUP01310
+       SCHB    REGB                                                     SUP01320
+       SCHA    REGA                                                     SUP01330
+       NOP                                                              SUP01340
+SCHX   XEC     *-1,2                                                    SUP01350
+       TCOB    0,4                                                      SUP01360
+       TCOA    0,4                                                      SUP01370
+       NOP                                                              SUP01380
+TCOX   XEC     *-1,2                                                    SUP01390
+       TEFB    0,4                                                      SUP01400
+       TEFA    0,4                                                      SUP01410
+       NOP                                                              SUP01420
+TEFX   XEC     *-1,2                                                    SUP01430
+       TRCB    0,4                                                      SUP01440
+       TRCA    0,4                                                      SUP01450
+       NOP                                                              SUP01460
+TRCX   XEC     *-1,2                                                    SUP01470
+       BTTB                                                             SUP01480
+       BTTA                                                             SUP01490
+       NOP                                                              SUP01500
+BTTX   XEC     *-1,2                                                    SUP01510
+       ETTB                                                             SUP01520
+       ETTA                                                             SUP01530
+       NOP                                                              SUP01540
+ETTX   XEC     *-1,2                                                    SUP01550
+REGB   PZE     ..                                                       SUP01560
+REGA   PZE     ..                                                       SUP01570
+       NOP                                                              SUP01580
+CHREG  CAL     *-1,2                                                    SUP01590
+       PZE     ..,,..   ADR = L(I-O COMMAND)  DEC = ACTION INDICATORS   SUP01600
+       PZE     ..,,..                                                   SUP01610
+       NOP                                                              SUP01620
+CHIND  CAL     *-1,2                                                    SUP01630
+       PZE     ..,,0    ADR = L(SPECIAL CHECKING ROUTINE)               SUP01640
+       PZE     ..,,0                                                    SUP01650
+       NOP                                                              SUP01660
+SCNAC  ZET     *-1,2    SKIP ON CHANNEL NOT ACTIVE                      SUP01670
+       PZE     0,,..    DEC = CHANNEL ERROR CODE / BIT 14-17 ON FOR     SUP01680
+       PZE     0,,..    POSITIVE TESTS OF BTTX, TE0FX, TRCX, AND ETTX.  SUP01690
+       NOP                                                              SUP01700
+CHERR  CAL     *-1,2                                                    SUP01710
+       END                                                              SUP01720
+       COUNT   60                                                       UNIT0000
+       LBL     UNIT,X                                                   UNIT0010
+*UNIT   I-O UNIT TABLE FOR IOPAR - SAO - NORRIS - JULY 61               UNIT0020
+*                                                                       UNIT0030
+       ENTRY   UNIT                                                     UNIT0040
+*                                                                       UNIT0050
+UNIT   CAL     BASE,4                                                   UNIT0060
+       PZE     PRINT                                                    UNIT0070
+       PZE     PUNCH                                                    UNIT0080
+       PZE     READ                                                     UNIT0090
+       PZE     B0                                                       UNIT0100
+       PZE     B9                                                       UNIT0110
+       PZE     B8                                                       UNIT0120
+       PZE     B7                                                       UNIT0130
+       PZE     B6                                                       UNIT0140
+       PZE     A0                                                       UNIT0150
+       PZE     A9                                                       UNIT0160
+       PZE     A8                                                       UNIT0170
+       PZE     A7                                                       UNIT0180
+       PZE     A6                                                       UNIT0190
+       PZE     B5                                                       UNIT0200
+       PZE     A5                                                       UNIT0210
+       PZE     B1                                                       UNIT0220
+       PZE     B4                                                       UNIT0230
+       PZE     A3                                                       UNIT0240
+       PZE     A2                                                       UNIT0250
+       PZE     A4                                                       UNIT0260
+       PZE     B3                                                       UNIT0270
+       PZE     B2                                                       UNIT0280
+       PZE     A1                                                       UNIT0290
+BASE   PZE     BASE,,NUNITS                                             UNIT0300
+       PZE     READ                                                     UNIT0310
+       PZE     PUNCH                                                    UNIT0320
+       PZE     PRINT                                                    UNIT0330
+NUNITS EQU     BASE-UNIT-1                                              UNIT0340
+READ   BOOL    1321                                                     UNIT0350
+PUNCH  BOOL    1341                                                     UNIT0360
+PRINT  BOOL    1361                                                     UNIT0370
+A1     BOOL    1201                                                     UNIT0380
+A2     BOOL    1202                                                     UNIT0390
+A3     BOOL    1203                                                     UNIT0400
+A4     BOOL    1204                                                     UNIT0410
+A5     BOOL    1205                                                     UNIT0420
+A6     BOOL    1206                                                     UNIT0430
+A7     BOOL    1207                                                     UNIT0440
+A8     BOOL    1210                                                     UNIT0450
+A9     BOOL    1211                                                     UNIT0460
+A0     BOOL    1212                                                     UNIT0470
+B1     BOOL    2201                                                     UNIT0480
+B2     BOOL    2202                                                     UNIT0490
+B3     BOOL    2203                                                     UNIT0500
+B4     BOOL    2204                                                     UNIT0510
+B5     BOOL    2205                                                     UNIT0520
+B6     BOOL    2206                                                     UNIT0530
+B7     BOOL    2207                                                     UNIT0540
+B8     BOOL    2210                                                     UNIT0550
+B9     BOOL    2211                                                     UNIT0560
+B0     BOOL    2212                                                     UNIT0570
+       END                                                              UNIT0580
+       COUNT   50                                                       SCF00000
+       LBL     IOSCF,X                                                  SCF00010
+*IOSCF  I-O STANDARD CHANNEL FLAGER  FOR IOPAR - SAO - NORRIS - JULY 61 SCF00020
+*                                                                       SCF00030
+*       SETS C(CHERRX) BIT 14-17 ON FOR POSITIVE TESTS - BTTX, TEFX,    SCF00040
+*       TRCX, AND ETTX (BITS OFF OTHERWISE).                            SCF00050
+*       IR2 MUST HAVE CHANNEL INDEX                                     SCF00060
+*                                                                       SCF00070
+       ENTRY   IOSCF                                                    SCF00080
+       ENTRY   IOSCA                                                    SCF00090
+*                                                                       SCF00100
+IOSCF  SXD     IOSCF-2,4                                                SCF00110
+       STZ     SKPFG                                                    SCF00120
+       TTR     *+3                                                      SCF00130
+IOSCA  XEC     IOSCF                                                    SCF00140
+       STL     SKPFG                                                    SCF00150
+       STI     SAVIND                                                   SCF00160
+       XEC*    $SCHX                                                    SCF00170
+       IOT                                                              SCF00180
+       CALL    IOTER                                                    SCF00190
+ONCE7  TRA     *+1                                                      SCF00200
+       CAL*    $CHERR                                                   SCF00210
+       STA     WCHERR                                                   SCF00220
+       STL     ONCE7                                                    SCF00230
+WCHERR LDI     ..,2                                                     SCF00240
+       NZT     SKPFG                                                    SCF00250
+       RIL     11                                                       SCF00260
+       SIL     06                                                       SCF00270
+       XEC*    $BTTX                                                    SCF00280
+       SIL     10                                                       SCF00290
+       XEC*    $ETTX                                                    SCF00300
+       SIL     01                                                       SCF00310
+       AXC     EOF,4                                                    SCF00320
+       XEC*    $TEFX                                                    SCF00330
+       RIL     04                                                       SCF00340
+EOF    AXC     RED,4                                                    SCF00350
+       XEC*    $TRCX                                                    SCF00360
+       RIL     02                                                       SCF00370
+RED    STI*    WCHERR                                                   SCF00380
+       LDI     SAVIND                                                   SCF00390
+       LXD     IOSCF-2,4                                                SCF00400
+       TRA     1,4                                                      SCF00410
+SAVIND PZE                                                              SCF00420
+SKPFG  PZE                                                              SCF00430
+..     EQU     0                                                        SCF00440
+       END                                                              SCF00450
+       COUNT   30                                                       IOT00000
+       LBL     IOTER,X                                                  IOT00010
+*IOTER   I-O  IOT ERROR ROUTINE FOR IOPAR - SAO - NORRIS - JULY 61      IOT00020
+*                                                                       IOT00030
+*        XR2 MUST CONTAIN CHANNEL INDEX                                 IOT00040
+*                                                                       IOT00050
+       ENTRY   IOTER                                                    IOT00060
+*                                                                       IOT00070
+IOTER  SXD     IOTER-2,4                                                IOT00080
+       STI     SAVIND                                                   IOT00090
+ONCE3  TRA     *+1                                                      IOT00100
+       CAL*    $CHERR                                                   IOT00110
+       STA     WCHERR                                                   IOT00120
+       STL     ONCE3                                                    IOT00130
+       XEC*    $CHIND                                                   IOT00140
+       PAI                    DISPLAY ACTION INDICATORS                 IOT00150
+       LFT     002000                                                   IOT00160
+       HPR     0,3                                                      IOT00170
+       LFT     000600                                                   IOT00180
+       HPR     0,5                                                      IOT00190
+       LFT     002600                                                   IOT00200
+       TRA     WCHERR                                                   IOT00210
+       LFT     001100                                                   IOT00220
+       HPR     0,4                                                      IOT00230
+WCHERR LDI     ..,2                                                     IOT00240
+       SIL     400000                                                   IOT00250
+       STI*    WCHERR                                                   IOT00260
+       LDI     SAVIND                                                   IOT00270
+       LXD     IOTER-2,4                                                IOT00280
+       TRA     1,4                                                      IOT00290
+SAVIND PZE                                                              IOT00300
+..     EQU     0                                                        IOT00310
+       END                                                              IOT00320
+       COUNT   650                                                      SCC00000
+       LBL     IOSCC,X                                                  SCC00010
+*IOSCC    STANDARD CHANNEL CHECKER FOR  IOPAR - SAO - NORRIS - AUGUST 61SCC00020
+*                                                                       SCC00030
+*      TSX     $IOSCC,4   USED BY WAIT.                                 SCC00040
+*                                                                       SCC00050
+*      APPLIES NOISE RECORD I-O PROCEEDURE TO CORRECT READS OR WRITES   SCC00060
+*      THAT TAPE CHECKED.  WILL NOT CORRECT READS OR WRITES THAT DO NOT SCC00070
+*      USE I-O PROGRAMS THAT MOVE TAPE OVER A FIXED NUMBER OF RECORDS   SCC00080
+*      REGARDLESS OF FORMAT (EXCLUDING OCCURENCE OF EOF RECORDS).       SCC00090
+*                                                                       SCC00100
+*      SETS C(CHERR) BITS ON -                                          SCC00110
+*        8      - A REEL WAS COMPLETED AND CHANGED.                     SCC00120
+*        9      - REEL MUST BE CHANGED.                                 SCC00130
+*       10      - I-O ACTION NOT CORRECTABLE BY IOSCC.                  SCC00140
+*       11      - I-O PROGRAM NOT ACCEPTABLE PER IOSCC.                 SCC00150
+*       12      - I-O PROGRAM INCURRED PREMATURE DISCONNECT.            SCC00160
+*       13      - IOSCC WAS UNABLE TO CORRECTLY READ ONE OR MORE RECORDSSCC00170
+*                 /OR IN REWRITING CREATED ONE OR MORE NOISE RECORDS.   SCC00180
+*                                                                       SCC00190
+*      CLA*    $IOCNT   COUNT OF RECORDS PER I-O PROGRAM EXECUTED, B17. SCC00200
+*      CLA*    $BADRC   C(BADRC) BIT N ON IF RECORD N UNREADABLE.       SCC00210
+*      CLA*    $BADCT   COUNT OF BAD RECORDS (READING) OR ERASURESS (WR)SCC00220
+       ENTRY   IOSCC                                                    SCC00230
+       ENTRY   IOCNT                                                    SCC00240
+       ENTRY   BADRC                                                    SCC00250
+       ENTRY   BADCT                                                    SCC00260
+*                                                                       SCC00270
+IOSCC  SXD     IOSCC-2,4                                                SCC00280
+       SXA     XR1,1                                                    SCC00290
+       STI     SAVIND                                                   SCC00300
+ONCE   TRA     *+1                                                      SCC00310
+       CAL*    $CHERR                                                   SCC00320
+       STA     WCHERR                                                   SCC00330
+       CAL*    $WRSX                                                    SCC00340
+       STA     WWRS                                                     SCC00350
+       STL     ONCE                                                     SCC00360
+       STZ     IOCNT                                                    SCC00370
+       STZ     BADCT                                                    SCC00380
+       STZ     BADRC                                                    SCC00390
+       STZ     IRRAC                                                    SCC00400
+       STZ     IRRIO                                                    SCC00410
+       LDI*    WWRS                                                     SCC00420
+       RFT     100                                                      SCC00430
+       TRA     NSAC                                                     SCC00440
+WCHERR LDI     **,2                                                     SCC00450
+       LFT     7                                                        SCC00460
+       TTR     *+2                                                      SCC00470
+       TRA     FINSH                                                    SCC00480
+       STI     SAVERR                                                   SCC00490
+       CAL     =O400000000000                                           SCC00500
+       SLW     FALBT                                                    SCC00510
+       XEC*    $CHIND                                                   SCC00520
+       SLW     SAVAC                                                    SCC00530
+       PAC     0,4                                                      SCC00540
+       PAI                                                              SCC00550
+       IIL     03000          03000 INVERTED                            SCC00560
+       LFT     03700                                                    SCC00570
+       TTR     *+2                                                      SCC00580
+       TRA     RER                                                      SCC00590
+       LNT     01300                                                    SCC00600
+       TTR     *+2                                                      SCC00610
+       TRA     WER                                                      SCC00620
+       IIL     00100          03100  INVERTED                           SCC00630
+       LNT     01500                                                    SCC00640
+       TTR     *+2                                                      SCC00650
+       TRA     WEFER                                                    SCC00660
+*                                                                       SCC00670
+NSAC   STL     IRRAC                                                    SCC00680
+FINSH  LDI*    WCHERR                                                   SCC00690
+       ZET     IRRAC                                                    SCC00700
+       SIL     200                                                      SCC00710
+       ZET     IRRIO                                                    SCC00720
+       SIL     100                                                      SCC00730
+       STI*    WCHERR                                                   SCC00740
+       XEC*    $ERROR                                                   SCC00750
+       PAC     0,4                                                      SCC00760
+       STI     0,4                                                      SCC00770
+       TXI     *+1,4,-1                                                 SCC00780
+       XEC*    $CHREG                                                   SCC00790
+       SLW     0,4                                                      SCC00800
+       TXI     *+1,4,-1                                                 SCC00810
+       CAL     BADCT                                                    SCC00820
+       SLW     0,4                                                      SCC00830
+       TXI     *+1,4,-1                                                 SCC00840
+       CAL     BADRC                                                    SCC00850
+       SLW     0,4                                                      SCC00860
+       IOT                                                              SCC00870
+       CALL    IOTER                                                    SCC00880
+OUT    LXD     IOSCC-2,4                                                SCC00890
+XR1    AXT     **,1                                                     SCC00900
+       LDI     SAVIND                                                   SCC00910
+       TRA     1,4                                                      SCC00920
+       SPACE   6                                                        SCC00930
+RER    STZ     ANCHOR                                                   SCC00940
+       SXA     FIRST,4                                                  SCC00950
+       XEC*    $SCHX                                                    SCC00960
+       XEC*    $CHREG                                                   SCC00970
+       SLW     REG                                                      SCC00980
+       PDC     0,4                                                      SCC00990
+       TXI     *+1,4,1                                                  SCC01000
+       SXA     LAST,4                                                   SCC01010
+R2     STZ     RECCT                                                    SCC01020
+       STZ     INCAC                                                    SCC01030
+       RIL     40                                                       SCC01040
+R3     LDI     0,4            GET LAST I-O COMMAND                      SCC01050
+R4     LFT     700000                                                   SCC01060
+       TTR     *+2                                                      SCC01070
+       TRA     R6                                                       SCC01080
+       LNT     100000                                                   SCC01090
+       TTR     R22                                                      SCC01100
+R5     LNT     200000                                                   SCC01110
+       TTR     R6                                                       SCC01120
+       LFT     077777                                                   SCC01130
+       TRA     R8                                                       SCC01140
+R6     LFT     277777                                                   SCC01150
+       TRA     R9                                                       SCC01160
+R7     STL     ANCHOR                                                   SCC01170
+       TRA     R10                                                      SCC01180
+R8     CLA     RECCT                                                    SCC01190
+       ADD     =1B17                                                    SCC01200
+       STO     RECCT                                                    SCC01210
+       TRA     R16                                                      SCC01220
+R9     STL     IRRIO                                                    SCC01230
+       TRA     FINSH                                                    SCC01240
+R10    PXA     0,4                                                      SCC01250
+       ERA     FIRST                                                    SCC01260
+       TZE     R9                                                       SCC01270
+       TXI     *+1,4,1                                                  SCC01280
+       LDI     0,4                                                      SCC01290
+R11    LNT     100000                                                   SCC01300
+       TRA     R13                                                      SCC01310
+R12    TSX     R12B,1                                                   SCC01320
+       TRA     R9                                                       SCC01330
+       TRA     R10                                                      SCC01340
+R12B   LFT     600000         TEST FOR  TCH  *+1,  1,1 =NO, 2,1 =YES    SCC01350
+       TRA*    1,1            (PREFIX OCTAL 1 KNOWN TO BE ON.)          SCC01360
+       PXA     0,4                                                      SCC01370
+       COM                                                              SCC01380
+       ADD     =2B35                                                    SCC01390
+       IIA                                                              SCC01400
+       RFT     077777                                                   SCC01410
+       TRA*    1,1                                                      SCC01420
+       TRA     2,1                                                      SCC01430
+R13    LNT     200000                                                   SCC01440
+       TRA     R9                                                       SCC01450
+R14    TRA     R8                                                       SCC01460
+R16    PXA     0,4                                                      SCC01470
+       CAS     FIRST          HAVE WE REACHED BEGINNING OF I-O PROGRAM. SCC01480
+       TTR     *+2                                                      SCC01490
+       TRA     R26                                                      SCC01500
+       TXI     *+1,4,1                                                  SCC01510
+       LDI     0,4            GET NEXT PRECEEDING I-O COMMAND           SCC01520
+R17A   LFT     100000                                                   SCC01530
+       TRA     R18                                                      SCC01540
+R17B   LNT     200000                                                   SCC01550
+       TRA     R9                                                       SCC01560
+       TRA     R19                                                      SCC01570
+R18    TSX     R12B,1                                                   SCC01580
+       TRA     R9                                                       SCC01590
+       TRA     R16                                                      SCC01600
+R19    LFT     400000                                                   SCC01610
+       TRA     R9                                                       SCC01620
+R20    TRA     R8                                                       SCC01630
+R22    PIA                                                              SCC01640
+       LDI*    WCHERR                                                   SCC01650
+       LNT     4                                                        SCC01660
+       TRA     R9                                                       SCC01670
+       PAI                                                              SCC01680
+R23    STL     INCAC                                                    SCC01690
+       TRA     R13                                                      SCC01700
+R26    EQU     *                                                        SCC01710
+       LDI*    WCHERR                                                   SCC01720
+       LNT     2                                                        SCC01730
+       TRA     R37                                                      SCC01740
+       LXA     LAST,4                                                   SCC01750
+       ZET     ANCHOR                                                   SCC01760
+       TXI     *+1,4,1                                                  SCC01770
+       TXI     *+1,4,-1                                                 SCC01780
+       SXA     TERMN,4                                                  SCC01790
+       LXA     FIRST,4                                                  SCC01800
+R27    LXD     RECCT,1                                                  SCC01810
+       XEC*    $BSRX                                                    SCC01820
+       TIX     *-1,1,1                                                  SCC01830
+       TRA     R30                                                      SCC01840
+R29    TXI     *+1,4,-1                                                 SCC01850
+R30    PXA     0,4                                                      SCC01860
+       ERA     TERMN                                                    SCC01870
+       TZE     R55                                                      SCC01880
+R31A   STI     TEMP     IS THIS A TCH  *+1.                             SCC01890
+       LDI     0,4                                                      SCC01900
+       LFT     100000                                                   SCC01910
+       TTR     *+3                                                      SCC01920
+       LDI     TEMP                                                     SCC01930
+       TRA     R31A2   *NO                                              SCC01940
+       TSX     R12B,1                                                   SCC01950
+       TTR     *-3                                                      SCC01960
+       LDI     TEMP                                                     SCC01970
+       TRA     R29     *YES                                             SCC01980
+R31A2  CAL     FALBT                                                    SCC01990
+       ARS     1                                                        SCC02000
+       SLW     FALBT                                                    SCC02010
+R31B   TSX     TRYRD,1                                                  SCC02020
+R32    EQU     *                                                        SCC02030
+       LNT     2                                                        SCC02040
+       TRA     R35                                                      SCC02050
+R33    CAL     FALBT                                                    SCC02060
+       ORS     BADRC                                                    SCC02070
+R34    RIL     2                                                        SCC02080
+R35    LFT     4                                                        SCC02090
+       TRA     R50                                                      SCC02100
+       TRA     R29                                                      SCC02110
+R37    EQU     *                                                        SCC02120
+       RIL     2                                                        SCC02130
+       STI*    WCHERR                                                   SCC02140
+       NZT     INCAC                                                    SCC02150
+       TRA     R50B                                                     SCC02160
+       LFT     4                                                        SCC02170
+       TRA     R50B                                                     SCC02180
+       SIL     40                                                       SCC02190
+R38    CAL     IOSCC-1                                                  SCC02200
+       HPR     *-IOSCC+1,7    PREMATURE I-O STOP                        SCC02210
+       TRA     R50B                                                     SCC02220
+R40    BSS     0                                                        SCC02230
+TRYRD  SXA     RSXR1,1                                                  SCC02240
+       CLA     0,4                                                      SCC02250
+       PAC     0,1                                                      SCC02260
+       SXD     CMPT,1                                                   SCC02270
+       SXA     COMAD,4                                                  SCC02280
+       SLW     HOLDIO                                                   SCC02290
+       CAL     IORTN                                                    SCC02300
+       STP     0,4                                                      SCC02310
+NTRY   AXT     9,1                                                      SCC02320
+LOOP   XEC*    $RDSX                                                    SCC02330
+       SIL     6                                                        SCC02340
+COMAD  AXT     **,4                                                     SCC02350
+       XEC*    $RCHX                                                    SCC02360
+       AXC     *+1,4                                                    SCC02370
+       XEC*    $TCOX                                                    SCC02380
+       AXC     *+3,4                                                    SCC02390
+       XEC*    $TRCX                                                    SCC02400
+       RIL     2                                                        SCC02410
+       AXC     *+3,4                                                    SCC02420
+       XEC*    $TEFX                                                    SCC02430
+       RIL     4                                                        SCC02440
+       XEC*    $SCHX                                                    SCC02450
+       XEC*    $CHREG                                                   SCC02460
+       PAX     0,4                                                      SCC02470
+CMPT   TXI     *+1,4,**                                                 SCC02480
+       TXL     NOQ,4,2                                                  SCC02490
+       LNT     2                                                        SCC02500
+       TRA     GOOD                                                     SCC02510
+       TXL     *+2,1,1                                                  SCC02520
+       XEC*    $BSRX                                                    SCC02530
+       TIX     LOOP,1,1                                                 SCC02540
+       SIL     20                                                       SCC02550
+GOOD   TXH     GOUT,1,8                                                 SCC02560
+       CLA     BADCT                                                    SCC02570
+       ADD     =1B17                                                    SCC02580
+       STO     BADCT                                                    SCC02590
+GOUT   LXA     COMAD,4                                                  SCC02600
+       CAL     HOLDIO                                                   SCC02610
+       STP     0,4                                                      SCC02620
+RSXR1  AXT     **,1                                                     SCC02630
+       TRA     1,1                                                      SCC02640
+NOQ    LNT     4                                                        SCC02650
+       TRA     NTRY                                                     SCC02660
+       TXL     GOOD,4,1                                                 SCC02670
+       TRA     NTRY                                                     SCC02680
+R55    XEC*    $BSRX                                                    SCC02690
+       TXI     *+1,4,1                                                  SCC02700
+       CAL     0,4                                                      SCC02710
+       SLW     HOLDIO                                                   SCC02720
+       CAL     IORTN                                                    SCC02730
+       STT     0,4                                                      SCC02740
+       XEC*    $RDSX                                                    SCC02750
+       XEC*    $RCHX                                                    SCC02760
+       SXA     HXR,4                                                    SCC02770
+       AXC     *+1,4                                                    SCC02780
+       XEC*    $TCOX                                                    SCC02790
+       CALL    IOSCF                                                    SCC02800
+HXR    AXT     **,4                                                     SCC02810
+       CAL     HOLDIO                                                   SCC02820
+       STT     0,4                                                      SCC02830
+R56    OSI*    WCHERR                                                   SCC02840
+R58    XEC*    $CHREG                                                   SCC02850
+       ERA     REG                                                      SCC02860
+       PDX     0,1                                                      SCC02870
+       TXL     R37,1,0                                                  SCC02880
+       OSI     SAVERR                                                   SCC02890
+       STI     SAVERR                                                   SCC02900
+       CAL     FALBT                                                    SCC02910
+       ALS     1                                                        SCC02920
+       SLW     FALBT                                                    SCC02930
+       CLA     IOCNT                                                    SCC02940
+       ADD     RECCT                                                    SCC02950
+       SUB     =1B17                                                    SCC02960
+       STO     IOCNT                                                    SCC02970
+       TRA     RER                                                      SCC02980
+*                                                                       SCC02990
+R50    CALL    IOSCF                                                    SCC03000
+R50B   OSI*    WCHERR                                                   SCC03010
+       PIA                                                              SCC03020
+       LDI     SAVERR                                                   SCC03030
+       RIL     6                                                        SCC03040
+       OAI                                                              SCC03050
+       STI*    WCHERR                                                   SCC03060
+R51    CLA     FALBT                                                    SCC03070
+       SSM                                                              SCC03080
+       STO     FALBT                                                    SCC03090
+       CLA     IOCNT                                                    SCC03100
+       ADD     RECCT                                                    SCC03110
+       STO     IOCNT                                                    SCC03120
+       TRA     FINSH                                                    SCC03130
+IRRAC  PZE                                                              SCC03140
+IRRIO  PZE                                                              SCC03150
+INCAC  PZE                                                              SCC03160
+ANCHOR PZE                                                              SCC03170
+FIRST  PZE                                                              SCC03180
+LAST   PZE                                                              SCC03190
+TERMN  PZE                                                              SCC03200
+RECCT  PZE                                                              SCC03210
+FALBT  PZE                                                              SCC03220
+TEMP   PZE                                                              SCC03230
+HOLDIO PZE                                                              SCC03240
+IOCNT  PZE                                                              SCC03250
+BADCT  PZE                                                              SCC03260
+BADRC  PZE                                                              SCC03270
+IORTN  IORTN   0,,2                                                     SCC03280
+REG    PZE                                                              SCC03290
+SAVAC  PZE                                                              SCC03300
+SAVERR PZE                                                              SCC03310
+SAVIND PZE                                                              SCC03320
+       SPACE   6                                                        SCC03330
+WER    EQU     *                                                        SCC03340
+       STZ     KNOT                                                     SCC03350
+       SXA     FIRST,4                                                  SCC03360
+       XEC*    $SCHX                                                    SCC03370
+       XEC*    $CHREG                                                   SCC03380
+       SLW     REG                                                      SCC03390
+       PDC     0,4                                                      SCC03400
+       TXI     *+1,4,1                                                  SCC03410
+       SXA     LAST,4                                                   SCC03420
+       STZ     RECCT                                                    SCC03430
+       STZ     BSFFG                                                    SCC03440
+W2     XEC*    $CHIND                                                   SCC03450
+       PAI                                                              SCC03460
+       STZ     ETRNFG                                                   SCC03470
+       LFT     1                                                        SCC03480
+       STL     ETRNFG                                                   SCC03490
+       LFT     400                                                      SCC03500
+W3     STL     BSFFG                                                    SCC03510
+       LDI*    WCHERR                                                   SCC03520
+       LFT     2                                                        SCC03530
+       TRA     W3E                                                      SCC03540
+       TSX     DUTCH,1                                                  SCC03550
+       NZT     ETRNFG                                                   SCC03560
+       TRA     W3D                                                      SCC03570
+       TSX     ETRN,1                                                   SCC03580
+       TRA     LEVW                                                     SCC03590
+W3E    NZT     BSFFG                                                    SCC03600
+       TRA     W5                                                       SCC03610
+W3B    XEC*    $BSFX                                                    SCC03620
+W3C    TSX     TWEF,1                                                   SCC03630
+       CAL*    WWRS                                                     SCC03640
+       LNT     2                                                        SCC03650
+       TRA     W28                                                      SCC03660
+       LFT     1                                                        SCC03670
+       TTR     *+3                                                      SCC03680
+       HPR     1,5            FIVE ATTEMPTS TO WRITE ( WITH BSR-ERASE ) SCC03690
+       TRA     W3B                                                      SCC03700
+       NZT     ETRNFG                                                   SCC03710
+       TRA     W3D                                                      SCC03720
+       TSX     ETRN,1                                                   SCC03730
+       TRA     W3C                                                      SCC03740
+W3D    SIL     400            TAPE  NEEDS CHANGING                      SCC03750
+       TRA     LEVW                                                     SCC03760
+W5     LDI     0,4                                                      SCC03770
+W6     LFT     700000                                                   SCC03780
+       TTR     *+2                                                      SCC03790
+       TRA     W7                                                       SCC03800
+       LNT     100000                                                   SCC03810
+       TRA     W11                                                      SCC03820
+W7     LFT     077777                                                   SCC03830
+       TRA     W13                                                      SCC03840
+W8     PXA     0,4                                                      SCC03850
+       ERA     FIRST          HAVE WE REACHED START OF I-O PG.          SCC03860
+       TZE     W11            YES                                       SCC03870
+       TXI     *+1,4,1        NO                                        SCC03880
+       LDI     0,4            GET NEXT PRECEEDING I-O COM.              SCC03890
+W9     LFT     600000                                                   SCC03900
+       TTR     W9B                                                      SCC03910
+       LNT     100000                                                   SCC03920
+       TRA     W11                                                      SCC03930
+       TSX     R12B,1                                                   SCC03940
+       TRA     W11                                                      SCC03950
+       TRA     W8                                                       SCC03960
+W9B    LFT     100000                                                   SCC03970
+       TRA     W11                                                      SCC03980
+       TRA     W12                                                      SCC03990
+W11    STL     IRRIO                                                    SCC04000
+       LDI*    WCHERR                                                   SCC04010
+       TRA     LEVW                                                     SCC04020
+W12    LFT     077777                                                   SCC04030
+       TRA     W13                                                      SCC04040
+       TRA     W8                                                       SCC04050
+W13    CLA     RECCT                                                    SCC04060
+       ADD     =1B17                                                    SCC04070
+       STO     RECCT                                                    SCC04080
+W14    PXA     0,4                                                      SCC04090
+       ERA     FIRST          HAVE WE REACHED START OF I-O PG.          SCC04100
+       TZE     W25            YES                                       SCC04110
+       TXI     *+1,4,1        NO                                        SCC04120
+       LDI     0,4            GET NEXT PRECEEDING I-O COM.              SCC04130
+W15    LNT     100000                                                   SCC04140
+       TRA     W17                                                      SCC04150
+       TSX     R12B,1                                                   SCC04160
+       TRA     W11                                                      SCC04170
+       TRA     W14                                                      SCC04180
+W17    LNT     400000                                                   SCC04190
+       TRA     W21                                                      SCC04200
+W18    NZT     KNOT                                                     SCC04210
+       TRA     W14                                                      SCC04220
+W19    LFT     077777                                                   SCC04230
+       TRA     W20                                                      SCC04240
+       TRA     W14                                                      SCC04250
+W20    STZ     KNOT                                                     SCC04260
+       TRA     W13                                                      SCC04270
+W21    LNT     200000                                                   SCC04280
+       TRA     W11                                                      SCC04290
+W22    ZET     KNOT                                                     SCC04300
+       TRA     W11                                                      SCC04310
+W23    STL     KNOT                                                     SCC04320
+       TRA     W19                                                      SCC04330
+W25    EQU     *                                                        SCC04340
+       ZET     KNOT                                                     SCC04350
+       TRA     W11                                                      SCC04360
+       LDI*    WCHERR                                                   SCC04370
+W26    EQU     *                                                        SCC04380
+W28C   TSX     BACK,1                                                   SCC04390
+W28    LNT     1                                                        SCC04400
+       TTR     W28B                                                     SCC04410
+       NZT     BSFFG                                                    SCC04420
+       TSX     DUTCH,1                                                  SCC04430
+       NZT     ETRNFG                                                   SCC04440
+       TRA     W3D                                                      SCC04450
+       TSX     ETRN,1                                                   SCC04460
+       ZET     BSFFG                                                    SCC04470
+       TRA     W31                                                      SCC04480
+W28B   TSX     TRYWR,1                                                  SCC04490
+       LNT     2                                                        SCC04500
+       TRA     LEVW                                                     SCC04510
+WWRS   CAL     **,2                                                     SCC04520
+       HPR     1,5            FIVE ATTEMPTS TO WRITE ( WITH BSR-ERASE ) SCC04530
+       TRA     W28C                                                     SCC04540
+*                                                                       SCC04550
+TRYWR  EQU     *                                                        SCC04560
+       STZ     USESW                                                    SCC04570
+       TTR     *+2                                                      SCC04580
+TWEF   EQU     *                                                        SCC04590
+       STL     USESW                                                    SCC04600
+       SXA     CMMD,4                                                   SCC04610
+       SXA     XRA,1                                                    SCC04620
+       STZ     ALTSW                                                    SCC04630
+       AXT     10,1                                                     SCC04640
+LUUP   EQU     *                                                        SCC04650
+       SIL     2                                                        SCC04660
+       ZET     USESW                                                    SCC04670
+       TRA     TWFG                                                     SCC04680
+CMMD   AXT     **,4                                                     SCC04690
+       XEC*    $WRSX                                                    SCC04700
+       XEC*    $RCHX                                                    SCC04710
+       TRA     TWFG+1                                                   SCC04720
+TWFG   XEC*    $WEFX                                                    SCC04730
+       AXC     *+1,4                                                    SCC04740
+       XEC*    $TCOX                                                    SCC04750
+       AXC     *+3,4                                                    SCC04760
+       XEC*    $TRCX                                                    SCC04770
+       RIL     2                                                        SCC04780
+       XEC*   $ETTX                                                     SCC04790
+       SIL     1                                                        SCC04800
+       LNT     2                                                        SCC04810
+       TRA     GUUD                                                     SCC04820
+       TXL     GUUD,1,1                                                 SCC04830
+       LFT     1                                                        SCC04840
+       TRA     GUUD                                                     SCC04850
+       ZET     USESW                                                    SCC04860
+       TRA     TWFH                                                     SCC04870
+       SXA     HIRA,1                                                   SCC04880
+       TSX     BACK,1                                                   SCC04890
+HIRA   AXT     **,1                                                     SCC04900
+       TRA     TWFH+1                                                   SCC04910
+TWFH   XEC*    $BSRX                                                    SCC04920
+       ZET     ALTSW                                                    SCC04930
+       TRA     TWFC                                                     SCC04940
+       STL     ALTSW                                                    SCC04950
+TWFB   EQU     *                                                        SCC04960
+       TIX     LUUP,1,1                                                 SCC04970
+GUUD   EQU     *                                                        SCC04980
+       XEC*    $ETTX                                                    SCC04990
+       SIL     1                                                        SCC05000
+       LXA     CMMD,4                                                   SCC05010
+XRA    AXT     **,1                                                     SCC05020
+       TRA     1,1                                                      SCC05030
+TWFC   EQU     *                                                        SCC05040
+       STZ     ALTSW                                                    SCC05050
+       XEC*    $WRSX                                                    SCC05060
+       CLA     BADCT          ONE MORE ERASE                            SCC05070
+       ADD     =1B17                                                    SCC05080
+       STO     BADCT                                                    SCC05090
+       AXC     *+1,4                                                    SCC05100
+       XEC*    $TCOX                                                    SCC05110
+       AXC     TWFD,4                                                   SCC05120
+       XEC*    $TRCX                                                    SCC05130
+       TRA     TWFB                                                     SCC05140
+TWFD   CLA     BADRC          ONE MORE NOISE RECORD                     SCC05150
+       ADD     =1B17                                                    SCC05160
+       STO     BADRC                                                    SCC05170
+       SIL     20                                                       SCC05180
+       TRA     TWFB                                                     SCC05190
+*                                                                       SCC05200
+BACK   NZT     BSFFG                                                    SCC05210
+       TTR     *+4                                                      SCC05220
+       XEC*    $BSFX                                                    SCC05230
+       XEC*    $RDSX                                                    SCC05240
+       TRA     1,1                                                      SCC05250
+       SXA     HRA,1                                                    SCC05260
+       LXD     RECCT,1                                                  SCC05270
+       XEC*    $BSRX                                                    SCC05280
+       TIX     *-1,1,1                                                  SCC05290
+HRA    AXT     **,1                                                     SCC05300
+       TRA     1,1                                                      SCC05310
+*                                                                       SCC05320
+DUTCH  EQU     *                                                        SCC05330
+       SXA     DUTH,4                                                   SCC05340
+       XEC*   $WEFX                                                     SCC05350
+       AXC     *+1,4                                                    SCC05360
+       XEC*   $TCOX                                                     SCC05370
+       AXC     DUTH,4                                                   SCC05380
+       XEC*   $TRCX                                                     SCC05390
+DUTH   AXT     **,4                                                     SCC05400
+       TRA     1,1                                                      SCC05410
+*                                                                       SCC05420
+ETRN   EQU     *                                                        SCC05430
+       XCL                                                              SCC05440
+       XEC*    $RUNX                                                    SCC05450
+       HPR     3,5                                                      SCC05460
+       SIL     1000           TAPE HAS BEEN CHANGED                     SCC05470
+       RIL     1                                                        SCC05480
+       XCL                                                              SCC05490
+       TRA     1,1                                                      SCC05500
+*                                                                       SCC05510
+W31    STZ     BADRC                                                    SCC05520
+       STZ     BADCT                                                    SCC05530
+       TRA     W3C                                                      SCC05540
+LEVW   EQU     *                                                        SCC05550
+       TRA     R50                                                      SCC05560
+       SPACE   6                                                        SCC05570
+WEFER  EQU     *                                                        SCC05580
+       STZ     ERASF                                                    SCC05590
+       LFT     200                                                      SCC05600
+       STL     ERASF                                                    SCC05610
+       STZ     ETRNFG                                                   SCC05620
+       LFT     1                                                        SCC05630
+       STL     ETRNFG                                                   SCC05640
+       LDI*    WCHERR                                                   SCC05650
+       STL     BSFFG                                                    SCC05660
+       STZ     RECCT                                                    SCC05670
+F2     XEC*    $BSFX                                                    SCC05680
+F3     TSX     TWEF,1                                                   SCC05690
+       CAL*    WWRS                                                     SCC05700
+       LNT     2                                                        SCC05710
+       TRA     LEVF                                                     SCC05720
+       LFT     1                                                        SCC05730
+       TTR     F5                                                       SCC05740
+       HPR     1,5            FIVE ATTEMPTS TO WRITE ( WITH BSR-ERASE ) SCC05750
+       TRA     F2                                                       SCC05760
+F5     NZT     ETRNFG                                                   SCC05770
+       TRA     F4                                                       SCC05780
+       TSX     ETRN,1                                                   SCC05790
+       TRA     OUTF                                                     SCC05800
+LEVF   LFT     1                                                        SCC05810
+       TRA     F5                                                       SCC05820
+       ZET     ERASF                                                    SCC05830
+       XEC*    $WRSX                                                    SCC05840
+       AXC     *+1,4                                                    SCC05850
+       XEC*    $TCOX                                                    SCC05860
+       XEC*    $ETTX                                                    SCC05870
+       TTR     *+2                                                      SCC05880
+       TRA     OUTF                                                     SCC05890
+       SIL     1                                                        SCC05900
+       TRA     F5                                                       SCC05910
+F4     SIL     400                                                      SCC05920
+OUTF   EQU     *                                                        SCC05930
+       TRA     R50                                                      SCC05940
+*                                                                       SCC05950
+KNOT   EQU     ANCHOR                                                   SCC05960
+ERASF  PZE                                                              SCC05970
+BSFFG  PZE                                                              SCC05980
+ETRNFG PZE                                                              SCC05990
+USESW  PZE                                                              SCC06000
+ALTSW  PZE                                                              SCC06010
+       END                                                              SCC06020
+       COUNT   120                                                      ENB00000
+       LBL     IOENB,X                                                  ENB00010
+*IOENB  I-O ENABLE SPG. FOR IOPAR - R. NORRIS - SAO - AUG. 61           ENB00020
+*                                                                       ENB00030
+*           THIS SUBPROGRAM PROVIDES DATA CHANNEL MODE FOR IOPAR, SUCH  ENB00040
+*                       THAT I-O ACTIONS TERMINATED BY EOF COND. OR BY  ENB00050
+*                       IOXT COND., WILL BE AUTOMATICALLY COMPLETED AND ENB00060
+*                       CHECKED AT TRAP TIME, WHETHER OR NOT CPU IS     ENB00070
+*                       BEING DELAYED BY FINIO.                         ENB00080
+*                                                                       ENB00090
+*      TSX $IOENB,4     CPU WILL BE DELAYED VIA FINIO UNTIL PREVIOUS    ENB00100
+*                       ACTIONS ARE COMPLETED, AND THEN PUT IOPAR INTO  ENB00110
+*                       D.C.T. MODE.                                    ENB00120
+*      TSX $IODSB,4     WILL DISABEL D.C.T. AND RESTORE TRAP LOCATIONS  ENB00130
+*                       TO PRE-IOENB STATUS.                            ENB00140
+*                                                                       ENB00150
+*                       A CALL TO IOENB (IODSB) WITHOUT AN INTERVENING  ENB00160
+*                        CALL TO IODSB (IOENB) WILL BE EQUIVALENT TO A  ENB00170
+*                        NOP ( XEC* $DSB ) .                            ENB00180
+*                                                                       ENB00190
+*      TSX $INTRG,4     SET IOENB TO XEC TWO ONE INSTRUCTION SUBPROGRAMSENB00200
+*                       AFTER COMPLETION OF TRAP PGS. AT TRAP TIME.     ENB00210
+*      TSX  ONE,0        ONE - LOC OF FIRST SUBPROGRAM.                 ENB00220
+*      TSX  TWO,0        TWO - LOC OF SECOND SUBPG.                     ENB00230
+*                                                                       ENB00240
+*      NZT*   $ENBFG    SKIP IF IOENB CALLED WITHOUT SUBSEQUENT CALL    ENB00250
+*                        TO IODSB                                       ENB00260
+*                                                                       ENB00270
+       ENTRY   IOENB                                                    ENB00280
+       ENTRY   IODSB                                                    ENB00290
+       ENTRY   -ENB                                                     ENB00300
+       ENTRY   -DSB                                                     ENB00310
+       ENTRY  -INTRG                                                    ENB00320
+       ENTRY  -ENBFG                                                    ENB00330
+       ENTRY   SSENB                                                    ENB00340
+       ENTRY   RSENB                                                    ENB00350
+*                                                                       ENB00360
+IOENB  SXD     IOENB-2,4                                                ENB00370
+       ZET     ENBFG                                                    ENB00380
+       TRA     1,4                                                      ENB00390
+       SXA     IRB,2                                                    ENB00400
+       CAL*    $CHERR                                                   ENB00410
+       STA     WCHERR                                                   ENB00420
+       AXT     1,2                                                      ENB00430
+       TSX     $FINIO,4                                                 ENB00440
+       TSX     *-1,0                                                    ENB00450
+       AXT     2,2                                                      ENB00460
+       TSX     $FINIO,4                                                 ENB00470
+       TSX     *-1,0                                                    ENB00480
+       CAL     10                                                       ENB00490
+       SLW     SAV12                                                    ENB00500
+       CAL     11                                                       ENB00510
+       SLW     SAV13                                                    ENB00520
+       CAL     12                                                       ENB00530
+       SLW     SAV14                                                    ENB00540
+       CAL     13                                                       ENB00550
+       SLW     SAV15                                                    ENB00560
+       STZ     10                                                       ENB00570
+       CAL     TRAPA                                                    ENB00580
+       SLW     11                                                       ENB00590
+       STZ     12                                                       ENB00600
+       CAL     TRAPB                                                    ENB00610
+       SLW     13                                                       ENB00620
+IRB    AXT     **,2                                                     ENB00630
+       LXD     IOENB-2,4                                                ENB00640
+       CAL     ENBWD                                                    ENB00650
+       SLW     ENB                                                      ENB00660
+       CAL     DSBWD                                                    ENB00670
+       SLW     DSB                                                      ENB00680
+       STL     ENBFG                                                    ENB00690
+       XEC     ENB                                                      ENB00700
+       TRA     1,4                                                      ENB00710
+IODSB  EQU     *                                                        ENB00720
+DSB    NOP                                                              ENB00730
+       NZT     ENBFG                                                    ENB00740
+       TRA     1,4                                                      ENB00750
+       SXD     IOENB-2,4                                                ENB00760
+       CAL     SAV12                                                    ENB00770
+       SLW     10                                                       ENB00780
+       CAL     SAV13                                                    ENB00790
+       SLW     11                                                       ENB00800
+       CAL     SAV14                                                    ENB00810
+       SLW     12                                                       ENB00820
+       CAL     SAV15                                                    ENB00830
+       SLW     13                                                       ENB00840
+       CAL     NOP                                                      ENB00850
+       SLW     ENB                                                      ENB00860
+       SLW     DSB                                                      ENB00870
+       STZ     LEVCT                                                    ENB00880
+       STZ     ENBFG                                                    ENB00890
+       TRA     1,4                                                      ENB00900
+TRAPA  TTR     *+1                                                      ENB00910
+       SXA     XRB,2                                                    ENB00920
+       AXT     1,2                                                      ENB00930
+       STI     SAVIND                                                   ENB00940
+       LDI     10                                                       ENB00950
+       TTR     SAVE                                                     ENB00960
+TRAPB  TTR     *+1                                                      ENB00970
+       SXA     XRB,2                                                    ENB00980
+       AXT     2,2                                                      ENB00990
+       STI     SAVIND                                                   ENB01000
+       LDI     12                                                       ENB01010
+SAVE   EQU     *                                                        ENB01020
+       STQ     MQ                                                       ENB01030
+       STZ     ACOV                                                     ENB01040
+       TNO     *+2                                                      ENB01050
+       STL     ACOV                                                     ENB01060
+       SLW     ACLG                                                     ENB01070
+       ARS     2                                                        ENB01080
+       STO     ACSQP                                                    ENB01090
+       SXA     XRC,4                                                    ENB01100
+       PIA                                                              ENB01110
+       STA     RET                                                      ENB01120
+       RIL     777771                                                   ENB01130
+       RIR     777777                                                   ENB01140
+       OSI*    WCHERR                                                   ENB01150
+WCHERR STI     **,2                                                     ENB01160
+       CAL     NOP                                                      ENB01170
+       SLW     ENB                                                      ENB01180
+       SLW     DSB                                                      ENB01190
+       STZ     ENBFG                                                    ENB01200
+       TSX     $FINIO,4                                                 ENB01210
+       TSX     *-1,0                                                    ENB01220
+TRIGR  XEC     DSB                                                      ENB01230
+       XEC     DSB                                                      ENB01240
+       CAL     ENBWD                                                    ENB01250
+       SLW     ENB                                                      ENB01260
+       CAL     DSBWD                                                    ENB01270
+       SLW     DSB                                                      ENB01280
+       CAL     *                                                        ENB01290
+       ZET     ACOV                                                     ENB01300
+       ALS     8                                                        ENB01310
+       CLA     ACSQP                                                    ENB01320
+       ALS     2                                                        ENB01330
+       ORA     ACLG                                                     ENB01340
+       NZT     ACOV                                                     ENB01350
+       TOV     *+1                                                      ENB01360
+       LDQ     MQ                                                       ENB01370
+       LDI     SAVIND                                                   ENB01380
+XRB    AXT     **,2                                                     ENB01390
+XRC    AXT     **,4                                                     ENB01400
+       STL     ENBFG                                                    ENB01410
+ENB    NOP                                                              ENB01420
+RET    TTR     **                                                       ENB01430
+*                                                                       ENB01440
+INTRG  EQU     *                                                        ENB01450
+       XEC     DSB                                                      ENB01460
+       SXD     IOENB-2,4                                                ENB01470
+       CLA     1,4                                                      ENB01480
+       STA     TRIGR                                                    ENB01490
+       CLA     2,4                                                      ENB01500
+       STA     TRIGR+1                                                  ENB01510
+       XEC     ENB                                                      ENB01520
+       TRA     3,4                                                      ENB01530
+*                                                                       ENB01540
+NOP    NOP                                                              ENB01550
+DSBBT  PZE                                                              ENB01560
+ENBBT  OCT     3                                                        ENB01570
+DSBWD  ENB     DSBBT                                                    ENB01580
+ENBWD  ENB     ENBBT                                                    ENB01590
+ACOV   PZE                                                              ENB01600
+ACSQP  PZE                                                              ENB01610
+ACLG   PZE                                                              ENB01620
+MQ     PZE                                                              ENB01630
+SAVIND PZE                                                              ENB01640
+SAV12  PZE                                                              ENB01650
+SAV13  PZE                                                              ENB01660
+SAV14  PZE                                                              ENB01670
+SAV15  PZE                                                              ENB01680
+ENBFG  PZE                                                              ENB01690
+       EJECT                                                            ENB01700
+       BSS     0                                                        ENB01710
+*                                                                       ENB01720
+*       MUTILEVEL OVERSEER TO SAVE AND SUSPEND CH. TRAPPING RECURSIVELY.ENB01730
+*                                                                       ENB01740
+*      TSX $SSENB,4     DISABLE CHANS.  SAVE AND NOP ENB IF LEVEL ZERO. ENB01750
+*                                                                       ENB01760
+*      TSX $RSENB,4     DISABLE CHANS.  REPLACE ENB IF LEVEL ZERO.      ENB01770
+*                                                                       ENB01780
+*                                                                       ENB01790
+       PZE                                                              ENB01800
+       BCI     1,SSENB                                                  ENB01810
+SSENB  EQU     *                                                        ENB01820
+       XEC     DSB                                                      ENB01830
+       SXD     SSENB-2,4                                                ENB01840
+       NZT     ENBFG                                                    ENB01850
+       TRA     SRET                                                     ENB01860
+       ZET     LEVCT                                                    ENB01870
+       TRA     SSA                                                      ENB01880
+       CAL     ENB                                                      ENB01890
+       SLW     SENB                                                     ENB01900
+       CAL     DSB                                                      ENB01910
+       SLW     SDSB                                                     ENB01920
+       CAL     NOP                                                      ENB01930
+       SLW     ENB                                                      ENB01940
+       SLW     DSB                                                      ENB01950
+SSA    CAL     LEVCT                                                    ENB01960
+       ADD     =1B35                                                    ENB01970
+       STO     LEVCT                                                    ENB01980
+SRET   TRA     1,4                                                      ENB01990
+*                                                                       ENB02000
+RSENB  EQU     *                                                        ENB02010
+       XEC     DSB                                                      ENB02020
+       SXD     SSENB-2,4                                                ENB02030
+       ZET     ENBFG                                                    ENB02040
+       NZT     LEVCT                                                    ENB02050
+       TRA     RRET                                                     ENB02060
+       CAL     LEVCT                                                    ENB02070
+       SUB     =1B35                                                    ENB02080
+       STO     LEVCT                                                    ENB02090
+       TNZ     RRET                                                     ENB02100
+       CAL     SDSB                                                     ENB02110
+       SLW     DSB                                                      ENB02120
+       CAL     SENB                                                     ENB02130
+       SLW     ENB                                                      ENB02140
+RRET   TRA     1,4                                                      ENB02150

@@ -1,0 +1,273 @@
+*PCPE      TV PCPE - PRINCIPAL COMPONENTS PREDITION EQUATION.           PCPE0001
+C     WILLARD M. SNYDER, TRIBUTARY AREA DEVELOPMENT, TVA.               PCPE0002
+      DIMENSION OBS(40),SS(40,40),COR(40,40),SOBS(40),B1(40),C1(40),D1(4PCPE0003
+     10,40),V1(40),DX1(40),X1(40,40),U1(40),GM1(40),L41(40),AX1(40),XTB1PCPE0004
+     2(40),UBX1(40),DIF1(40),ACOR(40),COEE(40),DEVX(40),AVX(40),ALPH(12)PCPE0005
+     3,FCOR(40),PREDY(1000),ERR(1000)                                   PCPE0006
+   99 READ 114,(ALPH(I),I=1,12)                                         PCPE0007
+  114 FORMAT(12A6)                                                      PCPE0008
+      READ 100,NOBS,NVAR,NROO,NORM,IB1,IB2,ACC                          PCPE0009
+  100 FORMAT(6I3,E7.1)                                                  PCPE0010
+C     CLEAR TRIANGULAR MATRIX TO ZERO                                   PCPE0011
+      NVAR2=NVAR-1                                                      PCPE0012
+      DO 101 I=1,NVAR                                                   PCPE0013
+      DO 101 J=I,NVAR                                                   PCPE0014
+  101 SS(I,J)=0.0                                                       PCPE0015
+      IF(SENSE SWITCH 1)102,108                                         PCPE0016
+C     ADD AN A TERM,FORM TRIANGULAR SS,FORM SQUARE COR                  PCPE0017
+  102 DO 104 I=1,NVAR                                                   PCPE0018
+  104 SOBS(I)=0.0                                                       PCPE0019
+      NT=NVAR                                                           PCPE0020
+      DO 106 I=1,NOBS                                                   PCPE0021
+      READ INPUT TAPE 4,103,(OBS(J),J=1,NVAR)                           PCPE0022
+      WRITE TAPE 6,(OBS(J),J=1,NVAR)                                    PCPE0023
+  103 FORMAT(7F10.4)                                                    PCPE0024
+      DO 107 II=1,NVAR                                                  PCPE0025
+  107 SOBS(II)=SOBS(II)+OBS(II)                                         PCPE0026
+      DO 106 K1=1,NVAR                                                  PCPE0027
+      DO 106 K2=K1,NVAR                                                 PCPE0028
+  106 SS(K1,K2)=SS(K1,K2)+(OBS(K1)*OBS(K2))                             PCPE0029
+      DO 105 K1=1,NVAR                                                  PCPE0030
+      DO 105 K2=K1,NVAR                                                 PCPE0031
+      COR(K1,K2)=(SS(K1,K2)-((SOBS(K1)*SOBS(K2))/FLOATF(NOBS)))/SQRTF((SPCPE0032
+     1S(K1,K1)-(SOBS(K1)**2/FLOATF(NOBS)))*(SS(K2,K2)-(SOBS(K2)**2/FLOATPCPE0033
+     2F(NOBS))))                                                        PCPE0034
+  105 COR(K2,K1)=COR(K1,K2)                                             PCPE0035
+      GO TO 112                                                         PCPE0036
+C     DO NOT ADD AN A TERM,FORM TRIANGULAR SS,FORM SQUARE COR           PCPE0037
+  108 DO 109 I=1,NOBS                                                   PCPE0038
+      READ INPUT TAPE 4,103,(OBS(J),J=1,NVAR)                           PCPE0039
+      WRITE TAPE 6,(OBS(J),J=1,NVAR)                                    PCPE0040
+      DO 109 K1=1,NVAR                                                  PCPE0041
+      DO 109 K2=K1,NVAR                                                 PCPE0042
+  109 SS(K1,K2)=SS(K1,K2)+(OBS(K1)*OBS(K2))                             PCPE0043
+      NT=NVAR2                                                          PCPE0044
+      DO 111 K1=1,NVAR                                                  PCPE0045
+      DO 111 K2=K1,NVAR                                                 PCPE0046
+      COR(K1,K2)=SS(K1,K2)/SQRTF(SS(K1,K1)*SS(K2,K2))                   PCPE0047
+  111 COR(K2,K1)=COR(K1,K2)                                             PCPE0048
+  112 REWIND 6                                                          PCPE0049
+      READ 113,(B1(I),I=1,NVAR)                                         PCPE0050
+  113 FORMAT(7F10.4)                                                    PCPE0051
+      WRITE OUTPUT TAPE 5,115                                           PCPE0052
+  115 FORMAT(82H0 PRINCIPAL COMPONENTS PREDICTION EQUATION WITH EIGENVALPCPE0053
+     1UE-EIGENVECTOR COMPUTATION)                                       PCPE0054
+      WRITE OUTPUT TAPE 5,114,(ALPH(I),I=1,12)                          PCPE0055
+      WRITE OUTPUT TAPE 5,200,(K1,COR(K1,NVAR),K1=1,NVAR)               PCPE0056
+ 200  FORMAT (38H0 CORRELATIONS WITH DEPENDENT VARIABLE/7(I5,F11.6))    PCPE0057
+      CALL EIGEN(COR,B1,NVAR2,NROO,NORM,ACC,IB1,IB2,U1,X1,NRF)          PCPE0058
+      WRITE OUTPUT TAPE 5,116                                           PCPE0059
+  116 FORMAT(28H0   COEFFICIENTS OF EQUATION)                           PCPE0060
+C     COMPUTE CORRELATION COMPONENTS                                    PCPE0061
+      DO 120 K3=1,NRF                                                   PCPE0062
+      SCOR=0.0                                                          PCPE0063
+      DO 150 K4=1,NVAR2                                                 PCPE0064
+  150 SCOR=SCOR+(X1(K4,K3)*COR(K4,NVAR))                                PCPE0065
+  120 ACOR(K3)=SCOR/U1(K3)                                              PCPE0066
+      DO 121 K3=1,NVAR2                                                 PCPE0067
+      COEE(K3)=0.0                                                      PCPE0068
+      DO 121 K4=1,NRF                                                   PCPE0069
+  121 COEE(K3)=COEE(K3)+(ACOR(K4)*X1(K3,K4))                            PCPE0070
+      TCOR=0.                                                           PCPE0071
+      DO 140 K4=1,NRF                                                   PCPE0072
+      FCOR(K4)=U1(K4)*(ACOR(K4)**2)                                     PCPE0073
+  140 TCOR=TCOR+FCOR(K4)                                                PCPE0074
+      WRITE OUTPUT TAPE 5,122,(K3,COEE(K3),K3=1,NVAR2)                  PCPE0075
+  122 FORMAT(23H0 STANDARDIZED VARIATES/5(I5,F17.8))                    PCPE0076
+      IF(SENSE SWITCH 1)123,124                                         PCPE0077
+  124 DO 125 K3=1,NVAR                                                  PCPE0078
+  125 DEVX(K3)=SQRTF(SS(K3,K3)/FLOATF(NOBS))                            PCPE0079
+      DO 126 K3=1,NVAR2                                                 PCPE0080
+  126 COEE(K3)=COEE(K3)*DEVX(NVAR)/DEVX(K3)                             PCPE0081
+      A=0.0                                                             PCPE0082
+      GO TO 130                                                         PCPE0083
+  123 DO 127 K3=1,NVAR                                                  PCPE0084
+      DEVX(K3)=SQRTF((SS(K3,K3)-(SOBS(K3)**2/FLOATF(NOBS)))/FLOATF(NOBS-PCPE0085
+     11))                                                               PCPE0086
+ 127  AVX(K3)=SOBS(K3)/FLOATF(NOBS)                                     PCPE0087
+      DO 128 K3=1,NVAR2                                                 PCPE0088
+  128 COEE(K3)=COEE(K3)*DEVX(NVAR)/DEVX(K3)                             PCPE0089
+      A=AVX(NVAR)                                                       PCPE0090
+      DO 129 K4=1,NVAR2                                                 PCPE0091
+  129 A=A-(COEE(K4)*AVX(K4))                                            PCPE0092
+  130 SSE=0.                                                            PCPE0093
+      DO 144 I=1,NOBS                                                   PCPE0094
+      READ TAPE 6,(OBS(J),J=1,NVAR)                                     PCPE0095
+      PREDY(I)=A                                                        PCPE0096
+      DO 143 K3=1,NVAR2                                                 PCPE0097
+  143 PREDY(I)=PREDY(I)+(COEE(K3)*OBS(K3))                              PCPE0098
+      ERR(I)=OBS(NVAR)-PREDY(I)                                         PCPE0099
+  144 SSE=SSE+(ERR(I)**2)                                               PCPE0100
+      REWIND 6                                                          PCPE0101
+      WRITE OUTPUT TAPE 5,131,(K4,COEE(K4),K4=1,NVAR2)                  PCPE0102
+  131 FORMAT (19H0 ORIGINAL VARIATES/5(I5,F17.8))                       PCPE0103
+      WRITE OUTPUT TAPE 5,132,A                                         PCPE0104
+  132 FORMAT(22H0 TERM A OF EQUATION = F11.6)                           PCPE0105
+      WRITE OUTPUT TAPE 5,145,(I,PREDY(I),ERR(I),I=1,NOBS)              PCPE0106
+  145 FORMAT((49H0ITEM NUMBER PREDICTED VALUE AND PREDICTION ERROR)/(3(IPCPE0107
+     14,2E15.6)))                                                       PCPE0108
+      EVAR=SSE/FLOATF(NOBS-NT)                                          PCPE0109
+      ESDEV=SQRTF(EVAR)                                                 PCPE0110
+      WRITE OUTPUT TAPE 5,146,SSE,EVAR,ESDEV                            PCPE0111
+  146 FORMAT(23H0 ERROR SUM OF SQUARES=E17.8,17H  ERROR VARIANCE=E17.8,2PCPE0112
+     17H  ERROR STANDARD DEVIATION=E17.8)                               PCPE0113
+      YVAR=DEVX(NVAR)**2                                                PCPE0114
+      WRITE OUTPUT TAPE 5,147,SS(NVAR,NVAR),YVAR,DEVX(NVAR)             PCPE0115
+  147 FORMAT(23H0   Y   SUM OF SQUARES=E17.8,17H    Y   VARIANCE=E17.8,2PCPE0116
+     17H    Y   STANDARD DEVIATION=E17.8)                               PCPE0117
+      WRITE OUTPUT TAPE 5,141,(K4,FCOR(K4),K4=1,NRF)                    PCPE0118
+  141 FORMAT(34H0 FACTOR CORRELATION CONTRIBUTIONS/8(I5,F8.4))          PCPE0119
+      WRITE OUTPUT TAPE 5,142,TCOR                                      PCPE0120
+  142 FORMAT((42H0 MULTIPLE CORRELATION COEFFICIENT SQUAREDF8.4)//8H0 ENPCPE0121
+     1D OF)                                                             PCPE0122
+      WRITE OUTPUT TAPE 5,114,(ALPH(I),I=1,12)                          PCPE0123
+      END FILE 5                                                        PCPE0124
+      PAUSE 77777                                                       PCPE0125
+      GO TO 99                                                          PCPE0126
+      END (2,2,2,2,2)                                                   PCPE0127
+*EIGN     SUBROUTINE EIGENVALUE-EIGENVECTOR.                            EIGN0001
+C     THIS IS ADAPTION OF CA 0054 EIGENVALUE-EIGENVECTOR PROGRAM.       EIGN0002
+      SUBROUTINE EIGEN(A,B,N,M,M1,E,IBUG,IBUG1,U,X,L)                   EIGN0003
+      DIMENSION A(40,40),B(40),C(40),D(40,40),V(40),DX(40),X(40,40),U(40EIGN0004
+     1),GM(40),L4(40),AX(40),XTB(40),UBX(40),DIF(40)                    EIGN0005
+      DO 80 I=1,N                                                       EIGN0006
+   80 WRITE OUTPUT TAPE 5,90,I,(A(I,J),J=1,N)                           EIGN0007
+   90 FORMAT(10H0 A MATRIX/4H0ROWI3/(1H 8F12.6))                        EIGN0008
+      WRITE OUTPUT TAPE 5,100,(B(I),I=1,N)                              EIGN0009
+  100 FORMAT(19H0 B DIAGONAL MATRIX/(1H 8F12.6))                        EIGN0010
+      IBUG=IBUG+1                                                       EIGN0011
+      IBUG1=IBUG1+1                                                     EIGN0012
+      DO 200 I=1,N                                                      EIGN0013
+  200 C(I)=1./B(I)                                                      EIGN0014
+      DO 210 I=1,N                                                      EIGN0015
+      DO 210 J=1,N                                                      EIGN0016
+  210 D(I,J)=C(I)*A(I,J)                                                EIGN0017
+      L=1                                                               EIGN0018
+      L2=1                                                              EIGN0019
+      CHEC=(FLOATF(M)/1000.)*FLOATF(N)                                  EIGN0020
+      SROO=0.                                                           EIGN0021
+      K=0                                                               EIGN0022
+  220 K=K+1                                                             EIGN0023
+      L4(L)=0                                                           EIGN0024
+      DO 230 I=1,N                                                      EIGN0025
+  230 X(I,L)=1.                                                         EIGN0026
+  240 MAX=0                                                             EIGN0027
+  250 DO 260 I=1,N                                                      EIGN0028
+      DX(I)=0.                                                          EIGN0029
+      DO 260 J=1,N                                                      EIGN0030
+  260 DX(I)=DX(I)+D(I,J)*X(J,L)                                         EIGN0031
+      XX=0.                                                             EIGN0032
+      XTDX=0.                                                           EIGN0033
+      DO 270 I=1,N                                                      EIGN0034
+      XX=XX+X(I,L)**2                                                   EIGN0035
+  270 XTDX=XTDX+X(I,L)*DX(I)                                            EIGN0036
+      U(L)=XTDX/XX                                                      EIGN0037
+      DO 280 I=1,N                                                      EIGN0038
+  280 V(I)=DX(I)-U(L)*X(I,L)                                            EIGN0039
+      DO 300 I=1,N                                                      EIGN0040
+      IF(DX(I))290,285,290                                              EIGN0041
+  285 DX(I)=V(I)/E                                                      EIGN0042
+  290 IF(ABSF(V(I))-E*ABSF(DX(I)))300,300,310                           EIGN0043
+  300 CONTINUE                                                          EIGN0044
+      ASSIGN 405 TO BD                                                  EIGN0045
+      GO TO 352                                                         EIGN0046
+  310 MAX=MAX+1                                                         EIGN0047
+      IF(MAX-150)320,360,360                                            EIGN0048
+  320 DO 330 I=1,N                                                      EIGN0049
+      DX(I)=0.                                                          EIGN0050
+      DO 330 J=1,N                                                      EIGN0051
+  330 DX(I)=DX(I)+D(I,J)*V(J)                                           EIGN0052
+      XX=0.                                                             EIGN0053
+      XTDX=0.                                                           EIGN0054
+      DO 340 I=1,N                                                      EIGN0055
+      XX=XX+V(I)**2                                                     EIGN0056
+  340 XTDX=XTDX+V(I)*DX(I)                                              EIGN0057
+      Z=XTDX/XX                                                         EIGN0058
+      DO 350 I=1,N                                                      EIGN0059
+  350 X(I,L)=X(I,L)+(.8/ABSF(U(L)-Z))*V(I)                              EIGN0060
+      ASSIGN 250 TO BD                                                  EIGN0061
+  352 GO TO (358,354),IBUG1                                             EIGN0062
+ 354  WRITE OUTPUT TAPE 5,356,L,MAX,XX,XTDX,U(L),Z,(DX(I),V(I),X(I,L),I=EIGN0063
+     11,N)                                                              EIGN0064
+  356 FORMAT(14H0DEBUG1 OUTPUT/1H 2I4,1P4E14.4/(1H 1P3E14.4))           EIGN0065
+  358 GO TO BD,(405,250,490)                                            EIGN0066
+  360 DO 380 I=1,N                                                      EIGN0067
+      IF(DX(I))375,370,375                                              EIGN0068
+  370 DX(I)=V(I)/(999.99*E)                                             EIGN0069
+  375 IF(ABSF(V(I))-1000.*E*ABSF(DX(I)))380,380,400                     EIGN0070
+  380 CONTINUE                                                          EIGN0071
+      L4(L)=L4(L)+1                                                     EIGN0072
+      ASSIGN 405 TO BD                                                  EIGN0073
+      GO TO 352                                                         EIGN0074
+  400 L4(L)=L4(L)+2                                                     EIGN0075
+      ASSIGN 490 TO BD                                                  EIGN0076
+      GO TO 352                                                         EIGN0077
+  405 IF(M1)440,440,410                                                 EIGN0078
+  410 IF(X(M1,L))420,440,420                                            EIGN0079
+  420 XNML=X(M1,L)                                                      EIGN0080
+      DO 430 I=1,N                                                      EIGN0081
+  430 X(I,L)=X(I,L)/XNML                                                EIGN0082
+  440 DO 450 I=1,N                                                      EIGN0083
+  450 XTB(I)=X(I,L)*B(I)                                                EIGN0084
+      GM(L)=0.                                                          EIGN0085
+      DO 460 I=1,N                                                      EIGN0086
+  460 GM(L)=GM(L)+XTB(I)*X(I,L)                                         EIGN0087
+      CN=U(L)/GM(L)                                                     EIGN0088
+      DO 470 J=1,N                                                      EIGN0089
+      DO 470 I=1,N                                                      EIGN0090
+  470 D(I,J)=D(I,J)-CN*X(I,L)*XTB(J)                                    EIGN0091
+      SROO=SROO+U(K)                                                    EIGN0092
+      IF(CHEC-SROO) 490,490,475                                         EIGN0093
+ 475  IF(L-7-L2) 640,490,640                                            EIGN0094
+ 490  WRITE OUTPUT TAPE 5,500,(U(L1),L1=L2,L)                           EIGN0095
+  500 FORMAT(6H0EGVAL,1P8E13.4)                                         EIGN0096
+      WRITE OUTPUT TAPE 5,540,(L1,L1=L2,L)                              EIGN0097
+  540 FORMAT(6H0EGVEC,I8,7I13)                                          EIGN0098
+      DO 550 I=1,N                                                      EIGN0099
+  550 WRITE OUTPUT TAPE 5,560,I,(X(I,L1),L1=L2,L)                       EIGN0100
+  560 FORMAT(3H0  ,I2,(1PE14.4,1P7E13.4))                               EIGN0101
+      DO 630 L1=L2,L                                                    EIGN0102
+      IF(L4(L1)-1)630,610,570                                           EIGN0103
+  570 WRITE OUTPUT TAPE 5,600,L1                                        EIGN0104
+  600 FORMAT(22H0BAD ACCURACY ON EGVALI3)                               EIGN0105
+      GO TO 730                                                         EIGN0106
+  610 WRITE OUTPUT TAPE 5,620,L1                                        EIGN0107
+  620 FORMAT(31H0ACCURACY REDUCED BY 3 ON EGVALI3)                      EIGN0108
+  630 CONTINUE                                                          EIGN0109
+      L2=L2+8                                                           EIGN0110
+  640 GO TO (720,650),IBUG                                              EIGN0111
+  650 DO 660 I=1,N                                                      EIGN0112
+      AX(I)=0.                                                          EIGN0113
+      DO 660 J=1,N                                                      EIGN0114
+  660 AX(I)=AX(I)+A(I,J)*X(J,L)                                         EIGN0115
+      DO 680 I=1,N                                                      EIGN0116
+  670 UBX(I)=U(L)*B(I)*X(I,L)                                           EIGN0117
+  680 DIF (I)=AX(I)-UBX(I)                                              EIGN0118
+      WRITE OUTPUT TAPE 5,690,L,L4(L),U(L),GM(L),(X(I,L),XTB(I),AX(I),UBEIGN0119
+     1X(I),DIF(I),I=1,N)                                                EIGN0120
+  690 FORMAT(13H0DEBUG OUTPUT/1H 2I3,1P2E14.4/(1H 1P5E14.4))            EIGN0121
+      WRITE OUTPUT TAPE 5,700                                           EIGN0122
+  700 FORMAT(16H DEFLATED MATRIX)                                       EIGN0123
+      DO 710 I=1,N                                                      EIGN0124
+  710 WRITE OUTPUT TAPE 5,760,I,(D(I,J),J=1,N)                          EIGN0125
+  720 L=L+1                                                             EIGN0126
+ 725  IF(CHEC-SROO) 730,220,220                                         EIGN0127
+  730 WRITE OUTPUT TAPE 5,740                                           EIGN0128
+  740 FORMAT(17H1 DEFLATED MATRIX)                                      EIGN0129
+      DO 750 I=1,N                                                      EIGN0130
+  750 WRITE OUTPUT TAPE 5,760,I,(D(I,J),J=1,N)                          EIGN0131
+  760 FORMAT(4H0ROWI3/(1H 8E14.5))                                      EIGN0132
+      L=L-1                                                             EIGN0133
+      DO 800 L1=1,L                                                     EIGN0134
+      SRTSS=SQRTF(GM(L1))                                               EIGN0135
+      DO 800 I=1,N                                                      EIGN0136
+ 800  X(I,L1)=X(I,L1)/SRTSS                                             EIGN0137
+      WRITE OUTPUT TAPE 5,810                                           EIGN0138
+  810 FORMAT(12H0TRANSFORMED)                                           EIGN0139
+      WRITE OUTPUT TAPE 5,540,(L1,L1=1,L)                               EIGN0140
+      DO 811 I=1,N                                                      EIGN0141
+  811 WRITE OUTPUT TAPE 5,560,I,(X(I,L1),L1=1,L)                        EIGN0142
+      IBUG=IBUG-1                                                       EIGN0143
+      IBUG1=IBUG1-1                                                     EIGN0144
+      RETURN                                                            EIGN0145
+      END (2,2,2,2,2)                                                   EIGN0146

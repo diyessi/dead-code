@@ -1,0 +1,355 @@
+*      FAP                                                              MITMR001
+*(TIME)  MERWIN-DAGGETT AND CORBATO. MITMR...INTERVAL TIMER SUBPROGRAM  MITMR002
+*              FOR USE WITH THE FORTRAN MONITOR SYSTEM.                 MITMR003
+       LBL     MITMR,M                                                  MITMR004
+*                                                                       MITMR005
+       COUNT   220                                                      MITMR006
+*      AUGUST 27,1962                                                   MITMR007
+       ENTRY   (TIME)                                                   MITMR008
+       ENTRY   TIMER                                                    MITMR009
+       ENTRY   JOBTM                                                    MITMR010
+       ENTRY   RSCLCK                                                   MITMR011
+       ENTRY   STOPCL                                                   MITMR012
+       ENTRY   KILLTR                                                   MITMR013
+       ENTRY   TIMLFT                                                   MITMR014
+       ENTRY   RSTRTN                                                   MITMR015
+       ENTRY   (FRM7)                                                   MITMR016
+*                                                                       MITMR017
+*              RSCLCK...RESET CLOCK TO TIME,,ZERO,,                     MITMR018
+*              STOPCL        GIVES BACK TIME SINCE LAST RSCLCK.         MITMR019
+*              JOBTM         GIVES BACK TIME SINCE START OF JOB.        MITMR020
+*              TIMER         SETS CLOCK TO ACT LIKE ALARM CLOCK.        MITMR021
+*              KILLTR        RESETS ALARM CLOCK BEFORE IT GOES OFF.     MITMR022
+*              TIMLFT        GIVES BACK TIME LEFT FOR JOB TO RUN.       MITMR023
+*              RTNRST        RETURN TO INTERRUPTED PROGRAM              MITMR024
+*                                 WITH MACHINE CONDITIONS RESTORED AS OFMITMR025
+*                                 LAST INTERRUPT.                       MITMR026
+*              CALLING SEQUENCE...CALL RSCLCK                           MITMR027
+*              CALLING SEQUENCE...CALL STOPCL(I)                        MITMR028
+*               CALLING SEQUENCE... CALL TIMLFT(I)                      MITMR029
+*              CALLING SEQUENCE...CALL TIMER(I,STMT)                    MITMR030
+*              CALLING SEQUENCE...CALL KILLTR                           MITMR031
+*              CALLING SEQUENCE...CALL JOBTM(I)                         MITMR032
+*              CALLING SEQUENCE...CALLRSTRTN                            MITMR033
+*                                                                       MITMR034
+*                                                                       MITMR035
+*              REGISTERS IN LOWER CORE                                  MITMR036
+*   7  TTR     CLKL                                                     MITMR037
+* CLKL STL     CLKIND                                                   MITMR038
+*      TTR*    6                                                        MITMR039
+*CLKIND                                                                 MITMR040
+*JOBTIM                                                                 MITMR041
+*                                                                       MITMR042
+ CLKRD SYN     5                                                        MITMR043
+CLKLOC SYN     6                                                        MITMR044
+CLKTRA SYN     7                                                        MITMR045
+(JBTM) SYN     91                                                       MITMR046
+JOBTIM SYN     (JBTM)                                                   MITMR047
+(CKIN) SYN     92                                                       MITMR048
+CLKIND SYN     (CKIN)                                                   MITMR049
+*                                                                       MITMR050
+*              (TIME)                                                   MITMR051
+(TIME) SYN     *                                                        MITMR052
+       SXA     TM2,1                                                    MITMR053
+ TM1   CAL     CLKRD                                                    MITMR054
+       STZ     CLKRD                                                    MITMR055
+       COM                                                              MITMR056
+       STO     TMLEFT                                                   MITMR057
+       STO     LSTSET                                                   MITMR058
+       ANA     =O777777                                                 MITMR059
+       ORA     STRT                                                     MITMR060
+       LXA     NTBL,1                                                   MITMR061
+       SLW     TMTBL,1                                                  MITMR062
+       TXI     *+1,1,-1      OPCODE VAR.FIELD                           MITMR063
+       SXA     NTBL,1                                                   MITMR064
+       CAL     TRA7                                                     MITMR065
+       SLW     CLKTRA                                                   MITMR066
+       CAL     TMLEFT                                                   MITMR067
+       COM                                                              MITMR068
+       STO     CLKRD                                                    MITMR069
+       NZT     CLKIND                                                  1MITMR070
+       TTR     TM2                                                     2MITMR071
+       CALL    EXIT                                                    3MITMR072
+ TM2   AXT     **,1                                                     MITMR073
+       TTR     1,4                                                      MITMR074
+ TRA7  TTR     FROM7                                                    MITMR075
+ STRT  PON     0,0,GOMON     VECTOR ENTRY FOR JOB TIME UP.              MITMR076
+*                                                                       MITMR077
+*              GOMON SETS CLOCK INDICATOR NON-ZERO AND THEN TO EXIT.    MITMR078
+*                                                                       MITMR079
+ GOMON STL     CLKIND                                                   MITMR080
+       TTR     $EXIT                                                    MITMR081
+*                                                                       MITMR082
+************************************************************************MITMR083
+*              JOBTM                                                    MITMR084
+*              CALLING SEQUENCE... TSX JOBTM,4                          MITMR085
+*                                  PZE TIMEX      RESULT IN DECR.       MITMR086
+*                                (TXH)            RESULT IN ADDR.       MITMR087
+*                                                                       MITMR088
+ JOBTM SYN     *                                                        MITMR089
+       CAL     CLKRD                                                    MITMR090
+       COM                                                              MITMR091
+       STO     TMET                                                     MITMR092
+       CAL     1,4                                                      MITMR093
+       STP     PRFX                                                     MITMR094
+       CLA     JOBTIM                                                   MITMR095
+       SUB     TMLEFT                                                   MITMR096
+       ADD     LSTSET                                                   MITMR097
+       SUB     TMET                                                     MITMR098
+       NZT     PRFX                                                     MITMR099
+       ALS     18                                                       MITMR100
+       STO*    1,4                                                      MITMR101
+       TTR     2,4                                                      MITMR102
+ TMET                        TEMPORARY                                  MITMR103
+************************************************************************MITMR104
+*              TIMLFT                                                   MITMR105
+*              CALLING SEQUENCE...TSX TIMLFT,4                          MITMR106
+*                                 PZE LEFT       RESULT IN DECR.        MITMR107
+*                                (TXH) LEFT      RESULT IN ADDR.        MITMR108
+*                                                                       MITMR109
+TIMLFT SYN     *                                                        MITMR110
+       SXA     TML1,4                                                   MITMR111
+       TSX     JOBTM,4                                                  MITMR112
+       TXH     RUNR                                                     MITMR113
+ TML1  AXT     **,4                                                     MITMR114
+       CAL     1,4                                                      MITMR115
+       STP     PRFX                                                     MITMR116
+       CLA     JOBTIM                                                   MITMR117
+       SUB     RUNR                                                     MITMR118
+       NZT     PRFX                                                     MITMR119
+       ALS     18                                                       MITMR120
+       STO*    1,4                                                      MITMR121
+       TTR     2,4                                                      MITMR122
+ RUNR  PZE                                                              MITMR123
+************************************************************************MITMR124
+*                                                                       MITMR125
+************************************************************************MITMR126
+*              RSCLCK                                                   MITMR127
+*              CALLING SEQUENCE...TSX RSCLCK,4                          MITMR128
+RSCLCK SYN     *                                                        MITMR129
+       SXA     RSC1,4                                                   MITMR130
+       TSX     JOBTM,4                                                  MITMR131
+       TXH     CNTRL                                                    MITMR132
+ RSC1  AXT     **,4                                                     MITMR133
+       TTR     1,4                                                      MITMR134
+*              STOPCL                                                   MITMR135
+*              CALLING SEQUENCE...CALL STOPCL(J)                        MITMR136
+*                                                                       MITMR137
+STOPCL SYN     *                                                        MITMR138
+       SXA     STP1,4                                                   MITMR139
+       TSX     JOBTM,4                                                  MITMR140
+       TXH     NEWT                                                     MITMR141
+ STP1  AXT     **,4                                                     MITMR142
+       CAL     1,4                                                      MITMR143
+       STP     PRFX                                                     MITMR144
+       CLA     NEWT                                                     MITMR145
+       SUB     CNTRL                                                    MITMR146
+       NZT     PRFX                                                     MITMR147
+       ALS     18            0=FORTRAN TYPE                             MITMR148
+       STO*    1,4           NON-ZERO=MAD TYPE                          MITMR149
+       TTR     2,4                                                      MITMR150
+ CNTRL                       OLD TIME LEFT. BASE POINT                  MITMR151
+ NEWT                                                                   MITMR152
+************************************************************************MITMR153
+*              TIMER                                                    MITMR154
+*              CALLING SEQUENCE...CALL TIMER(I,N)                       MITMR155
+*                            ...EXECUTE TIMER.(A,B)                     MITMR156
+*              WHERE I GIVES TIME IN 60THS OF SECOND FOR CLOCK TO RUN   MITMR157
+*              BEFORE ALARM. N CONTAINS LOCATION WHERE CONTROL IS SENT  MITMR158
+*              AFTER ALARM CLOCK GOES OFF.                              MITMR159
+ TIMER SYN     *                                                        MITMR160
+       SXA     CLK10,1                                                  MITMR161
+       CAL     1,4                                                      MITMR162
+       STP     PRFX                                                     MITMR163
+       CAL*    1,4           TIME INTERVAL IN SECONDS                   MITMR164
+       NZT     PRFX                                                     MITMR165
+       ARS     18            0=FORTRAN. NON-ZERO=MAD                    MITMR166
+       SLW     NEWINT        TIME INTERVAL IN 60THS OF A SECOND         MITMR167
+*              COMPUTE ELAPSED TIME FROM LAST READING                   MITMR168
+       LXA     NTBL,1        NO. OF OPENINGS IN TABLE                   MITMR169
+       TXL     CLK10,1,0     TABLE FULL                                 MITMR170
+       SXD     CLK2,1                                                   MITMR171
+       CAL     CLKRD                                                    MITMR172
+       STZ     CLKRD                                                    MITMR173
+       COM                                                              MITMR174
+       XCL                                                              MITMR175
+       XCA                   -TIME LEFT IN AC                           MITMR176
+       ADD     LSTSET        LAST SETTING-TIME LEFT                     MITMR177
+       STO     TMUSED        =TIME USED IN 60THS OF SECOND.             MITMR178
+       AXT     N,1                                                      MITMR179
+ CLK1  CLA     TMTBL,1       DECREASE TIME LIMITS                       MITMR180
+       SUB     TMUSED        ON ALL ENTRIES                             MITMR181
+       STO     TMTBL,1       IN THE TABLE                               MITMR182
+       TXI     *+1,1,-1                                                 MITMR183
+ CLK2  TXH     CLK1,1,**                                                MITMR184
+       CAL     2,4           PICK UP LOCATION                           MITMR185
+       ANA     =O77777                                                 AMITMR186
+       ALS     18            TO TRANSFER TO WHEN CLOCK GOES OFF         MITMR187
+       ORA     NEWINT                                                   MITMR188
+       SLW     TEMP                                                     MITMR189
+*              SEARCH FOR PROPER POSITION IN TABLE.                     MITMR190
+       LXA     NTBL,1                                                   MITMR191
+       SXD     CLK5,1                                                   MITMR192
+       SXD     CLK8,1                                                   MITMR193
+       AXT     N,1                                                      MITMR194
+ CLK3  CAL     TMTBL,1                                                  MITMR195
+       ANA     =O777777                                                 MITMR196
+       LAS     NEWINT                                                   MITMR197
+       TRA     CLK4                                                     MITMR198
+       NOP                                                              MITMR199
+       TRA     SMLR                                                     MITMR200
+ CLK4  TXI     *+1,1,-1                                                 MITMR201
+ CLK5  TXH     CLK3,1,**                                                MITMR202
+       LDQ     TEMP          IF NEW INTERVAL IS LESS                    MITMR203
+       STQ     TMTBL,1       THAN REST THAT ARE                         MITMR204
+       TRA     CLK9          IN THE TABLE                               MITMR205
+*                                                                       MITMR206
+*              FOUND A LARGER VALUE. INSERT NEW VALUE                   MITMR207
+*              IN TABLE AND PUSH DOWN THE REST.                         MITMR208
+ SMLR  LDQ     TMTBL,1                                                  MITMR209
+       CAL     TEMP                                                     MITMR210
+       SLW     TMTBL,1                                                  MITMR211
+       TRA     CLK7                                                     MITMR212
+ CLK6  CAL     TMTBL,1                                                  MITMR213
+       STQ     TMTBL,1                                                  MITMR214
+       XCL                                                              MITMR215
+ CLK7  TXI     *+1,1,-1                                                 MITMR216
+ CLK8  TXH     CLK6,1,**                                                MITMR217
+       STQ     TMTBL,1                                                  MITMR218
+ CLK9  TXI     *+1,1,-1                                                 MITMR219
+       SXA     NTBL,1                                                   MITMR220
+*              SET CLOCK FOR NEW VALUE                                  MITMR221
+       CLA     TMLEFT                                                   MITMR222
+       SUB     TMUSED                                                   MITMR223
+       SUB     CLKRD                                                    MITMR224
+       STO     TMLEFT        ADJUST TOTAL TIME COUNT                    MITMR225
+       XCL                   LOWEST INTERVAL IN MQ                      MITMR226
+       ANA     =O777777                                                 MITMR227
+       SLW     LSTSET                                                   MITMR228
+       COM                                                              MITMR229
+       STO     CLKRD         RESET C(5) TO NEW VALUE                    MITMR230
+ CLK10 AXT     **,1                                                     MITMR231
+       TRA     3,4           EXIT                                       MITMR232
+TMUSED                                                                  MITMR233
+NEWINT                                                                  MITMR234
+ TEMP                                                                   MITMR235
+ PRFX                                                                   MITMR236
+LSTSET                                                                  MITMR237
+ N     EQU     10                                                       MITMR238
+ TMTBL BES     N                                                        MITMR239
+ NTBL  PZE     N                                                        MITMR240
+************************************************************************MITMR241
+*              KILLTR                                                   MITMR242
+*              CALLING SEQUENCE...CALL KILLTR                           MITMR243
+*              KILLS LAST TIMER ALARM CLOCK SETTING                     MITMR244
+*              EXCEPT IF LAST SET FOR JOB TIME SETTING.                 MITMR245
+*                                                                       MITMR246
+KILLTR SYN     *                                                        MITMR247
+       SXA     CL1,1                                                    MITMR248
+       LXA     NTBL,1                                                   MITMR249
+       TXI     *+1,1,1                                                  MITMR250
+       CAL     TMTBL,1                                                  MITMR251
+       STP     PRFX                                                     MITMR252
+       ZET     PRFX                                                     MITMR253
+TRARTN TTR     RTN                                                      MITMR254
+       STZ     KILLOV                                                   MITMR255
+       TNO     *+2                                                      MITMR256
+       STL     KILLOV                                                   MITMR257
+       CAL     CLKRD                                                    MITMR258
+       COM                                                              MITMR259
+       XCL                                                              MITMR260
+       XCA                                                              MITMR261
+       ADD     LSTSET                                                   MITMR262
+       STO     LSTSET                                                   MITMR263
+       CAL     TRARTN                                                   MITMR264
+       ALS     18                                                       MITMR265
+       STD     TMTBL,1                                                  MITMR266
+       NZT     KILLOV                                                   MITMR267
+       TOV     *+1                                                      MITMR268
+       LXA     CL1,1                                                    MITMR269
+       TTR     FROM7         TREAT AS IF TRAP FROM 7.                   MITMR270
+KILLOV                                                                  MITMR271
+*                                                                       MITMR272
+*              JOB TIME SETTING CANNOT BE KILLED.                       MITMR273
+ RTN   LXA     CL1,1                                                    MITMR274
+       TTR     1,4                                                      MITMR275
+*                                                                       MITMR276
+************************************************************************MITMR277
+*              RSTRTN                                                   MITMR278
+*              CALLING SEQUENCE...CALL RSTRTN                           MITMR279
+RSTRTN SYN     *                                                        MITMR280
+       CAL     *                                                        MITMR281
+       ALS     2                                                        MITMR282
+       CLA     SPQ                                                      MITMR283
+       ALS     2                                                        MITMR284
+       ORA     LOGAC                                                    MITMR285
+       NZT     OVFL                                                     MITMR286
+       TOV     *+1                                                      MITMR287
+       LDQ     MQ                                                       MITMR288
+       LXA     CL1,1                                                    MITMR289
+       LXA     CL2,2                                                    MITMR290
+       LXA     CL4,4                                                    MITMR291
+       TTR*    6                                                        MITMR292
+************************************************************************MITMR293
+*              EXTERNAL REGISTERS REFERENCED                            MITMR294
+*              CLKRD         5                                          MITMR295
+*              ENTRY FROM 7 AFTER CLOCK HAS GONE OFF.                   MITMR296
+*                                                                       MITMR297
+(FRM7) SYN     *                                                        MITMR298
+ FROM7 SYN     *                                                        MITMR299
+       SXA     CL1,1                                                    MITMR300
+       SXA     CL2,2                                                    MITMR301
+       SXA     CL4,4                                                    MITMR302
+       STZ     OVFL                                                     MITMR303
+       STQ     MQ                                                       MITMR304
+       SLW     LOGAC         SAVE LOGICAL ACCUMULATOR                   MITMR305
+       ARS     2                                                        MITMR306
+       STO     SPQ                                                      MITMR307
+       TNO     *+2                                                      MITMR308
+       STL     OVFL                                                     MITMR309
+       LXA     NTBL,1                                                   MITMR310
+       TXI     *+1,1,1                                                  MITMR311
+       CAL     TMTBL,1                                                  MITMR312
+       PDX     0,2           SET TRANSFER                               MITMR313
+       SXA     TRAD,2        LOCATION.                                  MITMR314
+       ALS     2                                                       AMITMR315
+       PBT                                                             BMITMR316
+       TTR     *+2                                                     CMITMR317
+       TTR     CLKN          GO TO MONITOR SETTING. DONT RESET CLOCK   DMITMR318
+       SXA     NTBL,1                                                   MITMR319
+       SXD     CLKM,1                                                   MITMR320
+       AXT     N,1                                                      MITMR321
+CLKL   CLA     TMTBL,1       REVISE PREVIOUS                            MITMR322
+       SUB     LSTSET        ENTRIES IN THE TABLE.                      MITMR323
+       STO     TMTBL,1                                                  MITMR324
+       TXI     *+1,1,-1                                                 MITMR325
+CLKM   TXH     CLKL,1,**                                                MITMR326
+       ANA     =O777777      USE LAST ENTRY IN TABLE                    MITMR327
+       SLW     NEWINT        FOR NEW SETTING                            MITMR328
+       CLA     TMLEFT        REVISE TOTAL TIME                          MITMR329
+       SUB     LSTSET        LEFT FOR JOB.                              MITMR330
+       STO     TMLEFT                                                   MITMR331
+       CAL     NEWINT        UPDATE LSTSET AND                          MITMR332
+       SLW     LSTSET        CHANGE SETTING OF                          MITMR333
+       COM                   LOCATION 5 TO NEXT                         MITMR334
+       STO     CLKRD         ENTRY IN THE TABLE.                        MITMR335
+*              RESTORE MACHINE CONDITIONS                               MITMR336
+ CLKN  SYN     *                                                       AMITMR337
+       ALS     2   TURN ON OVERFLOW LIGHT                               MITMR338
+       CLA     SPQ                                                      MITMR339
+       ALS     2   RESTORE +, Q, AND S                                  MITMR340
+       ORA     LOGAC                                                    MITMR341
+       NZT     OVFL                                                     MITMR342
+       TOV     *+1                                                      MITMR343
+       LDQ     MQ                                                       MITMR344
+ CL1   AXT     **,1          RESTORE INDEX REGISTERS                    MITMR345
+ CL2   AXT     **,2                                                     MITMR346
+ CL4   AXT     **,4                                                     MITMR347
+ TRAD  TTR     **                                                       MITMR348
+ OVFL                                                                   MITMR349
+*                                                                       MITMR350
+ SPQ                                                                    MITMR351
+ LOGAC                                                                  MITMR352
+ MQ                                                                     MITMR353
+TMLEFT PZE                                                              MITMR354
+       END                                                              MITMR355

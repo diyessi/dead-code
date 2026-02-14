@@ -1,0 +1,275 @@
+C      REM 0256 05090               NU HLU  QUASITRIDIAGONAL MATRIX RTN HLU 0001
+      SUBROUTINE HLU                                                    HLU  002
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  003
+     XG(80,1)                                                           HLU  004
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  005
+      REWIND 2                                                          HLU  006
+      REWIND 3                                                          HLU  007
+      REWIND 4                                                          HLU  008
+      REWIND 5                                                          HLU  009
+      REWIND 6                                                          HLU  010
+      REWIND 7                                                          HLU  011
+      N3=NN(1)                                                          HLU  012
+      N1=NN(2)                                                          HLU  013
+      N2=NN(3)                                                          HLU  014
+      READ TAPE 2,((QTM(I,J),I=1,N2),J=1,N2)                            HLU  015
+      WRITE TAPE 7,((QTM(I,J),I=1,N2),J=1,N2)                           HLU  016
+      READ TAPE 5, (QTM(I,1),I=1,N2)                                    HLU  017
+      WRITE TAPE 7,(QTM(I,1),I=1,N2)                                    HLU  018
+      CALL H1P (N2,N1)                                                  HLU  019
+      IF (NN-1) 1,2,1                                                   HLU  020
+ 1    N4=NN(4)                                                          HLU  021
+      N5=NN(5)                                                          HLU  022
+      CALL HLINK(N2,N5,N4,N3)                                           HLU  023
+ 2    CALL SOLN                                                         HLU  024
+      CALL WRANS                                                        HLU  025
+      RETURN                                                            HLU  026
+      END(0,1,0,1,0)                                                    HLU  027
+C                  H-PROCESS ON SUB-PARTITIONS                          HLU  028
+      SUBROUTINE H1P(L1,L2)                                             HLU  029
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  030
+     XG(80,1)                                                           HLU  031
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  032
+      ASSIGN 51 TO MM                                                   HLU  033
+      ASSIGN 111 TO MMM                                                 HLU  034
+      L3=0                                                              HLU  035
+      DO 1 I=1,L1                                                       HLU  036
+ 1    W(I,1)=0.0                                                        HLU  037
+      DO 4 I=1,L1                                                       HLU  038
+      DO 4 J=1,I                                                        HLU  039
+      IF (I-J) 3,2,3                                                    HLU  040
+ 2    H2(I,J)=1.0                                                       HLU  041
+      GO TO 4                                                           HLU  042
+ 3    H2(I,J)=0.0                                                       HLU  043
+      H2(J,I)=0.0                                                       HLU  044
+ 4    CONTINUE                                                          HLU  045
+ 5    GO TO MM,(51,52)                                                  HLU  046
+ 51   BACKSPACE 7                                                       HLU  047
+      READ TAPE 7,(G(I,1),I=1,L1)                                       HLU  048
+      GO TO 53                                                          HLU  049
+ 52   READ TAPE 5,(G(I,1),I=1,L1)                                       HLU  050
+ 53   IF(L3)6,7,6                                                       HLU  051
+ 6    CALL MTMPY1(H2,G,2,L1,1)                                          HLU  052
+ 7    DO 8 I=1,L1                                                       HLU  053
+ 8    W(I,1)=G(I,1)-W(I,1)                                              HLU  054
+      IF(L3)9,11,9                                                      HLU  055
+ 9    READ TAPE 4,((E(I,J),I=1,L1),J=1,L1)                              HLU  056
+      IF(L3-1)10,11,10                                                  HLU  057
+ 10   CALL MTMPY1(H1,E,2,L1,L1)                                         HLU  058
+ 11   GO TO MMM,(111,112)                                               HLU  059
+ 111  BACKSPACE 7                                                       HLU  060
+      BACKSPACE 7                                                       HLU  061
+      READ TAPE 7,((QTM(I,J),I=1,L1),J=1,L1)                            HLU  062
+      GO TO 113                                                         HLU  063
+ 112  READ TAPE 2,((QTM(I,J),I=1,L1),J=1,L1)                            HLU  064
+ 113  IF(L3)12,14,12                                                    HLU  065
+ 12   CALL MTMPY1(H2,QTM,2,L1,L1)                                       HLU  066
+      DO 13 I=1,L1                                                      HLU  067
+      DO 13 J=1,L1                                                      HLU  068
+ 13   QTM(I,J)=QTM(I,J)-E(I,J)                                          HLU  069
+ 14   DO 15 I=1,L1                                                      HLU  070
+      DO 15 J=1,L1                                                      HLU  071
+      H1(I,J)=H2(I,J)                                                   HLU  072
+ 15   H2(I,J)=QTM(I,J)                                                  HLU  073
+      IF (L2-1) 16,17,16                                                HLU  074
+ 16   L2=L2-1                                                           HLU  075
+      L3=L3+1                                                           HLU  076
+      ASSIGN 52 TO MM                                                   HLU  077
+      ASSIGN 112 TO MMM                                                 HLU  078
+      GO TO 5                                                           HLU  079
+ 17   REWIND 7                                                          HLU  080
+      RETURN                                                            HLU  081
+      END(0,1,0,1,0)                                                    HLU  082
+C                  LINK TO NEXT H-PROCESS                               HLU  083
+      SUBROUTINE HLINK(L1,L2,L3,L4)                                     HLU  084
+C     TO ENTER WE NEED H1,H2,W FILLED FROM H1P                          HLU  085
+C          L1 = ORDER OF MATRICES IN PREVIOUS H1P                       HLU  086
+C          L2 = ORDER OF MATRICES IN FOLLOWING H1P                      HLU  087
+C          L3 = NUMBER OF MATRICES IN FOLLOWING H1P                     HLU  088
+C          L4 = NUMBER OF TIMES TO RE-ENTER H1P                         HLU  089
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  090
+     XG(80,1)                                                           HLU  091
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  092
+      KM=2*L4-3                                                         HLU  093
+      DO 5 I1=1,KM,2                                                    HLU  094
+      CALL INVERT(H2,QTM,L1)                                            HLU  095
+      CALL MTMPY2(L1,QTM,L1,W,1,G)                                      HLU  096
+      CALL MTMPY 1(QTM,H1,2,L1,L1)                                      HLU  097
+      WRITE TAPE 6,(G(I,1),I=1,L1)                                      HLU  098
+      WRITE TAPE 6,((H1(I,J),I=1,L1),J=1,L1)                            HLU  099
+      READ TAPE 4,((E(I,J),I=1,L1),J=1,L2)                              HLU  100
+      CALL MTMPY 2(L1,H1,L1,E,L2,H2)                                    HLU  101
+      READ TAPE 3,((E(I,J),I=1,L2),J=1,L1)                              HLU  102
+      CALL MTMPY 2(L2,E,L1,H2,L2,H1)                                    HLU  103
+      READ TAPE 2,((QTM(I,J),I=1,L2),J=1,L2)                            HLU  104
+      DO 2 I=1,L2                                                       HLU  105
+      DO 2 J=1,L2                                                       HLU  106
+ 2    QTM(I,J)=QTM(I,J)-H1(I,J)                                         HLU  107
+      WRITE TAPE 7,((QTM(I,J),I=1,L2),J=1,L2)                           HLU  108
+      CALL MTMPY2(L2,E,L1,G,1,W)                                        HLU  109
+      READ TAPE 5,(G(I,1),I=1,L2)                                       HLU  110
+      DO 21 I=1,L2                                                      HLU  111
+ 21   G(I,1)=G(I,1)-W(I,1)                                              HLU  112
+      WRITE TAPE 7,(G(I,1),I=1,L2)                                      HLU  113
+      CALL H1P(L2,L3)                                                   HLU  114
+ 3    L1=L2                                                             HLU  115
+      L3=NN(I1+5)                                                       HLU  116
+ 5    L2=NN(I1+6)                                                       HLU  117
+ 4    RETURN                                                            HLU  118
+      END(0,1,0,1,0)                                                    HLU  119
+C                  BEGIN BACKWARDS SUBSTITUTION                         HLU  120
+      SUBROUTINE SOLN                                                   HLU  121
+C          ALL DATA IS IMPLICITLY STORED                                HLU  122
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  123
+     XG(80,1)                                                           HLU  124
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  125
+      REWIND 7                                                          HLU  126
+      K = 2*NN(1)                                                       HLU  127
+      NN1=NN(K)                                                         HLU  128
+      NN2=NN(K+1)                                                       HLU  129
+      NN3=NN2                                                           HLU  130
+      CALL INVERT(H2,QTM,NN2)                                           HLU  131
+      CALL MTMPY1(QTM,W,2,NN2,1)                                        HLU  132
+      WRITE TAPE 7,(W(I,1),I=1,NN3)                                     HLU  133
+      DO 2 I =1,NN3                                                     HLU  134
+ 2    H2(I,1) =0.0                                                      HLU  135
+ 5    IF(NN1-1)1,6,1                                                    HLU  136
+ 1    NN1=NN1-1                                                         HLU  137
+      NS=2                                                              HLU  138
+ 4    CALL RECURS(NN3,NN2,NN1,NS)                                       HLU  139
+ 6    IF (K-2) 7,11,7                                                   HLU  140
+ 7    NN2=NN3                                                           HLU  141
+      K=K-2                                                             HLU  142
+      NN1=NN(K)                                                         HLU  143
+      NN3=NN(K+1)                                                       HLU  144
+      BACKSPACE 4                                                       HLU  145
+      READ TAPE 4,((E(I,J),I=1,NN3),J=1,NN2)                            HLU  146
+      BACKSPACE 4                                                       HLU  147
+      CALL MTMPY2(NN3,E,NN2,W,1,H2)                                     HLU  148
+      DO 8 I=1,NN3                                                      HLU  149
+ 8    H1(I,1)=H2(I,1)                                                   HLU  150
+      BACKSPACE 6                                                       HLU  151
+      READ TAPE 6,((QTM(I,J),I=1,NN3),J=1,NN3)                          HLU  152
+      BACKSPACE 6                                                       HLU  153
+      CALL MTMPY1(QTM,H1,2,NN3,1)                                       HLU  154
+      BACKSPACE 6                                                       HLU  155
+      READ TAPE 6,(W(I,1),I=1,NN3)                                      HLU  156
+      BACKSPACE 6                                                       HLU  157
+      DO 9 I=1,NN3                                                      HLU  158
+ 9    W(I,1)=W(I,1)-H1(I,1)                                             HLU  159
+      WRITE TAPE 7,(W(I,1),I=1,NN3)                                     HLU  160
+      BACKSPACE 2                                                       HLU  161
+      BACKSPACE 5                                                       HLU  162
+ 10   GO TO  5                                                          HLU  163
+ 11   RETURN                                                            HLU  164
+      END(0,1,0,1,0)                                                    HLU  165
+C                  RECURSION IN SUBSTITUTION                            HLU  166
+      SUBROUTINE RECURS(MM1,MM2,MM3,NS)                                 HLU  167
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  168
+     XG(80,1)                                                           HLU  169
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  170
+      GO TO (1,2),NS                                                    HLU  171
+ 1    BACKSPACE 4                                                       HLU  172
+      READ TAPE 4,((E(I,J),I=1,MM1),J=1,MM2)                            HLU  173
+      BACKSPACE 4                                                       HLU  174
+      CALL MTMPY2(MM1,E,MM2,H1,1,H2)                                    HLU  175
+      MM2=MM1                                                           HLU  176
+ 2    NS=1                                                              HLU  177
+      DO 3 I=1,MM1                                                      HLU  178
+ 3    H1(I,1)=W(I,1)                                                    HLU  179
+      BACKSPACE 2                                                       HLU  180
+      READ TAPE 2,((QTM(I,J),I=1,MM1),J=1,MM1)                          HLU  181
+      BACKSPACE 2                                                       HLU  182
+      CALL MTMPY1(QTM,W,2,MM1,1)                                        HLU  183
+      BACKSPACE 5                                                       HLU  184
+      READ TAPE 5,(G(I,1),I=1,MM1)                                      HLU  185
+      BACKSPACE 5                                                       HLU  186
+      DO 4 I=1,MM1                                                      HLU  187
+ 4    W(I,1)=G(I,1)-W(I,1)-H2(I,1)                                      HLU  188
+      WRITE TAPE 7,(W(I,1),I=1,MM1)                                     HLU  189
+      IF(MM3-1)5,6,5                                                    HLU  190
+ 5    MM3=MM3-1                                                         HLU  191
+      GO TO 1                                                           HLU  192
+ 6    BACKSPACE 4                                                       HLU  193
+      RETURN                                                            HLU  194
+      END(0,1,0,1,0)                                                    HLU  195
+C                  ORDINARY MATRIX MULTIPLICATION                       HLU  196
+      SUBROUTINE MTMPY2(K,A,L,B,M,C)                                    HLU  197
+      DIMENSION A(80,80),B(80,80),C(80,80)                              HLU  198
+      DO 2 I1=1,K                                                       HLU  199
+      DO 2 I2=1,M                                                       HLU  200
+      C(I1,I2)=0.0                                                      HLU  201
+      DO 2 I3=1,L                                                       HLU  202
+      IF(A(I1,I3))3,2,3                                                 HLU  203
+ 3    IF(B(I3,I2))4,2,4                                                 HLU  204
+ 4    C(I1,I2)=A(I1,I3)*B(I3,I2)+C(I1,I2)                               HLU  205
+ 2    CONTINUE                                                          HLU  206
+      RETURN                                                            HLU  207
+      END(0,1,0,1,0)                                                    HLU  208
+C     MATRIX MULTIPLY FOR SQUARE MATRICES     PRODUCT STORED            HLU  209
+C     OVER A IF M=1, OVER B IF M=2.     IF B IS A                       HLU  210
+C     VECTOR N1=1, OTHERWISE N1=N.                                      HLU  211
+      SUBROUTINE MTMPY1(A,B,M,N,N1)                                     HLU  212
+      DIMENSION A(80,80),B(80,80),C(80)                                 HLU  213
+      DO 6 L1=1,N1                                                      HLU  214
+      GO TO (1,2),M                                                     HLU  215
+ 1    I=L1                                                              HLU  216
+      GO TO 12                                                          HLU  217
+ 2    K=L1                                                              HLU  218
+ 12   DO 7 L2=1,N                                                       HLU  219
+      GO TO (13,14),M                                                   HLU  220
+ 13   K=L2                                                              HLU  221
+      GO TO 3                                                           HLU  222
+ 14   I=L2                                                              HLU  223
+ 3    C(L2)=0.0                                                         HLU  224
+      DO 7 J=1,N                                                        HLU  225
+      IF(A(I,J))4,7,4                                                   HLU  226
+ 4    IF(B(J,K))5,7,5                                                   HLU  227
+ 5    C(L2)=A(I,J)*B(J,K)+C(L2)                                         HLU  228
+ 7    CONTINUE                                                          HLU  229
+      GO TO (8,9),M                                                     HLU  230
+ 8    DO 11 J=1,N                                                       HLU  231
+ 11   A(I,J)=C(J)                                                       HLU  232
+      GO TO 6                                                           HLU  233
+ 9    DO 10 J=1,N                                                       HLU  234
+ 10   B(J,K)=C(J)                                                       HLU  235
+ 6    CONTINUE                                                          HLU  236
+      RETURN                                                            HLU  237
+      END(0,1,0,1,0)                                                    HLU  238
+C                  MATRIX INVERSE                                       HLU  239
+      SUBROUTINE INVERT (A,B,N)                                         HLU  240
+      DIMENSION A(80,80),B(80,80)                                       HLU  241
+      DO 1 I=1,N                                                        HLU  242
+      DO 1 J=1,N                                                        HLU  243
+      IF(I-J)2,3,2                                                      HLU  244
+ 2    B(I,J)=0                                                          HLU  245
+      GO TO 1                                                           HLU  246
+ 3    B(I,J)=1.0                                                        HLU  247
+ 1    CONTINUE                                                          HLU  248
+      LA=XLOCF(A(1,1))                                                  HLU  249
+      LB=XLOCF(B(1,1))                                                  HLU  250
+      IA=LA-XLOCF(A(1,2))                                               HLU  251
+      IB=LB-XLOCF(B(1,2))                                               HLU  252
+      DUMMY=LEQF(LA,LB,N,N,IA,IB)                                       HLU  253
+      RETURN                                                            HLU  254
+      END(0,1,0,1,0)                                                    HLU  255
+C     WRITE ANSWERS                                                     HLU  256
+      SUBROUTINE WRANS                                                  HLU  257
+      DIMENSION NN(201),H1(80,80),H2(80,80),QTM(80,80),E(80,80),W(80,1),HLU  258
+     XG(80,1)                                                           HLU  259
+      COMMON NN,H1,H2,QTM,E,W,G                                         HLU  260
+      REWIND 5                                                          HLU  261
+      K=2*NN(1)-1                                                       HLU  262
+      DO 2 I=1,K,2                                                      HLU  263
+      L=NN(I+1)                                                         HLU  264
+      M=NN(I+2)                                                         HLU  265
+      DO 2 J=1,L                                                        HLU  266
+      BACKSPACE 7                                                       HLU  267
+      READ TAPE 7,(G(I1,1),I1=1,M)                                      HLU  268
+      BACKSPACE 7                                                       HLU  269
+ 2    WRITE TAPE 5,(G(I1,1),I1=1,M)                                     HLU  270
+ 6    END FILE 5                                                        HLU  271
+      REWIND 5                                                          HLU  272
+      RETURN                                                            HLU  273
+      END(0,1,0,1,0)                                                    HLU  274
+C                  END PROGRAM                                          HLU  275

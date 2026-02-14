@@ -1,0 +1,776 @@
+*      FAP                                                              IOP00000
+*     LABEL(IOSIM)                                                      IOP00010
+*      SIMULATION OF 709 INPUT/OUTPUT ON THE --7040/44                  IOP00011
+*                               A.S. FARHA           SEPT 1962          IOP00012
+*              ADDRESS-NORTH AMERICAN AVIATION BLD. 6                   IOP00013
+*                      5300 EAST 5TH AVE.                               IOP00014
+*                      COLUMBUS, OHIO                                   IOP00015
+       PCC     ON                                                       IOP00020
+       PMC     ON                                                       IOP00030
+       ENTRY   IOSIM                                                    IOP00040
+ TDOA  OPD     -106071140000       TRA CHAN A IN OPERATION              IOP00050
+ SEN   OPD     -176273140002       SENSE COMMAND                        IOP00060
+ PWR   OPD     -176673140002       PRE WRITE TYPE.                      IOP00070
+ PCS   OPD     -150573140002       PLACE CHARACTER FROM STORAGE         IOP00080
+ SAC   OPD     -162373140002       STORE ACCUMULATOR CHARACTER          IOP00090
+ TSL   OPD     -162771140000       TRANSFER AND SET LOCATION.           IOP00100
+ MSM   OPD     -162371140000                                            IOP00110
+ MIT   OPD     -134171140000                                            IOP00120
+ PLT   OPD     -134171140000                                            IOP00130
+ RDCB  OPD     076071140000        RESET DATA CHAN.                     IOP00140
+ RDCC  OPD     076071140000                                             IOP00150
+*      ACKNOWLEDGEMENT-SOME OF THE IDEAS AND CONCEPTS USED IN THIS      IOP00151
+*                      SIMULATOR WERE CONTRIBUTED BY VINCE SPRAGUE NAA  IOP00152
+*                      AND J.H. BRAUN IBM.                              IOP00153
+*                                                                       IOP00160
+*      THIS IS A PROGRAM THAT SIMULATES THE 709 IO ON THE 7044          IOP00170
+*      ALL TAPE COMMANDS THAT USED CHANNEL-A-ON THE 709 HAVE BEEN       IOP00180
+*      CHANGED TO USE CHAN -B-ON THE 7044 CHAN -B-S HAVE BEEN           IOP00190
+*      CHANGED TO USE CHAN -C-.                                         IOP00200
+*      THE FOLLOWING IS THE LIST OF COMMANDS THAT WERE SIM.             IOP00210
+*      RDS,WRS,RCHA,RCHB,LCHA,LCHB,SCH,TCNA,TCNB,THE NEXT COMMANDS HAD  IOP00220
+*      BE SIMULATED IN ORDER TO CHANGE THE CHANS FROM A TO B            IOP00230
+*      BSR,BSF,WEF,REW,TCOA,TCOB,TRCA,TRCB,TEFA,TEFB,ETT                IOP00240
+*      PRINTER,READER AND PUNCH COMMANDS WERE LEFT ON CHAN-A-           IOP00250
+ IOSIM CLA     ADD33               SETUP ENTRY FOR SIMULATOR            IOP00260
+       STO     27                                                       IOP00270
+       TRA     1,4                                                      IOP00280
+ ADD33 TRA     TBSTR                                                    IOP00290
+ OUT4  TSL     RA4)                RESTORE CONDITIONS                   IOP00300
+       PLT     QSWT9,,7                                                 IOP00310
+       TRA*    26                                                       IOP00320
+       TRA*    12                                                       IOP00330
+ PXA   PXA     0,0,0                                                    IOP00340
+ CCS   OPD     -134173140002       COMPARE CHARACTER WITH STORAGE       IOP00350
+ IORD  MACRO   A,B,C                                                    IOP00360
+       TXH     A,B,C                                                    IOP00370
+ IORD  END                                                              IOP00380
+ RA4)  TRA     --                                                       IOP00390
+       CAL     AREGS+1             RESTORE AC WITHOUT TURNING ON        IOP00400
+       ANA     =O-0                OVERFLOW LIGHTS                      IOP00410
+       ALS     1                                                        IOP00420
+       ORA     AREGS                                                    IOP00430
+       STQ     AREGS                                                    IOP00440
+       LDQ     AREGS+2                                                  IOP00450
+       LLS     0                                                        IOP00460
+       LDQ     AREGS                                                    IOP00470
+ IX4   AXT     --,4                                                     IOP00480
+       TRA*    RA4)                                                     IOP00490
+ AREGS BSS     3                   LOCATIONS FOR AC  SAVING.            IOP00500
+*      THIS IS THE TABLE THAT WILL GET TO PROPER ROUTINE                IOP00510
+ SACI4 TRA     --                  SAVE CONDITIONS                      IOP00520
+       SLW     AREGS               SAVE A-REG                           IOP00530
+       ARS     1                   SAVE P BIT                           IOP00540
+       STO     AREGS+2                                                  IOP00550
+       SLW     AREGS+1                                                  IOP00560
+       SXA     IX4,4               SAVE IX4                             IOP00570
+       TRA*    SACI4                                                    IOP00580
+ TBSTR TCOB    *                                                        IOP00590
+       TCOC    *                                                        IOP00600
+       TSL     SACI4                                                    IOP00610
+       LAC     26,4                                                     IOP00620
+       CLA     -1,4                                                     IOP00630
+       MSM     QSWT9,,6             ON NOT TRAP                         IOP00640
+ TSTPL TPL     XEXFX               TEST FOR XEC COMMAND                 IOP00650
+       ANA     =O000077777777      ANA IN REST OF COMMAND               IOP00660
+       PDX     0,4                                                      IOP00670
+       TNX     *+3,4,31            GET RID EXTRA BIT                    IOP00680
+       ORA     =O000060000000      OR IN INDIRECT BITS                  IOP00690
+       TXI     *+1,4,-1                                                 IOP00700
+       TXH     ERHLT,4,20          TEST FOR ERROR                       IOP00710
+       TRA*    TBSTB,4                                                  IOP00720
+ XEXFX SUB     =O002200000000      CHANGE TO CLA                        IOP00730
+       LXA     IX4,4               RESTORE IX4                          IOP00740
+       STO     *+1                                                      IOP00750
+       CLA     --                  BRING UP NEXT ADDRESS                IOP00760
+       TRA     TSTPL                                                    IOP00770
+ ERHLT HPR     32767               ILLEGAL IO FOR SIMULATOR             IOP00780
+       TRA     ERHLT                                                    IOP00781
+*      THE FOLLOWING IS THE TABLE FOR THE COMMANDS THAT ARE SIMULATED.  IOP00790
+       TRA     ETT                 BEGINNING OF TABLE                   IOP00800
+       TRA     TEFB                THIS TABLE MUST BE KEPT IN ORDER.    IOP00810
+       TRA     TEFA                                                     IOP00820
+       TRA     TRCB                                                     IOP00830
+       TRA     TRCA                                                     IOP00840
+       TRA     TCOB                                                     IOP00850
+       TRA     TCOA                                                     IOP00860
+       TRA     REW                                                      IOP00870
+       TRA     WEF                                                      IOP00880
+       TRA     BSF                                                      IOP00890
+       TRA     BSR                                                      IOP00900
+       TRA     TCNB                                                     IOP00910
+       TRA     TCNA                                                     IOP00920
+       TRA     SCH                                                      IOP00930
+       TRA     LCHB                                                     IOP00940
+       TRA     LCHA                                                     IOP00950
+       TRA     RCHB                                                     IOP00960
+       TRA     RCHA                                                     IOP00970
+       TRA     WRS                                                      IOP00980
+ TBSTB TRA     RDS                 TABLE OF STIMULATE COMMANDS          IOP00990
+*      THE FOLLOWING ARE THE SWITCHS USED NON ZERO EQUALS ON AND VISA   IOP01000
+ QSWT1 PZE     0,,0                SWITCH FOR READ OR WRITE             IOP01010
+ QSWT2 PZE     0,,0                SWITCH FOR CHAN A OR B               IOP01020
+ QSWT3 PZE     0,,0                SWIT FOR IO COUNT OR RECORD          IOP01030
+ QSWT4 PZE     0,,0                SWIT FOR PRINT RD OR PUNCH           IOP01040
+ QSWT5 PZE     0,,0                SWIT TELLS IF IO COM WAS IOXT        IOP01050
+ QSWT6 PZE     0,,0                TELLS IF LAST IO WAS SCATTER IO      IOP01060
+ QSWT7 PZE     0,,0                ON IF IO IS NON TRANS COMMAND        IOP01070
+ QSWT8 PZE     0,,0                FOR IOCDS WITH ZERO COUNT            IOP01080
+ QSWT9 PZE     0,,0                SWITCH FOR CHANNEL TRAPS             IOP01090
+ QSW10 PZE     0,,0                SWITCH FOR SELECT EXECUTION          IOP01100
+ QTEMP PZE     0,,0                A TEMP STORAGE LOCATION              IOP01110
+       REM                                                              IOP01120
+*                                                                       IOP01130
+*      ROUTINES FOR THE RDS AND WRS                                     IOP01140
+ RDS   STZ     QSWT1               SET SWITCH OFF FOR READ              IOP01150
+       TSL     RETRZ                                                    IOP01160
+       ORA     RDSZ                ORA IN DUMMY RDS                     IOP01170
+       LXD     QSW10,4             TEST IF LAST SELECT WAS EXECUTED     IOP01180
+       TXL     *+2,4,0                                                  IOP01190
+       XEC     QRDST               IF NOT EXECUTE IT                    IOP01200
+       STO     QSW10               TURN SWITCH ON                       IOP01210
+       SLW     QRDST               STO AWAY TOBE PROC LATER             IOP01220
+       TRA     OUT4                EXIT                                 IOP01230
+ RDSZ  RDS     0,,0                DUMMY RDS COMMAND                    IOP01240
+*THIS IS ROUTINE FOR PERFORMING RDS AND WRS                             IOP01250
+ QRDWR TRA     -                   RETURN ADDRESS                       IOP01260
+       CAL     QSWT4               TEST FOR PERF GEAR                   IOP01270
+       TNZ*    QRDWR               PERF GEAR SO RETURN.                 IOP01280
+       CAL     QSWT2               TEST FOR CHAN A OR B                 IOP01290
+       TNZ     *+4                                                      IOP01300
+       TCOB    *                                                        IOP01310
+       RDCB    1258                THIS ISNT ON 709 OR IN S40           IOP01320
+ QRDST RDS     --,,--              EXCUTE READ OR WRITE SELECT.         IOP01330
+ QSKIP TRA*    QRDWR               RETURN                               IOP01340
+       TCOC    *                                                        IOP01350
+       RDCC    1770                THIS ISNT ON 709 OR IN S40           IOP01360
+       TRA     *-4                                                      IOP01370
+*                                                                       IOP01380
+ WRS   STO     QSWT1               TURN SWICH ON FOR WRITE              IOP01390
+       TSL     RETRZ                                                    IOP01400
+       ORA     WRSZ                OR IN WRS COMMAND                    IOP01410
+       TRA     RDS+3               STO WD AND EXIT                      IOP01420
+ WRSZ  WRS     0,,0                DUMMY WRS COMMAND                    IOP01430
+*                                                                       IOP01440
+*      THIS ROUTINE FIXS UP ADDRESS FOR RDS ETC                         IOP01450
+*      ALSO TESTS TO SEE IF COMMAND USES PRINT READER OR PUNCH          IOP01460
+*      IF IT USES ON LINE PERF GEAR IT LEAVES INSTR ON CHAN-A-          IOP01470
+       STO     QSWT4               SWIT ON FOR PERF                     IOP01480
+       CAL     QADDR               PUT NEW ADDRESS IN AC                IOP01490
+ RETRZ TRA     --                  RETURN ADDRESS                       IOP01500
+       ORA     PXA                 OR IN PXA COMMAND                    IOP01510
+       SLW     *+2                                                      IOP01520
+       LXA     IX4,4               RESTORE IX4                          IOP01530
+       PXA     --,--               PUT IX AC                            IOP01540
+       ANA     =O777                                                    IOP01550
+       SUB     *-2                 SUB ADDRESS FROM IX                  IOP01560
+       STA     QADDR               STORE NEW ADDRESS AWAY               IOP01570
+       STZ     QSWT4               TURN THE SWITCH OFF                  IOP01580
+       CLS     =O13                TEST FOR PERF GEAR                   IOP01590
+       CCS     QADDR,,4                                                 IOP01600
+       TRA     *+2                                                      IOP01610
+       TRA     RETRZ-2             IF YES EXIT                          IOP01620
+       CAL     QADDR               IF NOT ADD 1 TO CHANNEL              IOP01630
+       ADD     =O1000                                                   IOP01640
+       TRA*    RETRZ                                                    IOP01650
+ QADDR PZE     --,0                FILL IN ADDRESS HERE                 IOP01660
+*                                                                       IOP01670
+*      RCH ROUTINE IT SIMULATES RCH AND SETS IO COMMAND FOR EXECUTION   IOP01680
+ RCHA  STZ     QSWT2               SWITCH OFF FOR A                     IOP01690
+       STZ     QSWT6               OFF PREVIOUS COMMAND NOT PROCEED     IOP01700
+       STZ     QSWT8               SWITCH  OFF                          IOP01710
+       ORA     QLOGA               PUT ADDR OF RCH IN CAL               IOP01720
+       SLW     *+2                                                      IOP01730
+ QRELD LXA     IX4,4               RESTORE IX4                          IOP01740
+       CAL     --                  BRING UP IO COMMAND                  IOP01750
+       SLW     QIORD               STO IO COMMAND AWAY                  IOP01760
+       SLW     ORGIO               SAVE ORIGINAL IO COMMAND             IOP01770
+       ARS     15                                                       IOP01780
+       PDC     ,4                  PUT COMP OF OP CODE IN IX            IOP01790
+       STZ     QSW10               TURN SELECT SWITCH OFF               IOP01800
+       STZ     QSWT7               THE FOL TESTS NON TRANS AND          IOP01810
+       ARS     1                   ALSO PUTS ZEROS IN 18 19             IOP01820
+       LBT                         OF THE IORD COMMAND.                 IOP01830
+       TRA     *+2                                                      IOP01840
+       STO     QSWT7               SWICH ON NON TRANS CODE              IOP01850
+       CAL     =O077777077777                                           IOP01860
+       ANA     QIORD               PUT ZEROS 18 AND 19                  IOP01870
+       ORA     =3B2                CLA IORD INTO A REG                  IOP01880
+       STO     QIORD                                                    IOP01890
+       STZ     QSWT5               TURN SWITCH OFF FOR IOXT             IOP01900
+       TRA*    QIOTB,4             TRA TO RIGHT IO COMMAND              IOP01910
+ QLOGA CAL     0,,0                DUMMY CAL                            IOP01920
+ QIOTB TRA     IOCD                THIS IS TABLE THAT WILL              IOP01930
+       TRA     TCH                 TRA TO PROPER IO ROUTINE.            IOP01940
+       TRA     IORP                                                     IOP01950
+       TRA     IORT                                                     IOP01960
+       TRA     IOCP                                                     IOP01970
+       TRA     IOCT                                                     IOP01980
+       TRA     IOSP                                                     IOP01990
+       TRA     IOST                                                     IOP02000
+ RCHB  STO     QSWT2               SWITCH ON RCHB                       IOP02010
+       TRA     RCHA+1                                                   IOP02020
+ QIORD PZE     0,,0                LOC FOR 7044 NEW IO                  IOP02030
+ ORGIO PZE     0,,0                LOCATION FOR ORIGINAL IOCOM          IOP02040
+*      THIS ROUTINE EXECUTES RCH COMMANDS IT ALSO DOES SCH              IOP02050
+       TSL     SACI4               SAVE CONDITIONS                      IOP02060
+       STZ     QSWT9               OFF FOR TRAP                         IOP02070
+ QRCHI TRA     *                   RETURN ADDRESS                       IOP02080
+       CAL     QSWT2               TEST A OR B                          IOP02090
+       TNZ     QRCHC               IF B GO TO CHAN C OP                 IOP02100
+       CAL     QSWT4               TEST FOR PERF GEAR                   IOP02110
+       TNZ     RCHQP               TRA IF PERF GEAR USED                IOP02120
+       CLA     TRADR               STORE TRAP  RETURN                   IOP02130
+       STO     13                                                       IOP02140
+       TSL     RA4)                RESTORE CONDTIONS                    IOP02150
+       RCHB    QIORD               EXECUTE RCH ON CHAN B                IOP02160
+       ENB     2                   ENABLE TRAP CHAN-B-                  IOP02170
+       TRA     OUT4+1              RETURN TO USER                       IOP02180
+ TRAPB TCOB    *                                                        IOP02190
+       SCHB    QSCHX               SAVE REGISTERS                       IOP02200
+       TRA     QRCHI-2             RETURN                               IOP02210
+ RCHQP CLA     =O1361              TEST FOR PRINTER                     IOP02220
+       CAS     QADDR               COMPARE WITH ADDRESS OF RDS          IOP02230
+       TRA     *+3                 NOT PRINTER                          IOP02240
+       TRA     PRTTP               YES PRINTER                          IOP02250
+       TRA     PRTTP               YES PRINTER                          IOP02260
+       SUB     =O1321                                                   IOP02270
+       TZE     RDORD               TRA TO READER ROUTINE                IOP02280
+       TRA     PNCRT               TRA TO PUNCH ROUTINE                 IOP02290
+       TRA*    QRCHI                                                    IOP02300
+ QRCHC CLA     TRADR+1                                                  IOP02310
+       STO     15                                                       IOP02320
+       TSL     RA4)                RESTORE CONDITIONS                   IOP02330
+       RCHC    QIORD               EXECUTE RCH ON CHAN-C-               IOP02340
+       ENB     4                                                        IOP02350
+       TRA     OUT4+1                                                   IOP02360
+ TRAPC TCOC    *                                                        IOP02370
+       CLA     14                                                       IOP02380
+       STO     12                                                       IOP02390
+       SCHC    QSCHX                                                    IOP02400
+       TRA     QRCHI-2             RETURN                               IOP02410
+ QSCHX PZE     0,,0                LOC FOR STORE CHANNELS               IOP02420
+ TRADR TRA     TRAPB               CHANNEL TRAPING INSTRUCTIONS         IOP02430
+       TRA     TRAPC                CHANGE WITH CAUTION                 IOP02440
+       REM                                                              IOP02450
+*      LOAD CHANNEL SIMULATING ROUTINE                                  IOP02460
+ LCHA  STZ     QSWT2               TURN OFF SWT FOR CHAN-A-             IOP02470
+       ORA     QLOGA                                                    IOP02480
+       SLW     QRELD+1                                                  IOP02490
+       CAL     QSWT5               TEST IF LST COM WAS IOCT             IOP02500
+       TNZ     QRELD               IORT OR IOST                         IOP02510
+*      IF POSSIBLE IO LIGHT SHOULD BE TURNED ON                         IOP02520
+       TRA     QEXI                RETURN TOMAIN PROGRAM                IOP02530
+ LCHB  STO     QSWT2               SWITCH ON FOR CHAN B                 IOP02540
+       TRA     LCHA+1                                                   IOP02550
+*                                                                       IOP02560
+*      ALL THE IOCP,IOSP,IOCT AND IOST SETUP SWITS AN GO SCATTER ROUTINEIOP02570
+*      THEIR SETUP ROUTINES FOLLOW                                      IOP02580
+ IOCP  STO     QSWT3               SWITCH ON FOR COUNT COMMAND          IOP02590
+       TRA     *+2                                                      IOP02600
+ IOSP  STZ     QSWT3               SWIT OFF FOR RECORD COMMAND          IOP02610
+       STZ     QSWT5               OFF FOR PROCEED                      IOP02620
+       STO     QSWT6               ON FOR SCATTER COMMAND               IOP02630
+       CAL     QSWT1               TEST RD OR WRITE                     IOP02640
+       TZE     QSCAT               IF READ SWITCH OK                    IOP02650
+       STO     QSWT3               IF WRT REC AN CNT COM SAME           IOP02660
+       TRA     QSCAT                                                    IOP02670
+ IOCT  STO     QSWT3               ON FOR COUNT COMMAND                 IOP02680
+       TRA     IOST+1                                                   IOP02690
+ IOST  STZ     QSWT3               OFF FOR REC COMMAND                  IOP02700
+       STO     QSWT5               ON FOR TRA COMMAND                   IOP02710
+       TRA     IOSP+2                                                   IOP02720
+*      ROUTINE FOR IOCD FOLLOWS                                         IOP02730
+ IOCD  STO     QSWT3               TURN SWT ON FOR CNT                  IOP02740
+       CAL     QSWT6               TEST PREVIOUS IO SCATTER COM         IOP02750
+       TNZ     QFXZ3                                                    IOP02760
+       CAL     QSWT8               TEST IF PROCEED                      IOP02770
+       TNZ     TSTZR                                                    IOP02780
+ RETST TSL     IOCK                TRA TO FIX UP IF NON TRANS           IOP02790
+       TSL     QRDWR               EXCUTE RDS OR WRS                    IOP02800
+       TSL     QRCHI               EXCUTE RCH                           IOP02810
+       TSL     WDPR                GO SUB ROUT WORDS TO PROC            IOP02820
+       TMI     *+2                 IF MINUS EXECUTE RDS OVER            IOP02830
+       TRA     QEXI                EXIT                                 IOP02840
+       TSL     QRDWR               XEC THE RDS OR WRS                   IOP02850
+       TRA     *-5                 RETURN RCH TEST                      IOP02860
+ QFXZ3 CLA     QSWT1               TST WRITE COMMAND IF IS              IOP02870
+       TZE     QSCAT-1             MAKE LOOK LIKE REC COMMAND.          IOP02880
+       STZ     QSWT3                                                    IOP02890
+       TRA     QSCAT-1                                                  IOP02900
+ TSTZR LXD     QIORD,4              TEST ZERO WORD COUNT                IOP02910
+       TXL     QEXI,4,0            EXIT IF ZERO                         IOP02920
+       TRA     RETST               RETURN  NON ZERO                     IOP02930
+*      ROUTINE TO CONVERT IORP                                          IOP02940
+ IORP  STZ     QSWT5               SWT OFF FOR PROCEED                  IOP02950
+       STZ     QSWT3               SWT OFF FOR RECORD COMMAND           IOP02960
+       CAL     QSWT6               TEST PREVIOUS COMMAND SCATTER        IOP02970
+       TNZ     QSCAT-1                                                  IOP02980
+       TSL     IOCK                CHECK FOR NULL COMMAND               IOP02990
+       TSL     QRDWR               EXECUTE RDS OR WRS                   IOP03000
+       TSL     QRCHI               TRA TO RCH                           IOP03010
+       STZ     QSWT6                                                    IOP03020
+ QPROX LXA     QRELD+1,4           FIXUP NEXT IO COMMAND                IOP03030
+       TXI     *+1,4,1             ADD 1 FOR NEXT ADDRESS               IOP03040
+       SXA     QRELD+1,4                                                IOP03050
+       SXA     QSWT8,4              TURN SWITCH ON                      IOP03060
+       TRA     QRELD               RET FOR NEXT IO                      IOP03070
+*      ROUTINE TO CONVERT IORT                                          IOP03080
+ IORT  STO     QSWT5               TURN ON FOR TRANS COMMAND            IOP03090
+       STZ     QSWT3               SET TO ZERO FOR RECORD               IOP03100
+       CAL     QSWT6               TEST LAST COMMAND SCATTER            IOP03110
+       TNZ     QSCAT-1                                                  IOP03120
+       TSL     IOCK                CHECK FOR NULL                       IOP03130
+       TSL     QRDWR                                                    IOP03140
+       TSL     QRCHI                                                    IOP03150
+       STZ     QSWT6                                                    IOP03160
+       TRA     OUT4                EXIT                                 IOP03170
+*      ROUTINE FOR TCH COMMAND                                          IOP03180
+ TCH   CAL*    QIORD               SETUP CAL INSTRUC TO PICKUP          IOP03190
+       TRA     QRELD+2             IO COMMAND FROM ADDRESS OF TCH       IOP03200
+*                                                                       IOP03210
+*      ROUTINE FOR TAKING CARE OF SPACING UNDER COUNT CONTROL           IOP03220
+ IOCK  ADD     --                  RETURN ADDRESS                       IOP03230
+       CAL     QSWT7               TEST NON TRANSMITING                 IOP03240
+       TZE*    IOCK                IF IS RETURN                         IOP03250
+       CAL     QIORD                                                    IOP03260
+       SLW     QTEMP                                                    IOP03270
+       CLA     QDUM1               PUT DUM REC IN IORD                  IOP03280
+       STO     QIORD                                                    IOP03290
+       CAL     QSWT3               TEST COUNT OR RECORD                 IOP03300
+       TZE*    IOCK                IF REC RETURN                        IOP03310
+ QLOP1 LXD     QTEMP,4             PUT COUNT INTO IX4                   IOP03320
+       PXA     ,4                                                       IOP03330
+       SUB     QCONS               SUB LENGTH OF BUFF                   IOP03340
+       TZE*    IOCK                IF ZERO RETURN                       IOP03350
+       TMI     QMIFX               FIXUP THEN RETURN                    IOP03360
+       TIX     *+1,4,QCOUT         SUB LENTH BUF FROM COUNT             IOP03370
+       SXD     QTEMP,4                                                  IOP03380
+       TSL     QRDWR               RDS OR WRS                           IOP03390
+       TSL     QRCHI               EXECUTE RCH                          IOP03400
+       TSL     WDPR                TEST ALL WORDS PROCESSED             IOP03410
+       TMI     *-3                                                      IOP03420
+       TRA     QLOP1               ALL PROC CONTINUE                    IOP03430
+ QMIFX SXD     QIORD,4             PUT WD COUNT IN IORD                 IOP03440
+       TRA*    IOCK                RETURN                               IOP03450
+*      THIS IS SUBROUTINE THAT WILL FIGURE OUT WORDS TO BE PROCESSED.   IOP03460
+*      A SCH INSTRUCTION SHOULD BE GIVEN BEFORE ENTERING THE ROUTINE.   IOP03470
+*      ON RETURN A-REG WILL HAVE A MINUS IF MORE WDS ARE TOBE PROC      IOP03480
+ WDPR  TRA     --                  RETURN ADDRESS                       IOP03490
+       LXA     QIORD,4             PICKUP ADDRESS IO COMMAND            IOP03500
+       SXD     *+3,4                                                    IOP03510
+       LXA     QSCHX,4             PUT ADDRESS SCH IN IX4               IOP03520
+       SXA     QIORD,4             PUT NEW ADDRESS IN IO                IOP03530
+       TIX     *+1,4,0             THE NEXT INSTRUCTIONS ARE            IOP03540
+       SXA     QDUM2,4             USED TO SEE IF THE COUNT             IOP03550
+       LXD     QIORD,4             WAS COMPLETELY USED.IF NOT IT        IOP03560
+       PXA     ,4                  REPLACES EXISTING COUNT IN           IOP03570
+       SUB     QDUM2               THE IORD AND RETURNS                 IOP03580
+       TZE*    WDPR                EXIT ALL ARE PROCESSED               IOP03590
+       TMI     *+3                                                      IOP03600
+       PAX     ,4                                                       IOP03610
+       SXD     QIORD,4             PUT NEW COUNT AWAY                   IOP03620
+       CHS                         CHANGE TO MINUS                      IOP03630
+       TRA*    WDPR                RETURN                               IOP03640
+ QDUM2 PZE     0,,0                DUM LOC TO STO COUNT                 IOP03650
+*      THIS ROUTINE HANDLES ALL SCATTER COMMANDS                        IOP03660
+*      BY SCATTER I MEAN IO COMMANDS THAT DONT RELEASE THE CHAN IMM.    IOP03670
+*      ON READS IT PUTS ALL THE INPUT INTO A BUFFER CALLED QNBUF        IOP03680
+*      (SIZE OF BUF IS OPEN)AND THEN MOVES WORDS TO PROPER LOCATIONS    IOP03690
+*      ON WRITES IT TRANSFERS THE WORDS FROM THE SPECIFIC               IOP03700
+*      LOCATION TO QNBUF AND ARE WRITTEN AFTER RELEASE COMMAND.         IOP03710
+       STZ     QSWT6                                                    IOP03720
+ QSCAT SXA     QSVX2,2                                                  IOP03730
+       CAL     QIORD               SAVE ORG IO COMMAND                  IOP03740
+       PAX     ,4                                                       IOP03750
+       SXD     QFXZ1,4             STO ADDRESS IN TXI COMMAND           IOP03760
+       SLW     QTEMP                                                    IOP03770
+       CAL     QDUM1                                                    IOP03780
+       SLW     QIORD                                                    IOP03790
+       LXD     QTEMP,4             PICKUP = WORDS IN IO COM.            IOP03800
+ QFXZ1 TXI     *+1,4,--            THIS ROUTINE GIVES US THE            IOP03810
+       SXA     QFXAD,4             COUNT + THE ADDRESS                  IOP03820
+       SXA     QFXAW,4                                                  IOP03830
+       LXD     QTEMP,4                                                  IOP03840
+       CAL     QSWT1               TEST RD OR WRITE                     IOP03850
+       TNZ     QZWRT               TRA IF WRITE COMMAND                 IOP03860
+       TXH     *+3,4,0             TEST = OF WORDS FOR ZERO             IOP03870
+       STZ     QYCNT               ZERO OUT WORDS                       IOP03880
+       TRA     EXITZ+1                                                  IOP03890
+       LXA     QYCNT,2                                                  IOP03900
+       TXL     QRDAR,2,0           TEST QNBUF SEE IF ANY LEFT           IOP03910
+       CAL     QSWT7               CHECK NON TRANS                      IOP03920
+       TNZ     QFXAD+1                                                  IOP03930
+       CLA     QNBUF+QCOUT,2       BRING UP WORD OUT OF BUF.            IOP03940
+ QFXAD STO     --,4                STO WORD IN PROPER LOC.              IOP03950
+       TXI     *+1,4,-1            DECREASE IX2 AN 4 BY ONE             IOP03960
+       TXI     *+1,2,-1                                                 IOP03970
+       TXH     *-7,4,0             TEST FOR END WORD                    IOP03980
+ EXITZ SXA     QYCNT,2             THIS IS EXIT ROUT FOR SCATS          IOP03990
+       LXA     QSVX2,2             RESTORE IX2                          IOP04000
+       CAL     QSWT6                                                    IOP04010
+       TZE     QEXI                                                     IOP04020
+       CAL     QSWT5               TEST TRA OR PROCEED COM.             IOP04030
+       TNZ     OUT4                EXIT TRA COMMAND                     IOP04040
+       TRA     QPROX               EXIT PROCEED COMMAND                 IOP04050
+ QRDAR CAL     QSWT3                                                    IOP04060
+       TZE     EXITZ               IF REC COUNT EXIT                    IOP04070
+       LXA     QSVX2,2             RESTORE IX2                          IOP04080
+       TSL     QRDWR                                                    IOP04090
+       TSL     QRCHI                                                    IOP04100
+       LAC     QIORD,2             THIS ROUTINE FIGURES OUT             IOP04110
+       SXD     *+3,2               = OF WORDS THAT WERE                 IOP04120
+       LXA     QSCHX,2             PROCESSED AND ALSO LOC FOR           IOP04130
+       SXA     QFXAD-1,2           HIGHEST REC RD INTO BUF.             IOP04140
+       TXI     QFXAD-3,2,0                                              IOP04150
+ QZWRT LXA     QYCTW,2             RES IX2 WITH BUF CNT                 IOP04160
+       TXH     *+5,4,0             TEST = WORDS IN IO COM.              IOP04170
+       CAL     QSWT3               TST FOR WRT OUT                      IOP04180
+       TZE     QWRTB                                                    IOP04190
+       LXA     QSVX2,2                                                  IOP04200
+       TRA     EXITZ+4             NOT FORCE OUT                        IOP04210
+       TXL     QWRTB,2,0           TEST QNBUF FULL                      IOP04220
+ QFXAW CAL     --,4                BRING WORD INTO BUFFER               IOP04230
+       SLW     QNBUF+QCOUT,2       STO AWAY                             IOP04240
+       TXI     *+1,4,-1            SUB ONE FROM IX,2,4                  IOP04250
+       TXI     *+1,2,-1                                                 IOP04260
+       SXA     QYCTW,2             SAVE  COUNT                          IOP04270
+       TXL     QZWRT+1,4,0                                              IOP04280
+       TXH     QFXAW,2,0           TEST FULL BUFFER                     IOP04290
+ QWRTB PXD     0,2                 PUT CNT IN IO COMMAND                IOP04300
+       CHS                                                              IOP04310
+       ADD     QDUM1                                                    IOP04320
+       STD     QIORD                                                    IOP04330
+       CLA     QCONS               RESTORE QYCTN TO COUT                IOP04340
+       STO     QYCTW                                                    IOP04350
+ QSVX2 AXT     --,2                RESTORE IX2                          IOP04360
+       TSL     QRDWR               WRITE TAPE                           IOP04370
+       TSL     QRCHI                                                    IOP04380
+       TRA     QEXI                EXIT COM COMPLETE                    IOP04390
+ QYCTW PZE     QCOUT,,0            = WORDS IN WRITE BUFFER              IOP04400
+ QZCNT PZE     0,,0                = WORDS IN IO COMMAND                IOP04410
+ QYCNT PZE     0,,0                = WORDS LEFT IN RD BUFF.             IOP04420
+*                                                                       IOP04430
+ QEXI  STZ     QZCNT               ZERO OUT COUNTER IN SCATTER          IOP04440
+       STZ     QYCNT               SAME                                 IOP04450
+       CAL     *+3                 PUT TRA IN RDS AREA                  IOP04460
+       SLW     QRDST                                                    IOP04470
+       TRA     OUT4                                                     IOP04480
+       TRA     QSKIP               DUMMY COMMAND FOR NO RDS             IOP04490
+*                                                                       IOP04500
+*      QCOUT IS THE LENGTH OF BUFFER THIS MAYBE MODIFIED                IOP04510
+ QCOUT EQU     256                 FOR TEST PURPOSES ITS 256            IOP04520
+ QDUM1 IORD    QNBUF,,QCOUT        IO WORD WITH MAX COUNT               IOP04530
+ QNBUF BSS     QCOUT               RES AREA FOR PROCEEDS AN SPAC        IOP04540
+ QCONS PZE     QCOUT,,0            CONST OF QCOUT FOR TESTING           IOP04550
+*      ROUTINE FOR SCHA AND SCHB                                        IOP04560
+ SCH   ORA     QSTO                ORA IN STO COMMAND                   IOP04570
+       SLW     *+5                                                      IOP04580
+       CAL     ORGIO               BRING UP ORIGINAL IO COMMAND         IOP04590
+       ORA     =O077777777777      FIXUP MASK                           IOP04600
+       SAC     QSCHX,,6            PUT S BIT ON  MSM                    IOP04610
+       ANA     QSCHX                                                    IOP04620
+       SLW     --                  THIS STORES INFO IN AREA             IOP04630
+       TRA     OUT4                                                     IOP04640
+ QSTO  SLW     0,,0                                                     IOP04650
+*      ROUTINE FOR ALL BSR                                              IOP04660
+ BSR   TSL     RETRZ               FIXUP COMMAND                        IOP04670
+       ORA     BSRZ                ORA IN BSR COMMAND                   IOP04680
+       SLW     *+1                                                      IOP04690
+       XEC     --                  EXECUTE COMMAND                      IOP04700
+       TRA     OUT4                EXIT                                 IOP04710
+ BSRZ  BSR     0,,0                DUMMY COMMAND                        IOP04720
+*      ROUTINE FOR ALL BSFS SHOULD BE INSERTED HERE...                  IOP04730
+ BSF   TRA     ERHLT               NOT SIMULATED                        IOP04740
+*      THIS IS ROUTINE TO SIMULATE WRITE END OF FILE                    IOP04780
+ WEF   TSL     RETRZ               FIXUP ADDRESS OF COMMAND             IOP04790
+       ORA     WEFZ                OR IN WEF COMMAND                    IOP04800
+       TRA     BSR+2                                                    IOP04810
+ WEFZ  WEF     0,,0                DUMMY COMMAND                        IOP04820
+*      ROUTINE FOR SIMULATING REWINDS                                   IOP04830
+ REW   TSL     RETRZ                                                    IOP04840
+       ORA     REWZ                                                     IOP04850
+       TRA     BSR+2                                                    IOP04860
+ REWZ  REW     0,,0                DUMMY COMMAND                        IOP04870
+*      THIS WILL SIMMULATE THE TCOA COMMANDS                            IOP04880
+ TCOA  LXA     QSWT4,4             TEST PERF GEAR                       IOP04890
+       TXL     *+7,4,0             NOT PERF TRANSFER                    IOP04900
+       AXT     6,4                                                      IOP04910
+       ORA     TCOAZ+6,4                                                IOP04920
+       SLW     *+2                                                      IOP04930
+       TSL     RA4)                RESTORE MACH CONDITIONS              IOP04940
+       XEC     --,,--              THIS WILL EXECUTE THE TRA            IOP04950
+       TRA     OUT4                                                     IOP04960
+       AXT     5,4                                                      IOP04970
+       TRA     TCOA+3                                                   IOP04980
+ TCOB  AXT     4,4                 FIX TCOB TOBE TCOC                   IOP04990
+       TRA     TCOA+3                                                   IOP05000
+ TRCA  AXT     3,4                 FIX TRCA TOBE TRCB                   IOP05010
+       TRA     TCOA+3                                                   IOP05020
+ TRCB  AXT     2,4                 FIX TRCB TOBE TRCC                   IOP05030
+       TRA     TCOA+3                                                   IOP05040
+ TEFA  AXT     1,4                 FIX TEFA TO BE TEFB                  IOP05050
+       TRA     TCOA+3                                                   IOP05060
+ TEFB  AXT     0,4                 FIX TEFB TOBE TEFC                   IOP05070
+       TRA     TCOA+3                                                   IOP05080
+ TCOAZ TCOA    0,,0                TABLE OF IO TEST COMMANDS            IOP05090
+       TCOB    0,,0                                                     IOP05100
+       TCOC    0,,0                                                     IOP05110
+       TRCB    0,,0                                                     IOP05120
+       TRCC    0,,0                                                     IOP05130
+       TEFB    0,,0                                                     IOP05140
+       TEFC    0,,0                                                     IOP05150
+*      SIMULATES THE TCNA AN TCNB COMMANDS                              IOP05160
+ TCNA  LXA     QSWT4,4             TEST FOR LAST IO PERF                IOP05170
+       TXL     *+7,4,0             NOT PERF TRA TO CHANG CHAN           IOP05180
+       AXT     2,4                 SETUP PICKUP FOR TCOA                IOP05190
+       ORA     TCNZ+3              ORA IN TEST COMMAND                  IOP05200
+       SLW     *+3                                                      IOP05210
+       XEC     TCNZ+2,4            TRA TO OUT) IF IN OP                 IOP05220
+       TSL     RA4)                RESTORE CONDITIONS                   IOP05230
+       TRA     *                   TRA TO PROP ADD IF CHAN NOT          IOP05240
+       AXT     1,4                                                      IOP05250
+       TRA     TCNA+3                                                   IOP05260
+ TCNB  AXT     0,4                                                      IOP05270
+       TRA     TCNA+3                                                   IOP05280
+ TCNZ  TCOA    OUT4                TABLE TCO COMMANDS USED TO           IOP05290
+       TCOB    OUT4                SIMULATE TCN COMMANDS                IOP05300
+       TCOC    OUT4                                                     IOP05310
+       TRA     0,,0                                                     IOP05320
+*      ROUTINE FOR ETT COMMAND                                          IOP05330
+ ETT   TSL     RETRZ               FIXUP ADDRESS OF COMMAND             IOP05340
+       ORA     ETTZ                ORA IN ETT                           IOP05350
+       SLW     *+1                                                      IOP05360
+       ETT     --,,--              EXECUTE ETT COMMAND                  IOP05370
+       TRA     OUT4                IF ON EXIT                           IOP05380
+       CLA     0                   BRING UP RET ADDRESS                 IOP05390
+       ADD     =1                  ADD ONE TO RET ADDRESS               IOP05400
+       STO     0                   STO BACK IN ZERO                     IOP05410
+       TRA     OUT4                EXIT                                 IOP05420
+ ETTZ  OCT     -076000000000       DUMMY ETT COMMAND WITH 0 ADDRESS     IOP05430
+*      ROUTINE TO SIMULATE ON-LINE PRINTER ON THE TYPEWRITER.           IOP05440
+*      THE COUNT OF THE IO COM IS ASSUMED TO BE 24(OR 46 WITH ECHO CK)  IOP05450
+ PRTTP STZ     CNT1                ZERO OUT COUNTER                     IOP05460
+       CAL     QSWT1               TEST READ OR WRITE                   IOP05470
+       TZE     ECPR                TRA ON READ                          IOP05480
+ LP7   AXT     12,4                LOAD UP IX FOR OUTPUT CNT            IOP05490
+       LXA     QIORD,2             BRING UP ADDRESS FOR INPUT           IOP05500
+       TXI     *+1,2,24            ADD 24 TO ADDRESS                    IOP05510
+ LP3   SXA     FIXA9,2                                                  IOP05520
+       AXT     36,1                FIXUP SHIFT IX                       IOP05530
+ LP2   AXT     2,2                 FIXUP LOCATION COUNTER               IOP05540
+       PXA     0,0                 ZERO OUT A-REG                       IOP05550
+ FIXA9 LDQ     --,2                BRING UP WORD FOR SHIFT              IOP05560
+       RQL     36,1                SHIFT OFF LEADING BITS               IOP05570
+       LGL     1                   SHIFT BIT OVER                       IOP05580
+       TXH     *+2,2,23            TEST FOR ALL 12 BITS INA             IOP05590
+       TXI     FIXA9,2,2           ADD 2                                IOP05600
+       STO     ATEMP               STO 12 BITS FOR COMPARE              IOP05610
+       AXT     62,2                LOAD UP TABLE IX. IF SIZE            IOP05620
+ LP1   LDQ     TYTBL+62,2          OF TABLE CHANGES TAKE CARE.          IOP05630
+       PXA     0,0                 ZERO OUT AC                          IOP05640
+       LGL     12                                                       IOP05650
+       CAS     ATEMP               COMPARE WITH TABLE                   IOP05660
+       TRA     *+2                                                      IOP05670
+       TRA     *+2                 IF EQUAL SAVE CHARCTER               IOP05680
+       TIX     LP1,2,1             SUB ONE                              IOP05690
+       CAL     PRNTA+12,4          PRING UP PRINT AREA                  IOP05700
+       LGL     6                   SHIFT IN CHARACTER                   IOP05710
+       SLW     PRNTA+12,4          STO WD BACK AGAIN                    IOP05720
+       LXA     CNT1,2              LD UP IX WITH COUNTER.               IOP05730
+       TXI     *+1,2,1             INCREASE COUNTER                     IOP05740
+       TXH     LP4,2,5             TEST FOR WORD FULL                   IOP05750
+       SXA     CNT1,2              SAVE COUNTER                         IOP05760
+       TIX     LP2,1,1             SUB ONE FROM SHIFT REG               IOP05770
+ LP5   LXA     FIXA9,2                                                  IOP05780
+       TXI     LP3,2,1             ADD ONE TO ADDRESS                   IOP05790
+ LP4   STZ     CNT1                ZERO OUT COUNTER                     IOP05800
+       TIX     LP5-1,4,1           SUB FROM WORD COUNTER                IOP05810
+*      THE FOLLOWING SHOULD PRINT OUT TYPEWRITER.                       IOP05820
+       TDOA    *,,4                TEST FOR TYPEWRITER                  IOP05830
+       PWR     512,,4              PRE TO READ TYPEWRITER               IOP05840
+       RCHA    TPIO                                                     IOP05850
+       TRA     OUT4                EXIT                                 IOP05860
+ EROR1 HPR     *                   ERROR PUNCH OR READER                IOP05870
+ ECPR  LAC     QIORD,7             PUT ADD IN ALL INDEXS                IOP05880
+       TXI     *+1,2,-18           ADD 18 TO IX                         IOP05890
+       TXI     *+1,4,-22           ADD 22                               IOP05900
+       SXD     TSTZ1,4             SETUP LOOP BREAKER                   IOP05910
+       TXI     *+1,1,-20                                                IOP05920
+ LP6   CAL     0,1                 BRING UP WORD 21,25,29               IOP05930
+       SLW     0,2                 STORE WD AWAY                        IOP05940
+       CAL     1,1                 BRING UP WORD 22,26,30               IOP05950
+       SLW     1,2                 STO AWAY                             IOP05960
+ TSTZ1 TXL     LP7,2,--            TEST FOR END OF MOVE                 IOP05970
+       TXI     *+1,1,-4            ADD 4 TO FROM ADDRESS                IOP05980
+       TXI     LP6,2,-2            ADD 2                                IOP05990
+ TPIO  IORD    PRNTA,,12           IO COM FOR TYPEWRITER                IOP06000
+ PRNTA EQU     QNBUF+50            USE PART NBUF FOR PRNTA              IOP06010
+ CNT1  PZE     0,,0                COUNTER FOR SHIFTS                   IOP06020
+ ATEMP PZE     0,,0                LOC FOR 12 BIT SAVING                IOP06030
+*      ROUTINE TO SIMULATE READER                                       IOP06040
+*      IT USES THE TABLE FROM ON-LINE PRINTER SIMULATOR                 IOP06050
+ RDORD SEN     648,,13                                                  IOP06060
+       RCHA    IOZ1                FOR BINARY OR BCD CARDS.             IOP06070
+       TDOA    *,,1                TEST READER AVAILIABLE               IOP06080
+       CLA     CDBUF               IF MINUS NEXT CARD IS                IOP06090
+       TMI     BNCDR               A BINARY                             IOP06100
+       RDS     648,,3              READ READER BCD                      IOP06110
+       RCHA    IOZ2                                                     IOP06120
+       TDOA    *,,1                MAKE SURE ALL IS IN                  IOP06130
+*      THIS ROUTINE WILL CONVERT BCD TO 12 BIT CODE                     IOP06140
+       AXT     12,1                COUNTER FOR BCD WORDS                IOP06150
+       AXT     24,2                COUNTER FOR 12 BIT WORDS             IOP06160
+       AXT     6,4                                                      IOP06170
+ LPZ1  LDQ     CDBUF+25,1          BRING UP WORD                        IOP06180
+       PXD     0,0                 CLEAR OUT AC                         IOP06190
+       LGL     6                   SHIFT BCD CHAR INTO AC               IOP06200
+       STQ     CDBUF+25,1          SAVE WORD                            IOP06210
+       ADD     TBAD                ADD TABLE ADDRES                     IOP06220
+       STA     *+1                 STORE THE ADDRESS                    IOP06230
+       LDQ     --                  BRING UP 12 BIT CODE                 IOP06240
+       CAL     CDBUF+24,2          BRING UP AREA TO STORE IT            IOP06250
+       LGL     12                  SHIFT 12 BITS INTO WORD              IOP06260
+       SLW     CDBUF+24,2          STORE IT AWAY                        IOP06270
+       TXL     *+2,4,4             TEST IF 3 CHARCTERS PROCESS          IOP06280
+       TXI     LPZ1,4,-1           SUB 1 AND RETURN                     IOP06290
+       TXL     *+3,4,3             TEST IF EQUAL TO 4                   IOP06300
+       TXI     *+1,4,-1            SUB ONE FROM IX 4                    IOP06310
+       TXI     LPZ1,2,-1           SUB 1 FROM IX2 AND 4                 IOP06320
+       TIX     LPZ1,4,1            TEST FOR NEW WORD                    IOP06330
+       TIX     *+2,1,1             SUB ONE FROM SIX BIT WORD            IOP06340
+       TRA     BINCV               ALL DONE GO TO FLIP                  IOP06350
+       TIX     LPZ1-1,2,1          SUB 1 FROM 12 BIT WORD               IOP06360
+*      CONVERT 12 BIT CODES TO CARD IMMIAGE                             IOP06370
+ BINCV AXT     24,2                                                     IOP06380
+       LXA     QIORD,4                                                  IOP06390
+       TXI     *+1,4,24            ADD 24 TO ADDRESS                    IOP06400
+       SCHA    QSCHX               FIXUP STORE CHAN WITH NEW            IOP06410
+       SXA     QSCHX,4             ADDRESS                              IOP06420
+       SXA     FXZ1,4              STORE ADD AWAY                       IOP06430
+ FXZ3  AXT     3,1                                                      IOP06440
+       AXT     2,4                 FIXUP IX FOR 12 BITS                 IOP06450
+ FXZ2  LDQ     CDBUF+24,2          BRING UP BITS                        IOP06460
+ FXZ1  CAL     --,4                BRING UP OUT WORD                    IOP06470
+       LGL     1                   SHIFT 1 BIT OVER                     IOP06480
+       STQ     CDBUF+24,2                                               IOP06490
+       SLW*    FXZ1                STORE NEW WORD AWAY                  IOP06500
+       TXH     *+2,4,23            TEST IF 24                           IOP06510
+       TXI     FXZ2,4,2            ADD 2 TO THE IX                      IOP06520
+       TIX     FXZ2-1,1,1          SUB ONE FROM LOOP BREAKER            IOP06530
+       TXL     *+2,2,13                                                 IOP06540
+       TXI     FXZ3,2,-1                                                IOP06550
+       TXL     *+4,2,12            TEST FIRST TIME THROGH               IOP06560
+       CAL     FXZ1                FIXUP ADDRESS                        IOP06570
+       ADD     =O1                 ADD ONE TO PICKUP EVENS              IOP06580
+       SLW     FXZ1                                                     IOP06590
+       TIX     FXZ3,2,1            TEST FOR END                         IOP06600
+       TRA*    QRCHI               RETURN TO MAIN PROGRAM               IOP06610
+*      THIS READS BINARY CARD                                           IOP06620
+ BNCDR RDS     664,,3              READ CARD READER BINARY              IOP06630
+       RCHA    IOZ1                                                     IOP06640
+       TDOA    *,,1                TEST ALL IN                          IOP06650
+       TRA     BINCV               TRA TO FLIP CARD                     IOP06660
+ IOZ1  IORD    CDBUF,,24           IO FOR BINARY READ                   IOP06670
+ IOZ2  IORD    CDBUF+13,,12        IO FOR BCD READ                      IOP06680
+ TBAD  PZE     TYTBL,0             TABLE ADDRESS                        IOP06690
+ CDBUF BSS     25                  RES AREA FOR CARD READ               IOP06700
+*      TABLE FOR PRINTER TOO TYPEWRITER CONVERSION                      IOP06710
+*      THE FIRST 12 BITS OF EACH WORD REPRESENT ROWS 12-9 OF CARD       IOP06720
+*      THE NEXT 6 BITS REPRESENT THE OCTAL CHARC. FOR TYPEWRITER.       IOP06730
+*      FOR CORRECTIONS JUST ADJUST THE TABLE                            IOP06740
+ TYTBL OCT     100000000000        WORD FOR NUMERIC -O-                 IOP06750
+       OCT     040001000000        1                                    IOP06760
+       OCT     020002000000        2                                    IOP06770
+       OCT     010003000000        3                                    IOP06780
+       OCT     004004000000        4                                    IOP06790
+       OCT     002005000000        5                                    IOP06800
+       OCT     001006000000        6                                    IOP06810
+       OCT     000407000000        7                                    IOP06820
+       OCT     000210000000        8                                    IOP06830
+       OCT     000111000000        9                                    IOP06840
+       OCT     777712000000        ILLEGAL=12                           IOP06850
+       OCT     204213000000        *-ASTERISK                           IOP06860
+       OCT     004214000000        APOSTROPHE=14                        IOP06870
+       OCT     777715000000        ILLEGAL=15                           IOP06880
+       OCT     777716000000        ILLEGAL=16                           IOP06890
+       OCT     777717000000        ILLEGAL=17                           IOP06900
+       OCT     400020000000        PLUS SIGN                            IOP06910
+       OCT     440021000000        A                                    IOP06920
+       OCT     420022000000        B                                    IOP06930
+       OCT     410023000000        C                                    IOP06940
+       OCT     404024000000        D                                    IOP06950
+       OCT     402025000000        E                                    IOP06960
+       OCT     401026000000        F                                    IOP06970
+       OCT     400427000000        G                                    IOP06980
+       OCT     400230000000        H                                    IOP06990
+       OCT     400131000000        I                                    IOP07000
+       OCT     777732000000        ILLEGAL=32                           IOP07010
+       OCT     410233000000        .(PERIOD)                            IOP07020
+       OCT     404234000000        RIGHT PAREN=34                       IOP07030
+       OCT     777735000000        ILLEGAL=35                           IOP07040
+       OCT     777736000000        ILLEGAL=36                           IOP07050
+       OCT     777737000000        ILLEGAL=37                           IOP07060
+       OCT     200040000000        -(DASH OR MINUS)                     IOP07070
+       OCT     240041000000        J                                    IOP07080
+       OCT     220042000000        K                                    IOP07090
+       OCT     210043000000        L                                    IOP07100
+       OCT     204044000000        M                                    IOP07110
+       OCT     202045000000        N                                    IOP07120
+       OCT     201046000000        O                                    IOP07130
+       OCT     200447000000        P                                    IOP07140
+       OCT     200250000000        Q                                    IOP07150
+       OCT     200151000000        R                                    IOP07160
+       OCT     300052000000        MINUS-ZERO                           IOP07170
+       OCT     210253000000        $=53                                 IOP07180
+       OCT     204254000000        *=54                                 IOP07190
+       OCT     777755000000        ILLEGAL=55                           IOP07200
+       OCT     777756000000        ILLEGAL=56                           IOP07210
+       OCT     777757000000        ILLEGAL=57                           IOP07220
+       OCT     000060000000        BLANK=60                             IOP07230
+       OCT     140061000000        /(SLASH)                             IOP07240
+       OCT     120062000000        S                                    IOP07250
+       OCT     110063000000        T                                    IOP07260
+       OCT     104064000000        U                                    IOP07270
+       OCT     102065000000        V                                    IOP07280
+       OCT     101066000000        W                                    IOP07290
+       OCT     100467000000        X                                    IOP07300
+       OCT     100270000000        Y                                    IOP07310
+       OCT     100171000000        Z                                    IOP07320
+       OCT     120272000000        RM                                   IOP07330
+       OCT     110273000000        COMMA                                IOP07340
+       OCT     104274000000        LEFT PAREN                           IOP07350
+       OCT     777773000000        CHAR PRINTS FOR ALL UNDEFINED        IOP07360
+*      ROUTINE TO SIMULATE ON-LINE PUNCH.                               IOP07370
+*      IT FLIPS THE IMAGE THEREFORE EVERTHING IS PUNCHED BINARY.        IOP07380
+*      IT USES THE TOP OF QNBUF FOR OUTPUT BUFFER                       IOP07390
+ PNCHA EQU     QNBUF+60            STORAGE FOR PUNCH OUT                IOP07400
+ IOZ3  IORD    PNCHA,,27                                                IOP07410
+ PNCRT AXT     24,4                FIXUP OUTPUT COUNTER                 IOP07420
+       LXA     QIORD,2             FIX INPUT STARTING ADDRESS           IOP07430
+       TXI     *+1,2,24            ADD 24 TO STARTING ADDRESS           IOP07440
+       SXA     QSCHX,2             FIXUP SCH                            IOP07450
+       SXA     ADFX1,2             STORE ADDRESS AWAY                   IOP07460
+       AXT     36,2                FIXUP BIT SHIFT COUNTER              IOP07470
+ LPP3  SXA     QTEMP,4             SAVE IX4 FOR OUTPUT                  IOP07480
+       AXT     3,4                                                      IOP07490
+ LPP2  AXT     0,1                 FIXUP INPUT COUNTER                  IOP07500
+ LPP1  TXI     *+1,1,2             ADD 2 TO COUNTER                     IOP07510
+ ADFX1 LDQ     --,1                BRING UP WORD                        IOP07520
+       RQL     36,2                KNOCK OFF BITS NOT NEEDED            IOP07530
+       LGL     1                   SHIFT BIT INTO AC                    IOP07540
+       TXL     LPP1,1,23           TEST END OF 12 BITS                  IOP07550
+       TIX     LPP4,2,1            SUB 1 FROM BIT DROP OFF              IOP07560
+       CAL     ADFX1                                                    IOP07570
+       ADD     =O1                 INCREASE ADDRESS FOR EVEN.           IOP07580
+       SLW     ADFX1                                                    IOP07590
+       AXT     36,2                RESTORE BIT DROP OFF                 IOP07600
+ LPP4  TIX     LPP2,4,1            TEST FOR 36 BITS IN AC               IOP07610
+       LXA     QTEMP,4             BRING OUTPUT COUNTER UP              IOP07620
+       SLW     PNCHA+24,4          STO AC IN OUT AREA                   IOP07630
+       TIX     LPP3,4,1            TEST END OF OUTPUT                   IOP07640
+       TDOA    *,,2                TEST PUNCH BUSY                      IOP07650
+       WRS     665,,3              PUNCH CARD                           IOP07660
+       RCHA    IOZ3                                                     IOP07670
+       TRA*    QRCHI               RETURN                               IOP07680
+       END                                                              IOP07690

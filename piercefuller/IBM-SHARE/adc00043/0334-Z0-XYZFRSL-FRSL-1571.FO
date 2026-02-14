@@ -1,0 +1,303 @@
+* PID 926  COMPILE AND XEQ                                                      
+*     XEQ                                                                       
+*     LIST8                                                                     
+*     LABEL                                                                     
+*     LIBE                                                                      
+CFORSAL                                                                         
+C     PROGRAM TO FORECAST SALES                                              001
+ 1000 FORMAT(12I6)                                                           002
+ 1001 FORMAT(6F12.6)                                                         003
+ 1002 FORMAT(1H0/6X,9HPERIOD ISI4,11X,1HP,4X,12HACTUAL SALES,11X,            004
+     816HFORECASTED SALES/29X,3H---,3X,12H------------,11X,16H----------     005
+     9------)                                                                006
+ 1003 FORMAT(1H ,28X,I2,4X,F13.6,12X,F13.6)                                  007
+ 1011 FORMAT(1H1,47X24HSALES FORECASTING OUTPUT/48X,24H-----------------     008
+     1-------/53X,11HPRODUCT NO.,I2/53X,13H-------------)                    009
+ 1012 FORMAT(1H0/22X,25HOPTIMAL WEIGHTS..........,4X,2HA=,F7.4,10X,          010
+     22HB=,F7.4,10X,2HC=,F7.4///22X,25HCURRENT ESTIMATES........,            011
+     34X,2HS=,F14.6//51X,2HR=,F14.6//(51X,2HF(,I2,2H)=,F10.6))               012
+ 1013 FORMAT(1H0/22X,29HMEANS AND STANDARD DEVIATIONS//                      013
+     5(51X,6HSMEAN(,I1,2H)=,F13.7,10X,5HSDEV(,I1,2H)=,F13.7))                014
+ 1014 FORMAT(1H1,5X,11HPRODUCT NO.,I2,24H SALES FORECAST FOR   A=,F7.4,      015
+     63X,2HB=,F7.4,3X,2HC=,F7.4 /6X,68H---------------------------------     016
+     7-----------------------------------)                                   017
+ 1015 FORMAT(1H0/20X23HINPUT CRITERIA.........,4X2HD=,I4,6X2HH=,I3,          018
+     16X3HQ1=,I3,6X3HQ2=,I3//47X2HL=,I4,6X2HN=,I3,7X2HP=,I3,7X2HM=,I3///     019
+     220X23HOPTIONS USED...........,4X7HOPT(1)=,I1,4X7HOPT(2)=,I1,           020
+     33X7HOPT(3)=,I1,4X7HOPT(4)=,I1///20X23HWEIGHTS USED...........,         021
+     47X1HA,11X1HB,10X1HC,12X3HPHI/50X1H-,11X1H-,10X1H-,12X3H---)            022
+ 1016 FORMAT(47X,F7.4,5X,F7.4,4X,F7.4,3X,F16.6)                              023
+ 1020 FORMAT(1H0,83HYOU HAVE NOT CONFORMED WITH ONE OF THE FOLLOWING INP     024
+     $UT RESTRICTIONS FOR PRODUCT NO.,I2//20X35H1. H MUST BE INTEGRAL MU     025
+     $LTIPLE OF N/20X38H2. Q1 MUST BE LESS THAN OR EQUAL TO Q2/              026
+     $20X39H3. Q2 MUST BE LESS THAN OR EQUAL TO D-P/20X41H4. M MUST BE E     027
+     4QUAL TO 1 OR GREATER THAN 2)                                           028
+ 1021 FORMAT(56H0APPARENT MACHINE ERROR. INPUT MAY BE FAULTY FOR PRODUCT     029
+     1I3)                                                                    030
+ 1023 FORMAT(1H0,95HTHE NUMBER OF OUTPUTS DESIRED DOES NOT CONFORM WITH      031
+     1STANDARDS.   PROGRAM WILL GIVE ONE OUTPUT. )                           032
+      DIMENSION W(120),S(10000),V(100),FSAVE(120),G(120),SHAT(120),          033
+     1SHAT1(600),FPERM(120),SPERH1(240),SMEAN(30),SDEV(30),NOPT(4)           034
+C     INITIALIZATION                                                         035
+      NTAP1=7                                                                036
+      NTAP10=10                                                              037
+      NTAP9=9                                                                038
+      REWIND NTAP9                                                           039
+      EPSI=0.000001                                                          040
+      READ INPUT TAPE NTAP1,1000,NINPUT                                      041
+C                                                                          041.1
+C     LOOP FOR EACH PRODUCT                                                041.3
+C                                                                          041.5
+C     INITIALIZE AND COMPUTE INITIAL VALUE OF S(0),R(0),F(0),              041.7
+C                                                                          041.9
+ 0011 DO105KMAJOR=1,NINPUT                                                   042
+      JFK1=1                                                                 043
+      FSUM=0.                                                                044
+ 13   READ INPUT TAPE NTAP1,1000,ID,IH,IQ1,IQ2,L,N,IP,M,(NOPT(I),I=1,4)      045
+      READ INPUT TAPE NTAP1,1001,(W(I),I=1,IP)                               046
+ 15   READ INPUT TAPE NTAP1,1001,(S(I),I=1,ID)                               047
+      WRITE OUTPUT TAPE NTAP10,1011,KMAJOR                                   048
+      WRITE OUTPUT TAPE NTAP10,1015,ID,IH,IQ1,IQ2,L,N,IP,M,(NOPT(I),I=1,     049
+     14)                                                                     050
+      IF(NOPT(1))10,10,3                                                     051
+ 3    JFK1=2                                                                 052
+ 10   IQ11=IQ1-1                                                             053
+      IQ11=IQ1-1                                                             054
+      JIQ1=(IQ11-(N*(IQ11/N)))+1                                             055
+ 0023 JIQ2=IQ2-(N*(IQ2/N))+1                                                 056
+ 0025 IHDN=IH/N                                                              057
+      IF(IH-(N*IHDN))16,17,16                                                058
+ 16   PRINT 1020,KMAJOR                                                      059
+      DO 14 LABC=1,L                                                         060
+ 14   READ INPUT TAPE NTAP1,1001,A,B,C                                       061
+      GO TO 105                                                              062
+ 0017 IDMP=ID-IP                                                             063
+      ITEMP=IDMP+1                                                           064
+      JPERM=ITEMP-(N*(ITEMP/N))+1                                            065
+      IF(IDMP-IQ2)16,18,18                                                   066
+ 0018 IF(IQ2-IQ1)16,19,19                                                    067
+ 0019 FN=N                                                                   068
+      FN1D2=(FN+1.)*(.5)                                                     069
+      FIH=IH                                                                 070
+      FIHDN=IHDN                                                             071
+      FIHMN=IH-N                                                             072
+      FIQ1=IQ1                                                               073
+      IQ21=IQ2-1                                                             074
+      KL=IDMP-IQ21                                                           075
+      FKL=KL                                                                 076
+      MM1=M-1                                                                077
+      IF(MM1)16,28,24                                                        078
+ 0024 FMM1=MM1                                                               079
+      IDEN=KL/MM1                                                            080
+      DEN=IDEN                                                               081
+ 0028 SSAVE=0.                                                               082
+      PHI=3.*(10.**35)                                                       083
+      DO27L3=1,IHDN                                                          084
+      V(L3)=0                                                                085
+      L1=(N*(L3-1))+1                                                        086
+      L2=N*L3                                                                087
+      DO26J=L1,L2                                                            088
+ 0026 V(L3)=V(L3)+S(J)                                                       089
+      SSAVE=SSAVE+V(L3)                                                      090
+ 0027 V(L3)=V(L3)/FN                                                         091
+      IF(IH-N) 16,29,38                                                      092
+ 38   IF(NOPT(3))31,31,29                                                    093
+ 0029 RSAVE=0.                                                               094
+      GO TO32                                                                095
+ 0031 RSAVE=(V(IHDN)-V(1))/FIHMN                                             096
+ 0032 SSAVE=(SSAVE/FIH)-(((FIH*.5)-FIQ1)*RSAVE)                              097
+      IF(SSAVE) 43,44,44                                                     098
+ 43   SSAVE=0.                                                               099
+ 44   IF(NOPT(4)) 34,34,33                                                   100
+ 0033 DO36K=1,N                                                              101
+ 0036 FSAVE(K)=1.                                                            102
+      GO TO37                                                                103
+ 0034 DO40K=1,N                                                              104
+      MY=0                                                                   105
+      FK=K                                                                   106
+      FSAVE(K)=0.                                                            107
+      TEMP=(FN1D2-FK)*RSAVE                                                  108
+      DO35I=K,IH,N                                                           109
+      MY=MY+1                                                                110
+ 0035 FSAVE(K)=FSAVE(K)+(S(I)/(V(MY)-TEMP))                                  111
+      FSAVE(K)=FSAVE(K)/FIHDN                                                112
+      IF(FSAVE(K)) 46,40,40                                                  113
+ 46   FSAVE(K)=0.                                                            114
+ 0040 FSUM=FSUM+FSAVE(K)                                                     115
+      IF(NOPT(2))37,37,41                                                    116
+ 0041 DO42K=1,N                                                              117
+ 0042 FSAVE(K)=FSAVE(K)*(FN/FSUM)                                            118
+C                                                                          118.3
+C     LOOP TO TEST SET OF WEIGHTS                                          118.6
+C                                                                          118.9
+ 0037 DO85JFK=1,L                                                            119
+      READ INPUT TAPE NTAP1,1001,A,B,C                                       120
+ 126  IF(NOPT(3))3001,3001,3000                                              121
+ 3000 C=0.                                                                   122
+ 3001 IF(NOPT(4))3003,3003,3002                                              123
+ 3002 B=0.                                                                   124
+ 3003 GO TO(3004,124),JFK1                                                   125
+ 124  WRITE OUTPUT TAPE NTAP9,1014,KMAJOR,A,B,C                              126
+ 3004 SLAST=SSAVE                                                            127
+      RLAST=RSAVE                                                            128
+      DO45J=1,N                                                              129
+ 0045 G(J)=FSAVE(J)                                                          130
+      A1=1.-A                                                                131
+      B1=1.-B                                                                132
+      C1=1.-C                                                                133
+      J=JIQ1                                                                 134
+C                                                                          134.2
+C     UPDATE INITIAL VALUES OF S(0),R(0),F(0),                             134.4
+C     TO FIND S(LAST),R(LAST),F(LAST), FOR THIS SET OF WEIGHTS             134.6
+C                                                                          134.8
+ 0050 DO55MO=IQ1,IQ2                                                         135
+      IF(ABSF(G(J))-EPSI) 58,58,51                                           136
+ 58   SCUR=A1*(SLAST+RLAST)+A*S(MO)                                          137
+      GO TO 59                                                               138
+ 51   SCUR=A*(S(MO)/G(J))+(A1*(SLAST+RLAST))                                 139
+ 59   IF(SCUR) 62,56,54                                                      140
+ 62   SCUR=0.                                                                141
+      GO TO 56                                                               142
+ 54   G(J)=B*(S(MO)/SCUR)+(B1*G(J))                                          143
+ 56   RCUR=C*(SCUR-SLAST)+(C1*RLAST)                                         144
+      SLAST=SCUR                                                             145
+      RLAST=RCUR                                                             146
+      IF(J-N)55,53,84                                                        147
+ 0053 J=0                                                                    148
+ 0055 J=J+1                                                                  149
+C                                                                          149.2
+C     LOOP OVER FORCAST PERIODS Q2 TO (D-P) AND                            149.4
+C     FORECAST EACH TIME OVER P PERIODS FOR THIS SET OF WEIGHTS            149.6
+C                                                                          149.8
+ 0060 TEMP=0.                                                                150
+      J=JIQ2                                                                 151
+      DO80MO=IQ2,IDMP                                                        152
+      J1=J                                                                   153
+      GO TO(57,76),JFK1                                                      154
+ 76   WRITE OUTPUT TAPE NTAP9,1002,MO                                        155
+C                                                                          155.3
+C     FORECAST FOR P PERIODS,STARTING FROM THE PRESENT PERIOD              155.6
+C                                                                          155.9
+ 0057 DO65K=1,IP                                                             156
+      FK=K                                                                   157
+      SHAT(K)=(SCUR+(FK*RCUR))*G(J1)                                         158
+      IF(SHAT(K)) 69,70,70                                                   159
+ 69   SHAT(K)=0.                                                             160
+ 70   MOK=MO+K                                                               161
+      TEMP=TEMP+(W(K)*((SHAT(K)-S(MOK ))**2.))                               162
+      GO TO(64,61),JFK1                                                      163
+ 61   WRITE OUTPUT TAPE NTAP9,1003,K,S(MOK),SHAT(K)                          164
+ 0064 IF(J1-N)65,63,84                                                       165
+ 0063 J1=0                                                                   166
+ 0065 J1=J1+1                                                                167
+C                                                                          167.2
+C     PROCEED TO COMPUTE S(LAST),R(LAST),F(LAST),                          167.4
+C     FOR EACH PERIOD BETWEEN Q2 AND (D-P)                                 167.6
+C                                                                          167.8
+      IF(ABSF(G(J))-EPSI) 66,66,67                                           168
+ 66   SCUR=A1*(SLAST+RLAST)+A*S(MO+1)                                        169
+      GO TO 71                                                               170
+ 67   SCUR=A*(S(MO+1)/G(J))+(A1*(SLAST+RLAST))                               171
+ 71   IF(SCUR) 72,68,74                                                      172
+ 72   SCUR=0.                                                                173
+      GO TO 68                                                               174
+ 74   G(J)=B*(S(MO+1)/SCUR)+(B1*G(J))                                        175
+ 68   RCUR=C*(SCUR-SLAST)+(C1*RLAST)                                         176
+      SLAST=SCUR                                                             177
+      RLAST=RCUR                                                             178
+      IF(J-N)75,73,84                                                        179
+ 0073 J=0                                                                    180
+ 0075 J=J+1                                                                  181
+      MOIQ=MO-IQ21                                                           182
+ 0080 SHAT1(MOIQ    )=SHAT(1)                                                183
+      TEMP=TEMP/FKL                                                          184
+      WRITE OUTPUT TAPE NTAP10,1016,A,B,C,TEMP                               185
+      IF(PHI-TEMP)85,85,81                                                   186
+ 0081 PHI=TEMP                                                               187
+      AP=A                                                                   188
+      BP=B                                                                   189
+      CP=C                                                                   190
+      RPERM=RCUR                                                             191
+      SPERM=SCUR                                                             192
+      DO82K=1,N                                                              193
+ 0082 FPERM(K)=G(K)                                                          194
+      DO83K=1,KL                                                             195
+ 0083 SPERH1(K)=SHAT1(K)                                                     196
+      GO TO 85                                                               197
+ 84   PRINT 1021,KMAJOR                                                      198
+      LABC=L-JFK                                                             199
+      IF(LABC) 105,105,106                                                   200
+ 106  DO 107 LA=1,LABC                                                       201
+ 107  READ INPUT TAPE NTAP1,1001,A,B,C                                       202
+      GO TO 105                                                              203
+ 0085 CONTINUE                                                               204
+C                                                                          204.2
+C     USING OPTIMAL SET OF WEIGHT                                          204.4
+C     COMPUTE S(BAR) AND SIGMA                                             204.6
+C                                                                          204.8
+      IF(IP-1) 111,111,89                                                    205
+ 89   AP1=1.-AP                                                              206
+      BP1=1.-BP                                                              207
+      CP1=1.-CP                                                              208
+      N1=IDMP+2                                                              209
+      J=JPERM                                                                210
+      DO110 K=N1,ID                                                          211
+      IF(ABSF(FPERM(J))-EPSI) 86,86,87                                       212
+ 86   SCUR=AP1*(SPERM+RPERM)+AP*S(K)                                         213
+      GO TO 102                                                              214
+ 87   SCUR=AP*(S(K)/FPERM(J))+(AP1*(SPERM+RPERM))                            215
+ 102  IF(SCUR) 100,88,101                                                    216
+ 100  SCUR=0.                                                                217
+      GO TO 88                                                               218
+ 101  FPERM(J)=BP*(S(K)/SCUR)+(BP1*FPERM(J))                                 219
+ 88   RCUR=CP*(SCUR-SPERM)+(CP1*RPERM)                                       220
+      SPERM=SCUR                                                             221
+      RPERM=RCUR                                                             222
+      IF(J-N)110,112,52                                                      223
+ 112  J=0                                                                    224
+ 110  J=J+1                                                                  225
+ 111  SDEV=0.                                                                226
+      SMEAN(1)=0.                                                            227
+      DO90K=IQ2,IDMP                                                         228
+      K1=K+1                                                                 229
+      SMEAN(1)=SMEAN(1)+S(K1)                                                230
+      KIQ2=K-IQ21                                                            231
+ 0090 SDEV(1)=SDEV(1)+((SPERH1(KIQ2   )-S(K1 ))**2.)                         232
+      SMEAN(1)=SMEAN(1)/FKL                                                  233
+      SDEV(1)=SDEV(1)/FKL                                                    234
+      SDEV(1)=SQRTF(SDEV(1))                                                 235
+      IF(M-2)98,92,93                                                        236
+ 92   PRINT 1023                                                             237
+      M=1                                                                    238
+      GO TO 98                                                               239
+ 93   IF(KL-(MM1*(IDEN)))92,94,92                                            240
+ 0094 DO96K=2,M                                                              241
+      SMEAN(K)=0.                                                            242
+      SDEV(K)=0.                                                             243
+      N1=IQ2+IDEN*(K-2)                                                      244
+      N2=IQ2+(IDEN*(K-1))-1                                                  245
+      DO95N3=N1,N2                                                           246
+      N31=N3+1                                                               247
+      SMEAN(K)=SMEAN(K)+S(N31)                                               248
+      N3IQ2=N3-IQ21                                                          249
+ 0095 SDEV(K)=SDEV(K)+((SPERH1(N3IQ2   )-S(N31 ))**2.)                       250
+      SMEAN(K)=SMEAN(K)/DEN                                                  251
+      SDEV(K)=SDEV(K)/DEN                                                    252
+ 0096 SDEV(K)=SQRTF(SDEV(K))                                                 253
+ 98   WRITE OUTPUT TAPE NTAP10,1011,KMAJOR                                   254
+      WRITE OUTPUT TAPE NTAP10,1012,AP,BP,CP,SPERM,RPERM,(J,FPERM(J),J=1     255
+     2,N)                                                                    256
+      WRITE OUTPUT TAPE NTAP10,1013,(K,SMEAN(K),K,SDEV(K),K=1,M)             257
+      GO TO 105                                                              258
+ 52   PRINT 1021,KMAJOR                                                      259
+C     MACHINE ERROR                                                          260
+ 0105 CONTINUE                                                               261
+      PRINT 1025                                                           261.1
+ 1025 FORMAT(61H0FINAL PROGRAM STOP SEE ON LINE PRINTS FOR ANY ERROR MES   261.2
+     1SAGES)                                                               261.3
+      END FILE NTAP10                                                        262
+ 120  END FILE NTAP9                                                         263
+      REWIND NTAP9                                                           264
+      CALL EXIT                                                              265
+      END                                                                    266
+√                                                                       CARD EOF

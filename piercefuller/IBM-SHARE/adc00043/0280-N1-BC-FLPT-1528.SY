@@ -1,0 +1,295 @@
+*      FAP                                                              FLPT 001
+*FPT                                                                         002
+       COUNT   300                                                           003
+*FLPT          FLPT FLOATING POINT TRAP AND DIVIDE CHECK TRAP ROUTINE   FLPT 004
+*      FLOATTRAP PROG.. VERSION USING LOWER MEMORY LOCATION FOR SIGN ON      005
+       ENTRY   (FPT)         FORTRAN LIBRARY                            FLPT 006
+       ENTRY   FTMOPT        (TYPE,COUNT,ADDRESS OR ZERO)               FLPT 007
+       ENTRY   FTMSET                                                   FLPT 008
+       ENTRY   -(FPTC)       STORAGE AREA FOR ERRORS IF CALLED          FLPT 009
+       ENTRY   (QUOT)                                                   FLPT 010
+       REM                                                              FLPT 011
+       PMC     ON                                                            012
+(FPTC) BOOL    117           THIS LOCATION IS PICKED UP BY BC FORTRAN MO     013
+       REM     NITOR AND WILL CONTAIN COUNT OC  MATH ERROR,                  014
+       REM     IN THE PRECEEDING THREE LOCATIONS WILL BE  OVERFLOWS,         015
+       REM     UNDERFLOWS, AND DIVIDE CHECK COUNTS                           016
+TEST   MACRO   WHAT          TO TEST LIMIT WORD                         FLPT 017
+       STI     BACK          SAVE SI AND AC                             FLPT 018
+       STO     AC                                                       FLPT 019
+       CAL     (FPTC)+WHAT-BASE                                              020
+       ACL     =1                                                            021
+       SLW     (FPTC)+WHAT-BASE    UPDATE LOWER MEMORY COUNT                 022
+       CLA     WHAT          TEST P/S BIT, IF FILLED, LIMIT,            FLPT 023
+       TPL     *+2                                                      FLPT 024
+       STA     BACK          SET INDICATED RETURN                       FLPT 025
+       ACL     =O1000000     AND CONTINUE UPPING COUNT                  FLPT 026
+       SLW     WHAT          STORING IT WITH P-BIT MAYBE                FLPT 027
+       STT     TAG           STORE TAG TO DECIDE MESS                   FLPT 028
+       CLA     AC            AGE OPTION, ALWAYS RESTORE AC              FLPT 029
+       ZET     TAG           TEST IF TAG IS ZERO, JUMP FOR PRINTOUT     FLPT 030
+TEST   END                                                              FLPT 031
+       REM                                                              FLPT 032
+TELLM  MACRO   WORDS,EXTRAW                                             FLPT 033
+       STQ     MQ                                                       FLPT 034
+       CAL     BLANK                                                    FLPT 035
+       LFT     10                                                       FLPT 036
+       CAL     EXTRAW                                                   FLPT 037
+       SLW     WORDS-1                                                  FLPT 038
+       STL     LOCRET                                                   FLPT 039
+       TXH     *+2,,WORDS-1+3                                           FLPT 040
+       TRA     ERPF                                                     FLPT 041
+       LDQ     MQ                                                       FLPT 042
+       CLA     AC            SAVED IN TEST MACRO                        FLPT 043
+TELLM  END                                                              FLPT 044
+       EJECT                                                            FLPT 045
+TRAPW  BOOL    0           LOCATION WHERE TRAP INFORMATOION IS STORED        046
+(FPT)  STI     IND                                                      FLPT 047
+       LDI     TRAPW                                                         048
+       ZET     LEAVE         CHECK IF USER HAS SPECIFIED THAT           FLPT 049
+       TRA     GOHIM         HE WANTS TRAP                              FLPT 050
+       LFT     20            IF NOT DIVIDE CHECK TRAP                   FLPT 051
+       TRA     DIVCH                                                    FLPT 052
+       LNT     4             DONT LOOK AT DIVIDE ERROR                  FLPT 053
+       TRA     UNDERF        AND NOT UNDERFLOW                          FLPT 054
+       REM                                                              FLPT 055
+       REM     OVERFLOW, SET FORTRANS INDICATOR                         FLPT 056
+       STI     OVRFLO                                                   FLPT 057
+       TEST    OVER          TEST IF PRINTOUT WANTED AND COUNT TO LIMIT FLPT 058
+       TRA     NOMO          NO MESSAGE WANTED FOR OVERFLOW             FLPT 059
+       TELLM   WO,DWD                                                   FLPT 060
+NOMO   LNT     2             SET                                        FLPT 061
+       TRA     MQONLY        APPROPRIATE                                FLPT 062
+       CLM                   REGISTER                                   FLPT 063
+       ACL     MAX             TO MAX                                   FLPT 064
+       LNT     1             PRESERVING                                 FLPT 065
+       TRA     ACONLY        SIGN                                       FLPT 066
+MQONLY LDQ     MAX                                                      FLPT 067
+       LRS     0                                                        FLPT 068
+ACONLY LDI     IND                                                      FLPT 069
+       TRA*    BACK                                                     FLPT 070
+       REM                                                              FLPT 071
+       REM     UNDERFLOW                                                FLPT 072
+UNDERF TEST    UNDER         TEST IF PRINTOUT WANTED AND COUNT TO LIMIT FLPT 073
+       TRA     NOMU          NO MESSAGE WANTED FOR UNDETFLOW            FLPT 074
+       TELLM   WU,DWD                                                   FLPT 075
+NOMU   LFT     2                                                        FLPT 076
+       CLM                                                              FLPT 077
+       LFT     1                                                        FLPT 078
+       LDQ     ZERO                                                     FLPT 079
+       LDI     IND                                                      FLPT 080
+       TRA*    BACK                                                     FLPT 081
+       REM                                                              FLPT 082
+       REM     DIVIDE CHECK                                             FLPT 083
+DIVCH  TEST    CHECK          TEST IF PRINT WANTED AND COUNT TO LIMIT   FLPT 084
+       TRA     DONLY                                                    FLPT 085
+       STQ     MQ                                                       FLPT 086
+       CAL     BLANK                                                    FLPT 087
+       LNT     10                                                       FLPT 088
+       CAL     IWD                                                      FLPT 089
+       SLW     WD-1                                                     FLPT 090
+       STL     LOCRET                                                   FLPT 091
+       TXH     *+2,,WD-1+3                                              FLPT 092
+       TRA     ERPF                                                     FLPT 093
+       LDQ     MQ                                                       FLPT 094
+       CLA     AC            SAVED IN TEST MACRO                        FLPT 095
+       TZE     *+2             DONT USE MAX IF DIVIDE WAS 0/0                096
+DONLY  SYN     *                                                        FLPT 097
+(QUOT) SYN     *                                                        FLPT 098
+       LDQ     MAX            RESULT OF OVERFLOW OPERATION              FLPT 099
+       LRS     0                                                        FLPT 100
+       LDI     IND                                                      FLPT 101
+       TRA*    BACK                                                     FLPT 102
+       REM                                                              FLPT 103
+       REM                                                              FLPT 104
+       REM                                                              FLPT 105
+FTMOPT CLA*    1,4                                                      FLPT 106
+       SXA     RET,1                                                    FLPT 107
+       AXT     3,1           START WITH OVER-BIT 1                      FLPT 108
+       ARS     18                                                       FLPT 109
+LOOKBT LBT                                                              FLPT 110
+       TRA     NEXT1                                                    FLPT 111
+       STO     AC                                                       FLPT 112
+       CLA*    2,4                                                      FLPT 113
+       TMI     *+2           IF COUNT NEGATIVE DONT PRINT               FLPT 114
+       ORA     =O700000      MAKE SURE COMPLEMENT GIVES ZERO            FLPT 115
+       COM                                                              FLPT 116
+       STT     WHAT,1        STORE INDICATOR TO PRINT                   FLPT 117
+       ANA     MAX                                                      FLPT 118
+       ACL     =O1000000                                                FLPT 119
+       STP     WHAT,1                                                   FLPT 120
+       STD     WHAT,1                                                   FLPT 121
+       CLA*    3,4           IF AN ADDRESS GIVEN                        FLPT 122
+       TNZ     *+2           USE IT , ELSE SET EXIT TO EXIT             FLPT 123
+       CAL     $EXIT         INTO WHAT WORD                             FLPT 124
+       STA     WHAT,1                                                   FLPT 125
+       CLA     AC                                                       FLPT 126
+NEXT1  ARS     1               GET NEXT BIT                             FLPT 127
+       TIX     LOOKBT,1,1                                               FLPT 128
+       REM                                                              FLPT 129
+RET    AXT     *-*,1                                                    FLPT 130
+       TRA     4,4                                                      FLPT 131
+       EJECT                                                            FLPT 132
+FTMSET STL     LEAVE                                                    FLPT 133
+       CLA*    1,4                                                      FLPT 134
+       STA     GOHIM                                                    FLPT 135
+       ACL     =1                                                       FLPT 136
+       STA     GOTHIM                                                   FLPT 137
+       TRA     2,4                                                      FLPT 138
+       REM                                                              FLPT 139
+       REM     ENTER HERE IF HE WANTED TO THE WORK HIMSELF              FLPT 140
+GOHIM  STI     *-*                                                      FLPT 141
+       LDI     IND           RELOAD INDICATOR AND LET HIM HAVE IT       FLPT 142
+GOTHIM TRA     *-*                                                      FLPT 143
+       EJECT                                                            FLPT 144
+       REM     FLOATING POINT DIAGNOSTIC PRINT                          FLPT 145
+ERPF   SYN     *                                                        FLPT 146
+       CAL*    LOCRET                                                   FLPT 147
+       STA     RETER                                                    FLPT 148
+       ARS     18                                                       FLPT 149
+       STA     TYPEOV                                                   FLPT 150
+       CAL     0             PICK UP TRAP INFORMATION                   FLPT 151
+       SUB     =1            GET TRUE ADDRESS                           FLPT 152
+       STA     ADDR          FOR PRINT OUT AS OCTAL LOC                 FLPT 153
+       STA     GETARG        AND PICK UP ARGUMENT                       FLPT 154
+       STI     ERPFI                                                         155
+GETARG CAL     *-*           GET INSTRUCTION INTO AC                         156
+       PAI                   AND INTO INDICATORS                             157
+       STA     GETSIT                                                        158
+       STT     GETSIT                                                        159
+GETSIT CAL*    *-*           PICK UP ASSUMING INSTRUCTION WAS INDIRECTLY     160
+       LNT     60              ADDRESSED, NOW IF IT ISNT PICK IT UP          161
+       CAL*    GETSIT          WITH DIRECT ADRESS ONLY                       162
+       SLW     ARG                                                      FLPT 163
+       SXA     ERPFR,4       SAVE INDICES NOW                           FLPT 164
+       SXA     ERPFR+1,2                                                FLPT 165
+       LNT     10000         ADD/SUB OR MPY/DIV                         FLPT 166
+       TRA     MPYDIV        30N                                        FLPT 167
+       CAL     ADDWD                                                    FLPT 168
+       LFT     200           ADD OR SUB                                 FLPT 169
+       CAL     SUBWD         302                                        FLPT 170
+       SLW     FRSTWD                                                   FLPT 171
+       CAL     INGWD                                                    FLPT 172
+       TRA     HAVEOP                                                   FLPT 173
+MPYDIV CAL     MPYWD         MPY OR DIV                                 FLPT 174
+       LNT     6000          260                                        FLPT 175
+       CAL     DIVWD                                                    FLPT 176
+       SLW     FRSTWD                                                   FLPT 177
+       CAL     BYWD                                                     FLPT 178
+HAVEOP SYN     *                                                        FLPT 179
+       SLW     SECWD                                                    FLPT 180
+       REM     SCAN TO FIND PRECEDING FORTRAN ROUTINE                   FLPT 181
+       LAC     ADDR,4        TO GET WORD FROM PROG                      FLPT 182
+       LXA     ADDR,2        TO GET ADDRESS TO COMPARE                  FLPT 183
+NEXT   CAL     3,4           GET AWORD                                  FLPT 184
+       LAS     STO8          SEE IF IS MAIN PROGRAM                     FLPT 185
+       TXI     TRYSXD,2,-1   CODE MORE THAN STO                         FLPT 186
+       TRA     FOUNDM        MAIN PROGRAM                               FLPT 187
+       TXI     NOTNOW,2,-1   CODE LESS THAN STO, SXD                    FLPT 188
+TRYSXD SXA     SXDM44,2      MAKE ADDRESS 4 LESS                        FLPT 189
+       LAS     SXDM44        AND SEE                                    FLPT 190
+       TXI     MORE,4,1      NO                                         FLPT 191
+       TXI     FOUND,2,-1    YES                                        FLPT 192
+NOTNOW TXI     MORE,4,1      NO, NEXT CODE                              FLPT 193
+MORE   TXH     NEXT,2,100    IF NOT END                                 FLPT 194
+       CAL     BEGWD                                                    FLPT 195
+       TXI     HAVNAM,4,-4    ADJUST FOE BEGIN                          FLPT 196
+FOUNDM CAL     MAINW         *MAIN*                                     FLPT 197
+       TXI     HAVNAM,4,-5   ADJUST FOR MAIN PROGRAM                    FLPT 198
+FOUND  SXA     SXDM42,2                                                 FLPT 199
+       CAL     2,4                                                      FLPT 200
+       LAS     SXDM42                                                   FLPT 201
+       TXI     NOTNOW,2,1    NO, RESET                                  FLPT 202
+       TXI     TWOOK,2,-1    YES, CHECK SXD1                            FLPT 203
+       TXI     NOTNOW,2,1    NO, RESET                                  FLPT 204
+TWOOK  SXA     SXDM41,2                                                 FLPT 205
+       CAL     1,4                                                      FLPT 206
+       LAS     SXDM41                                                   FLPT 207
+       TXI     NOTNOW,2,2    NO, RESET                                  FLPT 208
+       TRA     YES                                                      FLPT 209
+       TXI     NOTNOW,2,2                                               FLPT 210
+YES    CAL     0,4           NAME                                       FLPT 211
+HAVNAM SLW     NAME                                                     FLPT 212
+       REM                                                              FLPT 213
+       REM     RELATIVE LOCATION                                        FLPT 214
+NTTR   CAL     -4,4          SKIP THREE INDEXES                         FLPT 215
+       ANA     =O777777700000  AND TTR'S IF ANY                         FLPT 216
+       LAS     TTR                                                      FLPT 217
+       TRA     *+2                                                      FLPT 218
+       TXI     NTTR,4,1                                                 FLPT 219
+       PXA     0,4           -BEGIN+4                                   FLPT 220
+       ACL     ADDR          +TRAP                                      FLPT 221
+       ACL     =3            ADJUST FOR BASIS DIFFERENCE                FLPT 222
+       STA     REL                                                      FLPT 223
+       REM                                                              FLPT 224
+       REM     PRINT FINALLY                                            FLPT 225
+       TSX     $(SPH),4                                                 FLPT 226
+       TSX     FMT3                                                     FLPT 227
+       AXT     3,4                                                      FLPT 228
+TYPEOV LDQ     *-*,4                                                    FLPT 229
+       STR                                                              FLPT 230
+       TIX     *-2,4,1                                                  FLPT 231
+       AXT     4,4                                                      FLPT 232
+       LDQ     REL+1,4                                                  FLPT 233
+       STR                                                              FLPT 234
+       TIX     *-2,4,1                                                  FLPT 235
+       TSX     $(FIL),4                                                 FLPT 236
+       REM                                                              FLPT 237
+       REM     RESTORE                                                  FLPT 238
+ERPFR  AXT     *-*,4                                                    FLPT 239
+       AXT     *-*,2                                                    FLPT 240
+       LDI     ERPFI                                                    FLPT 241
+RETER  TRA     *-*                                                      FLPT 242
+       EJECT                                                            FLPT 243
+LEAVE  PZE                                                              FLPT 244
+BACK   PZE      STORES LOCATION ZERO  OR INDICATED ADDRESS FOR RETURN   FLPT 245
+IND    PZE      SAVES INDICATOR FOR THE POOR GUY WHO IS USING THEM      FLPT 246
+WHAT   REM     BITS P-17 COUNT COMPLEMENT,21-35 ADDRESS,20 IND          FLPT 247
+OVER   PZE     $EXIT,0,0                                                FLPT 248
+UNDER  PZE     TRAPW,1,0             UNDERFLOW COUNT DOES NOT GO TO EXIT     249
+CHECK  PZE     $EXIT,0,0                                                FLPT 250
+WHAT   SYN     OVER+3                                                   FLPT 251
+       PZE     $EXIT,0,0                                                FLPT 252
+BASE   SYN     *                                                             253
+ERPFI                                                                   FLPT 254
+LOCRET PZE                                                              FLPT 255
+AC     PZE     0             1,4 TEST SAVES AC, TEST AND TELLM RESTORES FLPT 256
+MQ     PZE     0             TELLM SAVES AND RESTORES MQ                FLPT 257
+TAG    PZE     0             TEST FOR INDICATOR IN WHAT                 FLPT 258
+ZERO   PZE                                                              FLPT 259
+MAX    OCT     377777777777                                             FLPT 260
+BLANK  BCI     1,                                                       FLPT 261
+DWD    BCI     1,DIVIDE                                                 FLPT 262
+IWD    BCI     1,FIXED                                                  FLPT 263
+       BCI     1,              AREA FOR PREFIX WORD FURTHER EXPLAINING  FLPT 264
+WO     BCI     2,  OVERFLOW                                             FLPT 265
+       BCI     1,                                                       FLPT 266
+WU     BCI     2, UNDERFLOW                                             FLPT 267
+       BCI     1,                                                       FLPT 268
+WD     BCI     2,DIVIDE CHECK                                           FLPT 269
+MAINW  BCI     1,*MAIN*                                                 FLPT 270
+BEGWD  BCI     1,*BEGIN                                                 FLPT 271
+SXDM44 SXD     *-*,4                                                    FLPT 272
+SXDM42 SXD     *-*,2                                                    FLPT 273
+SXDM41 SXD     *-*,1                                                    FLPT 274
+TTR    TTR     *-*                                                      FLPT 275
+STO8   STO     8             INSTRUCTION GENERATED BY FORTRAN TO SET(FPTFLPT 276
+BYWD   BCI     1,ING BY                                                 FLPT 277
+INGWD  BCI     1,ING                                                    FLPT 278
+ADDWD  BCI     1,   ADD                                                 FLPT 279
+SUBWD  BCI     1,.SUBTR'                                                FLPT 280
+DIVWD  BCI     1, DIVID                                                 FLPT 281
+MPYWD  BCI     1,MULTI'                                                 FLPT 282
+FMT3   BCI     7,(1H0,3A6,12H TRAPPED AT O5,24H OCT, WHILE              FLPT 283
+FRSTWD BCI     1,                                                       FLPT 284
+SECWD  BCI     1,                                                       FLPT 285
+       BCI     7,E16.8,5H IN 'A6,30H' (OR FAP CODE AFTER IT             FLPT 286
+       BCI     3,) LOC. O5,5H REL.)                                     FLPT 287
+ADDR   PZE                                                              FLPT 288
+ARG    PZE                                                              FLPT 289
+NAME   PZE                                                              FLPT 290
+REL    PZE                                                              FLPT 291
+       REM                                                              FLPT 292
+       COMMON  -1                                                            293
+OVRFLO COMMON  1                                                             294
+       END                                                              FLPT 295

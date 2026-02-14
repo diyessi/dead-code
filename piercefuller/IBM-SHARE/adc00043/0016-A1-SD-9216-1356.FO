@@ -1,0 +1,80 @@
+CROUND      PROGRAM SD 9216                                                 0001
+      SUBROUTINE ROUND(VALUE,NSF,NDEC,LOCA,NCH,HVALUE)                      0002
+      DIMENSION NUM(5),KH(6)                                                0003
+C     VALUE IS THE NUMBER TO BE ROUNDED OFF                                 0004
+C     HVALUE IS THE ROUNDED NUMBER IN HOLLERITH                             0005
+C     NSF IS THE NUMBER OF SIGNIFICANT FIGURES DESIRED (SUBJECT TO          0006
+C       RESTRICTIONS IMPOSED BY NDEC)                                       0007
+C     NDEC IS THE MAXIMUM NUMBER OF DECIMAL PLACES PERMITTED                0008
+C     NCH IS THE NUMBER OF CHARACTERS IN THE HOLLERITH WORD (INCLUDING      0009
+C       THE DECIMAL AND BLANKS) WHICH WILL BE PRINTED ON AN A               0010
+C       OUTPUT SPECIFICATION.   NCH MUST NOT EXCEED 6.                      0011
+C     LOCA IS THE POSITION (COUNTED FROM THE RIGHT) OF THE                  0012
+C       DECIMAL IN THE NCH-CHARACTER SPACE USED FOR THE STORAGE OF          0013
+C       HVALUE.  IF LOCA = 0, THEN HVALUE IS RIGHT ADJUSTED IN THE          0014
+C       NCH-CHARACTER SPACE.                                                0015
+C     LOC IS THE RELATIVE POSITION OF THE DECIMAL IN HVALUE                 0016
+C     ND IS THE NUMBER OF DIGITS, INCLUDING ZEROES, IN HVALUE               0017
+C     I, IF +, IS THE NUMBER OF DIGITS TO THE LEFT OF THE DECIMAL           0018
+C       (FOR NUMBERS GREATER THAN 1.0)                                      0019
+C     I, IF -, IS THE NUMBER OF ZEROES BETWEEN THE DECIMAL AND THE          0020
+C       FIRST SIGNIFICANT FIGURE  (FOR NUMBERS LESS THAN 1.0)               0021
+      IF(VALUE - 1.0) 101,100,100                                           0022
+  100 I = LOGF(VALUE)/2.30258 + 1.0                                         0023
+      GO TO 102                                                             0024
+  101 I = LOGF(VALUE)/2.30259                                               0025
+  102 IF(NDEC + I - NSF) 120,120,105                                        0026
+  105 N = NSF - I                                                           0027
+      IF(N) 115,115,110                                                     0028
+  110 IF(I) 112,113,113                                                     0029
+  112 ND = NSF - I                                                          0030
+      GO TO 135                                                             0031
+  113 ND = NSF                                                              0032
+      GO TO 135                                                             0033
+  115 NUMBER = (XFIXF(VALUE*10.0**N + 0.5))*10**(-N)                        0034
+      LOC = 1                                                               0035
+      ND = I                                                                0036
+      IF(NUMBER/10**I) 145,145,116                                          0037
+  116 ND = ND + 1                                                           0038
+      GO TO 145                                                             0039
+  120 N = NDEC                                                              0040
+      IF(I) 125,125,130                                                     0041
+  125 ND = NDEC                                                             0042
+      GO TO 135                                                             0043
+  130 ND = I + NDEC                                                         0044
+  135 NUMBER = VALUE*10.0**N + 0.5                                          0045
+      IF(NUMBER/10**(I + N)) 142,142,136                                    0046
+  136 IF(I) 138,139,139                                                     0047
+  138 ND = ND - 1                                                           0048
+  139 IF(NDEC + I - NSF) 141,140,140                                        0049
+  140 NUMBER = NUMBER/10                                                    0050
+      LOC = N                                                               0051
+      GO TO 145                                                             0052
+  141 ND = ND + 1                                                           0053
+  142 LOC = N + 1                                                           0054
+  145 DO 150 J=1,ND                                                         0055
+      K = ND - J + 1                                                        0056
+      NUM(K) = NUMBER/10**(K - 1)                                           0057
+  150 NUMBER = NUMBER - NUM(K)*10**(K - 1)                                  0058
+      NOBL = 6 - NCH                                                        0059
+      IF(LOCA) 160,160,155                                                  0060
+  155 NOBL = NOBL + LOCA - LOC                                              0061
+      LOC = LOCA + 6 - NCH                                                  0062
+  160 IF(NOBL) 175,175,165                                                  0063
+  165 DO 170 L=1,NOBL                                                       0064
+  170 KH(L) = 48                                                            0065
+  175 LL = NOBL + 1                                                         0066
+      NK = 1                                                                0067
+      DO 200 L=LL,6                                                         0068
+      IF(L - LOC) 185,180,185                                               0069
+  180 KH(L) = 27                                                            0070
+      GO TO 200                                                             0071
+  185 IF(ND - NK) 195,190,190                                               0072
+  190 KH(L) = NUM(NK)                                                       0073
+      NK = NK + 1                                                           0074
+      GO TO 200                                                             0075
+  195 KH(L) = 48                                                            0076
+  200 CONTINUE                                                              0077
+      CALL HOLL(KH(1),KH(2),KH(3),KH(4),KH(5),KH(6),HVALUE)                 0078
+      RETURN                                                                0079
+      END                                                                   0080

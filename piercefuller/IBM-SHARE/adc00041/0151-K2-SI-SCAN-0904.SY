@@ -1,0 +1,277 @@
+SISCAN REM 0277 05130                                                   SCAN 001
+       REM (TSH)+(STH)+(CSH)+REREAD ENTRIES                             SCAN 002
+ CODE  EQU 50      CODE TO RESTORE OR TO HAVE NORMAL (TSH) ENTRY.       SCAN 003
+       REM              FUL OUTPUT FOR CONTROL CARD                     SCAN 004
+       FUL                                                              SCAN 005
+       ORG 0                                                            SCAN 006
+       MZE ,,LCTR-2                                                     SCAN 007
+       PZE              BLANK CHECKSUM ON PROGRAM CARD                  SCAN 008
+       PZE END,,0            NO TRANSFER VECTOR                         SCAN 009
+       PZE COMMON       COMMON IS USED                                  SCAN 010
+       BCD 1REREAD                                                      SCAN 011
+       PZE REREAD                                                       SCAN 012
+       BCD 1(TSH)                                                       SCAN 013
+       PZE RTD                                                          SCAN 014
+       BCD 1(STH)                                                       SCAN 015
+       PZE WOT                                                          SCAN 016
+       BCD 1(CSH)                                                       SCAN 017
+       PZE RDBCD                                                        SCAN 018
+ LCTR  EQU *                 END OF CONTROL CARD                        SCAN 019
+       REM              RELOCATABLE                                     SCAN 020
+       REL                                                              SCAN 021
+       ORG 0                                                            SCAN 022
+       REM *************************************************************SCAN 023
+       REM REREAD ENTRY POINT MODIFIES NEXT READ STATEMENT.             SCAN 024
+REREAD SXD X4,4                                                         SCAN 025
+       CLA SLW               SEARCH FOR SLW 1                           SCAN 026
+       CAS 5,4                                                          SCAN 027
+       TXI *-1,4,-1                                                     SCAN 028
+ UNIT  TXI *+2,,CODE                                                    SCAN 029
+       TXI *-3,4,-1                                                     SCAN 030
+       CLA UNIT              FIX UNIT                                   SCAN 031
+       STD 7,4               XX                                         SCAN 032
+       CLA TYPE              AND TYPE                                   SCAN 033
+       STA 6,4               XX                                         SCAN 034
+       LXD X4,4              RESTORE IR4 AND                            SCAN 035
+       STO 0,4                 WIPE OUT CALLING TSX                     SCAN 036
+       TRA 1,4               RETURN TO MAIN PROGRAM.                    SCAN 037
+ SLW   SLW 1                 KEY WORD IN IN/OUT                         SCAN 038
+ TYPE  NOP *+1               PSEUDO TRANSFER VECTOR                     SCAN 039
+       TTR RTD                 TO (TSH)                                 SCAN 040
+       REM *************************************************************SCAN 041
+       REM                   SPACE FOR SAVING RECORD                    SCAN 042
+ MAX   EQU 20                  NOT MORE THAN 20 WORDS ARE SAVED.        SCAN 043
+ SAVE  BSS MAX                                                          SCAN 044
+       REM *************************************************************SCAN 045
+       REM (TSH)                                                        SCAN 046
+ RTD   SXD X2,2              SAVE IR2.  RTD=(TSH) ENTRY                 SCAN 047
+       RTT                   CLEAR RTT                                  SCAN 048
+ (TSH) NOP RTD               XX                                         SCAN 049
+       CAL 1,4               OBTAIN ADDRESS FOR COPY OR RESTORE         SCAN 050
+       STA CPY               XX                                         SCAN 051
+       TXL REST,1,-CODE-1    TEST FOR TAPE NUMBER                       SCAN 052
+       CLA BAC               NORMAL (TSH) ENTRY.                        SCAN 053
+ REP   STO ERR                                                          SCAN 054
+       RDS 127,1             SELECT TAPE                                SCAN 055
+       LXD BAC,2             SET IR2=0                                  SCAN 056
+ A)MAX SYN *                                                            SCAN 057
+ PXD   PXD MAX,0        (RETURN FROM MOR, BELOW)                        SCAN 058
+ CPY   CAD **,2              WORD IN ACC                                SCAN 059
+ D)M1  SYN *                                                            SCAN 060
+       TXI MOR,2,-1                                                     SCAN 061
+       TXI RES,4,1           EOF RETURN                                 SCAN 062
+       IOD                   END OF RECORD SKIP                         SCAN 063
+       RTT                   RTT                                        SCAN 064
+ ERR                         IF ERROR, REREAD                           SCAN 065
+ RES   LXD X2,2              RETURN   TO (BDC).                         SCAN 066
+       TRA 3,4               XX                                         SCAN 067
+ MOR   TXL PXD,2,-MAX-1      CONTINUE COPY LOOP IN ANY CASE BUT         SCAN 068
+       SLW SAVE-1,2          NOT MORE THAN MAX ARE SAVED.               SCAN 069
+ D)12  SYN *                                                            SCAN 070
+       TXI PXD,,12           XX                                         SCAN 071
+       REM                                                              SCAN 072
+ TRY   BST 127,1             REREAD BAD RECORD                          SCAN 073
+       CLA BAD               XX                                         SCAN 074
+ X2    TXI REP,,**           XX                                         SCAN 075
+ BAC   TXI TRY,,0            XX                                         SCAN 076
+ BAD   HPR 0,3               2ND ERROR HALT                             SCAN 077
+       REM *************************************************************SCAN 078
+       REM DONT READ, BUT RESTORE LAST'READ.                            SCAN 079
+ REST  SYN *                                                            SCAN 080
+       ADM A)MAX             XX                                         SCAN 081
+       STA SAV               XX                                         SCAN 082
+       LXA A)MAX,2      RESTORE RECORD                                  SCAN 083
+       CAL SAVE+MAX,2                                                   SCAN 084
+ SAV   SLW **,2              **=BCD+MAX                                 SCAN 085
+       TIX *-2,2,1                                                      SCAN 086
+ X4    TXI RES,,**           RETURN                                     SCAN 087
+       REM *************************************************************SCAN 088
+       REM (STH) ENTRY                                                  SCAN 089
+       BSS 0                                                            SCAN 090
+ WOT   CLA 1,4               CALCULATE ADDRESS                          SCAN 091
+       ARS 18                  FOR COPY INSTRUCTION                     SCAN 092
+       ADD 1,4               XX                                         SCAN 093
+       SXD X4,4              SAVE IR4                                   SCAN 094
+ (STH) PDX WOT,4   COUNT OF WORDS PER RECORD TO IR4                     SCAN 095
+       STA WT1     SUPPLY ADDRESS TO COPY INSTRUCTION                   SCAN 096
+       SXD X2,2              SAVE IR2                                   SCAN 097
+       LXD D)M1,2                                                       SCAN 098
+ PXD1  PXD -,0                                                          SCAN 099
+ WT1   CAD **,4              COPY RECORD                                SCAN 100
+       TXL *+3,2,-MAX-1      AND                                        SCAN 101
+ SLWS  NOP SAVE-1,2     SAVE RECORD (WHEN LAST BINARY CARD IN PLACE)    SCAN 102
+       TXI *+1,2,-1                                                     SCAN 103
+       TIX PXD1,4,1                                                     SCAN 104
+       LXD X2,2              RESTORE INDEX REGISTERS                    SCAN 105
+       LXD X4,4                                                         SCAN 106
+       IOD                   INPUT/OUTPUT DELAY                         SCAN 107
+       TRA 2,4               RETURN TO (BDC)                            SCAN 108
+       REM *************************************************************SCAN 109
+       REM (CSH)                                                        SCAN 110
+COMMON SYN -9                                                           SCAN 111
+       BSS 0                                                            SCAN 112
+   B17 HPR 0,2          NON'HOLLERITH CHARACTER ON CARD --RESTART       SCAN 113
+       LXD B2,1         RESTART AFTER ERROR                             SCAN 114
+       LXD B3,2         X                                               SCAN 115
+ RDBCD RCD              NORMAL ENTRY                                    SCAN 116
+       CPY L                                                            SCAN 117
+       TXL B1           X                                               SCAN 118
+       TRA 2,4          END OF FILE EXIT                                SCAN 119
+ B1    STQ LS           SET LEFT SUM                                    SCAN 120
+       SXD B2,1         SAVE INDEX REGISTERS                            SCAN 121
+       SXD B3,2         X                                               SCAN 122
+       LXD B4,1         SET DIGIT ROW COUNT                             SCAN 123
+       CPY R            COPY 9 RIGHT ROW AND                            SCAN 124
+       STQ RS           SET RIGHT SUM                                   SCAN 125
+       TSX C1,2         ENTER CONVERSION LOOP                           SCAN 126
+ B2    TXL B5           LEAVE CONVERSION LOOP                           SCAN 127
+       ALS 1                                                            SCAN 128
+ B3    TXL C2           INITIALIZE BCD RECORD                           SCAN 129
+ B5    CPY 8L           COPY 8 ROW AND                                  SCAN 130
+       STQ LS           USE AS SUM                                      SCAN 131
+       CPY 8R           X                                               SCAN 132
+       STQ RS           X                                               SCAN 133
+       TSX C1,2         ENTER CONVERSION LOOP                           SCAN 134
+ B4    TXL B6,0,8       LEAVE CONVERSION LOOP                           SCAN 135
+       ALS 3            ADD 8 TIMES 8 ROW                               SCAN 136
+       TXL C3           X                                               SCAN 137
+ B6    CAL L            USE 9 ROW AS SUM                                SCAN 138
+       SLW LS           X                                               SCAN 139
+       CAL R            X                                               SCAN 140
+       SLW RS           X                                               SCAN 141
+ B13   TXL B7,1,1       TEST FOR ZERO ROW                               SCAN 142
+ B14   CPY L            COPY LEFT ROW AND                               SCAN 143
+       TXL B8           TEST FOR END OF RECORD                          SCAN 144
+       TRA B17                                                          SCAN 145
+ B9    CAL LS           SAVE LEFT ZONE SUM                              SCAN 146
+       SLW L            X                                               SCAN 147
+       CAL LDS          FORM INDICATOR FOR                              SCAN 148
+       COM              ZERO AND X AND / OR Y                           SCAN 149
+       ANA LZ           IN LEFT ROWS                                    SCAN 150
+       ANS LS           X                                               SCAN 151
+       CAL RS           SAVE RIGHT ZONE SUM                             SCAN 152
+       SLW R            X                                               SCAN 153
+       CAL RDS          FORM INDICATOR FOR                              SCAN 154
+       COM              ZERO AND X AND/OR Y                             SCAN 155
+       ANA RZ           IN RIGHT ROWS                                   SCAN 156
+       ANS RS           X                                               SCAN 157
+       TSX C1,2         ENTER CONVERSION LOOP                           SCAN 158
+       TXL B15          LEAVE CONVERSION LOOP                           SCAN 159
+       SLW TP           MULTIPLY INDICATOR                              SCAN 160
+       ALS 2            BITS BY TEN                                     SCAN 161
+       ACL TP           X                                               SCAN 162
+       ALS 1            X                                               SCAN 163
+ C3    ACL **,1         ADD TO BCD RECORD                               SCAN 164
+ C2    SLW **,1         STORE IN BCD RECORD                             SCAN 165
+       TIX C7,1,1       COUNT WORDS                                     SCAN 166
+ C11   CLS C4           INVERT ROW SWITCH AND                           SCAN 167
+       STO C4           TEST FOR RIGHT ROW DONE                         SCAN 168
+ (CSH) PDX RDBCD,1      RESTORE ROW COUNT                               SCAN 169
+       TMI 1,2          TRANSFER IF RIGHT ROW DONE                      SCAN 170
+ C10   TXI C9           GO CONVERT RIGHT ROW                            SCAN 171
+ B8    CAL L            TEST LEFT ROW FOR                               SCAN 172
+       ANA LS           ILLEGAL DOUBLE PUNCH                            SCAN 173
+       TNZ B17          X                                               SCAN 174
+ B10   CAL L            FORM LOGICAL SUM                                SCAN 175
+       ORS LS           OF LEFT ROWS                                    SCAN 176
+       CPY R            COPY RIGHT ROW AND                              SCAN 177
+       CAL R            TEST FOR ILLEGAL                                SCAN 178
+       ANA RS           DOUBLE PUNCH                                    SCAN 179
+       TNZ B17          X                                               SCAN 180
+ B11   CAL R            FORM LOGICAL SUM OF                             SCAN 181
+       ORS RS           RIGHT ROWS                                      SCAN 182
+       TNX B12,1,1      TEST FOR ZONE ROWS                              SCAN 183
+       TSX C1,2         ENTER CONVERSION LOOP                           SCAN 184
+       TXL B13          LEAVE CONVERSION LOOP                           SCAN 185
+       TXL C3           ADD TO BCD RECORD                               SCAN 186
+ B7    CAL 8L           ADD 8 LEFT ROW TO                               SCAN 187
+       ORA LS           LEFT LOGICAL SUM                                SCAN 188
+       SLW LDS          X                                               SCAN 189
+       CPY LZ           COPY ZERO LEFT AND                              SCAN 190
+       ANA LZ           FORM INDICATOR FOR                              SCAN 191
+       SLW LS           BOTH DIGIT AND ZERO                             SCAN 192
+       CAL 8R           ADD 8 RIGHT ROW TO                              SCAN 193
+       ORA RS           RIGHT LOGICAL SUM                               SCAN 194
+       SLW RDS          X                                               SCAN 195
+       CPY RZ           COPY ZERO RIGHT AND                             SCAN 196
+       ANA RZ           FORM INDICATOR FOR                              SCAN 197
+       SLW RS           BOTH DIGIT AND ZERO                             SCAN 198
+ B12   TSX C1,2         ENTER CONVERSION LOOP                           SCAN 199
+       TXL B14          LEAVE CONVERSION LOOP                           SCAN 200
+       ALS 4            SHIFT TO ZONE POSITION                          SCAN 201
+       TXL C3           X                                               SCAN 202
+ B15   CAL LDS          FORM INDICATOR FOR                              SCAN 203
+       ORA LZ           BLANK COLUMNS IN                                SCAN 204
+       ORA L            LEFT HALF OF CARD                               SCAN 205
+       COM              X                                               SCAN 206
+       SLW LS           X                                               SCAN 207
+       CAL RDS          FORM INDICATOR FOR                              SCAN 208
+       ORA RZ           BLANK COLUMNS IN                                SCAN 209
+       ORA R            RIGHT HALF OF CARD                              SCAN 210
+       COM              X                                               SCAN 211
+       SLW RS           X                                               SCAN 212
+       TSX C1,2         ENTER CONVERSION LOOP                           SCAN 213
+       TXL B16          LEAVE CONVERSION LOOP                           SCAN 214
+       SLW TP           MULTIPLY INDICATOR                              SCAN 215
+       ALS 1            BITS BY 3 AND                                   SCAN 216
+       ACL TP           SHIFT TO ZONE POSITION                          SCAN 217
+       ALS 4            X                                               SCAN 218
+       TXL C3           X                                               SCAN 219
+       REM SAVE BCD BEFORE RETURN      *********************************SCAN 220
+ B16   CAL C3           GET ADDRESS OF BCD+12                           SCAN 221
+       STA D1             AND PLANT                                     SCAN 222
+       LXD D)12,2       LOAD IR2 WITH WORD COUNT                        SCAN 223
+ D1    CAL **,2              **=BCD+12                                  SCAN 224
+       SLW SAVE+12,2    SAVE BCD RECORD                                 SCAN 225
+       TIX D1,2,1                                                       SCAN 226
+       LXD B2,1         RESTORE INDEX REGISTERS                         SCAN 227
+       LXD B3,2         AND RETURN TO MAIN                              SCAN 228
+       TRA 3,4          PROGRAM                                         SCAN 229
+       REM                                                              SCAN 230
+ C1    SXD C4,1         SAVE ROW COUNT                                  SCAN 231
+ C9    CAL 1,4          INITIALIZE ADDRESSES                            SCAN 232
+       ADM C7           X ADD 6                                         SCAN 233
+ C6    LDQ LS           OBTAIN LEFT SUM                                 SCAN 234
+ C4    TXL C8,,**       TRANSFER IF LEFT ROW                            SCAN 235
+       ADM C7           RIGHT ROW, ADD 6 MORE                           SCAN 236
+       LDQ RS           OBTAIN RIGHT SUM AND                            SCAN 237
+ C8    STA C2           SET BCD RECORD ADDRESS                          SCAN 238
+       STA C3           X                                               SCAN 239
+       TXH C5,1,1       SKIP TEST IF DIGIT ROW                          SCAN 240
+       STQ TP           TEST FOR NO SUM                                 SCAN 241
+       CAL TP           X                                               SCAN 242
+       TZE C11          X                                               SCAN 243
+ C5    LXA C7,1         SET WORD COUNT                                  SCAN 244
+ C7    PXD 6            CONVERT ROW                                     SCAN 245
+       LGL 1            X                                               SCAN 246
+       ALS 5            X                                               SCAN 247
+       LGL 1            X                                               SCAN 248
+       ALS 5            X                                               SCAN 249
+       LGL 1            X                                               SCAN 250
+       ALS 5            X                                               SCAN 251
+       LGL 1            X                                               SCAN 252
+       ALS 5            X                                               SCAN 253
+       LGL 1            X                                               SCAN 254
+       ALS 5            X                                               SCAN 255
+       LGL 1            X                                               SCAN 256
+       TRA 2,2          EXIT FOR ROW PROCEDURE                          SCAN 257
+       REM *************************************************************SCAN 258
+ END   SYN *                 PROGRAM BREAK                              SCAN 259
+       REM *************************************************************SCAN 260
+       ORG COMMON       (CSH) CONTINUED                                 SCAN 261
+ TP    BSS 1            TEMPORARY                                       SCAN 262
+ LS    BSS 1            LEFT SUM                                        SCAN 263
+ RS    BSS 1            RIGHT SUM                                       SCAN 264
+ LDS   BSS 1            LEFT DIGIT SUM                                  SCAN 265
+ RDS   BSS 1            RIGHT DIGIT SUM                                 SCAN 266
+ LZ    BSS 1            LEFT ZERO ROW                                   SCAN 267
+ RZ    BSS 1            RIGHT ZERO ROW                                  SCAN 268
+ L     BSS 1            LEFT ROW                                        SCAN 269
+ R     BSS 1            RIGHT ROW                                       SCAN 270
+ 8L    SYN LDS          8 LEFT ROW                                      SCAN 271
+ 8R    SYN RDS          8 RIGHT ROW                                     SCAN 272
+       REM *************************************************************SCAN 273
+       ORG SLWS         READ IN THIS BINARY CARD TO SAVE RECORD         SCAN 274
+ SLWS  SLW SAVE-1,2       WHEN WRITING TAPE. OTHERWISE REMOVE IT.       SCAN 275
+       ABS                                                              SCAN 276
+       END -                                                            SCAN 277

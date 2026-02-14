@@ -1,0 +1,903 @@
+'PRICE COMPILE                                                           0162600
+ PRICE BEGIN   1,7,1                SAVE XRS, SI, SET RETURN LOC         0162601
+       RIL     17                   RESET IND-S TO BE USED               0162602
+       RFT     1                                                         0162603
+       STZ     'REJNO               NORMAL RETAINS CNT OF REJECTS        0162604
+       RFT     4                    PCR                                  0162702
+       TRA     PR9B                 YES                                  0162703
+ PRST  AXT     PR1,4                SET RETURN FROM                      0162800
+       SXA     'LFRTC,4             TRANS. COORD.                        0162900
+       SLT     2                    TURN OFF SL2                         0162910
+       TRA     *+1                                                       0162920
+       TSX     'PRSEQ,4             START TC PRICE SEQUENCE              0163000
+       TRA     PRXIT                ALL A-RECORDS READ AND PROC.         0163100
+ PR1   CLA     PRCHI                INITIALIZE                           0163200
+       LDQ     PRCLO                'DPFAD                               0163300
+       STO     'DPAHI               ADDRS                                0163400
+       STQ     'DPALO                                                    0163500
+       STZ     'NGDJS                                                    0163510
+       CLA     PR4B+2                                                    0163600
+       NZT     'PARTB               TEST FOR BEGINNING PARTITION         0163700
+       SSP                          NONE                                 0163800
+       STO     PR2A                 SET SWITCH                           0163801
+       RFT     1                    NORMAL                               0163802
+       TRA     PR1AA                NO-IGNORE CURTAINS                   0163900
+       CLA     'CURTE               ARE                                  0163901
+       SUB     'CURTB               CURTAIN                              0163902
+       PAX     ,4                   CONTROLS                             0163903
+       TXH     *+2,4,-2             SET                                  0163904
+       SIL     1                    YES                                  0163905
+PR1AA  CLA     PRSAV                PREPARE INSTRUCTION TO               0164000
+       STO     'MINID               STORE LOC OF SELECTED VECTOR         0164100
+       TSX     PRGCW,4              GET BUFFER CONTROL WORD              0164200
+ PR1A  STZ     'INDXS               ZERO 'INDXS                          0164300
+       STZ     'SAVAC                                                    0164400
+       CLA     'INFNY               SET 'MINHI TO                        0164500
+       STO     'MINHI               INFINITY FOR 'RATIO                  0164600
+ PR2   CAL     0,1                  VECTOR                               0164700
+       TZE     PR8                  GO TO TC AND FILL BUFFER             0164800
+       ANA     'BLNK1                                                    0164900
+       TZE     PR2B                 TEST FOR CURTAIN OR PARTITION        0165000
+ PR2A  TXL     PR5                  TXL UNTIL BEGIN. PART.,TXH AFTER     0165100
+       RNT     1                                                         0165101
+       TXL     PR5A                                                      0165102
+       CLA     0,1                  CHECK FOR                            0165103
+       LXA     'INDXR,2             R-TH BASIS                           0165104
+       SUB*    'BORG2+1             HEADING                              0165105
+       TZE     PR5                  YES                                  0165106
+       LXA     'REJNO,4             CHECK                                0165200
+ PR2C  TXL     PR6,4,0              REJECT                               0165201
+       TXI     *+1,4,1              LIST                                 0165202
+       CLA     0,1                  TO SEE IF                            0165203
+       SUB     'RJLST,4             VECTOR   PREVIOUSLY SELECTED         0165204
+       TZE     PR5                  YES-SKIP                             0165205
+       TRA     PR2C                                                      0165206
+ PR2B  CLA     0,1                                                       0165300
+       PDX     ,4                                                        0165400
+       TXH     PR4,4,0              TRA IF PART.                         0165500
+       RFT     1                    TEST IF NORMAL                       0165501
+       TXI     PR2,1,-2            NO-SKIP CURTAINS                      0165502
+       CAS     'CURTB               CURTAIN                              0165600
+       TXL     PR3                  BEYOND BEGINNING CURTAIN             0165700
+       TXL     PR3A                 BEGINNING CURTAIN                    0165800
+       TXI     PR2,1,-2             BELOW BEGINNING CURTAIN              0165900
+ PR3   CAS     'CURTE                                                    0166000
+       TXI     PR2,1,-2             BEYOND END CURTAIN                   0166100
+       TXL     PR3B                 END CURTAIN                          0166200
+       TXI     PR2,1,-2             WITHIN BEGIN.+END CURTAINS           0166300
+ PR3A  CLA     'INDXS               SAVE                                 0166400
+       STO     'SAVMQ               ID. AND MIN                          0166500
+       CLA     'MINHI               OF VECTOR                            0166600
+       LDQ     'MINLO               CHOSEN                               0166700
+       STO     'SC2HI                                                    0166800
+       STQ     'SC2LO                                                    0166900
+       TSX     PR7,4                SAVE VECTOR CHOSEN                   0166901
+       TXI     PR1A,1,-2            GO TO NEXT VECTOR                    0167000
+ PR3B  ZET     'INDXS               VECTOR CHOSEN BETWEEN CURTAINS       0167100
+       TRA     PR3C                 YES                                  0167200
+       CLA     'SC2HI                                                    0167300
+       LDQ     'SC2LO                                                    0167400
+       STO     'MINHI                                                    0167500
+       STQ     'MINLO                                                    0167600
+       CLA     'SAVMQ               VECTORCHOSENBEFOREBEGIN.CURTAIN/Q/   0167700
+       STO     'INDXS               RESTORE                              0167800
+       TNZ     PR3C+1               YES                                  0167900
+       TXI     PR1A,1,-2            TRY OUT OF REMAINING VECTORS         0168000
+ PR3C  TSX     PR7,4                SAVE VECTOR CHOSEN                   0168100
+       NZT     'ICSWX                                                    0168200
+       TSX     'RETPR,4             GO F INISH PRICE TC ROUTINE          0168300
+       TRA     PRXIT                                                     0168400
+ PR4   PXA     ,4                   PARTITION                            0169300
+       CAS     'PARTB                                                    0169400
+       TXL     PR4A                 BEYOND BEGINNING PART.               0169500
+       TXL     PR4B                 BEGINNING PART.                      0169600
+       TXL     PR5                  BELOW BEGINNING PARTITION            0169700
+ PR4A  CAS     'PARTE                                                    0169800
+       TXL     PRERR                BEYOND END PART. -ERROR              0169900
+       TRA     PR3C                 END PARTITION                        0170000
+ PR5   CLA     1,1                  GO TO NEXT VECTOR                    0170100
+       STD     *+1                                                       0170200
+       TIX     PR2,1,**             DECR. IS CNT OF VECTOR,CURT.,OR PART 0170300
+ PR4B  CLA     PR4B+2               RESET PR2A                           0170400
+       SLW     PR2A                 TO A TXH                             0170500
+       TXL     PR5                                                       0170600
+ PR5A  LXA     'REJNO,4             CHECK                                0170601
+       TXL     PR6,4,0              REJECT                               0170602
+       TXI     *+1,4,3              LIST                                 0170603
+       CLA     0,1                                                       0170604
+       SUB     'RJLST,4                                                  0170605
+       TZE     PR5                  THERE-SKIP                           0170606
+       TRA     PR5A+1                                                    0170607
+ PR6   AXT     0,4                                                       0170700
+       LFT     1                    CURTAINS SET                         0170701
+       AXT     -1,4                 YES-USE 'TOLCR                       0170702
+       CLA     PRLM2,4                                                   0170703
+       RNT     1                    TEST FOR PLP                         0170800
+       TXL     *+2                  NORMAL                               0170900
+       CLA     PRLMZ                PLP,PCR                              0171000
+       ZET     'PIVSW                                                    0171001
+       CLA     PRLMZ+1             USE 'TOLIV                            0171002
+       STZ     'DENHI                                                    0171010
+       TSX     'RATIO,4                                                  0171100
+       TSX     PGNUM,4                                                   0171200
+       NOP                                                               0171300
+       TSX     PGDEN,4                                                   0171400
+       TPL     PR5                                                       0171500
+       TRA     *+1                  XED IN 'RATIO                        0171501
+       NZT     'DENHI                                                    0171510
+       TRA     TNEWS                                                     0171520
+       CLA     'NGDJS               SAVE                                 0171530
+       ADD     'L1...               COUNT OF                             0171540
+       STO     'NGDJS               NEG. D/J-S                           0171550
+ TNEWS SLT     2                                                         0171600
+       TRA     PR5                  NO                                   0171601
+       SXA     'SAVAC,1             SAVE LOCATION                        0171602
+       CLA     0,1                  AND                                  0171603
+       STO     'INDXS               VECTOR NAME                          0171604
+ TCHVN NZT     'CHVNO               PLP                                  0171610
+       TRA     PR5                  NO                                   0171611
+       CLA     'DENHI               YES-SAVE DEN. FOR                    0171612
+       LDQ     'DENLO               NEW RATIO                            0171613
+       STO     'SC2HI                                                    0171614
+       STQ     'SC2LO                                                    0171615
+       TRA     PR5                                                       0171616
+ PGNUM CLA     'WORG1               ENTER FOR PI-REGION                  0171700
+       SXA     PR6B,4                                                    0171701
+       TSX     PRCIN,4                                                   0171702
+       LXA     PR6B,4                                                    0171703
+       TPL     1,4                                                       0171704
+       PXD                          SET NEG. NUM.                        0171705
+       LDQ     'L0...               TO ZERO                              0171706
+       TRA     1,4                                                       0171707
+ PGDEN CLA     'WORG1               ENTER FOR PI-REGION                  0171900
+       RFT     1                    TEST FOR PLP                         0172000
+       CLA     'GORG1               PLP-COMPUTE ALPHA WITH W-REG.        0172100
+ PR6A  SXA     PR6B,4                                                    0172200
+       TSX     PRCIN,4                                                   0172300
+ PR6B  AXT     ,4                                                        0172400
+       TRA     1,4                                                       0173000
+ PR7   BEGIN   1,5                                                       0173100
+       LXA     'SAVAC,1             LOC INDEX-VECTOR CHOSEN              0173200
+       TXL     PR7B,1,0             TRA IF NO VECTOR CHOSEN              0173300
+       CLA     1,1                  VECTOR CNT                           0173600
+       PDX     ,4                   TO XR4                               0173700
+       CLA     'TORG2                INITIALIZE                          0173800
+       STA     'AORGN                'AORGN FOR 'LDFLV                   0173900
+       PAC     ,2                                                        0174000
+ PR7A  CLA     0,1                  PICK UP                              0174100
+       LDQ     1,1                  SELECTED VECTOR                      0174200
+       STO     0,2                  STORE IN                             0174300
+       STQ     1,2                  T-REGION                             0174400
+       TIX     *+1,1,2                                                   0174500
+       TIX     *+1,2,2                                                   0174600
+       TIX     PR7A,4,2                                                  0174700
+       STZ     'SAVAC                                                    0174800
+ PR7B  RETURN  PR7                                                       0174900
+ PRXIT CLA     'MINHI               SAVE D/J                             0175100
+       LDQ     'MINLO                                                    0175101
+       STZ     'PHIHI                                                    0175200
+       RFT     1                                                         0175300
+       TMI     *+3                                                       0175400
+       STO     'PHIHI                  FOR PRINT LINE                    0175500
+       STQ     'PHILO                                                    0175501
+       CLA     'INDXS                                                    0175600
+       TZE     TRFT1                TRA IF NO VECTOR SELECTED            0175700
+       LXA     'PRSIZ,2             IS VECTOR SELECTED                   0175800
+ PRX1  CAS*    'BORG2+1             IN BASIS                             0175900
+       TXL     *+2                                                       0176000
+       TXL     PR9                  YES                                  0176100
+       TIX     PRX1,2,2                                                  0176200
+ TRFT1 RFT     1                                                         0176201
+       STZ     'REJNO                                                    0176202
+       STZ     'PIVSW                                                    0176203
+ PRETN RETURN  PRICE                NO-RETURN TO AGENDUM ROUTINE         0176300
+ PR8   TSX     PR7,4                SAVE VECTOR CHOSEN                   0176400
+ PR8A  AXT     *+3,4                PREPARE RETURN                       0176700
+       SXA     'LFRTC,4             FROM TC                              0176800
+       TRA*    'LTOTC               GO TO TC-FILL BUFFER WITH NEXT       0176900
+       TSX     PRGCW,4              GET BUFFER CONTROL WORD              0177000
+       TRA     PR2                                                       0177100
+ PRGCW CLA*    'LBUFF                                                    0177200
+       PAX     ,1                   ADDR IS BUFF/O + CNT                 0177300
+       STD     *+1                                                       0177400
+       TIX     *+1,1,**             DECR IS BUFFER CNT                   0177500
+       SXA     *+1,1                                                     0177600
+       AXC     **,1                                                      0177700
+       TRA     1,4                                                       0177800
+ PRSAV SLN     2                                                         0177900
+ PRLM2 MTW     'TOLPR                                                    0178000
+       MTW     'TOLCR               USED WHEN CURTAIN CONTROLS SET       0178001
+PRLMZ  MZE     'TOLPV               PLP,PCR                              0178100
+       MZE     'TOLIV              PLP-'PIVSW ON                         0178101
+ PRERR TSX     'WMEDT,4                                                  0178200
+       MZE     PARTER,,12                                                0178300
+       PZE     100                                                       0178400
+       HPR     *+1                                                       0178500
+       TRA     *-1                                                       0178600
+PARTER BCI     6,PART'NS NOT IN ASCENDING ORDER.                         0178700
+       BCI     6,REASSEMBLE DATA AFTER CORRECTION.                       0178800
+ PR9   LFT     10                   COMPUTED DP BEFORE                   0178801
+       TRA     PR9A                 YES - PRINT MESSAGE                  0178802
+ PR9B  SIL     10                   NO                                   0178803
+       CLA     PRMHI                SET UP                               0178804
+       STO     'DPMHI               FOR DP                               0178805
+       CLA     PRMLO                MULT.                                0178806
+       STO     'DPMLO               AND                                  0178807
+       TRA     PRST                 START OVER                           0178808
+ PR9A  LXA     'REJNO,4                                                  0178900
+       TXL     *+2,4,0                                                   0178901
+       TXL     PR9C,4,-15           TRA IF REJECT LIST FULL              0178910
+       CLA     'INDXS               PVT VECTOR                           0178930
+       STO     'RJLST,4             IN REJECT LIST                       0178935
+       RNT     1                                                         0178940
+       TXI     *+1,4,-2             NORMAL                               0178945
+       TXI     *+1,4,-1                                                  0178950
+       SXA     'REJNO,4                                                  0178955
+       RIL     10                   RESET FOR S.P.XD.P.                  0178960
+       TRA     PRST                 MAKE ANOTHER CHOICE                  0178965
+ PR9C  LDQ     'INDXS                                                    0178970
+       PXD                                                               0179000
+       LGL     2                                                         0179100
+       ALS     6                                                         0179200
+       LGL     4                                                         0179300
+       STA     BASVEC+2                                                  0179400
+       CAL     'BLANK                                                    0179500
+       LGR     6                                                         0179600
+       RQL     6                                                         0179700
+       STQ     BASVEC+3                                                  0179800
+       CLA     'PHIHI                                                    0179900
+       TSX     'BFLTD,4                                                  0180000
+       SLW     BASVEC+9                                                  0180100
+       STQ     BASVEC+10                                                 0180200
+       TSX     'WMEDT,4                                                  0180300
+       MZE     BASVEC,,11                                                0180400
+       PZE     100                                                       0180500
+       STZ     'INDXS                                                    0180600
+       HTR     PRETN                                                     0180700
+BASVEC BCI     8,SELECTED VECTOR         IN BASIS. START CONTINUE        0180800
+       BCI     3,S. D/J                                                  0180900
+ PRCIN SXA     PRCXC,4                                                   0181000
+       SXA     PRCXC+1,1                                                 0181100
+       STA     PRC2                                                      0181200
+       ADD     'L1...                                                    0181300
+       STA     PRC3                                                      0181400
+ PRCHI STZ     'SC1HI               CLEAR                                0181500
+ PRCLO STZ     'SC1LO               INNER PRODUCT                        0181600
+       CLA     1,1                                                       0181700
+       PAX     ,2                  CNT OF NON-ZERO ELEMENTS              0181800
+ PRC1  CAL     2,1                                                       0181900
+       PAX     ,4                  ELEM, INDEX (2M+2-2I)                 0182000
+       TXH     PRC5,4,-2           LIMIT IS -1                           0182100
+       ANA     'MSKLO                                                    0182101
+       XCL                                                               0182102
+       CLA     3,1                                                       0182200
+       LFT     10                                                        0182300
+       TRA     PRC6                 DO DP MULT.                          0182301
+       FRN                                                               0182400
+       STO     COMMON+3                                                  0182500
+ PRC2  LDQ     **,4                PICK UP                               0182600
+ PRC3  CLA     **,4                P OR W REGION                         0182700
+       STO     COMMON                                                    0182800
+       TZE     PRCXB                                                     0182900
+       FMP     COMMON+3                                                  0183000
+ PRMHI STO     COMMON+1                                                  0183100
+ PRMLO STQ     COMMON+2                                                  0183200
+       LDQ     COMMON                                                    0183300
+       FMP     COMMON+3                                                  0183400
+       UFA     COMMON+2                                                  0183500
+       FAD     COMMON+1                                                  0183600
+ PRC4  TSX     'DPFAD,4                                                  0183700
+       STO     'SC1HI                                                    0183800
+       STQ     'SC1LO                                                    0183900
+ PRCXB TXI     *+1,1,-2             MOVE TO NEXT VECTOR ELEM.            0184000
+       TIX     PRC1,2,1                                                  0184100
+       CLA     'SC1HI                                                    0184200
+       LDQ     'SC1LO                                                    0184300
+ PRCXC AXT     **,4                                                      0184400
+       AXT     ,1                   RESTORE XR1 AS AT ENTRY              0184500
+       TRA     1,4                                                       0184600
+ PRC5  TXI     PRC1,1,-2           IGNORE LIMIT                          0184700
+ PRC6  STO     COMMON+1             VECTOR                               0184701
+       STQ     COMMON+2             ELEMENT                              0184702
+       CLA*    PRC2                 PICK UP                              0184703
+       TZE     PRCXB                                                     0184704
+       LDQ*    PRC3                 P OR W REGION                        0184705
+       TSX     'DPFMP,4                                                  0184706
+       TRA     PRC4                                                      0184707
+COST.R COMPILE                                                           1849110
+*              COST.RANGING                                              1849120
+*                   DO ALL VECTORS IN BASIS                              1849130
+*              COST.RANGING,NAMES                                        1849140
+*                   DO NAMES ON FOL. CARDS, STARTING IN COL. 7           1849150
+*                   (IN FIELDS OF 6, MAX. 11 PER CARD, BLANK FIELDS      1849160
+*                   ARE SKIPPED.) SLACKS MAY BE SPECIFIED BY THE         1849170
+*                   APPROPRIATE OVER-PUNCH IN THE FIRST COL. OF THE      1849180
+*                   VECTOR NAME.  END*** IN ANY NAME FIELD SIGNALS END   1849190
+*                   OF NAMES.                                            1849200
+*              COST.RANGING,CLASS,N,S                                    1849210
+*                   DO CLASSES ON FOL. CARDS, STARTING IN COL. 7 (IN     1849220
+*                   FIELDS OF 6, MAX. 11 PER CARD. A CLASS OF ALL BLANK  1849230
+*                   MAY BE SPECIFIED. PUNCH THE CLASSES IN THE SAME      1849240
+*                   POSITION AS THEY APPEAR IN THE VECTOR NAMES.         1849250
+*                   END*** IN ANY CLASS FIELD SIGNALS END OF CLASSES.    1849260
+*                     N = NO. OF COL. CLASS SIZE                         1849270
+*                     S = BEGIN THE CLASS WITH THE STH CHARACTER OF THE  1849280
+*                      VECTOR NAME                                       1849290
+*              PUT NEXT AGENDUM CARD IMMEDIATELY AFTER THE LAST NAME OR  1849300
+*              CLASS CARD.                                               1849310
+*                                                                        1849320
+ A     CLA     'PRSIZ                                                    1849330
+       SUB     'FEASX                                                    1849340
+       STO     SIZE                                                      1849350
+       CLA     'SCLHI               DID WE MAXIMIZE THE OBJECTIVE        1849360
+       TPL     *+2                                                       1849370
+       STL     NEGSCL                YES                                 1849380
+       TSX     'WMEDT,4                                                  1849390
+       PZE     TITLE,,7                                                  1849400
+       PZE     65                                                        1849410
+       TSX     'WMEDT,4                                                  1849420
+       PZE     TITLE1,,14                                                1849430
+       PZE     65                                                        1849440
+       TSX     'WMEDT,4                                                  1849450
+       PZE     TITLE2,,14                                                1849460
+       PZE     65                                                        1849470
+       TSX     'WMEDT,4                                                  1849480
+       PZE     'BLANK,,1                                                 1849490
+       PZE     65                                                        1849500
+       LXA     'PRSIZ,1                                                  1849510
+       STZ*    'TORG1                                                    1849520
+       TIX     *-1,1,1                                                   1849530
+       CLA     'PRSIZ                                                    1849540
+       SUB     'PRICX                                                    1849550
+       STO     COSTRO                                                    1849560
+ AAA   AXT     START,4                                                   1849570
+       SXA     'LFRTC,4                                                  1849580
+       TSX     'PRSEQ,4                                                  1849590
+       TRA     AA                                                        1849600
+ START CLA*    'LBUFF               WORK WITH                            1849610
+       PAX     ,1                   BUFFER CONTROL WORD                  1849620
+       STD     *+1                                                       1849630
+       TIX     *+1,1,**                                                  1849640
+       SXA     *+1,1                                                     1849650
+       AXC     ,1                                                        1849660
+ SRCH1 CAL     ,1                                                        1849670
+       TZE*    'LTOTC               ZERO GO BACK                         1849680
+       ANA     'BLNK1                                                    1849690
+       TZE     SRCH2                CURT OR PART                         1849700
+       CAL     ,1                   V NAME FROM TAPE                     1849710
+       LXA     'PRSIZ,2                                                  1849720
+       LAS*    'BORG2+1                                                  1849730
+       TRA     *+2                                                       1849740
+       TRA     SRCH3                FOUND                                1849750
+       TIX     *-3,2,2                                                   1849760
+ SRCH2 CLA     1,1                  GO TO NEXT VECTOR                    1849770
+       STD     *+1                                                       1849780
+       TIX     SRCH1,1,**                                                1849790
+       HTR     *                    THIS SHOULD NOT HAPPEN               1849800
+ SRCH3 PXA     ,2                                                        1849810
+       ARS     1                                                         1849820
+       STA     HOLD2                SAVE XR2/2                           1849830
+       CLA     1,1                                                       1849840
+       SXA     GAMA,1                                                    1849850
+ HOLD2 PAX     ,2                                                        1849860
+       SXD     BETA,2                                                    1849870
+       AXT     1,2                                                       1849880
+ ALPHA CAL     2,1                                                       1849890
+       ANA     'MASKA                                                    1849900
+       ERA     COSTRO                                                    1849910
+       TZE     DELTA                                                     1849920
+       TXI     *+1,2,1                                                   1849930
+ BETA  TXH     *+2,2,**                                                  1849940
+       TIX     ALPHA,1,2                                                 1849950
+ GAMA  AXT     ,1                                                        1849960
+       TRA     SRCH2                                                     1849970
+ DELTA CLA     3,1                                                       1849980
+       LDQ     2,1                                                       1850010
+       LRS                                                               1850020
+       FRN                                                               1850030
+       LXA     HOLD2,2                                                   1850040
+       STO*    'TORG2                                                    1850050
+       TRA     GAMA                                                      1850060
+ AA    CAL     'BCDIN+2                                                  1850070
+       AXT     3,1                                                       1850080
+       LAS     LIST+3,1             ,NAMES,CLASS,BBBBBB                  1850090
+       TRA     JUNK                                                      1850100
+       TRA     *+3                                                       1850110
+       TIX     *-3,1,1                                                   1850120
+       TRA     JUNK                                                      1850130
+       TXH     NAMES,1,2            ,NAMES FOUND                         1850140
+       TXH     CLASS,1,1            ,CLASS FOUND                         1850150
+       LXA     SIZE,1               BLANKS FOUND                         1850160
+       LDQ*    'BORG1+1                                                  1850170
+       ZET*    'BORG1+1                                                  1850180
+       TSX     ARITH,4                                                   1850190
+       SWT     2                                                         1850200
+       TIX     *-4,1,2                                                   1850210
+FINISH CLA     'WORG1                                                    1850220
+       TSX     'RHSIN,4                                                  1850230
+       RIR     21                                                        1850240
+       PXD                                                               1850250
+       TRA*    'AGRET                                                    1850260
+ TITLE BCI     7,0                              COST RANGES              1850270
+TITLE1 BCI     8,0    BASIS                 COST IN                      1850280
+       BCI     6,                  INCOMING VECTOR                       1850290
+TITLE2 BCI     8,     VECTOR   BETA VALUE   PROBLEM      LIM 1           1850300
+       BCI     6,    LIMIT 2    AT LIM 1    AT LIM 2                     1850310
+ LIST  BCI     3,,NAMES,CLASS                                            1850320
+*                                                                        1850330
+ NAMES TSX     RDCARD,4                                                  1850340
+       AXT     11,2                 11 PER CARD                          1850350
+ NAME2 CAL     'BCDIN+12,2                                               1850360
+       LAS     'BLANK                                                    1850370
+       TRA     *+2                                                       1850380
+       TRA     TIXCD                SKIP BLANK FIELDS                    1850390
+       LAS     END                                                       1850400
+       TRA     *+2                                                       1850410
+       TRA     FINISH                                                    1850420
+       LAS     TYPE                                                      1850430
+       TRA     *+3                                                       1850440
+       TRA     *+1                                                       1850450
+       ORA     'BLNK1                                                    1850460
+       LXA     SIZE,1                                                    1850470
+       LAS*    'BORG1+1                                                  1850480
+       TRA     *+2                                                       1850490
+       TRA     FOUND                FOUND VEC NAME IN H-REG.             1850500
+       TIX     *-3,1,2                                                   1850510
+       CAL     'BCDIN+12,2          VEC.NOT FOUND                        1850520
+       SLW     NOTFND+1                                                  1850530
+       TSX     'WMEDT,4                                                  1850540
+       MZE     NOTFND,,7                                                 1850550
+       PZE     65                                                        1850560
+       TRA     TIXCD                                                     1850570
+NOTFND BCI     7, VEC. XXXXXX IS NOT IN BASIS. CONTINUING.               1850580
+*                                                                        1850590
+ FOUND XCL                                                               1850600
+       TSX     ARITH,4                                                   1850610
+       SWT     2                                                         1850620
+       TRA     *+2                                                       1850630
+       TRA     FINISH                                                    1850640
+ TIXCD TIX     NAME2,2,1            GET NEXT NAME FROM CARD              1850650
+       TRA     NAMES                READ NEXT CARD                       1850660
+*                                                                        1850670
+ CLASS TSX     'CDSCN,4             NO. OF COLS. THAT SPECIFY A CLASS    1850680
+       PZE     'BCDIN,,20                                                1850690
+       TRA     JUNK                                                      1850700
+       TZE     JUNK                                                      1850710
+       STO     COMMON               MPY                                  1850720
+       ALS     1                     BY                                  1850730
+       ADD     COMMON                 SIX                                1850740
+       ALS     1                                                         1850750
+       STA     NO.COL                                                    1850760
+       TSX     'CDSCN,4             NO.OF COLS. TO SKIP TO FIND CLASS    1850770
+       MZE                                                               1850780
+       TRA     JUNK                                                      1850790
+       TZE     JUNK                                                      1850800
+       SUB     'L1...                                                    1850810
+       STO     COMMON               MPY                                  1850820
+       ALS     1                     BY                                  1850830
+       ADD     COMMON                 SIX                                1850840
+       ALS     1                                                         1850850
+       STA     POSIT                                                     1850860
+       LDQ     'L0...                                                    1850870
+       CAL     7VENS                                                     1850880
+NO.COL LGR     **                                                        1850890
+       PXD                                                               1850900
+ POSIT LGR     **                                                        1850910
+       STQ     MASK                                                      1850920
+*                                                                        1850930
+RDNEXT TSX     RDCARD,4             READ CLASSES CARD                    1850940
+       AXT     11,2                 11 PER CARD                          1850950
+SCNEXT CAL     'BCDIN+12,2                                               1850960
+       ERA     END                                                       1850970
+       TZE     FINISH                                                    1850980
+       STZ     CLSFND                                                    1850990
+       CAL     'BCDIN+12,2                                               1851000
+       SLW     NUCLAS+4                                                  1851010
+       LAS     TYPE                                                      1851020
+       TRA     *+3                                                       1851030
+       TRA     *+1                                                       1851040
+       ORA     'BLNK1                                                    1851050
+       ANA     MASK                                                      1851060
+       SLW     HOLDIT                                                    1851070
+       TSX     'WMEDT,4             PRINT - NOW STARTING CLASS XXX       1851080
+       MZE     NUCLAS,,5                                                 1851090
+       PZE     65                                                        1851100
+       LXA     SIZE,1                                                    1851110
+ SERCH CAL*    'BORG1+1                                                  1851120
+       ANA     MASK                                                      1851130
+       LAS     HOLDIT                                                    1851140
+       TRA     *+2                                                       1851150
+       TRA     FND                                                       1851160
+BOTLUP TIX     SERCH,1,2                                                 1851170
+       NZT     CLSFND                                                    1851180
+       TRA     CLSMIS                                                    1851190
+NXTCLS TIX     SCNEXT,2,1           SCAN FOR NEXT CLASS ON SAME CARD     1851200
+       TRA     RDNEXT               READ NEXT CARD                       1851210
+CLSMIS TSX     'WMEDT,4                                                  1851220
+       MZE     CLSMS1,,6                                                 1851230
+       PZE     65                                                        1851240
+       TRA     NXTCLS                                                    1851250
+CLSMS1 BCI     6, NO VECTORS FOUND FOR THIS CLASS.                       1851260
+NUCLAS BCI     5,0    NOW STARTING CLASS XXXXXX                          1851270
+*                                                                        1851280
+ FND   STL     CLSFND                                                    1851290
+       LDQ*    'BORG1+1                                                  1851300
+       TSX     ARITH,4                                                   1851310
+       SWT     2                                                         1851320
+       TRA     BOTLUP               SEARCH FOR NEXT NAME OF THIS CLASS   1851330
+       TRA     FINISH                                                    1851340
+*                                                                        1851350
+ JUNK  TSX     'WMEDT,4                                                  1851360
+       MZE     JUNK1,,7                                                  1851370
+       PZE     100                                                       1851380
+       HTR     FINISH                                                    1851390
+ JUNK1 BCI     7,AGENDUM CARD BAD - CORRECT AND HIT START                1851400
+*                                                                        1851410
+RDCARD BEGIN   1,5                                                       1851420
+ RDCD  STR     READ                                                      1851430
+       LXD     *-1,1                                                     1851440
+       TXL     *-1,1,1                                                   1851450
+       SXD     RDCD                                                      1851460
+       TXH     EOFND,1,2            EOF                                  1851470
+       TSX     '9BCDI,4             CONVERT HOLLERITH                    1851480
+       PZE     HIMAGE,,'BCDIN                                            1851490
+       CAL     'BCDIN                                                    1851500
+       ERA     'BLANK               IS THIS NEXT AGENDUM CARD            1851510
+       TZE     RETURN                                                    1851512
+       TSX     'WMEDT,4                                                  1851514
+       MZE     'BCDIN,,12                                                1851516
+       PZE     100                                                       1851518
+       CLA     'WORG1                                                    1851520
+       TSX     'RHSIN,4             RESTORE THE RHS TO W-REGION          1851530
+       RIR     21                                                        1851531
+       CLA     'BCDIN                                                    1851540
+       TRA*    'AGRET                - YES                               1851550
+ READ  PZE     READ1,,READ2                                              1851560
+ READ1 RCDA                                                              1851570
+ READ2 PZE     HIMAGE,,24                                                1851580
+RETURN RETURN  RDCARD                - NO                                1851590
+ EOFND TSX     'WMEDT,4                                                  1851600
+       MZE     EOFMES,,7                                                 1851610
+       PZE     65                                                        1851620
+       HTR     RDCD                                                      1851630
+EOFMES BCI     7, EOF ON CARD READER. RELOAD AND START.                  1851640
+*                                                                        1851650
+ ARITH BEGIN   1,7                                                       1851660
+       SXA     'INDXR,1                                                  1851670
+       TSX     SPREAD,4             PUT BASIS VECTOR IN PRINT LINE       1851680
+       SLW     LINE                                                      1851690
+       STQ     LINE+1                                                    1851700
+       CLA     'INDXR                                                    1851710
+       ARS     1                                                         1851720
+       PAX     ,2                                                        1851730
+       CLA*    'TORG2               VALUE IN                             1851740
+       STO     VALUE                PROBLEM                              1851750
+       TSX     'BFLTD,4                                                  1851760
+       SLW     LINE+4                                                    1851770
+       STQ     LINE+5                                                    1851780
+       LXA     'INDXR,2                                                  1851790
+       CLA*    'PORG2               GET BETA                             1851800
+       TSX     'BFLTD,4                                                  1851810
+       SLW     LINE+2                                                    1851820
+       STQ     LINE+3                                                    1851830
+       SIR     5                    DUAL PRICING                         1851840
+       TSX     'FORMC,4                                                  1851850
+       RIR     4                    4 USED FOR SCALE SIGN IN F VEC       1851860
+       TSX     'BTRAN,4                                                  1851870
+       SIR     20                   AFTER 1ST ENTRY COMP. PI-SIG ONLY    1851880
+       TSX     PRICE,4                                                   1851890
+       NZT     LIM1XS               WAS MIN VEC FOUND                    1851900
+       TRA     NOMIN                 -NO, MINIMUM UNBOUNDED              1851910
+       LDQ     LIM1XS                -YES                                1851920
+       TSX     SPREAD,4             INCOMING VECTOR                      1851930
+       TRA     *+5                                                       1851940
+NOLIMT BCI     2,   UNBOUNDED                                            1851950
+ NOMIN CAL     NOLIMT               COME HERE FOR UNBOUNDED              1851960
+       LDQ     NOLIMT+1                                                  1851970
+       SLW     LINE+10                                                   1851980
+       STQ     LINE+11                                                   1851990
+       CLS     1MINHI               CONVERT MINIMUM                      1852000
+       LDQ     1MINLO                                                    1852010
+       FAD     VALUE                                                     1852020
+       FRN                                                               1852030
+       NZT     LIM1XS                                                    1852040
+       CLA     'INFNY                                                    1852050
+       TSX     'BFLTD,4                                                  1852060
+       SLW     LINE+6                                                    1852070
+       STQ     LINE+7                                                    1852080
+       NZT     LIM2XS               WAS MAX VEC FOUND                    1852090
+       TRA     NOMAX                -NO, MAXIMUM UNBOUNDED               1852100
+       LDQ     LIM2XS                -YES                                1852110
+       TSX     SPREAD,4             INCOMING VECTOR                      1852120
+       TRA     *+3                                                       1852130
+ NOMAX CAL     NOLIMT               COME HERE FOR UNBOUNDED              1852140
+       LDQ     NOLIMT+1                                                  1852150
+       SLW     LINE+12                                                   1852160
+       STQ     LINE+13                                                   1852170
+       CLA     2MINHI                                                    1852180
+       LDQ     2MINLO                                                    1852190
+       FAD     VALUE                                                     1852200
+       FRN                                                               1852210
+       NZT     LIM2XS                                                    1852220
+       CLA     'INFNY                                                    1852230
+       TSX     'BFLTD,4             CONVERT MAXIMUM                      1852240
+       SLW     LINE+8                                                    1852250
+       STQ     LINE+9                                                    1852260
+       TSX     'WMEDT,4             PRINT THE LINE                       1852270
+       PZE     LINE,,14                                                  1852280
+       PZE     65                                                        1852290
+       RIR     1                                                         1852300
+       RETURN  ARITH                                                     1852310
+ LINE  BCI     6,                                                        1852320
+       BCI     6,                                                        1852330
+       BCI     2,                                                        1852340
+ PRICE BEGIN   1,7,1                SAVE XRS, SI, SET RETURN LOC         1852350
+       RIL     17                   RESET IND-S TO BE USED               1852360
+       STZ     'REJNO                                                    1852370
+       CLA     PRMHI                SET UP                               1852380
+       STO     'DPMHI               FOR DP                               1852390
+       CLA     PRMLO                MULT.                                1852400
+       STO     'DPMLO               AND                                  1852410
+ PRST  AXT     PR1,4                SET RETURN FROM                      1852420
+       SXA     'LFRTC,4             TRANS. COORD.                        1852430
+       SLT     2                    TURN OFF SL2                         1852440
+       TRA     *+1                                                       1852450
+       TSX     'PRSEQ,4             START TC PRICE SEQUENCE              1852460
+       TRA     PRXIT                ALL A-RECORDS READ AND PROC.         1852470
+ PR1   CLA     PRCHI                INITIALIZE                           1852480
+       LDQ     PRCLO                'DPFAD                               1852490
+       STO     'DPAHI               ADDRS                                1852500
+       STQ     'DPALO                                                    1852510
+       STZ     'NGDJS                                                    1852520
+       CLA     PR4B+2                                                    1852530
+       NZT     'PARTB               TEST FOR BEGINNING PARTITION         1852540
+       SSP                          NONE                                 1852550
+       STO     PR2A                 SET SWITCH                           1852560
+PR1AA  CLA     PRSAV                PREPARE INSTRUCTION TO               1852570
+       STO     'MINID               STORE LOC OF SELECTED VECTOR         1852580
+       TSX     PRGCW,4              GET BUFFER CONTROL WORD              1852590
+ PR1A  STZ     LIM1XS                                                    1852600
+       STZ     LIM2XS                                                    1852610
+       CLA     'INFNY               SET 'MINHI TO                        1852620
+       STO     'MINHI               INFINITY FOR 'RATIO                  1852630
+       STO     1MINHI                                                    1852640
+       STO     2MINHI                                                    1852650
+ PR2   CAL     0,1                  VECTOR                               1852660
+       TZE     PR8                  GO TO TC AND FILL BUFFER             1852670
+       ANA     'BLNK1                                                    1852680
+       TZE     PR2B                 TEST FOR CURTAIN OR PARTITION        1852690
+ PR2A  TXL     PR5                  TXL UNTIL BEGIN. PART.,TXH AFTER     1852700
+       CLA     0,1                  CHECK FOR                            1852710
+       LXA     'INDXR,2             R-TH BASIS                           1852720
+       SUB*    'BORG2+1             HEADING                              1852730
+       TZE     PR5                  YES                                  1852740
+       LXA     'REJNO,4             CHECK                                1852750
+ PR2C  TXL     PR6,4,0              REJECT                               1852760
+       TXI     *+1,4,1              LIST                                 1852770
+       CLA     0,1                  TO SEE IF                            1852780
+       SUB     'RJLST,4             VECTOR   PREVIOUSLY SELECTED         1852790
+       TZE     PR5                  YES-SKIP                             1852800
+       TRA     PR2C                                                      1852810
+ PR2B  CLA     0,1                                                       1852820
+       PAX     ,4                                                        1852830
+       TXH     PR5,4,0              TRA IF CURT.                         1852840
+ PR4   PXA     ,4                   PARTITION                            1852850
+       CAS     'PARTB                                                    1852860
+       TXL     PR4A                 BEYOND BEGINNING PART.               1852870
+       TXL     PR4B                 BEGINNING PART.                      1852880
+       TXL     PR5                  BELOW BEGINNING PARTITION            1852890
+ PR4A  CAS     'PARTE                                                    1852900
+       TXL     PRERR                BEYOND END PART. -ERROR              1852910
+       NZT     'ICSWX               END PARTITION                        1852920
+       TSX     'RETPR,4             GO F INISH PRICE TC ROUTINE          1852930
+       TRA     PRXIT                                                     1852940
+ PR5   CLA     1,1                  GO TO NEXT VECTOR                    1852950
+       STD     *+1                                                       1852960
+       TIX     PR2,1,**             DECR. IS CNT OF VECTOR,CURT.,OR PAR  1852970
+ PR4B  CLA     PR4B+2               RESET PR2A                           1852980
+       SLW     PR2A                 TO A TXH                             1852990
+       TXL     PR5                                                       1853000
+ PR6   CLA     1MINHI                                                    1853010
+       LDQ     1MINLO                                                    1853020
+       STO     'MINHI                                                    1853030
+       STQ     'MINLO                                                    1853040
+       CLA     PRLMZ                PLP,PCR                              1853050
+       TSX     'RATIO,4                                                  1853060
+       TSX     PGNUM,4                                                   1853070
+       NOP                                                               1853080
+       TSX     PGDEN,4                                                   1853090
+       NOP                                                               1853100
+       TRA     *+1                  XED IN 'RATIO                        1853110
+       SLT     2                    NEW CHOICE                           1853120
+       TRA     PR7B                  -NO, TRY LIM 2                      1853130
+       CLA     0,1                   -YES                                1853140
+       STO     LIM1XS                                                    1853150
+ PR7A  CLA     'MINHI                                                    1853160
+       LDQ     'MINLO                                                    1853170
+       STO     1MINHI                                                    1853180
+       STQ     1MINLO                                                    1853190
+ PR7B  CLA     2MINHI                                                    1853200
+       LDQ     2MINLO                                                    1853210
+       STO     'MINHI                                                    1853220
+       STQ     'MINLO                                                    1853230
+       CLS     PRLMZ                                                     1853240
+       TSX     'RATIO,4             GET BEST RATIO FOR LIMIT 2           1853250
+       CLA     HINUM                USE NUMERATOR FROM LIMIT 1           1853260
+       LDQ     LONUM                                                     1853270
+       CLA     HIDEN                USE DENOMINATOR FROM LIMIT 1         1853280
+       LDQ     LODEN                                                     1853290
+       TRA     *+1                                                       1853300
+       SLT     2                    WAS A BETTER CHOICE FOUND            1853310
+       TRA     PR5                   -NO, GET NEXT VECTOR                1853320
+       CLA     0,1                   -YES, STORE NEW SELECTION           1853330
+       STO     LIM2XS                                                    1853340
+       CLA     'MINHI                                                    1853350
+       LDQ     'MINLO                                                    1853360
+       STO     2MINHI                                                    1853370
+       STQ     2MINLO                                                    1853380
+       TRA     PR5                                                       1853390
+ PGNUM CLA     'WORG1               ENTER FOR PI-REGION                  1853400
+       SXA     PR6B,4                                                    1853410
+       TSX     PRCIN,4                                                   1853420
+       LXA     PR6B,4                                                    1853430
+       TPL     PGXIT                                                     1853440
+       PXD                          SET NEG. NUM.                        1853450
+       LDQ     'L0...               TO ZERO                              1853460
+ PGXIT STO     HINUM                SAVE INNER PRODUCT                   1853470
+       STQ     LONUM                                                     1853480
+       TRA     1,4                                                       1853490
+ HINUM PZE                                                               1853500
+ LONUM PZE                                                               1853510
+ PGDEN CLA     'GORG1               COMPUTE ALPHA SIGMA W/W-REG          1853520
+ PR6A  SXA     PR6B,4                                                    1853530
+       TSX     PRCIN,4                                                   1853540
+       STO     HIDEN                SAVE INNER PRODUCT                   1853550
+       STQ     LODEN                                                     1853560
+ PR6B  AXT     ,4                                                        1853570
+       TRA     1,4                                                       1853580
+ HIDEN PZE                                                               1853590
+ LODEN PZE                                                               1853600
+PRXIT  RIL     1                                                         1853610
+       AXT     0,4                                                       1853620
+       LFT     1                                                         1853630
+ PRX2  AXT     -1,4                                                      1853640
+       CLA     LIM1XS,4                                                  1853650
+       TZE     PRX3                                                      1853660
+       LXA     'PRSIZ,2             IS VECTOR SELECTED                   1853670
+ PRX1  CAS*    'BORG2+1             IN BASIS                             1853680
+       TXL     *+2                                                       1853690
+       TXL     PR9                  YES                                  1853700
+       TIX     PRX1,2,2                                                  1853710
+ PRX3  LFT     1                                                         1853720
+       TRA     *+3                                                       1853730
+       SIL     1                                                         1853740
+       TRA     PRX2                                                      1853750
+       STZ     'REJNO                                                    1853760
+       STZ     'PIVSW                                                    1853770
+ PRETN RETURN  PRICE                NO-RETURN TO AGENDUM ROUTINE         1853780
+ PR8   AXT     *+3,4                PREPARE RETURN                       1853790
+       SXA     'LFRTC,4             FROM TC                              1853800
+       TRA*    'LTOTC               GO TO TC-FILL BUFFER WITH NEXT       1853810
+       TSX     PRGCW,4              GET BUFFER CONTROL WORD              1853820
+       TRA     PR2                                                       1853830
+ PRGCW CLA*    'LBUFF                                                    1853840
+       PAX     ,1                   ADDR IS BUFF/O + CNT                 1853850
+       STD     *+1                                                       1853860
+       TIX     *+1,1,**             DECR IS BUFFER CNT                   1853870
+       SXA     *+1,1                                                     1853880
+       AXC     **,1                                                      1853890
+       TRA     1,4                                                       1853900
+ PRSAV SLN     2                                                         1853910
+ PRLMZ MZE     'TOLPV                                                    1853920
+ PRERR TSX     'WMEDT,4                                                  1853930
+       MZE     PARTER,,12                                                1853940
+       PZE     100                                                       1853950
+       HPR     *+1                                                       1853960
+       TRA     *-1                                                       1853970
+PARTER BCI     6,PART'NS NOT IN ASCENDING ORDER.                         1853980
+       BCI     6,REASSEMBLE DATA AFTER CORRECTION.                       1853990
+ PR9   LXA     'REJNO,4                                                  1854000
+       TXL     *+2,4,0                                                   1854001
+       TXL     PR9C,4,-15           TRA IF REJECT LIST FULL              1854010
+       CLA     LIM1XS               PUT                                  1854020
+       LFT     1                    APPROPRIATE                          1854030
+       CLA     LIM2XS               VECTOR                               1854040
+       STO     'RJLST,4             IN REJECT LIST                       1854050
+       TXI     *+1,4,-1                                                  1854060
+       SXA     'REJNO,4                                                  1854070
+       TRA     PRST                 MAKE ANOTHER CHOICE                  1854080
+ PR9C  LDQ     LIM1XS                                                    1854090
+       LFT     1                                                         1854100
+       LDQ     LIM2XS                                                    1854110
+       PXD                                                               1854120
+       LGL     2                                                         1854130
+       ALS     6                                                         1854140
+       LGL     4                                                         1854150
+       STA     BASVEC+2                                                  1854160
+       CAL     'BLANK                                                    1854170
+       LGR     6                                                         1854180
+       RQL     6                                                         1854190
+       STQ     BASVEC+3                                                  1854200
+       CLA     1MINHI                                                    1854210
+       LFT     1                                                         1854211
+       CLA     2MINHI                                                    1854212
+       TSX     'BFLTD,4                                                  1854220
+       SLW     BASVEC+9                                                  1854230
+       STQ     BASVEC+10                                                 1854240
+       TSX     'WMEDT,4                                                  1854250
+       MZE     BASVEC,,11                                                1854260
+       PZE     100                                                       1854270
+       AXT     0,4                                                       1854280
+       LFT     1                                                         1854290
+       AXT     -1,4                                                      1854300
+       STZ     LIM1XS,4                                                  1854310
+       HTR     PRETN                                                     1854320
+BASVEC BCI     8,SELECTED VECTOR         IN BASIS. START CONTINUE        1854330
+       BCI     3,S. D/J                                                  1854340
+ PRCIN SXA     PRCXC,4                                                   1854350
+       SXA     PRCXC+1,1                                                 1854360
+       STA     PRC2                                                      1854370
+       ADD     'L1...                                                    1854380
+       STA     PRC3                                                      1854390
+ PRCHI STZ     'SC1HI               CLEAR                                1854400
+ PRCLO STZ     'SC1LO               INNER PRODUCT                        1854410
+       CLA     1,1                                                       1854420
+       PAX     ,2                  CNT OF NON-ZERO ELEMENTS              1854430
+ PRC1  CAL     2,1                                                       1854440
+       PAX     ,4                  ELEM, INDEX (2M+2-2I)                 1854450
+       TXH     PRC5,4,-2           LIMIT IS -1                           1854460
+       ANA     'MSKLO                                                    1854470
+       XCL                                                               1854480
+       CLA     3,1                                                       1854490
+ PRMHI STO     COMMON+1             VECTOR                               1854500
+ PRMLO STQ     COMMON+2             ELEMENT                              1854510
+ PRC2  CLA     **,4                 PICK UP                              1854520
+       TZE     PRCXB                                                     1854530
+ PRC3  LDQ     **,4                 P OR W REION                         1854540
+       TSX     'DPFMP,4                                                  1854550
+ PRC4  TSX     'DPFAD,4                                                  1854560
+       STO     'SC1HI                                                    1854570
+       STQ     'SC1LO                                                    1854580
+ PRCXB TXI     *+1,1,-2             MOVE TO NEXT VECTOR ELEM.            1854590
+       TIX     PRC1,2,1                                                  1854600
+       CLA     'SC1HI                                                    1854610
+       LDQ     'SC1LO                                                    1854620
+ PRCXC AXT     **,4                                                      1854630
+       AXT     ,1                   RESTORE XR1 AS AT ENTRY              1854640
+       TRA     1,4                                                       1854650
+ PRC5  TXI     PRC1,1,-2           IGNORE LIMIT                          1854660
+*                                                                        1854670
+SPREAD PXD                                                               1854680
+       LGL     2                                                         1854690
+       ALS     6                                                         1854700
+       LGR     2                                                         1854710
+       ACL     SPREDB                                                    1854720
+       SLW     SPREDT                                                    1854730
+       PXD                                                               1854740
+       LGL     6                                                         1854750
+       TNZ     *+2                                                       1854760
+       ADD     'BLNK6                                                    1854770
+       LGR     6                                                         1854780
+       CAL     SPREDT                                                    1854790
+       TRA     1,4                                                       1854800
+SPREDT PZE                                                               1854810
+SPREDB BCI     1,     0                                                  1854820
+*                                                                        1854830
+HOLDIT PZE                                                               1854840
+CLSFND PZE                                                               1854850
+ SIZE  PZE                                                               1854860
+ SLACK PZE                                                               1854870
+ VALUE PZE                                                               1854880
+ END   BCI     1,END***                                                  1854890
+LIM1XS PZE                                                               1854900
+LIM2XS PZE                                                               1854910
+1MINHI PZE                                                               1854920
+2MINHI PZE                                                               1854930
+1MINLO PZE                                                               1854940
+2MINLO PZE                                                               1854950
+COSTRO PZE                                                               1854960
+ MASK  PZE                                                               1854970
+ 7VENS OCT     777777777777                                              1854980
+ TYPE  OCT     177777777777                                              1854990
+NEGSCL PZE                                                               1855000
+HIMAGE EQU     -56                                                       1855010

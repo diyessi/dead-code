@@ -1,0 +1,131 @@
+*      SELF-LOADING BINARY-OCTAL LOWER LOADER.  H. FRIEDEN  5-23-60     L3900001
+*      LOADS ROW BINARY ABSOLUTE DECKS AND OCTAL CHANGE CARDS.          L3900002
+*      CARDS 0 AND 2 OF THE OUTPUT DECK CONTAIN IN 9R THE WORDS TO BE   L3900003
+*      PUNCHED MANUALLY INTO 9L OF CARDS 1 AND 3, AFTER *REMOVING* THE  L3900004
+*      CONTROL INFO FROM THE 9L OF CARDS 1 AND 3.  CARDS 0 AND 2 SHOULD L3900005
+*      THEN BE DISCARDED.                                               L3900006
+*      THE OCTAL CHANGE ROUTINE IS LOADED BY THE BINARY LOADER.         L3900007
+*                                                                       L3900008
+       ORG     0                   SELF-LOADING 2 CARD BINARY LOADER    L3900009
+       IOCD    3,,45                                                    L3900010
+       ORG     1                   PUNCH CARD FOR 1-23                  L3900011
+       RCDA                                                             L3900012
+       RCHA    C44                 READ ONE CARD TO BUFFER              L3900013
+       TCOA    *                                                        L3900014
+       TEFA    C43                                                      L3900015
+       CLA     9L                                                       L3900016
+       TZE     OCT                 TR IF OCTAL CHANGE CARD              L3900017
+       TPL     C10                                                      L3900018
+       HTR     1                   CARD-FORM ERROR STOP                 L3900019
+ C10   LRS     30                                                       L3900020
+       PAC     0,1                 COMPLEMENTED WORD COUNT              L3900021
+       SXD     C27,1                                                    L3900022
+       LLS     3                   9L MANIPULATIONS                     L3900023
+       RQL     3                                                        L3900024
+       LLS     12                                                       L3900025
+       STA     C25                 LOADING OR EXIT ADDRESS              L3900026
+       TXH     C19,1,0                                                  L3900027
+       TRA*    C25                 EXIT ON ZERO WORD COUNT              L3900028
+ C19   AXT     0,1                                                      L3900029
+       CAL     9L                                                       L3900030
+       ARS     12                  SHIFT OUT CARD CHECKSUM              L3900031
+ C23   ACL     9L+1,1              FOR 36-BIT CHECKSUM                  L3900032
+       LDQ     9L+1,1                                                   L3900033
+ C25   STQ     **,1                SEND CARD TO MEMORY                  L3900034
+       TXI     C27,1,-1                                                 L3900035
+       ORG     25                  PUNCH CARD FOR 25-47                 L3900036
+ C27   TXH     C23,1,-**           DECR. SET ACCORDING TO WORD COUNT    L3900037
+       AXT     2,1                                                      L3900038
+       LGR     24                                                       L3900039
+       SLW     9L+1                                                     L3900040
+       CAL     9L                                                       L3900041
+       ANA     C42                                                      L3900042
+       TZE     1                                                        L3900043
+ C31   CLM                                                              L3900044
+       LGL     12                                                       L3900045
+       ACL     9L+1                                                     L3900046
+       SLW     9L+1                                                     L3900047
+       TIX     C31,1,1                                                  L3900048
+       ARS     12                  OVERFLOW TERM                        L3900049
+       ACL     9L+1                                                     L3900050
+       ERA     9L                                                       L3900051
+       ANA     C42                 ERASE OTHER 9L BITS                  L3900052
+       TZE     1                                                        L3900053
+       HTR     1                   CHECKSUM ERROR, ERA IN AC            L3900054
+ C42   OCT     000000007777                                             L3900055
+ C43   HTR     1                   END-OF-FILE STOP                     L3900056
+ C44   IOCD    9L,,24                                                   L3900057
+ 9L    BSS     24                  INPUT BUFFER                         L3900058
+*                                                                       L3900059
+*    9L FORMAT (OCTAL) CCL5LLLLSSSS                                     L3900060
+*                      C = DIGIT OF WORD COUNT                          L3900061
+*                      L = DIGIT OF LOADING ADDRESS                     L3900062
+*                      S = DIGIT OF 12-BIT CHECKSUM                     L3900063
+       EJECT                                                            L3900064
+       BSS     0                   2 CARD OCTAL CHANGE LOADER           L3900065
+ OCT   AXT     2,1                 LEFT WORD-RIGHT WORD                 L3900066
+ OCT1  AXT     2,2                 LEFT HALF-RIGHT HALF                 L3900067
+       LDI     11L+2,1                                                  L3900068
+ OCT2  TSX     FC,4                                                     L3900069
+       TXI     FC3,1,400           (FOR 5-COLUMN FIELD)                 L3900070
+       STA     OCT5                                                     L3900071
+       CAL     Z                                                        L3900072
+       TZE     1                   EXIT IF LOC FIELD BLANK              L3900073
+       ERA     5ONES               TEST FOR 1 PUNCH PER COLUMN          L3900074
+       TNZ     DPBC                                                     L3900075
+       TSX     FC,4                                                     L3900076
+       TXI     FC3,1,1200          (FOR 13-COL. FIELD)                  L3900077
+       XEC     IFTOP+2,2           TEST FOR 11 PCH IN SIGN COL.         L3900078
+       SSM                                                              L3900079
+ OCT5  STO     **                                                       L3900080
+       CAL     Z                                                        L3900081
+       ERA     12ONS                                                    L3900082
+       TNZ     DPBC                                                     L3900083
+       TIX     OCT2,2,1                                                 L3900084
+       TIX     OCT1,1,1                                                 L3900085
+       TRA     1                                                        L3900086
+*      FIELD CONVERSION SUBROUTINE CONVERTS AN N-COL FIELD FROM CARD    L3900087
+*      IMAGE TO OCTAL.  AT EXIT, Z CONTAINS THE SUM OF ROWS 7-0 AND THE L3900088
+*      ALGEBRAIC AC CONTAINS THE CONVERTED FIELD.                       L3900089
+*      CALLING SEQUENCE IS                                              L3900090
+*      TSX     FC,4                                                     L3900091
+*      TXI     FC3,1,100(N-1)                                           L3900092
+*      XXX     RETURN                                                   L3900093
+ FC    STZ     Z                                                        L3900094
+       STZ     Z+1                                                      L3900095
+       TXI     *+1,1,14            IR 1 SET TO 16 OR 15                 L3900096
+ FC2   LDQ     7L+16,1                                                  L3900097
+       PXD     ,0                                                       L3900098
+       XEC     1,4                 X1 + 100(N-1) TO X1, FOR N-COL FIELD L3900099
+ FC3   ALS     2                                                        L3900100
+       LGL     1                                                        L3900101
+       TIX     FC3,1,100                                                L3900102
+       STQ     7L+16,1                                                  L3900103
+       ACL     Z                                                        L3900104
+       SLW     Z                                                        L3900105
+       TIX     *+3,1,2             TEST FOR 8 ROWS ADDED INTO Z         L3900106
+       CLA     Z+1                 PUT CONVERTED OCTAL FIELD IN AC      L3900107
+       TRA     2,4                                                      L3900108
+       ACL     Z+1                                                      L3900109
+       SLW     Z+1                                                      L3900110
+       TRA     FC2                                                      L3900111
+ DPBC  HTR     1                   DPBC ERROR   ERA IN AC               L3900112
+ 5ONES OCT     11111                                                    L3900113
+ 12ONS OCT     111111111111                                             L3900114
+ IFTOP LFT     010000              TEST LEFT HALF WORD                  L3900115
+       RFT     010000              TEST RIGHT HALF WORD                 L3900116
+ 7L    SYN     9L+4                                                     L3900117
+ 11L   SYN     9L+20                                                    L3900118
+ Z     SYN     9L+22               STORAGE FOR SUM OF ROWS 7-0          L3900119
+*Z+1   SYN     9L+23               STORAGE FOR FIELD BEING CONVERTED    L3900120
+*                                                                       L3900121
+*      FORMAT FOR OCTAL CHANGE CARD IS LLLLLSWWWWWWWWWWWW...            L3900122
+*      STARTING IN COL 1 WITH UP TO 4 CHANGES PER CARD.                 L3900123
+*      L=OCTAL DIGIT OF LOCATION                                        L3900124
+*      S=-(11 PUNCH) TO MAKE WORD NEGATIVE                              L3900125
+*      W=OCTAL DIGIT OF WORD TO BE LOADED.                              L3900126
+*      NEGATIVE WORDS CAN ALSO BE LOADED BY MAKING FIRST DIGIT OF WORD  L3900127
+*      EQUAL TO 4,5,6, OR 7 AND LEAVING S COL BLANK.                    L3900128
+*      FIRST COMPLETELY BLANK L FIELD DEFINES END OF CARD.              L3900129
+*      L AND W FIELDS CHECKED FOR DOUBLE PUNCH-BLANK COLUMN.            L3900130
+       END     0                                                        L3900131

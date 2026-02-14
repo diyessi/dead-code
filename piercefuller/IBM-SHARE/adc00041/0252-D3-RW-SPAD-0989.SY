@@ -1,0 +1,642 @@
+C     RW SPAD FORTRAN MONITOR ROUTINE.   01 AUGUST, 1960.               SPAD0001
+C     01 AUGUST, 1960  (DIMENSIONS ARE SETUP FOR A 32K MACHINE, AND     SPAD0002
+C      THE ROUTINE IS PREPARED FOR THE 709 FORTRAN MONITOR SYSTEM.)     SPAD0003
+C     TAPES A-4 (4), B-2 (10), AND B-6 (14) ARE USED ON THE VARIOUS     SPAD0004
+C      OPTIONS. HOWEVER, THE USER MAY CHANGE THESE TAPE UNITS IN THE    SPAD0005
+C      SETUP SUBROUTINE. (SEE NUT1, NUT2, NUT3, NINPT.)                 SPAD0006
+C     GLOSSARY OF SYMBOLS FROM SPAD SUB. TO SPAD WRITEUP.               SPAD0007
+C     SPAD SUB.   SPAD WRITEUP AND EXPLANATIONS OF SYMBOLS.             SPAD0008
+C                                                                       SPAD0009
+C     IOU(50)   = L1  NO. OF MESH UNITS IN X DIRECTION FROM Y AXIS.     SPAD0010
+C                     FOR A RECTANGULAR (OR SQUARE) AREA L1 WILL BE 0.  SPAD0011
+C                     FOR A CURVED AREA L1 WILL VARY WITH EACH ROW.     SPAD0012
+C     KN(50)    = L2  NODE PT. NUMBER (NAME) CORRESPONDING TO PTS. OF L1SPAD0013
+C     MAXI(50)  = L3  NO. OF REG. INT. PTS. IN ITH ROW. OF L1(I)        SPAD0014
+C     NSTO(10000)=L4  LIST OF FIXED PT. PORTIONS OF POINT RECORDS(INPUT)SPAD0015
+C     ASTO(9900) =C5  LIST OF FLOAT.PT. PORTIONS OF POINT RECORDS(INPUT)SPAD0016
+C     JV(1)     = N2  ORDINATE VALUE OF LOWEST ROW IN UNITS OF K, IN    SPAD0017
+C                     FIXED PT.  DISTANCE OF LOWEST ROW FROM X-AXIS.    SPAD0018
+C     NUMBR(1)  = N1  NO. OF INPUT PT. RECORDS.  (SEE L4 AND C5).       SPAD0019
+C     MAXJ(1)   = N3  TOTAL ROWS IN FIXED POINT.                        SPAD0020
+C     OMEGA(1)  = OMG OVERRELAXATION FACTOR.  (BETWEEN 1. AND 2.)       SPAD0021
+C     V (2000)  = UIJ SOLUTION VALUES.                                  SPAD0022
+C     SH(1)     = DX  MESH SIZE IN X-DIRECTION.                         SPAD0023
+C     SK(1)     = DY  MESH SIZE IN Y-DIRECTION.                         SPAD0024
+C     NUPPP(1)  = N4  NO. OF NEIGHBORS IN PT. PATTERN. (TOTAL PTS.)     SPAD0025
+C     MX(25)    = L6  PT. PATTERN NOS. OF X.  (EX. 1,0,-1,0)            SPAD0026
+C     MWHY(25)  = L7  PT. PATTERN NOS. OF Y.  (EX. 0,1,0,-1)            SPAD0027
+C     KDPV(1)   = N5  NO. OF DEPENDENT VARIABLES OR EQNS. (U AND W)     SPAD0028
+C     INCD(1)   = N6  ALPHA (SEE SEVERAL DEPENDENT VAR. SECT. C)        SPAD0029
+C                     ALPHA DIVIDES V STORAGE AMONG DEPENDENT VARIABLES.SPAD0030
+C                     THUS, IF U REQUIRES 500 PTS., SET ALPHA=500       SPAD0031
+C                     ASSUMING N5=2 (2 DEPENDENT VAR.)  ALSO, INCREASE  SPAD0032
+C                     DIMENSION OF V IF NECESSARY.                      SPAD0033
+C     NPAIR(1)  = N7  NO. OF ITEMS IN LIST L8 . (NO. OF L8=L9)          SPAD0034
+C     KOMIT(50) = L8  LIST OF PTS. TO BE OMITTED. LEFT PT. (STARTING)   SPAD0035
+C     LOMIT(50) = L9  LIST OF PTS. TO BE OMITTED.  RIGHT PT. (ENDING)   SPAD0036
+C     NA4(1)    = N8  NO. OF ITEMS IN L4.  (TOTAL CELLS)                SPAD0037
+C     N111(1)   = N11 FLAG FOR NON-LINEAR PROBLEMS.  (0=LINEAR)         SPAD0038
+C                  FOR NON-LINEAR PROBLEMS SPAD RETURNS TO STATEMENT    SPAD0039
+C                  666, AND THE USER MUST ALLOW FOR THIS IN BOTH SETUP  SPAD0040
+C                  AND COCAL. (SEE COMMENTS AFTER STATEMENT 125.)       SPAD0041
+C                  N11 IS ALSO USED AS A TEST FOR THE END OF A CASE.    SPAD0042
+C                  SET N11=-1 (NOT -0, SINCE FORTRAN TREATS -0 AS 0     SPAD0043
+C                  IN AN IF TEST) IN THE CNVRG SUB IF ALL POINTS HAVE   SPAD0044
+C                  CONVERGED.  SPAD WILL RETURN TO INSTRUCTION 1 FOR    SPAD0045
+C                  THE NEXT CASE (AFTER SAVING THE U(I) ON TAPE NUT3 IF SPAD0046
+C                  SAVE IS SET TO -1 IN SUB CNVRG, OR IF SS5 IS DOWN)   SPAD0047
+C     EPS       = EPS EPSILON IS THE ACCURACY DESIRED FOR CONVERGENCE.  SPAD0048
+C                     SPAD SETS EPS TO .0001.    EPS CAN BE CHANGED IN  SPAD0049
+C                     THE SETUP SUBROUTINE IF DESIRED.                  SPAD0050
+C     JWX1      =JWX1 FLAG WHICH IF MINUS, ALLOWS SPAD TO TEST FOR      SPAD0051
+C                     CONVERGENCE.  IF JWX1=-, SPAD WILL KEEP ITERATING SPAD0052
+C                     UNTIL ALL U(I) HAVE CONVERGED TO EPS DEC. PLACES. SPAD0053
+C                     AFTER CONVERGENCE SPAD TRANSFERS TO THE CNVRG SUB.SPAD0054
+C                     WHICH SHOULD BE USED FOR OUTPUT ONLY.  IF JWX1=+, SPAD0055
+C                     THE USER MUST TEST FOR CONVERGENCE IN THE CNVRG   SPAD0056
+C                     SUB.  SPAD TRANSFERS TO CNVRG AFTER EACH ITERATIONSPAD0057
+C                     IF JWX1 IS PLUS.  (ALSO, SEE MX1)                 SPAD0058
+C     JWX2      =JWX2 FLAG TO ALLOW SPAD TO USE TAPE OPERATIONS.        SPAD0059
+C                  IF JWX2=-, TAPES NUT1 AND NUT2 WILL NOT BE USED.     SPAD0060
+C                     IF JWX2=+K, SPAD WILL STORE ALL POINT RECORDS     SPAD0061
+C                     ON TAPES NUT1 AND NUT2 IN GROUPS OF LPT PT.RECORDSSPAD0062
+C                      LOADED PT. RECORDS (IF ANY) ARE PUT ON 1ST AS    SPAD0063
+C                      1 GROUP.  THEN REG.INT.PT. RECORDS ARE WRITTEN   SPAD0064
+C                      IN GROUPS OF LPT (LK TOTAL GROUPS) PT RECORDS.   SPAD0065
+C                      THE DATA IS SAVED IN DUPLICATE ON TAPES NUT1     SPAD0066
+C                      AND NUT2. THEN IN THE ITERATION FOR U(N) THE     SPAD0067
+C                      LOADED PT. RECORDS ARE READ IN AND SOLVED.       SPAD0068
+C                      THEREAFTER, REG.INT.PT. RECORDS ARE READ IN      SPAD0069
+C                      GROUPS OF LPT PT. RECORDS AND SOLVED. THE TWO    SPAD0070
+C                      TAPES ARE ALTERNATED AFTER EACH MAJOR ITERATION  SPAD0071
+C                      TO SAVE REWIND TIME. JWX2 MUST BE LESS THAN THE  SPAD0072
+C                      DIMENSION OF L4 BY AT LEAST 2(2+NUPPP*KDPV).     SPAD0073
+C                      JWX2=+K SHOULD ONLY BE USED WHEN C.S. IS LIMITED.SPAD0074
+C     SSW3      =SSW3 IF SENSE SWITCH SWITCH 3 IS DOWN, SPAD WILL TRA   SPAD0075
+C                      TO CNVRG AFTER EACH MAJOR ITERATION.             SPAD0076
+C     NINPT     =NINPT  IF NINPT=+, SPAD WILL READ U(N) FROM TAPE       SPAD0077
+C                    NINPT.  NINPT IS REWOUND AFTER READING THE U(N).   SPAD0078
+C     SAVE      =SAVE IF BOTH N111 AND SAVE ARE SET TO -1 IN SUB CNVRG, SPAD0079
+C                  SPAD WILL SAVE THE FINAL U(N) ON TAPE NUT3.          SPAD0080
+C     SSW5      =SSW5 IF SENSE SWITCH 5 IS DOWN, SPAD WILL SAVE THE     SPAD0081
+C                    FINAL U(N) (2000 WORDS) ON TAPE NUT3 -- IF N111    SPAD0082
+C                      IS SET TO MINUS IN THE CNVRG SUBROUTINE.  NOTE   SPAD0083
+C                      THAT NUT3=NINPT.  THUS, THE INPUT DATA, IF ANY,  SPAD0084
+C                      WILL BE DESTROYED. (CAN BE CHANGED IN SETUP.)    SPAD0085
+C     MX1       = MX1 SPADE WILL TRANSFER TO CNVRG AFTER MX1 ITERATIONS SPAD0086
+C                     EVEN THOUGH ALL THE U(I)  HAVE NOT CONVERGED.     SPAD0087
+C                     (NPR WILL BE ZERO IF ALL U(I)  HAVE CONVERGED.)   SPAD0088
+C                     THIS SHOULD BE USED WHERE SENSE SWITCHES ARE      SPAD0089
+C                     NOT ALLOWED, AND WHEN JWX1 IS NEGATIVE.           SPAD0090
+C                                                                       SPAD0091
+C     SPAD SUB.   COCAL SUBROUTINE (SPAD WRITEUP)                       SPAD0092
+C     SI(1)     = X   COORDINATE IN TERMS OF H (DX).                    SPAD0093
+C     SJ(1)     = Y   COORDINATE IN TERMS OF K (DY).                    SPAD0094
+C     AA(50)    = A   LIST OF COEFFICIENTS IN ORDER OF NUMBERS IN       SPAD0095
+C                     POINT PATTERN.  (ALSO, SEE SEVERAL DEPENDENT VAR.)SPAD0096
+C     INDX4     = N10 INTEGER ASSOCIATED WITH THE DEPENDENT VARIABLE.   SPAD0097
+C                     INDX4 INDICATES WHICH OF THE EQNS. COEFFICIENTS   SPAD0098
+C                     MUST BE GENERATED FOR. THUS, USER MUST BRANCH ON  SPAD0099
+C                     INDX4 (IN COCAL) IF MORE THAN 1 DEPENDENT VARIABLESPAD0100
+C     V(2000)   = U   FUNCTION VALUES AT MESH POINTS. U(I) = FUNCTION   SPAD0101
+C                     VALUE AT NET POINT I. THERE WILL BE FUNCT. VALUES SPAD0102
+C                     FOR ALL POINT RECORDS--THIS INCLUDES THE POINT    SPAD0103
+C                     RECORDS WHICH MAY HAVE BEEN LOADED BY THE USER    SPAD0104
+C                     AND THE POINT RECORDS FOR REG. INT. PTS GENERATED SPAD0105
+C                     BY SPAD. ALL OF THE FORMER ARE SOLVED BEFORE THE  SPAD0106
+C                     LATTER IN THE ITERATION SCHEME.                   SPAD0107
+C     NSTO(L)   = N   MESH POINT NUMBER (NAME) CORRESPONDING TO MESH    SPAD0108
+C                     POINT X AND Y.                                    SPAD0109
+      DIMENSION LAZ(200), AA(50)                                        SPAD0110
+C     THE DIMENSION OF LAZ IS THE MAXIMUM NUMBER OF POINTS WHICH CAN BE SPAD0111
+C       OMITTED.  (SEE COMMENTS ABOVE STATEMENT 133 AND 134.)           SPAD0112
+     0DIMENSION IOU(50),KN(50),MAXI(50),NSTO(10000),ASTO(9900),         SPAD0113
+     1 V(2000),MX(25),MWHY(25),KOMIT(50),LOMIT(50)                      SPAD0114
+C          PROGRAM BEGINS HERE.  (1ST STATEMENT OF SPAD)                SPAD0115
+ 1    EPS=.0001                                                         SPAD0116
+      SAVE=+1.                                                          SPAD0117
+      NUT1 = 4                                                          SPAD0118
+      NUT2 = 10                                                         SPAD0119
+      NINPT = -14                                                       SPAD0120
+      NUT3  = XABSF(NINPT)                                              SPAD0121
+C     NUT1, NUT2, NUT3, AND NINPT ARE TAPE UNITS USED IN SPADE (OPT.).  SPAD0122
+C      IF USED, THEY MAY BE CHANGED TO OTHER UNITS BY THE USER IN       SPAD0123
+C      THE SETUP SUBROUTINE.                                            SPAD0124
+      LNSTO =  10000                                                    SPAD0125
+      LASTO = 9900                                                      SPAD0126
+                                                                        SPAD0127
+      KUN   =   2000                                                    SPAD0128
+C     KUN SHOULD EQUAL THE DIMENSION OF V.                              SPAD0129
+      MX1   =   50                                                      SPAD0130
+ 66   JWX1=-1                                                           SPAD0131
+      JWX2 = -9700                                                      SPAD0132
+      I3=0                                                              SPAD0133
+C                                                                       SPAD0134
+ 666  CALL SETUP (IOU,KN,MAXI,NSTO,ASTO,NUMBR,JV,MAXJ,OMEGA,            SPAD0135
+     1   V,SH,SK,NUPPP,MX,MWHY,KDPV,INCD,NPAIR,KOMIT,LOMIT,NA4,N111,    SPAD0136
+     2 EPS, JWX1, JWX2, I3, NUT1, NUT2, NUT3, NINPT, X1, X2, MX1, MX2)  SPAD0137
+C     X1, X2, AND MX2 ARE NOT USED AT PRESENT.                          SPAD0138
+      MMX1  =   MX1                                                     SPAD0139
+      IF (NINPT) 661,661, 65                                            SPAD0140
+ 65   REWIND  NINPT                                                     SPAD0141
+ 661  IF (JWX2) 68,68, 67                                               SPAD0142
+ 67   REWIND  NUT1                                                      SPAD0143
+      REWIND  NUT2                                                      SPAD0144
+      JWX2A = LASTO - (LNSTO -JWX2)                                     SPAD0145
+ 68   SSJ = JV                                                          SPAD0146
+C     SET SSJ TO ORDINATE VALUE OF LOWEST ROW.                          SPAD0147
+      LPOR = NUPPP*KDPV                                                 SPAD0148
+      LPOR1 = LPOR +1                                                   SPAD0149
+      LPOR2 = LPOR +2                                                   SPAD0150
+C                                                                       SPAD0151
+C     GENERATE POINT RECORDS FOR INTERIOR PT.S                          SPAD0152
+      NYC=0                                                             SPAD0153
+C                                                                       SPAD0154
+C     DO 134 FORMS A TABLE CONTAINING A LIST OF ALL OMITTED PTS.        SPAD0155
+C     THUS, L8 AND L9 ARE SIMPLY EXPANDED TO ANOTHER TABLE (LAZ(LSST)). SPAD0156
+C     NPAIR (N7) IS THE NO. OF ITEMS IN LIST L8 (OR L9).                SPAD0157
+C     L8 AND L9 CONTAIN A LIST OF PTS. TO BE OMITTED.  L8 CONTAINS      SPAD0158
+C     THE STARTING PTS. WHILE L9 CONTAINS THE CORRESPONDING ENDING PTS. SPAD0159
+C     DO 133 IS A MINOR LOOP WHICH EXPANDS EACH SET OF L8 AND L9.       SPAD0160
+C     NYC IS THE LENGTH OF TABLE LAZ.  (TOTAL PTS. TO BE OMITTED).      SPAD0161
+C                                                                       SPAD0162
+      DO134JDEX=1,NPAIR                                                 SPAD0163
+      LSPKT=LOMIT(JDEX)-KOMIT(JDEX)+1                                   SPAD0164
+      DO133IDEX=1,LSPKT                                                 SPAD0165
+      LSST=NYC+IDEX                                                     SPAD0166
+ 133  LAZ(LSST)=KOMIT(JDEX)+IDEX-1                                      SPAD0167
+ 134  NYC=NYC+LSPKT                                                     SPAD0168
+C                                                                       SPAD0169
+C     NA4 (N8) IS THE NO. OF CELLS OCCUPIED BY LIST L4,                 SPAD0170
+C      WHERE L4 IS THE FIXED POINT PORTIONS OF THE POINT RECORDS        SPAD0171
+C     L--L4(L) IS THE FIRST CELL FOLLOWING THE INPUT FIXED POINT        SPAD0172
+C      PORTIONS OF POINT RECORDS                                        SPAD0173
+C     NA5 IS THE NUMBER OF CELLS IN LIST C5, WHICH CONTAINS THE         SPAD0174
+C      FLOATING POINT PORTIONS OF POINT RECORDS.  (EACH FLOATING POINT  SPAD0175
+C      PORTION OF A RECORD OCCUPIES 1 LESS CELL THAN THE FIXED POINT    SPAD0176
+C      PORTION OF THAT RECORD.)                                         SPAD0177
+C     LL--C5(LL) IS THE FIRST CELL FOLLOWING THE INPUT FLOATING POINT   SPAD0178
+C      PORTIONS                                                         SPAD0179
+C                                                                       SPAD0180
+      NA5=NA4-NUMBR                                                     SPAD0181
+      IF(JWX2)72,72,70                                                  SPAD0182
+ 70   IF(NA4)72,72,71                                                   SPAD0183
+ 71   WRITE TAPE  NUT1, (NSTO(I), I =1, NA4), (ASTO(I), I = 1, NA5)     SPAD0184
+      WRITE TAPE  NUT2, (NSTO(I), I =1, NA4), (ASTO(I), I = 1, NA5)     SPAD0185
+      L=1                                                               SPAD0186
+      LL=1                                                              SPAD0187
+      GO TO 73                                                          SPAD0188
+ 72   L=NA4+1                                                           SPAD0189
+       LL=NA5+1                                                         SPAD0190
+ 73   MAXYP=0                                                           SPAD0191
+C                                                                       SPAD0192
+C     DO 100 SEARCHES THE POINT PATTERN FOR THE ALGEBRAIC MAXIMUM AND   SPAD0193
+C      MINIMUM Y-DISTANCES (MAXYP AND MINYP) FROM THE CENTER OF         SPAD0194
+C      THE POINT PATTERN                                                SPAD0195
+C     MAXYP--THE MAX. Y DISTANCE OF PT. PATTERN  (OF NEIGHBOR PTS.)     SPAD0196
+C     NA6 IS THE NUMBER OF THE LAST ROW THAT MAY CONTAIN REGULAR        SPAD0197
+C      INTERIOR PTS.                                                    SPAD0198
+C                                                                       SPAD0199
+      DO 100INDX1=1,NUPPP                                               SPAD0200
+      MINYP= XMIN0F(MWHY(INDX1),MINYP)                                  SPAD0201
+ 100  MAXYP=XMAX0F(MWHY(INDX1),MAXYP)                                   SPAD0202
+       MINYP=-MINYP                                                     SPAD0203
+      NA6=MAXJ-MAXYP-1                                                  SPAD0204
+C                                                                       SPAD0205
+C     THIS SECTION GENERATES THE POINT RECORDS OF THE REGULAR INTERIOR  SPAD0206
+C      POINTS, PROCEEDING IN ORDER OF INCREASING ROW NUMBER, AND        SPAD0207
+C      FROM LEFT TO RIGHT WITHIN EACH ROW.                              SPAD0208
+C     INDEX J COUNTS ON ROW NUMBER. (J+1 IS 1ST ROW WITH REG. INT. PTS.)SPAD0209
+C     MIKKY--THE NUMBER OF MESH UNITS FROM THE Y-AXIS TO THE            SPAD0210
+C      FIRST REGULAR INTERIOR POINT                                     SPAD0211
+C                                                                       SPAD0212
+ 1010 LK=0                                                              SPAD0213
+      LPT=0                                                             SPAD0214
+      LPTA=0                                                            SPAD0215
+      DO 171J=MINYP,NA6                                                 SPAD0216
+      MIKKY=0                                                           SPAD0217
+      NA7=MAXI(J+1)                                                     SPAD0218
+      IF (NA7) 171,171,101                                              SPAD0219
+C     JUMP TO 171 IF THERE ARE NO REGULAR INT. PTS. IN THE CURRENT ROW. SPAD0220
+ 101  MIKKY=MIKKY+1                                                     SPAD0221
+C                                                                       SPAD0222
+C     THIS LOOP SEARCHES THE ROW BEING PROCESSED (BEGINNING AT THE LEFT SPAD0223
+C      END) FOR INTERIOR POINTS THAT ARE NOT REGULAR I.P.,              SPAD0224
+C      UNTIL A REGULAR INTERIOR POINT IS ENCOUNTERED.                   SPAD0225
+C     INDX1 COUNTS POSITION IN THE SET OF POINT PATTERN NUMBERS.        SPAD0226
+C     INDX7 IS NUMBER OF ROW ON WHICH THE CURRENT POINT (OF POINT       SPAD0227
+C      PATTERN) LIES                                                    SPAD0228
+C     MIKKY IS INCREASED BY ONE IF ONE OF POINTS ADJACENT TO CURRENT PT.SPAD0229
+C      IS AN EXTERIOR POINT (OUTSIDE THE BOUNDARY CURVE)                SPAD0230
+C                                                                       SPAD0231
+      DO 102INDX1=1,NUPPP                                               SPAD0232
+      INDX7=J+MWHY(INDX1)+1                                             SPAD0233
+      IF (IOU(INDX7)-MX(INDX1)-MIKKY)102,102,101                        SPAD0234
+ 102  CONTINUE                                                          SPAD0235
+C                                                                       SPAD0236
+C     NA7--L3(J+1), NUMBER OF REGULAR INTERIOR POINTS IN ROW            SPAD0237
+C      BEING PROCESSED                                                  SPAD0238
+C     NA777 IS THE NUMBER OF REGULAR INTERIOR POINTS, RELATIVE TO MIKKY.SPAD0239
+C                                                                       SPAD0240
+      IMS=KN(J+1)-IOU(J+1)                                              SPAD0241
+      NA777=NA7+MIKKY-1                                                 SPAD0242
+      SSSJ=J                                                            SPAD0243
+      SJ=SSJ+SSSJ                                                       SPAD0244
+C                                                                       SPAD0245
+C     THIS LOOP GENERATES POINT RECORDS FOR REGULAR INTERIOR POINTS     SPAD0246
+C      IN THE CURRENT ROW.                                              SPAD0247
+C     SI IS FLOATING POINT VALUE (FOR COCAL) OF X-COORDINATE OF CURRENT SPAD0248
+C      POINT (OF THE CURRENT ROW) (IN UNITS OF H)                       SPAD0249
+C     SJ IS FLOATING POINT VALUE (FOR COCAL) OF Y-COORDINATE OF CURRENT SPAD0250
+C      ROW (IN UNITS OF K) -- SSJ = N2 IN FLOATING POINT.               SPAD0251
+C     NSTO(L) WILL CONTAIN THE NAME OF THE CURRENT REG. INT. PT. OF THE SPAD0252
+C      CURRENT ROW.                                                     SPAD0253
+C     KN(J+1) IS NAME OF FIRST INTERIOR OR BOUNDARY POINT IN CURRENT ROWSPAD0254
+C     I IS COUNTER WHICH IS USED TO NAME SUCCESSIVE REGULAR INTERIOR PTSSPAD0255
+C     THE LAST TERM ADDS A CONSTANT (AN INTEGRAL MULTIPLE OF ALPHA)     SPAD0256
+C      TO DISTINGUISH NAMES OF POINTS OF SEVERAL DEPENDENT VARIABLES.   SPAD0257
+C                                                                       SPAD0258
+      DO 17INDX4=1,KDPV                                                 SPAD0259
+      ICD = (INDX4 -1)*INCD                                             SPAD0260
+      DO 17I=MIKKY,NA777                                                SPAD0261
+ 16   SI=I                                                              SPAD0262
+      IMT = IMS +I                                                      SPAD0263
+      NSTO(L) = IMT +ICD                                                SPAD0264
+      DO135JDEX=1,NYC                                                   SPAD0265
+      IF (IMT -LAZ(JDEX)) 135, 17, 135                                  SPAD0266
+C                                                                       SPAD0267
+C     TEST WHETHER CURRENT PT. IS IN LIST OF OMITTED PTS.               SPAD0268
+C      IF YES, BYPASS COCAL (FOR THIS POINT).                           SPAD0269
+ 135  CONTINUE                                                          SPAD0270
+C                                                                       SPAD0271
+C     COCAL GENERATES THE COEFFICIENTS OF THE DIFFERENCE EQUATIONS,     SPAD0272
+C      GIVEN X AND Y COORDINATES OF A REG. INT. PT. (USER MUST PROVIDE  SPAD0273
+C      COCAL). INDX4 INDICATES WHICH OF THE EQUATIONS COEFFICIENTS ARE  SPAD0274
+C      TO BE GENERATED FOR.  THUS, USER MUST BRANCH ON INDX4 IN COCAL,  SPAD0275
+C      IF MORE THAN 1 EQUATION (SEE SEVERAL DEPENDENT VARIABLES).       SPAD0276
+C     NSTO(L+1) CONTAINS THE TOTAL NO. OF COEFFICIENTS OF THE DIFFERENCESPAD0277
+C      EQUATION FOR U(N). THE PROGRAM ASSUMES THAT THE VALUE OF EACH    SPAD0278
+C      DEPENDENT VARIABLE AT EACH POINT OF THE POINT PATTERN ENTERS INTOSPAD0279
+C      THE EQUATION. FOR EXAMPLE, IN A 4 PT. PATTERN AND 2 DEPENDENT    SPAD0280
+C      VARIABLES, THE PROGRAM WILL ALLOW 8 STORAGES FOR THE COEFFICIENTSSPAD0281
+C      EVEN IF THE LATTER FOUR ARE ZERO, AND THE CONSTANT TERM MUST BE  SPAD0282
+C      STORED IN THE 9TH CELL (BY COCAL).                               SPAD0283
+C                                                                       SPAD0284
+      CALL COCAL(SI, SJ, AA, INDX4, V, NSTO(L), INCD,N111,SH,SK,X1,X2,  SPAD0285
+     1 MX1, MX2)                                                        SPAD0286
+C     X1, X2, AND MX2 ARE NOT USED AT PRESENT.                          SPAD0287
+      NSTO(L+1) = LPOR                                                  SPAD0288
+C                                                                       SPAD0289
+C     THIS SECTION OF PROGRAM STORES THE POINT RECORD FOR THE CURRENT   SPAD0290
+C      REGULAR INTERIOR POINT IN THE TABLES WHICH CONTAIN ALL THE POINT SPAD0291
+C      RECORDS.  ONE EXECUTION OF THE LOOP STORES THE NAME OF A NEIGHBORSPAD0292
+C      POINT N(I) IN TABLE L4, AND THE COEFFICIENT C(N(I)) IN TABLE C5. SPAD0293
+C     IX CONTROLS REPETITION FOR EACH OF NEIGHBOR POINTS IN PT. PATTERN.SPAD0294
+C     INDX5 CONTROLS REPETITION FOR EACH OF THE DEPENDENT VARIABLES.    SPAD0295
+C     ITRM21--LOCATION OF THE COEFFICIENT C(N(I)) IN TABLE (SEE AA)     SPAD0296
+C      OF COEFFICIENTS GENERATED BY COCAL                               SPAD0297
+C     ITRM22--LOCATION AT WHICH N(I) IS TO BE STORED (CONSECUTIVELY)    SPAD0298
+C     L--INITIAL LOCATION OF N(I) STORAGE                               SPAD0299
+C     ITRM24--LOCATION AT WHICH C(N(I)) IS TO BE STORED (CONSECUTIVELY) SPAD0300
+C     LL--INITIAL LOCATION OF THE C(N(I)) STORAGE                       SPAD0301
+C     ITRM23--NUMBER OF ROW ON WHICH POINT N(I) IS LOCATED              SPAD0302
+C     NSTO(ITRM22) CONTAINS THE NAME N(I) OF A NEIGHBOR POINT (USED IN  SPAD0303
+C      CALCULATION OF U(N).)                                            SPAD0304
+C     KN(ITRM23)=L2 (NODE PT. NAME) OF ROW ON WHICH N(I) IS LOCATED.    SPAD0305
+C     I--NUMBER OF INTERIOR PTS. PREVIOUS TO FIRST REGULAR INTERIOR PT. SPAD0306
+C     IOU(ITRM23)=L1 (NO. OF MESH UNITS IN X-DIRECTION FROM Y-AXIS) OF  SPAD0307
+C      ROW ON WHICH POINT N(I) IS LOCATED.                              SPAD0308
+C     LAST TERM ADDS MULTIPLE OF ALPHA IF SEVERAL DEPENDENT VARIABLES   SPAD0309
+C     ASTO CONTAINS COEFFICIENT C(N(I))                                 SPAD0310
+C                                                                       SPAD0311
+      LP1 = L +1                                                        SPAD0312
+      DO 103 IX = 1, NUPPP                                              SPAD0313
+      ITRM23 = J +1 +MWHY(IX)                                           SPAD0314
+      IMSV = KN(ITRM23) -IOU(ITRM23) +MX(IX)                            SPAD0315
+      DO 103 INDX5 = 1, KDPV                                            SPAD0316
+      ITRM21 = IX +(INDX5 -1)*NUPPP                                     SPAD0317
+      ITRM22 = ITRM21 +LP1                                              SPAD0318
+ 103  NSTO(ITRM22) = IMSV +I +(INDX5 -1)*INCD                           SPAD0319
+      L = L +LPOR2                                                      SPAD0320
+      IEND = LL +LPOR                                                   SPAD0321
+      JT = 1                                                            SPAD0322
+      DO 105 IT=   LL, IEND                                             SPAD0323
+      ASTO(IT)= AA(JT)                                                  SPAD0324
+ 105  JT = JT +1                                                        SPAD0325
+      LL = IEND +1                                                      SPAD0326
+C     INCREASE LL BY NO. OF CELLS OCCUPIED BY FLOATING POINT PORTION.   SPAD0327
+      IF(JWX2)17,17,204                                                 SPAD0328
+ 204  LPT=LPT+1                                                         SPAD0329
+C     LPT(=LPTA) IS THE NO. OF REG. INTERIOR PTS. IN A GROUP.           SPAD0330
+C     JWX2 MUST BE SMALLER THAN THE DIMENSION OF L4 BY 2(2+NUPPP*KDPV). SPAD0331
+      IF (L -JWX2) 208, 205,205                                         SPAD0332
+ 208  IF (LL -JWX2A) 17, 205, 205                                       SPAD0333
+ 205  WRITE TAPE  NUT1, (NSTO(M), M =1, L), (ASTO(M), M = 1, LL)        SPAD0334
+      WRITE TAPE NUT2, (NSTO(M), M =1, L), (ASTO(M), M = 1, LL)         SPAD0335
+      IF(LPTA-LPT)98,98,99                                              SPAD0336
+ 98   LPTA=LPT                                                          SPAD0337
+C     LPTA WILL CONTAIN THE MAX. NO. OF REG. INT. PT. RECORDS           SPAD0338
+C      IN A GROUP.  (FINAL GROUP MAY CONTAIN LESS.)                     SPAD0339
+ 99   LT=L                                                              SPAD0340
+      LLT=LL                                                            SPAD0341
+      L=1                                                               SPAD0342
+      LL=1                                                              SPAD0343
+      LK=LK+1                                                           SPAD0344
+      LPT=0                                                             SPAD0345
+C     LK (=LKA) IS THE NO. OF GROUPS OF REG. INTERIOR POINT             SPAD0346
+C      RECORDS SAVED ON TAPES NUT1 (8) AND NUT2 (9).                    SPAD0347
+ 17   CONTINUE                                                          SPAD0348
+ 171  CONTINUE                                                          SPAD0349
+      IF (JWX2) 19,19, 42                                               SPAD0350
+ 42   IF (LPT) 18,18, 41                                                SPAD0351
+ 41   WRITE TAPE  NUT1, (NSTO(M), M = 1, LT), (ASTO(M), M = 1, LLT)     SPAD0352
+      WRITE TAPE  NUT2, (NSTO(M), M = 1, LT), (ASTO(M), M = 1, LLT)     SPAD0353
+      LK=LK+1                                                           SPAD0354
+ 18   REWIND  NUT1                                                      SPAD0355
+      REWIND  NUT2                                                      SPAD0356
+ 19   IF (NINPT) 207,207, 206                                           SPAD0357
+ 206  READ TAPE  NINPT, (V(I), I = 1, KUN)                              SPAD0358
+C     KUN SHOULD EQUAL THE DIMENSION OF V.  (OR U)                      SPAD0359
+      REWIND  NINPT                                                     SPAD0360
+C     READ GUESSES FROM PREVIOUS RUN.  (IF NINPT=+)                     SPAD0361
+ 207  NA32 = 0                                                          SPAD0362
+      LQ=MAXJ-MAXYP-1                                                   SPAD0363
+C                                                                       SPAD0364
+C     DO 27 COMPUTES NA32, THE TOTAL NUMBER OF REGULAR INTERIOR POINTS. SPAD0365
+C     MINYP AND LQ ARE RESPECTIVELY THE FIRST AND LAST ROWS             SPAD0366
+C      IN WHICH THERE MAY BE REGULAR INTERIOR POINTS.                   SPAD0367
+C                                                                       SPAD0368
+C     NPONT IS THE TOTAL NUMBER OF POINT RECORDS. ((NA32-NYC) IS THE    SPAD0369
+C      NO. OF POINT RECORDS FOR REGULAR INTERIOR PTS.)  NYC IS THE TOTALSPAD0370
+C      (IF ANY) NO. OF POINTS TO BE OMITTED.                            SPAD0371
+C                                                                       SPAD0372
+      DO 27J=MINYP,LQ                                                   SPAD0373
+ 27   NA32=NA32+MAXI(J+1)                                               SPAD0374
+      IF(NPAIR)137,136,137                                              SPAD0375
+C     IF THERE ARE NO OMITTED POINTS, NYC (INITIALLY 1) MUST BE SET TO 0SPAD0376
+ 136  NYC=0                                                             SPAD0377
+ 137  NPONT = (NA32 -NYC)*KDPV +NUMBR                                   SPAD0378
+C                                                                       SPAD0379
+C        HERE BEGINS THE ITERATION SECTION OF THE PROGRAM.              SPAD0380
+C        THE POINT RECORDS SUPPLIED BY THE PROGRAMMER OR GENERATED      SPAD0381
+C         BY COCAL CONTAIN ALL INFORMATION                              SPAD0382
+C                                                                       SPAD0383
+C                                                                       SPAD0384
+C        NPR   --IF SPAD CHECKS CONVERGENCE DURING AN ITERATION,        SPAD0385
+C         NPR COUNTS THE NUMBER OF V(I) THAT HAVE CONVERGED.            SPAD0386
+C        NKONT --THE NUMBER OF V(I) ALREADY COMPUTED DURING             SPAD0387
+C         AN ITERATION.                                                 SPAD0388
+C        LIMIT --THE NUMBER OF V(I) COMPUTED FROM THE BEGINNING         SPAD0389
+C         OF AN ITERATION TO THE END OF THE GROUP PRESENTLY IN          SPAD0390
+C         CORE.  (NORMAL CASE, ALL RECORDS IN CORE, LIMIT               SPAD0391
+C         INITIALIZED TO NPONT.)                                        SPAD0392
+C        LA   --ADDRESS OF 2ND ENTRY IN THE FIXED-POINT RECORD          SPAD0393
+C         OF THE NEXT V(I), THE NUMBER OF NEIGHBOR PTS. IN ITS          SPAD0394
+C         RECORD.                                                       SPAD0395
+C        IHK   --THE NUMBER OF V(I), OF THE GROUP PRESENTLY IN          SPAD0396
+C         CORE, ALREADY COMPUTED, +2.                                   SPAD0397
+C                                                                       SPAD0398
+ 138  NPR = NPONT                                                       SPAD0399
+      NKONT = 0                                                         SPAD0400
+      LIMIT = NPONT                                                     SPAD0401
+      LA = 2                                                            SPAD0402
+      IHK = 2                                                           SPAD0403
+      OMEGB = OMEGA -1.                                                 SPAD0404
+C                                                                       SPAD0405
+C        INITIALIZE SWITCH  NTP  TO NORMAL CASE--INPUT POINT            SPAD0406
+C         RECORDS PRECEDE RECORDS OF REGULAR INTERIOR POINTS.           SPAD0407
+C        INITIALIZE SWITCH  IESKP  TO NORMAL CASE--ALL POINT            SPAD0408
+C         RECORDS IN CORE, END OF GROUP SAME AS END OF ITERATION.       SPAD0409
+C                                                                       SPAD0410
+      IF(NUMBR) 1380,1380,1383                                          SPAD0411
+ 1380 ASSIGN 120 TO NTP                                                 SPAD0412
+      GO TO 1384                                                        SPAD0413
+ 1383 ASSIGN 9 TO NTP                                                   SPAD0414
+ 1384 ASSIGN 7 TO IESKP                                                 SPAD0415
+C                                                                       SPAD0416
+C        IF JWX1 IS -, SPAD IS TO CHECK CONVERGENCE DURING THIS         SPAD0417
+C         ITERATION.  SET SWITCH KTST SO THAT A NEW V(I) WILL BE        SPAD0418
+C         COMPARED TO THE VALUE COMPUTED BY THE PREVIOUS ITERATION.     SPAD0419
+C        OTHERWISE SET KTST TO SKIP THE CONVERGENCE TEST.               SPAD0420
+C                                                                       SPAD0421
+      IF (JWX1) 1381, 1382,1382                                         SPAD0422
+ 1381 ASSIGN 127 TO KTST                                                SPAD0423
+      GO TO 406                                                         SPAD0424
+ 1382 ASSIGN 124 TO KTST                                                SPAD0425
+C        IF JWX2 IS +, THE POINT RECORDS ARE STORED ON TAPE--WITH       SPAD0426
+C         LK GROUPS OF REGULAR INTERIOR POINTS, POSSIBLY PRECEDED       SPAD0427
+C         BY A GROUP OF INPUT POINT RECORDS.                            SPAD0428
+C                                                                       SPAD0429
+ 406  IF(JWX2)6,6,300                                                   SPAD0430
+C                                                                       SPAD0431
+C                                                                       SPAD0432
+C        LIMIT IS UPDATED BEFORE COMPUTATION OF V(I) IN EACH GROUP.     SPAD0433
+C        LKA  --THE NUMBER OF GROUPS OF REGULAR INTERIOR POINT          SPAD0434
+C         RECORDS YET TO BE READ DURING THIS ITERATION.                 SPAD0435
+C        INITIALIZE SWITCH  IESKP  TO RETURN TO TAPE READ-IN WHEN       SPAD0436
+C         A GROUP IS FINISHED.                                          SPAD0437
+C        THE POINT RECORDS HAVE BEEN WRITTEN ON TWO TAPES, NUT1         SPAD0438
+C         AND NUT2.  DURING EACH ITERATION, ONE OF THESE TAPES IS       SPAD0439
+C         REWOUND, AND POINT RECORDS ARE READ FROM THE OTHER.           SPAD0440
+C        FLIP IS THE SWITCH THAT CONTROLS THIS ALTERNATION.             SPAD0441
+ 300  LIMIT = 0                                                         SPAD0442
+      LKA = LK                                                          SPAD0443
+      ASSIGN 326 TO IESKP                                               SPAD0444
+      IF (FLIP) 224, 324, 224                                           SPAD0445
+C                                                                       SPAD0446
+C        RESET FLIP TO ALTERNATE VALUE.                                 SPAD0447
+C        IF NA4 NON-POSITIVE, THERE ARE NO INPUT POINT RECORDS.         SPAD0448
+C         TRANSFER TO READ IN REGULAR INTERIOR POINT RECORDS.           SPAD0449
+C        OTHERWISE, READ INPUT POINT RECORDS, SET LIMIT TO NUMBER       SPAD0450
+C         OF RECORDS IN THIS GROUP, TRANSFER TO BEGIN COMPUTATION       SPAD0451
+C         LOOP OF ITERATION.                                            SPAD0452
+C                                                                       SPAD0453
+ 224  FLIP=0.                                                           SPAD0454
+      REWIND  NUT2                                                      SPAD0455
+      IF(NA4)326,326,225                                                SPAD0456
+ 225  READ TAPE  NUT1, (NSTO(I), I = 1, NA4), (ASTO(I), I = 1, NA5)     SPAD0457
+      GO TO 339                                                         SPAD0458
+C                                                                       SPAD0459
+ 324  FLIP=1.                                                           SPAD0460
+      REWIND  NUT1                                                      SPAD0461
+      IF(NA4)326,326,325                                                SPAD0462
+ 325  READ TAPE  NUT2, (NSTO(I), I = 1, NA4), (ASTO(I), I = 1, NA5)     SPAD0463
+ 339  LIMIT = NUMBR                                                     SPAD0464
+      GO TO 6                                                           SPAD0465
+C                                                                       SPAD0466
+C        READ IN A GROUP OF REGULAR INTERIOR POINTS FROM TAPE,          SPAD0467
+C         AND INITIALIZE FOR COMPUTATION OF V(I) IN THIS GROUP.         SPAD0468
+C         (LA AND IHK ARE RELATED TO LOCATION OF POINT RECORDS          SPAD0469
+C         IN CORE DURING COMPUTATION.)                                  SPAD0470
+C        LIMIT IS UPDATED TO THE END OF THE GROUP TO BE READ IN.        SPAD0471
+C                                                                       SPAD0472
+ 326  IHK = 2                                                           SPAD0473
+      LA = 2                                                            SPAD0474
+      LIMIT = LIMIT + LPTA                                              SPAD0475
+ 330  IF(FLIP)328,329,328                                               SPAD0476
+C                                                                       SPAD0477
+ 328  READ TAPE  NUT2, (NSTO(I), I = 1, LT),  (ASTO(I), I = 1, LLT)     SPAD0478
+      GO TO 331                                                         SPAD0479
+ 329  READ TAPE  NUT1, (NSTO(I), I = 1, LT),  (ASTO(I), I = 1, LLT)     SPAD0480
+C                                                                       SPAD0481
+C        IF LKA=0, THE GROUP JUST READ IN IS THE LAST.  SET IESKP       SPAD0482
+C         TO THE END-OF-ITERATION ALTERNATIVE, AND UPDATE LIMIT         SPAD0483
+C         TO THE TOTAL NUMBER OF POINT RECORDS.                         SPAD0484
+C                                                                       SPAD0485
+ 331  LKA=LKA-1                                                         SPAD0486
+      IF (LKA) 334,334, 6                                               SPAD0487
+ 334  LIMIT = NPONT                                                     SPAD0488
+      ASSIGN 7 TO IESKP                                                 SPAD0489
+C                                                                       SPAD0490
+C        THERE FOLLOWS THE COMPUTATION LOOP.  V(I) ARE COMPUTED         SPAD0491
+C         SUCCESSIVELY UNTIL THE END OF THE GROUP IN CORE IS            SPAD0492
+C         REACHED, OR ALL V(I) HAVE BEEN COMPUTED.                      SPAD0493
+C                                                                       SPAD0494
+C        IHK   --THE DIFFERENCE IN INDEX BETWEEN CORRESPONDING          SPAD0495
+C         ENTRIES IN NSTO AND ASTO.(THE FIXED-POINT AND FLOATING-       SPAD0496
+C         POINT PORTIONS OF POINT-RECORDS.)                             SPAD0497
+C        NLA   --THE NUMBER OF NEIGHBOR POINTS IN THE POINT RECORD      SPAD0498
+C         OF THE CURRENT V(I),(THE 2ND ENTRY OF ITS FIXED-POINT         SPAD0499
+C         RECORD.                                                       SPAD0500
+C        IK3   --THE NUMBER ASSIGNED TO THE V(I) CURRENTLY BEING        SPAD0501
+C         COMPUTED,(THE 1ST ENTRY OF ITS FIXED-POINT RECORD.)           SPAD0502
+C        IBGN, IEND -- RESPECTIVELY THE FIRST AND LAST POINT            SPAD0503
+C          NUMBERS OF NEIGHBOR POINTS IN THE CURRENT FIXED-             SPAD0504
+C          POINT RECORD.                                                SPAD0505
+C                                                                       SPAD0506
+ 6    NLA = NSTO(LA)                                                    SPAD0507
+      IK3 = NSTO(LA-1)                                                  SPAD0508
+      IBGN = LA +1                                                      SPAD0509
+      IEND = LA +NLA                                                    SPAD0510
+      T1 = 0.                                                           SPAD0511
+C        DO 3 COMPUTES THE NEW V(I), EXCEPT FOR THE CONSTANT TERM.      SPAD0512
+C        IK2   --POINT NUMBER OF A NEIGHBOR POINT, EXTRACTED FROM       SPAD0513
+C         FIXED-POINT RECORD.                                           SPAD0514
+C        J     --LOCATION OF CORRESPONDING ENTRY IN FLOATING-POINT      SPAD0515
+C         RECORD.                                                       SPAD0516
+C        T1    --IN WHICH THE PARTIAL SUM OF (COEFFICIENTS*V(NEIGH-     SPAD0517
+C         BOR POINTS)) IS ACCUMULATED.                                  SPAD0518
+C                                                                       SPAD0519
+      DO 3 I = IBGN, IEND                                               SPAD0520
+      IK2 = NSTO(I)                                                     SPAD0521
+      J = I -IHK                                                        SPAD0522
+ 3    T1 = T1 + ASTO(J)*V(IK2)                                          SPAD0523
+C                                                                       SPAD0524
+C        TACK ON THE CONSTANT TERM.                                     SPAD0525
+      T1 = T1 + ASTO(J+1)                                               SPAD0526
+      LA = IEND +2                                                      SPAD0527
+      IHK = IHK +1                                                      SPAD0528
+      NKONT=NKONT+1                                                     SPAD0529
+C                                                                       SPAD0530
+C        SWITCH  NTP  BRANCHES ON TYPE OF POINT RECORD,GOING TO         SPAD0531
+C         9 IF AN INPUT POINT RECORD, TO 120 IF A REGULAR INTERIOR      SPAD0532
+C         POINT RECORD.                                                 SPAD0533
+C                                                                       SPAD0534
+C        IF (NUMBR-NKONT) IS ZERO, ALL V(I) CORRESPONDING TO INPUT      SPAD0535
+C         POINT RECORDS HAVE BEEN COMPUTED.  SWITCH NTP IS SET          SPAD0536
+C         TO THE REGULAR INTERIOR POINT EXIT.                           SPAD0537
+      GO TO NTP, (9, 120)                                               SPAD0538
+ 9    IF (NUMBR -NKONT) 128,128, 121                                    SPAD0539
+ 128  ASSIGN 120 TO NTP                                                 SPAD0540
+      GO TO 121                                                         SPAD0541
+C                                                                       SPAD0542
+C        OVERRELAXATION IS APPLIED TO ALL BUT INPUT POINT RECORDS.      SPAD0543
+C                                                                       SPAD0544
+C        SWITCH  KTST  HAS BEEN SET TO 127 IF CONVERGENCE IS TO BE      SPAD0545
+C         TESTED DURING THIS ITERATION, OTHERWISE TO 124.               SPAD0546
+C                                                                       SPAD0547
+C        A RELATIVE CONVERGENCE TEST AGAINST THE CRITERION EPS.         SPAD0548
+C        IF THE TEST IS PASSED, NPR IS REDUCED BY 1.                    SPAD0549
+C                                                                       SPAD0550
+ 120  T1 = OMEGA*T1 -OMEGB*V(IK3)                                       SPAD0551
+ 121  GO TO KTST, (127, 124)                                            SPAD0552
+C                                                                       SPAD0553
+ 127  IF ( ABSF((V(IK3)-T1)/T1) -EPS) 123,123, 124                      SPAD0554
+ 123  NPR=NPR-1                                                         SPAD0555
+C                                                                       SPAD0556
+C        STORE THE NEW V(I).                                            SPAD0557
+ 124  V(IK3) = T1                                                       SPAD0558
+C                                                                       SPAD0559
+C        COMPARE NKONT AND LIMIT TO DETERMINE IF THE END OF THE         SPAD0560
+C         GROUP NOW IN CORE (OR OF THE ITERATION) HAS BEEN REACHED.     SPAD0561
+C                                                                       SPAD0562
+C        SWITCH  IESKP  HAS BEEN SET TO 326 ONLY IF TAPES ARE USED      SPAD0563
+C         AND THE GROUP JUST FINISHED WAS NOT THE LAST.                 SPAD0564
+C                                                                       SPAD0565
+      IF (NKONT - LIMIT) 6, 340,340                                     SPAD0566
+ 340  GO TO IESKP, (7, 326)                                             SPAD0567
+C                                                                       SPAD0568
+C        END OF THE COMPUTATION LOOP.                                   SPAD0569
+C        I3    --THE NUMBER OF THE ITERATION JUST COMPLETED.            SPAD0570
+C                                                                       SPAD0571
+C                                                                       SPAD0572
+C        CONTROL IS TRANSFERRED TO SUBROUTINE CNVRG IF--                SPAD0573
+C         1.SENSE SWITCH 3 IS DOWN,   OR                                SPAD0574
+C         2.NPR=0, INDICATING THAT THE CONVERGENCE CRITERIA HAS         SPAD0575
+C            BEEN SATISFIED BY EVERY ONE OF THE V(I), OR                SPAD0576
+C         3. MMX1 (=MX1) MAJOR ITERATIONS HAVE BEEN COMPLETED.          SPAD0577
+C        OTHERWISE SENSE SWITCH 5 IS TESTED, TO ENSURE THAT CONTROL     SPAD0578
+C         WILL TRANSFER TO CNVRG AT LEAST AT THE END OF EVERY RUN.      SPAD0579
+C        SENSE SWITCH 5 IS PROVIDED SO THAT A RUN MAY BE HALTED         SPAD0580
+C         AND RESULTS SAVED ON NUT3, IF THE RUN EXCEEDS ITS TIME        SPAD0581
+C         ALLOTMENT OR MUST BE INTERRUPTED FOR SOME OTHER REASON.       SPAD0582
+ 7    I3 = I3 +1                                                        SPAD0583
+      MMX1 = MMX1-1                                                     SPAD0584
+      IF(JWX1) 149,125,125                                              SPAD0585
+ 149  IF(MMX1) 125,125,1491                                             SPAD0586
+C     AFTER MMX1 ITERATIONS, GO TO CNVRG.  THIS SHOULD BE USED WHEN     SPAD0587
+C      JWX1 IS NEGATIVE AND SENSE SWITCHES ARE NOT ALLOWED.             SPAD0588
+ 1491 IF(SENSE SWITCH 3) 125,150                                        SPAD0589
+ 150  IF (NPR) 125, 125, 152                                            SPAD0590
+ 152  IF (SENSE SWITCH 5) 125, 126                                      SPAD0591
+C                                                                       SPAD0592
+ 125  CALL CNVRG( V, N111, I3, JWX1, INCD, NPR, EPS, OMEGA, SAVE,       SPAD0593
+     1 X1, X2, MX1, MX2)                                                SPAD0594
+C     X1, X2, AND MX2 ARE NOT USED AT PRESENT.                          SPAD0595
+C        THE FOLLOWING SHOULD BE INCLUDED IN CNVRG                      SPAD0596
+C          1. A TEST OF SENSE SWITCH 5, SO THAT APPROPRIATE ACTION      SPAD0597
+C              IS TAKEN IF THE OPERATOR FORCES A HALT.                  SPAD0598
+C               (PRINTOUT OF RESULTS, SETTING N111 - IF THE V(I)        SPAD0599
+C              ARE TO BE SAVED ON TAPE NUT3)                            SPAD0600
+C          2. IF THE CONVERGENCE-CHECKING FEATURE OF SPAD IS TO BE      SPAD0601
+C              USED, NPR MUST BE TESTED.                                SPAD0602
+C         3. TEST OF SENSE SWITCH 3 AND JWX1.  SPADE TRANSFERS TO       SPAD0603
+C             CNVRG AFTER EACH ITERATION IF SSW 3 IS DOWN, OR JWX1=+.   SPAD0604
+C                                                                       SPAD0605
+C        TEST OF N111--  (DO NOT USE -0 FOR -)                          SPAD0606
+C         1. IF -, SAVE AND SENSE SWITCH 5 ARE TESTED, TO DETERMINE     SPAD0607
+C             IF THE SOLUTION IS TO BE SAVED. TESTING OR SAVING         SPAD0608
+C             COMPLETED, THE PROGRAM RETURNS TO STATEMENT 1             SPAD0609
+C             FOR THE NEXT CASE.                                        SPAD0610
+C         2. IF 0, ANOTHER ITERATION IS BEGUN.                          SPAD0611
+C         3. IF +, (THE SET OF EQUATIONS IS NON-LINEAR) SPAD            SPAD0612
+C             PROCEEDS TO GO THROUGH THE WHOLE OPERATION OF SETTING     SPAD0613
+C             UP POINT RECORDS AGAIN, SO THAT COEFFICIENTS THAT         SPAD0614
+C             ARE FUNCTIONS OF THE V(I) MAY BE RECALCULATED.            SPAD0615
+C     FOR THE NON-LINEAR CASE (N11=+1), SPAD ALLOWS THE USER TO         SPAD0616
+C      RECALCULATE COEFFICIENTS WHICH ARE FUNCTIONS OF THE V(I) FOR     SPAD0617
+C      ALL POINT RECORDS.  TO DO THIS, SPAD RETURNS TO STATEMENT 666    SPAD0618
+C      AFTER EACH MAJOR ITERATION.  THUS, THE USER MUST PROVIDE FOR     SPAD0619
+C      THIS IN BOTH SETUP AND COCAL.  ALSO, THE USER MUST NOT CLEAR     SPAD0620
+C      THE V REGION AFTER THE 1ST PASS THRU SETUP.  IF DATA IS LOADED   SPAD0621
+C      FROM TAPE NINPT, THE USER MUST SET NINPT=-14 (OR -K) DURING THE  SPAD0622
+C      2ND PASS THRU SETUP TO PREVENT SPAD FROM RE-LOADING THE DATA.    SPAD0623
+      MMX1 = MX1                                                        SPAD0624
+ 126  IF (N111) 499, 138, 666                                           SPAD0625
+C                                                                       SPAD0626
+C        IF SAVE IS NEGATIVE, OR SENSE SWITCH 5 IS DOWN, THE FINAL      SPAD0627
+C         V(I) WILL BE SAVED ON TAPE NUT3.   (DESTROYS NINPT, IF ANY.)  SPAD0628
+C                                                                       SPAD0629
+ 499  IF(SAVE)501,500,500                                               SPAD0630
+ 500  IF(SENSE SWITCH 5)501,1                                           SPAD0631
+ 501  REWIND  NUT3                                                      SPAD0632
+      WRITE TAPE  NUT3, (V(I), I = 1, KUN)                              SPAD0633
+      REWIND  NUT3                                                      SPAD0634
+C     KUN SHOULD EQUAL THE DIMENSION OF V.  (OR U)                      SPAD0635
+      GO TO 1                                                           SPAD0636
+C                                                                       SPAD0637
+C     THIS PROGRAM IS BEYOND THE MIND OF MORTAL MAN TO CONTEMPLATE.     SPAD0638
+C     LET THE USER BEWARE, AND MAY GOD HAVE MERCY UPON HIS SOUL--       SPAD0639
+C     POOR DEVIL.                                                       SPAD0640
+C     A J. WOLFGANG VON HOLTSTEINOVITCH MODIFICATION  *****             SPAD0641
+      END                                                               SPAD0642

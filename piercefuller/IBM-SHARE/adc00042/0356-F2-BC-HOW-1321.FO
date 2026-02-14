@@ -1,0 +1,240 @@
+      SUBROUTINE HOW(LP,NM,M,R,E,V,A,B,W1,W2)                           BCHOW001
+      DIMENSION R(1),E(1),V(1),A(1),B(1),W1(1),W2(1)                    BCHOW002
+      IF(LP-1)20,14,4                                                   BCHOW003
+C  TRI-DIAGONALIZE MATRIX                                               BCHOW004
+    4 CALL TRIDI(LP,NM,R,A,B,W1,W2)                                     BCHOW005
+C  FIND EIGEN VALUES                                                    BCHOW006
+      CALL EIGVAL(LP,NM,M,E,A,B,W1,W2)                                  BCHOW007
+      IF(M)5,9,5                                                        BCHOW008
+C  FIND EIGEN VECTORS                                                   BCHOW009
+    5 K=XABSF(M)                                                        BCHOW010
+      J=1                                                               BCHOW011
+      DO 7 I=1,K                                                        BCHOW012
+      CALL EIGVEC(LP,NM,R,A,B,E(I),V(J),W1,W2)                          BCHOW013
+    7 J=J+NM                                                            BCHOW014
+C  RESTORE INPUT MATRIX                                                 BCHOW015
+    9 NM1=NM+1                                                          BCHOW016
+      JJ=NM1                                                            BCHOW017
+      LP2=LP*NM                                                         BCHOW018
+      DO 12 I=2,LP2,NM1                                                 BCHOW019
+      K=I                                                               BCHOW020
+      DO 10 J=JJ,LP2,NM                                                 BCHOW021
+      R(K)=R(J)                                                         BCHOW022
+   10 K=K+1                                                             BCHOW023
+   12 JJ=JJ+NM1                                                         BCHOW024
+      GO TO 20                                                          BCHOW025
+C  SOLUTION FOR ORDER 1                                                 BCHOW026
+   14 E(1)=R(1)                                                         BCHOW027
+      V(1)=1.0                                                          BCHOW028
+      A(1)=R(1)                                                         BCHOW029
+      B(1)=0.0                                                          BCHOW030
+   20 RETURN                                                            BCHOW031
+       END                                                              BCHOW032
+C  TRI-DIAGONALIZATION SUBROUTINE      DWM       1517-UB                BCHOW033
+C  RETURN ORIGNAL R IN UPPER TRIANGULAR HALF INCLUDING DIAGONAL         BCHOW034
+C  RETURN MODIFIED W MATRICES IN LOWER HALF OF R MATRIX                 BCHOW035
+C  RETURN NEW DIAGONAL IN A                                             BCHOW036
+C  RETURN NEW FIRST OFF DIAGONAL IN B                                   BCHOW037
+      SUBROUTINE TRIDI(LP,NM,R,A,B,W,Q)                                 BCHOW038
+      DIMENSION R(1),A(1),B(1),Q(1),W(1)                                BCHOW039
+      LP1=LP-1                                                          BCHOW040
+      LP2=LP1*NM+LP                                                     BCHOW041
+      LPP=LP2-NM                                                        BCHOW042
+      NM1=NM+1                                                          BCHOW043
+C  STORE ORIGINAL DIAGONAL                                              BCHOW044
+      L=0                                                               BCHOW045
+      DO 10 I=1,LP2,NM1                                                 BCHOW046
+      L=L+1                                                             BCHOW047
+   10 A(L)=R(I)                                                         BCHOW048
+      B(1)=0.                                                           BCHOW049
+      IF(LP-2)99,65,15                                                  BCHOW050
+   15 KK=0                                                              BCHOW051
+      DO 50 K=2,LP1                                                     BCHOW052
+      KL=KK+K                                                           BCHOW053
+      KU=KK+LP                                                          BCHOW054
+      KJ=K+1                                                            BCHOW055
+C  CALCULATE AND STORE MODIFIED COLUMN MATRIX W                         BCHOW056
+      SUM=0.0                                                           BCHOW057
+      DO 20 J=KL,KU                                                     BCHOW058
+   20 SUM=SUM+R(J)**2                                                   BCHOW059
+      S=SQRTF(SUM)                                                      BCHOW060
+      B(K)=SIGNF(S,-R(KL))                                              BCHOW061
+      S=1./S                                                            BCHOW062
+      W(K)=SQRTF(ABSF(R(KL))*S+1.)                                      BCHOW063
+      X=SIGNF(S/W(K),R(KL))                                             BCHOW064
+      R(KL)=W(K)                                                        BCHOW065
+      DO 30 I=KJ,LP                                                     BCHOW066
+      JJ=I+KK                                                           BCHOW067
+      W(I)=X*R(JJ)                                                      BCHOW068
+   30 R(JJ)=W(I)                                                        BCHOW069
+C  CALCULATE NEW R MATRIX WITH ROW K-1 NOW HAVING ZEROS OFF 2ND DIAGONALBCHOW070
+      DO 35 J=K,LP                                                      BCHOW071
+      JJ=J+1                                                            BCHOW072
+      Q(J)=0.0                                                          BCHOW073
+      L=KK+J                                                            BCHOW074
+      DO 33 I=K,J                                                       BCHOW075
+      L=L+NM                                                            BCHOW076
+   33 Q(J)=Q(J)+R(L)*W(I)                                               BCHOW077
+      IF(JJ-LP)34,34,36                                                 BCHOW078
+   34 DO 35 I=JJ,LP                                                     BCHOW079
+      L=L+1                                                             BCHOW080
+   35 Q(J)=Q(J)+R(L)*W(I)                                               BCHOW081
+   36 X=0.0                                                             BCHOW082
+      DO 40 J=K,LP                                                      BCHOW083
+   40 X=X+W(J)*Q(J)                                                     BCHOW084
+      X=.5*X                                                            BCHOW085
+      DO 45 I=K,LP                                                      BCHOW086
+   45 Q(I)=X*W(I)-Q(I)                                                  BCHOW087
+      LL=KK                                                             BCHOW088
+      KK=KK+NM                                                          BCHOW089
+      DO 50 I=K,LP                                                      BCHOW090
+      LL=LL+NM                                                          BCHOW091
+      DO 50 J=I,LP                                                      BCHOW092
+      L=LL+J                                                            BCHOW093
+   50 R(L)=R(L)+Q(I)*W(J)+Q(J)*W(I)                                     BCHOW094
+C  SORT OUTPUT                                                          BCHOW095
+      L=1                                                               BCHOW096
+      DO 60 I=1,LP                                                      BCHOW097
+      X=A(I)                                                            BCHOW098
+      A(I)=R(L)                                                         BCHOW099
+      R(L)=X                                                            BCHOW100
+   60 L=L+NM1                                                           BCHOW101
+   65 B(LP)=R(LPP)                                                      BCHOW102
+   99 RETURN                                                            BCHOW103
+       END                                                              BCHOW104
+C  EIGEN VALUE SUBROUTINE FOR TRI-DIAGONAL MATRICES     DWM     1517-UB BCHOW105
+      SUBROUTINE EIGVAL(LP,NM,M,E,A,B,F,W)                              BCHOW106
+      DIMENSION E(1),A(1),B(1),F(1),W(1)                                BCHOW107
+      EQUIVALENCE (S1,IS1),(S2,IS2)                                     BCHOW108
+C  FIND UPPER AND LOWER BOUNDS AND NORMALIZE INPUT                      BCHOW109
+      BD=ABSF(A(1))                                                     BCHOW110
+      DO 5 I=2,LP                                                       BCHOW111
+    5 BD=MAX1F(BD,ABSF(A(I))+B(I)**2)                                   BCHOW112
+      BD=BD+1.                                                          BCHOW113
+      DO 6 I=1,LP                                                       BCHOW114
+      A(I)=A(I)/BD                                                      BCHOW115
+      B(I)=B(I)/BD                                                      BCHOW116
+      W(I)=1.                                                           BCHOW117
+    6 E(I)=-1.                                                          BCHOW118
+      DO 50 K=1,LP                                                      BCHOW119
+    8 IF((W(K)-E(K))/MAX1F(ABSF(W(K)),ABSF(E(K)),1.0E-9)-1.0E-7)50,50,10BCHOW120
+   10 X=(W(K)+E(K))*.5                                                  BCHOW121
+C  FIND NUMBER OF EIGEN VALUES ,N, GREATER THAN OR EQUAL TO X           BCHOW122
+      IS2=1                                                             BCHOW123
+      F(1)=A(1)-X                                                       BCHOW124
+      IF(F(1))102,104,104                                               BCHOW125
+  102 IS1=-1                                                            BCHOW126
+      N=0                                                               BCHOW127
+      GO TO 105                                                         BCHOW128
+  104 IS1=1                                                             BCHOW129
+      N=1                                                               BCHOW130
+  105 DO 120 I=2,LP                                                     BCHOW131
+      IF(B(I))106,113,106                                               BCHOW132
+  106 IF(B(I-1))107,114,107                                             BCHOW133
+  107 IF(ABSF(F(I-1))+ABSF(F(I-2))-1.0E-15)110,112,112                  BCHOW134
+  110 F(I-1)=F(I-1)*1.0E15                                              BCHOW135
+      F(I-2)=F(I-2)*1.0E15                                              BCHOW136
+  112 F(I)=(A(I)-X)*F(I-1)-B(I)**2*F(I-2)                               BCHOW137
+      GO TO 115                                                         BCHOW138
+  113 F(I)=(A(I)-X)*SIGNF(1.,S1)                                        BCHOW139
+      GO TO 115                                                         BCHOW140
+  114 F(I)=(A(I)-X)*F(I-1)-SIGNF(B(I)**2,S2)                            BCHOW141
+  115 S2=S1                                                             BCHOW142
+      IF(F(I))116,117,116                                               BCHOW143
+  116 S1=SIGNF(S1,F(I))                                                 BCHOW144
+      IF(IS2+IS1)117,120,117                                            BCHOW145
+  117 N=N+1                                                             BCHOW146
+  120 CONTINUE                                                          BCHOW147
+C  TRAP EIGEN VALUES IN SMALLER AND SMALLER BOUNDS                      BCHOW148
+      N=LP-N                                                            BCHOW149
+      IF(N-K)20,12,12                                                   BCHOW150
+   12 DO 15 J=K,N                                                       BCHOW151
+   15 W(J)=X                                                            BCHOW152
+   20 N=N+1                                                             BCHOW153
+      IF(LP-N)8,24,24                                                   BCHOW154
+   24 DO 26 J=N,LP                                                      BCHOW155
+      IF(X-E(J))8,8,26                                                  BCHOW156
+   26 E(J)=X                                                            BCHOW157
+      GO TO 8                                                           BCHOW158
+   50 CONTINUE                                                          BCHOW159
+C  RESTORE INPUT AND ORDER EIGEN VALUES                                 BCHOW160
+      DO 60 I=1,LP                                                      BCHOW161
+      A(I)=A(I)*BD                                                      BCHOW162
+      B(I)=B(I)*BD                                                      BCHOW163
+   60 F(I)=(W(I)+E(I))*BD*.5                                            BCHOW164
+      J=LP                                                              BCHOW165
+      K=1                                                               BCHOW166
+      DO 70 I=1,LP                                                      BCHOW167
+      IF(ABSF(F(K))-ABSF(F(J)))63,63,65                                 BCHOW168
+   63 E(I)=F(J)                                                         BCHOW169
+      J=J-1                                                             BCHOW170
+      GO TO 70                                                          BCHOW171
+   65 E(I)=F(K)                                                         BCHOW172
+      K=K+1                                                             BCHOW173
+   70 CONTINUE                                                          BCHOW174
+      IF(XSIGNF(1,M))75,80,80                                           BCHOW175
+   75 DO77 I=1,LP                                                       BCHOW176
+   77 F(I)=E(I)                                                         BCHOW177
+      J=LP                                                              BCHOW178
+      DO 79 I=1,LP                                                      BCHOW179
+      E(I)=F(J)                                                         BCHOW180
+   79 J=J-1                                                             BCHOW181
+   80 CONTINUE                                                          BCHOW182
+      RETURN                                                            BCHOW183
+       END                                                              BCHOW184
+      SUBROUTINE EIGVEC (LP,NM,R,A,B,E,V,P,Q)                           BCHOW185
+      DIMENSION R(1),A(1),B(1),V(1),P(1),Q(1)                           BCHOW186
+C  SET UP SIMULTANEOUS EQUATIONS FOR EIGEN VECTOR WITH EIGEN VALUE E    BCHOW187
+      X=A(1)-E                                                          BCHOW188
+      Y=B(2)                                                            BCHOW189
+      LP1=LP-1                                                          BCHOW190
+      DO 10 I=1,LP1                                                     BCHOW191
+      IF(ABSF(X)-ABSF(B(I+1)))4,6,8                                     BCHOW192
+    4 P(I)=B(I+1)                                                       BCHOW193
+      Q(I)=A(I+1)-E                                                     BCHOW194
+      V(I)=B(I+2)                                                       BCHOW195
+      Z=-X/P(I)                                                         BCHOW196
+      X=Z*Q(I)+Y                                                        BCHOW197
+      IF(LP1-I)5,10,5                                                   BCHOW198
+    5 Y=Z*V(I)                                                          BCHOW199
+      GO TO 10                                                          BCHOW200
+    6 IF(X)8,7,8                                                        BCHOW201
+    7 X=1.0E-10                                                         BCHOW202
+    8 P(I)=X                                                            BCHOW203
+      Q(I)=Y                                                            BCHOW204
+      V(I)=0.                                                           BCHOW205
+      X=A(I+1)-(B(I+1)/X*Y+E)                                           BCHOW206
+      Y=B(I+2)                                                          BCHOW207
+   10 CONTINUE                                                          BCHOW208
+C  SOLVE SIMULTANEOUS EQUATIONS FOR EIGEN VECTOR OF TRI-DIAGONAL MATRIX BCHOW209
+   20 IF(X) 21,28,21                                                    BCHOW210
+   21 V(LP)=1./X                                                        BCHOW211
+   22 I=LP1                                                             BCHOW212
+      V(I)=(1.-Q(I)*V(LP))/P(I)                                         BCHOW213
+      X=V(LP)**2+V(I)**2                                                BCHOW214
+   25 I=I-1                                                             BCHOW215
+      IF(I) 26,30,26                                                    BCHOW216
+   26 V(I)=(1.-(Q(I)*V(I+1)+V(I)*V(I+2)))/P(I)                          BCHOW217
+      X=X+V(I)**2                                                       BCHOW218
+      GO TO 25                                                          BCHOW219
+   28 V(LP)=1.0E10                                                      BCHOW220
+      GO TO 22                                                          BCHOW221
+   30 X=SQRTF(X)                                                        BCHOW222
+      DO 31 I=1,LP                                                      BCHOW223
+   31 V(I)=V(I)/X                                                       BCHOW224
+C  TRANSFORM EIGEN VECTOR TO SOLUTION OF ORIGINAL MATRIX                BCHOW225
+      J=LP1*NM-NM                                                       BCHOW226
+      K=LP                                                              BCHOW227
+      GO TO 42                                                          BCHOW228
+   32 K=K-1                                                             BCHOW229
+      J=J-NM                                                            BCHOW230
+      Y=0.0                                                             BCHOW231
+      DO 35 I=K,LP                                                      BCHOW232
+      L=J+I                                                             BCHOW233
+   35 Y=Y+V(I)*R(L)                                                     BCHOW234
+      DO 40 I=K,LP                                                      BCHOW235
+      L=J+I                                                             BCHOW236
+   40 V(I)=V(I)-Y*R(L)                                                  BCHOW237
+   42 IF(J)32,44,32                                                     BCHOW238
+   44 RETURN                                                            BCHOW239
+       END                                                              BCHOW240

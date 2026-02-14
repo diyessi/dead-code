@@ -1,0 +1,221 @@
+BSTWDC REM 0221 09261                                                   TWDC0001
+       REM BTW AS INTERPRETED FROM BINARY CARDS BY HOOD          9/26/61TWDC0002
+       REM THIS PROGRAM WRITES PROGRAM TAPE 1 FROM ROW BINARY CARDS.    TWDC0003
+       REM FIRST CARD MUST BE BINARY CONTAINING STARTING ADDRESS.       TWDC0004
+       REM SELF-LOADING FROM CARD READER.                               TWDC0005
+       REM NO SENSE SWITCHES ARE USED.                                  TWDC0006
+       REM                                                              TWDC0007
+       REM CARDS ACCEPTED BY PROGRAM ARE                                TWDC0008
+       REM   (A) ABSOLUTE ROW BINARY CARDS.                             TWDC0009
+       REM   (B) ROW BINARY CORRECTION CARDS WITH ELEVEN                TWDC0010
+       REM       CORRECTIONS PER CARD.                                  TWDC0011
+       REM       1) ADDRESSES IN LEFT ROWS,8 THRU 12, OF CARD.          TWDC0012
+       REM       2) INSTRUCTIONS IN RIGHT ROWS OF CARD                  TWDC0013
+       REM            (CARD COLUMNS 37-72)                              TWDC0014
+       REM       3) 9 ROW RIGHT AND LEFT BOTH BLANK.                    TWDC0015
+       REM   (C) OCTAL CARDS WITH ONE CORRECTION PER CARD.              TWDC0016
+       REM       1) ADDRESS IN CARD COLUMNS 2 THRU 6.                   TWDC0017
+       REM       2) INSTRUCTION IN CARD COLUMNS 10 THRU 21.             TWDC0018
+       REM       3) SIGN OF INSTRUCTION IN COLUMN 9 OF CARD.            TWDC0019
+       REM   (D) CONTROL CARDS PUNCHED IN ADDRESS 9 ROW LEFT.           TWDC0020
+       REM       (1) WRITE RECORD WITH CHECKSUM AND CONTINUE            TWDC0021
+       REM           READING CARDS.                                     TWDC0022
+       REM       (2) WRITE RECORD WITHOUT CHECKSUM AND CONTINUE         TWDC0023
+       REM           READING CARDS.                                     TWDC0024
+       REM       (3) WRITE END OF FILE ON TAPE 1 AND REWIND.            TWDC0025
+       REM       (4) WRITE RECORD WITH CHECKSUM,BACKSPACE TAPE,READ     TWDC0026
+       REM           RECORD,COMPARE CHECKSUMS, AND CONTINUE READING     TWDC0027
+       REM       (5) WRITE END OF FILE ON TAPE 1 AND CONTINUE           TWDC0028
+       REM           READING CARDS.                                     TWDC0029
+       REM   (E) FINAL ADDRESS COMPUTED FROM LAST BINARY CARD READ      TWDC0030
+       REM       UNLESS DIFFERENT FINAL ADDRESS IS PUNCHED IN           TWDC0031
+       REM       ADDRESS 9 ROW RIGHT ON CONTROL CARD (1),(2),OR(4).     TWDC0032
+       REM                                                              TWDC0033
+       REM                                                              TWDC0034
+       FUL                                                              TWDC0035
+       ORG 0                                                            TWDC0036
+ BTW   LXA *,1                    REMARKS SHOW AFTER MODIFICATION.      TWDC0037
+       REM                      RECEIVES 9 ROW LEFT FROM CARDS.         TWDC0038
+       CPY *+1,1      COPY FIRST                                        TWDC0039
+       REM                      TXI WRIT,1,2 CONTROL 1.                 TWDC0040
+       TXI *-1,1,-1   CARD OF BASIC TAPE WRITER.                        TWDC0041
+       REM                      TXI WRIT,1,1 CONTROL 2.                 TWDC0042
+       PZE 0,0,7                                                        TWDC0043
+       REM                      TXI ENFIL,1,2 CONTROL 3.                TWDC0044
+       LXD BTW+3,1                                                      TWDC0045
+       REM                      TXI WRIT,1,3 CONTROL 4.                 TWDC0046
+ READ  RCD                                                              TWDC0047
+       REM                      TXI ENFIL,1,1 CONTROL 5.                TWDC0048
+       CPY BTW                                                          TWDC0049
+       REM                      SLN 1                                   TWDC0050
+       LXA BTW+3,2                                                      TWDC0051
+       REM                      TRA NAN RECEIVES 9R FROM CARDS.         TWDC0052
+       CPY BTW+1      CARD CHECKSUM.                                    TWDC0053
+       REM                      HTR*+1                                  TWDC0054
+       CAL BTW                                                          TWDC0055
+       REM                      TRA RED                                 TWDC0056
+       STA COPY                                                         TWDC0057
+       REM                      RECEIVES CARD ROWS RIGHT.               TWDC0058
+ COPY  CAD --,2       COMPUTE CHECKSUM.                                 TWDC0059
+       REM                      CONTAINS STARTING ADDRESS LESS 310 OCTALTWDC0060
+       TXI *-1,2,-1                                                     TWDC0061
+       REM                      RECEIVES CARD ROWS LEFT.                TWDC0062
+       NOP 145                                                          TWDC0063
+       SLW BTW        COPY CARDS                                        TWDC0064
+       CLA BTW        2 THROUGH 8                                       TWDC0065
+       SUB BTW+1      OF BTW.                                           TWDC0066
+       TZE *+2                                                          TWDC0067
+ BAD   HTR 200                                                          TWDC0068
+       TIX READ,1,1                                                     TWDC0069
+       LXA NINE,1     CHANGE CONTENTS                                   TWDC0070
+       CLA NINE+2,1   OF CELLS                                          TWDC0071
+       STO COPY-1,1   1 THRU 9.                                         TWDC0072
+       TIX *-2,1,1                                                      TWDC0073
+       ABS                                                              TWDC0074
+       ORG 24                                                           TWDC0075
+       TRA CLEAR                                                        TWDC0076
+ RED   RCD            COPY PROGRAM CARD.                                TWDC0077
+       CPY BTW        9 ROW,LEFT                                        TWDC0078
+       LXD BTW,1      NUMBER INSTRUCTIONS ON BINARY CARD.               TWDC0079
+       TRA BTW+5,4    IS TRA*+1 FIRST TIME                              TWDC0080
+       REM            IS TRA TEST OTHER TIMES.                          TWDC0081
+       TSX *+1,4      LOAD INDEX 4 WITH 2S COMP OF DECIMAL 29.          TWDC0082
+ LOD   CLA BTW                                                          TWDC0083
+       ANA MASKA      000000077777 GET STARTING ADDRESS.                TWDC0084
+       SUB BAD        SUBTRACT DECIMAL 200 FROM ADDRESS.                TWDC0085
+       STO COPY       STARTING ADDRESS MINUS DEC 200.                   TWDC0086
+ TEST  TXL XX-1,1,0   CONTROL CARD,BINARY AND OCT CORRECTIONS           TWDC0087
+       REM            GO OUT AT THIS POINT.                             TWDC0088
+       CLS COPY       GET DEC 200 MINUS STARTING ADDRESS.               TWDC0089
+       ADM BTW        GIVES FIRST LOCATION FOR INSTRUCTIONS THIS CARD.  TWDC0090
+       CPY READ+2     9 ROW RIGHT IS CHECKSUM.                          TWDC0091
+       COM            ONES COMPLEMENT IN ADDRESS.                       TWDC0092
+       ADD LAST       ADD ONE TO ADDRESS.                               TWDC0093
+       PAX 0,2        PLACE MINUS FIRST ADDRESS IN INDES 2.             TWDC0094
+       REM            FIRST TIME IS NEGATIVE DEC 200.                   TWDC0095
+       CAL BTW                                                          TWDC0096
+ CAPY  CPY BTW,2      COPY INSTRUCTIONS FROM CARD,FIRST IS DEC 200.     TWDC0097
+       ACL BTW,2      ACCUMULATE CHECKSUM                               TWDC0098
+       TIX *+1,2,1    ADD ONE TO LOCATION COUNTER.                      TWDC0099
+       TIX CAPY,1,1   SUBTRACT ONE FROM INSTRUCTION COUNTER.            TWDC0100
+       SLW BTW        STORE CHECKSUM                                    TWDC0101
+       CLA BTW        GET CHECKSUM WITH SIGN.                           TWDC0102
+       SUB READ+2     SUBTRACT CARD CHECKSUM                            TWDC0103
+       TZE RED        CHECKSUM OK                                       TWDC0104
+       HTR RED        PUSH START TO IGNORE BAD CHECKSUM.                TWDC0105
+       CPY READ+2     COPY 9 ROW RIGHT,CHECKSUM.                        TWDC0106
+ XX    CPY COPY+1     OCTAL CORRECTION-COPY 8 ROW LEFT                  TWDC0107
+       REM            BINARY CORRECTION-COPY 8 THRU 12 ROW LEFT + SKIP. TWDC0108
+       CLA COPY+1     PUT ROW LEFT IN AC.                               TWDC0109
+       TRA PP+3                                                         TWDC0110
+       TRA QX+1       BINARY CORRECTION-SKIP AS RESULT OF 25TH COPY.    TWDC0111
+       TZE RED        IF START EQUAL ZERO, FINISHED BINARY CORRECTIONS. TWDC0112
+ PP    STA *+2        CONTROL CARD IN PROCESS.                          TWDC0113
+       LXA LOD,1      LOAD INDEX 1 WITH ZERO.                           TWDC0114
+       TRA --         TO LOCATIONS 1,2,3,4, OR 5.                       TWDC0115
+       CPY COPY-1     OCTAL CORRECTION-COPY 8 ROW RIGHT.                TWDC0116
+       REM            BINARY CORRECTION-COPY 8 THRU 12 ROW RIGHT.       TWDC0117
+       TNZ NINE-2     IS 8 ROW LEFT ZERO,NO-BINARY CARD.                TWDC0118
+       TRA NINE+2     YES-MAY BE ANY CARD EXCEPT ABSOLUTE BINARY.       TWDC0119
+       TZE XX                                                           TWDC0120
+       CLA COPY+1                                                       TWDC0121
+ NAN   SUB COPY       MAKE BINARY CORRECTION RELATIVE ADDRESS.          TWDC0122
+       STA *+1                                                          TWDC0123
+       STQ --         MAKE BINARY CORRECTION TO PROGRAM.                TWDC0124
+       TRA XX                                                           TWDC0125
+ WRIT  WTB 1          START PROCESSING CONTROLS (1),(2),AND(4).         TWDC0126
+       CLA READ+2     GET TERMINATING ADDRESS OF PROGRAM.               TWDC0127
+       TZE YY         TERMINATING ADDRESS NOT SPECIFIED IN CONTROL CARD.TWDC0128
+       SUB COPY       MAKE RELATIVE TERMINAL ADDRESS.                   TWDC0129
+       COM            MAKE NEGATIVE                                     TWDC0130
+       PAX 0,2        LOAD INDEX 2 WITH COMPLEMENT OF TERM. ADDRESS.    TWDC0131
+       CLM            CLEAR AC                                          TWDC0132
+ YY    SXD ZZ,2       SET UP TESTS FOR                                  TWDC0133
+       SXD STOP,2     END OF COPY LOOP.                                 TWDC0134
+       LXD LAST,2     LOAD INDEX 2 WITH NEGATIVE DEC 200.               TWDC0135
+       CPY BTW,2                                                        TWDC0136
+       ACL BTW,2      ACCUMULATE CHECKSUM                               TWDC0137
+       TIX ZZ,2,1     ADD ONE TO LOCATION COUNT.                        TWDC0138
+ ZZ    TXH *-3,2,--   WRITE LOOP.                                       TWDC0139
+       TNX RED-1,1,1  CONTROL (2) FINISHED.                             TWDC0140
+       SLW BTW        CHECKSUM FOR TAPE RECORD.                         TWDC0141
+       CPY BTW        WRITE CHECKSUM AFTER PROGRAM.                     TWDC0142
+       TNX RED-1,1,1  CONTROL (1) FINISHED.                             TWDC0143
+       BST 1          READ RECORD,RECALCULATE                           TWDC0144
+       RTB 1          CHECKSUM, AND COMPARE                             TWDC0145
+       LXD LAST,2     WITH ONE WRITTEN.                                 TWDC0146
+       CLM                                                              TWDC0147
+       CPY BTW                                                          TWDC0148
+       ACL BTW                                                          TWDC0149
+       TIX *+1,2,1    ADD ONE TO LOCATION COUNTER.                      TWDC0150
+ STOP  TXH *-3,2,--   READ LOOP.                                        TWDC0151
+       CPY READ+2                                                       TWDC0152
+       SLW BTW                                                          TWDC0153
+       CLA BTW                                                          TWDC0154
+       SUB READ+2                                                       TWDC0155
+       TZE *+2        CHECKSUMS AGREE OK- NOW CHECK RTT                 TWDC0156
+       HTR *+1        PUSH START TO IGNORE BAD CHECKSUM.                TWDC0157
+       RTT                                                              TWDC0158
+       HTR *          RTT BAD - TRY ANOTHER TAPE AND TAPE UNIT          TWDC0159
+       TRA RED-1      CHECKSUM AND RTT OK - CONTROL (4) FINISHED.       TWDC0160
+ ENFIL WEF 1          START CONTROLS (3) AND (5).                       TWDC0161
+       TNX RED-1,1,1  CONTROL (5) FINISHED.                             TWDC0162
+       REW 1                                                            TWDC0163
+       HTR RED-1      CONTROL (3) FINISHED.                             TWDC0164
+ LAST  PZE 1,0,-200                                                     TWDC0165
+ MASKA OCT 77777                                                        TWDC0166
+       TXI WRIT,1,2                                                     TWDC0167
+       TXI WRIT,1,1                                                     TWDC0168
+       TXI ENFIL,1,2                                                    TWDC0169
+       TXI WRIT,1,3                                                     TWDC0170
+       TXI ENFIL,1,1                                                    TWDC0171
+       SLN 1                                                            TWDC0172
+       TRA NAN                                                          TWDC0173
+ NINE  HTR 9                                                            TWDC0174
+       TRA RED                                                          TWDC0175
+       SLT 1                                                            TWDC0176
+       TRA FOO        OFF-IS CONTROL OR OCTAL CORRECTION CARD.          TWDC0177
+       SLN 1          ON-IS BINARY CORRECTION CARD.                     TWDC0178
+       CLA COPY-1                                                       TWDC0179
+       TRA NAN-2                                                        TWDC0180
+ FOO   CLA BTW        GET 9 ROW LEFT WORD.                              TWDC0181
+       TNZ PP         NOT ZERO-IS CONTROL CARD.                         TWDC0182
+       LXD QX,1       OCTAL CORRECTION CARD. LOAD INDEX 1 WITH DEC 525  TWDC0183
+       STA RAT        STORE ZERO IN ADDRESS OF RAT.                     TWDC0184
+ OOXX  CPY COPY+2     COPY 7 THRU 1 ROW LEFT.                           TWDC0185
+       CLA COPY+2                                                       TWDC0186
+       ORS BTW                                                          TWDC0187
+       CPY COPY+2     COPY 7 THRU 1 ROW RIGHT.                          TWDC0188
+       LDQ BTW                                                          TWDC0189
+       ALS 2          CONVERT OCTAL                                     TWDC0190
+       LLS 1          LOCATION TO BINARY.                               TWDC0191
+       TIX *-2,1,105  AROUND THIS LOOP 5 TIMES.                         TWDC0192
+       ADD RAT                                                          TWDC0193
+       STA RAT        ADDRESS RAT NOW HAS ABSOLUTE LOCATION             TWDC0194
+       ALS 2          FOR OCTAL CORRECTION.                             TWDC0195
+       LLS 1                                                            TWDC0196
+       TIX *-2,1,7    AROUND THIS LOOP 15 TIMES.                        TWDC0197
+       ACL COPY-1                                                       TWDC0198
+       SLW COPY-1                                                       TWDC0199
+       TNX *+2,1,1                                                      TWDC0200
+       TXI OOXX,1,518                                                   TWDC0201
+       CPY COPY+2     COPY ZERO ROW LEFT.                               TWDC0202
+       CPY COPY+2     COPY ZERO ROW RIGHT.                              TWDC0203
+       CPY COPY+2     COPY 11 ROW LEFT-CONTAINS SIGN.                   TWDC0204
+       RQL 8          POSITION SIGN OF INSTRUCTION WORD IN MQ.          TWDC0205
+       CLA RAT        MAKE RELATIVE OCTAL                               TWDC0206
+       SUB COPY       CORRECTION ADDRESS.                               TWDC0207
+       STA RAT        RAT CONTAINS LOCATION FOR OCTAL CORRECTION.       TWDC0208
+       CAL COPY-1     COPY-1 CONTAINS OCTAL CORRECTION INSTRUCTION.     TWDC0209
+       LLS 0          PUT SIGN ON INSTRUCTION WORD.                     TWDC0210
+ RAT   STO --         MAKE OCTAL CORRECTION.                            TWDC0211
+ QX    TXI RED,0,525  GET NEXT CARD.                                    TWDC0212
+       SLF                                                              TWDC0213
+       CLA BTW                                                          TWDC0214
+       TRA PP-1                                                         TWDC0215
+ CLEAR LXD LAST,4     PUT ZEROS IN                                      TWDC0216
+       STZ BTW,4      CELLS DEC 200                                     TWDC0217
+       TIX *-1,4,1    THRU DEC 32,767.                                  TWDC0218
+       LXD *+1,4      GO READ                                           TWDC0219
+       TXI RED,0,-24  PROG CARDS.                                       TWDC0220
+       END BTW                                                          TWDC0221

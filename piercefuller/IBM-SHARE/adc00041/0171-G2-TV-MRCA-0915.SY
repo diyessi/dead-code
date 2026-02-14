@@ -1,0 +1,184 @@
+C     TV MRCA MULTIPLE REGRESSION - COMPREHENSIVE ANALYSIS              MRCA0001
+      DIMENSION S(25,25),X(500),A(24,24),B(24,25),YY(500),EYY(500)      MRCA0002
+      DIMENSION BSDEV(24,24),XTX(23,23),LOT(24),AW(24),XD(23),BB(25)    MRCA0003
+      DIMENSION AVV(25)                                                 MRCA0004
+      READ 125,NGR                                                      MRCA0005
+  125 FORMAT (I3)                                                       MRCA0006
+      DO 126 INGR=1,NGR                                                 MRCA0007
+  105 READ 1,N,M,MVP,NR                                                 MRCA0008
+   1  FORMAT (4I3)                                                      MRCA0009
+      LI=0                                                              MRCA0010
+      NN=N+2                                                            MRCA0011
+      NNL=NN                                                            MRCA0012
+      DO2I=1,NN                                                         MRCA0013
+      DO2J=I,NN                                                         MRCA0014
+C     INITIALIZE SUMS S TO ZERO                                         MRCA0015
+    2 S(I,J)=0.                                                         MRCA0016
+      S(1,1)=FLOATF(M)                                                  MRCA0017
+      DO3K=1,M                                                          MRCA0018
+C     SENSE SWITCH 1 DOWN TO READ FROM CARDS, UP TO READ FROM BCD TAPE  MRCA0019
+      IF(SENSE SWITCH 1)4,5                                             MRCA0020
+ 4    READ 6,(X(I),I=2,NN)                                              MRCA0021
+      GO TO 7                                                           MRCA0022
+  5   READ INPUT TAPE 5,6,(X(I),I=2,NN)                                 MRCA0023
+  6   FORMAT (7F10.4)                                                   MRCA0024
+      WRITE TAPE 3,(X(I),I=2,NN)                                        MRCA0025
+C     GENERATE TRIANGULAR SUMMATION MATRIX S                            MRCA0026
+   7  DO3 I=2,NN                                                        MRCA0027
+      S(1,I)=S(1,I)+X(I)                                                MRCA0028
+      DO 3 J=I,NN                                                       MRCA0029
+    3 S(I,J)=S(I,J)+X(I)*X(J)                                           MRCA0030
+      REWIND 3                                                          MRCA0031
+      WRITE OUTPUT TAPE 2,15                                            MRCA0032
+   15 FORMAT (30H0TRIANGULAR SUMMATION MATRIX S)                        MRCA0033
+      DO 33 I =1,NN                                                     MRCA0034
+   33 WRITE OUTPUT TAPE 2,16,(S(I,J),J=1,NN)                            MRCA0035
+   16 FORMAT (7E17.8)                                                   MRCA0036
+      NNN=N+1                                                           MRCA0037
+      SENSE LIGHT 2                                                     MRCA0038
+C     FORM SYMMETRICAL NORMAL MATRIX A                                  MRCA0039
+      DO 9 I=1,NNN                                                      MRCA0040
+      DO 9 J=I,NNN                                                      MRCA0041
+      A(I,J)=S(I,J)                                                     MRCA0042
+      A(J,I)=S(I,J)                                                     MRCA0043
+      IF(I-J) 11,12,11                                                  MRCA0044
+   11 B(I,J)=0.                                                         MRCA0045
+      B(J,I)=0.                                                         MRCA0046
+      GO TO 13                                                          MRCA0047
+  12  B(I,J)=1.0                                                        MRCA0048
+  13  IF(J-NNN)9,14,9                                                   MRCA0049
+  14  B(I,J+1)=S(I,NN)                                                  MRCA0050
+      BB(I)=S(I,NN)                                                     MRCA0051
+  9   CONTINUE                                                          MRCA0052
+C     INVERT A AND SOLVE FOR RIGHT SIDE                                 MRCA0053
+  96  NR=NR-1                                                           MRCA0054
+      LA=XLOCF(A(1,1))                                                  MRCA0055
+      LB=XLOCF(B(1,1))                                                  MRCA0056
+      IA=XLOCF(A(1,1))-XLOCF(A(1,2))                                    MRCA0057
+      IB=XLOCF(B(1,1))-XLOCF(B(1,2))                                    MRCA0058
+      DET=MATEQF(LA,LB,NNN,NN,IA,IB)                                    MRCA0059
+      WRITE OUTPUT TAPE 2,35,DET                                        MRCA0060
+   35 FORMAT (6H0 DET=E17.8)                                            MRCA0061
+C     PRINT A INVERSE AND SOLUTION TO SIMULTANEOUS EQUATIONS            MRCA0062
+      WRITE OUTPUT TAPE 2,17                                            MRCA0063
+   17 FORMAT (57H0 INVERSE MATRIX A AND SOLUTION TO SIMULTANEOUS EQUATIOMRCA0064
+     1NS   )                                                            MRCA0065
+        DO 57 I = 1,NNN                                                 MRCA0066
+   57 WRITE OUTPUT TAPE 2,16,(B(I,J),J=1,NN)                            MRCA0067
+      SSR=0.                                                            MRCA0068
+      DO 20 I=1,NNN                                                     MRCA0069
+   20 SSR=SSR+B(I,NN)*BB(I)                                             MRCA0070
+      SSE=S(NNL,NNL)-SSR                                                MRCA0071
+      ATSS=S(NNL,NNL)-((S(1,NNL)**2)/S(1,1))                            MRCA0072
+      ASSR=ATSS-SSE                                                     MRCA0073
+      COR=SQRTF(ASSR/ATSS)                                              MRCA0074
+      FN=FLOATF(N)                                                      MRCA0075
+      SDEV=SQRTF(SSE/(S(1,1)-FN-1.0)               )                    MRCA0076
+      RSDEV=SDEV/SQRTF(S(1,1))                                          MRCA0077
+      DO 21 I=1,NNN                                                     MRCA0078
+      DO 21 J=1,NNN                                                     MRCA0079
+      IF (I-J) 21,22,21                                                 MRCA0080
+   22 BSDEV(I,J)=SDEV*(SQRTF(B(I,J)))                                   MRCA0081
+   21 CONTINUE                                                          MRCA0082
+      WRITE OUTPUT TAPE 2,58,(I,BSDEV(I,I),I=1,NNN)                     MRCA0083
+   58 FORMAT((35H0STANDARD DEVIATION OF COEFFICIENTS   )/(6(I3,E17.8))) MRCA0084
+      WRITE OUTPUT TAPE 2,73,SSR,SSE,ATSS,ASSR,COR,SDEV,RSDEV           MRCA0085
+   73 FORMAT((5H0SSR=E17.8,6H  SSE=E17.8,7H  ATSS=E17.8,7H  ASSR=E17.8)/MRCA0086
+     1(6H  COR=E17.8,7H  SDEV=E17.8,8H  RSDEV=E17.8  ))                 MRCA0087
+      IF (SENSE LIGHT 2) 59,83                                          MRCA0088
+   59 IF (SENSE SWITCH 1) 23,24                                         MRCA0089
+  24  GO TO 25                                                          MRCA0090
+   23 PAUSE 77775                                                       MRCA0091
+   25 DO 26 K=1,M                                                       MRCA0092
+      IF (SENSE SWITCH 1) 27,28                                         MRCA0093
+   27 READ 6,(X(I),I=2,NN)                                              MRCA0094
+      GO TO 29                                                          MRCA0095
+   28 READ TAPE 3,(X(I),I=2,NN)                                         MRCA0096
+  29  YY(K)=B(1,NN)                                                     MRCA0097
+      DO 30 I=2,NNN                                                     MRCA0098
+   30 YY(K)=YY(K)+X(I)*B(I,NN)                                          MRCA0099
+      EYY(K)=X(NN)-YY(K)                                                MRCA0100
+   26 CONTINUE                                                          MRCA0101
+      REWIND 3                                                          MRCA0102
+      WRITE OUTPUT TAPE 2,75,(K,YY(K),EYY(K),K=1,M)                     MRCA0103
+   75 FORMAT((49H0ITEM NUMBER PREDICTED VALUE AND PREDICTION ERROR )/   MRCA0104
+     1(3(I4,2E15.6)))                                                   MRCA0105
+C     COMPUTE AVERAGE EACH VARIABLE                                     MRCA0106
+      DO 60 I=2,NN                                                      MRCA0107
+   60 AVV(I)=S(1,I) /S(1,1)                                             MRCA0108
+      WRITE OUTPUT TAPE 2,61, (I,AVV(I), I=2,NN)                        MRCA0109
+  61  FORMAT((10H0 AVERAGES)/(6(I3,E17.8)))                             MRCA0110
+      IF (MVP) 101, 83, 611                                             MRCA0111
+C     READ IN POINTS FOR VARIANCE OF PREDICTION COMPUTE AND WRITE       MRCA0112
+  611 RECM=1.0/S(1,1)                                                   MRCA0113
+      IF (SENSE SWITCH 1) 62,63                                         MRCA0114
+   62 PAUSE 77774                                                       MRCA0115
+   63 DO 80 K=1,MVP                                                     MRCA0116
+      IF (SENSE SWITCH 1) 64,65                                         MRCA0117
+   64 READ 6, (X(I), I=2, NNN)                                          MRCA0118
+      GO TO 66                                                          MRCA0119
+   65 READ INPUT TAPE 5,6, (X(I), I=2, NNN)                             MRCA0120
+  66  YY(K) = B(1,NN)                                                   MRCA0121
+      DO 67 I=2, NNN                                                    MRCA0122
+   67 YY(K)=YY(K)+X(I)*B(I,NN)                                          MRCA0123
+      DO 68  I=2, NNN                                                   MRCA0124
+   68 XD(I) = X(I)-AVV(I)                                               MRCA0125
+      DO 69  I=2, NNN                                                   MRCA0126
+      DO 69  J=I,NNN                                                    MRCA0127
+      XTX(I,J) = XD(I)*XD(J)                                            MRCA0128
+   69 XTX(J,I)=XTX(I,J)                                                 MRCA0129
+      TEM XX =0.0                                                       MRCA0130
+      DO 81 I=2,NNN                                                     MRCA0131
+      DO 81 J=2,NNN                                                     MRCA0132
+   81 TEMXX=TEMXX+(B(I,J)*XTX(I,J))                                     MRCA0133
+   80 YSDEV(K)=SDEV*(SQRTF (1.0 + RECM + TEMXX))                        MRCA0134
+      EQUIVALENCE (YSDEV,EYY)                                           MRCA0135
+      WRITE OUTPUT TAPE 2, 82, (K,YY(K), YSDEV(K), K=1,MVP)             MRCA0136
+   82 FORMAT((66H0 ITEM NUMBER PREDICTED VALUE AND PREDICTION VARIANCE SMRCA0137
+     1QUARE ROOT   )/(3(I4,2E15.6)))                                    MRCA0138
+C     RECOMPUTE REGRESSION WITH SOME TERMS LEFT OUT                     MRCA0139
+   83 IF (NR) 102, 103, 84                                              MRCA0140
+C     RESET MATRIX DIMENSIONS                                           MRCA0141
+   84 N=N+LI                                                            MRCA0142
+      NN=N+2                                                            MRCA0143
+      NNN=N+1                                                           MRCA0144
+C     FORM NEW REDUCED MATRIX A                                         MRCA0145
+      LI=0                                                              MRCA0146
+      READ 85, (LOT(L),L=1,NNN)                                         MRCA0147
+   85 FORMAT (24I1)                                                     MRCA0148
+      DO 95 I=1,NNN                                                     MRCA0149
+      IF(LOT(I))104, 90, 94                                             MRCA0150
+   90  LJ=LI                                                            MRCA0151
+      ILI=I-LI                                                          MRCA0152
+      DO 93 J=I,NNN                                                     MRCA0153
+      IF(LOT (J))104,91,92                                              MRCA0154
+  91  JLJ=J-LJ                                                          MRCA0155
+      A(ILI,JLJ)=S(I,J)                                                 MRCA0156
+      A(JLJ,ILI)=S(I,J)                                                 MRCA0157
+      IF(ILI-JLJ) 200,201,200                                           MRCA0158
+ 200  B(ILI,JLJ)=0.                                                     MRCA0159
+      B(JLJ,ILI)=0.                                                     MRCA0160
+      GO TO 203                                                         MRCA0161
+ 201  B(ILI,JLJ)=1.0                                                    MRCA0162
+      GO TO 203                                                         MRCA0163
+   92 LJ=LJ+1                                                           MRCA0164
+ 203  IF(J-NNN) 93,202,93                                               MRCA0165
+ 202  B(ILI,JLJ+1)=S(I,NNL)                                             MRCA0166
+      BB(ILI)=S(I,NNL)                                                  MRCA0167
+   93 CONTINUE                                                          MRCA0168
+   94 LI=O                                                              MRCA0169
+      DO 95 L=1, I                                                      MRCA0170
+   95 LI=LI+LOT(L)                                                      MRCA0171
+C     CHANGE MATRIX DIMENSIONS                                          MRCA0172
+      N=N-LI                                                            MRCA0173
+      NN=N+2                                                            MRCA0174
+      NNN=N+1                                                           MRCA0175
+      GO TO 96                                                          MRCA0176
+  101 STOP 77771                                                        MRCA0177
+  102 STOP 77773                                                        MRCA0178
+  104 STOP 77772                                                        MRCA0179
+  103 END FILE 2                                                        MRCA0180
+  126 CONTINUE                                                          MRCA0181
+      PAUSE 77777                                                       MRCA0182
+      GO TO 105                                                         MRCA0183
+      END (2,2,2,2,2)                                                   MRCA0184

@@ -1,0 +1,236 @@
+      DIMENSION U(10, 999)                                              ELS20001
+      CALL ELS2 (U)                                                     ELS20002
+      END                                                               ELS20003
+      SUBROUTINE ELS2 (U)                                               ELS20004
+      DIMENSION W(5,5),BA(4),BN(4),R(4),RF(4),U(10,100)                 ELS20005
+     1 ,MC(40),AC(40),ALF(8),AL(8)                                      ELS20006
+C     UT1,UE2,UC3,UN4,UL5,UV6-10                                        ELS20007
+  121 DO 131 I=1,40                                                     ELS20008
+      MC(I)=0                                                           ELS20009
+  131 AC(I)=0.0                                                         ELS20010
+  133 DO 163 I=1,40                                                     ELS20011
+      READINPUTTAPE5,21,MM,AM,ALF                                       ELS20012
+   21 FORMAT(I5,E15.7,8A6)                                              ELS20013
+      IF(MM) 143,212,143                                                ELS20014
+  143 MC(MM)=MM                                                         ELS20015
+      IF(MM-13) 163,183,163                                             ELS20016
+  183 DO 193 J=1,8                                                      ELS20017
+      AL(J)=ALF(J)                                                      ELS20018
+  193 CONTINUE                                                          ELS20019
+  163 AC(MM)=AM                                                         ELS20020
+  212 MB=0                                                              ELS20021
+      MT=AC(12)+40.0                                                    ELS20022
+      NU=AC(13)                                                         ELS20023
+      NT=AC(14)                                                         ELS20024
+      NE=NT-XFIXF(AC(15))                                               ELS20025
+      CN=AC(16)                                                         ELS20026
+      ET=AC(17)                                                         ELS20027
+      IF(MC(7)) 242,252,242                                             ELS20028
+  252 WRITEOUTPUTTAPE6,26,NU,AL,ET,CN,AC(15)                            ELS20029
+   26 FORMAT(1H13X16H IDENTIFICATION I5,1X8A6/6X14H PRECISION IS E10.2  ELS20030
+     1 /7X13H CONSTANT IS E12.4/20H END POINTS OMITTED F6.0             ELS20031
+     2 /14H COEFFICIENTS 11X3H A 11X3H B 11X3H C 11X3H D )              ELS20032
+  242 NA=0                                                              ELS20033
+      IF(MC(9)) 284,232,284                                             ELS20034
+  232 IP=0                                                              ELS20035
+C                       DATA INPUT                                      ELS20036
+      DO 224 I=1,NT                                                     ELS20037
+      IF(NA+1-I)  234,243,253                                           ELS20038
+  243 READINPUTTAPE5,24,NA,AA,BB                                        ELS20039
+   24 FORMAT(5XI5,F10.2,F10.5)                                          ELS20040
+  253 IF(NA-I) 234,254,264                                              ELS20041
+  234 WRITEOUTPUTTAPE6,27,NA,I                                          ELS20042
+   27 FORMAT(45H EXIT DUE TO WRONG DATA CARD NUMBER OR ORDER /8H CARD NOELS20043
+     1 9H READ IS I5,21H CARD NO REQUIRED IS I5 )                       ELS20044
+      GOTO 639                                                          ELS20045
+  264 U(1,I)=U(1,I-1)                                                   ELS20046
+      U(2,I)=U(2,I-1)                                                   ELS20047
+      GOTO 224                                                          ELS20048
+  254 U(1,I)=AA                                                         ELS20049
+      U(2,I)=BB                                                         ELS20050
+  224 U(4,I)=U(2,I)/U(2,1)                                              ELS20051
+C                       TRIAL CONST                                     ELS20052
+  284 BA(1)=AC(31)                                                      ELS20053
+      BA(2)=AC(32)                                                      ELS20054
+      BA(3)=AC(33)                                                      ELS20055
+      BA(4)=AC(34)                                                      ELS20056
+      IF (BA(1))  236,235,236                                           ELS20057
+  235 BA(1)=0.9*(U(2,1)-CN)*(1.0+(AC(25)+2.0)*0.025)                    ELS20058
+      BA(3)=U(2,1)-BA(1)                                                ELS20059
+      BA(4)=-LOGF((U(2,NE)-CN)/(U(2,1)-CN))/U(1,NE)                     ELS20060
+      BA(2)=BA(4)*10.0*(1.0+AC(26)*5.0)                                 ELS20061
+  236 WRITEOUTPUTTAPE6,28,BA                                            ELS20062
+   28 FORMAT(5X9H INITIAL 4E14.7)                                       ELS20063
+C                       START OF MAIN LOOP                              ELS20064
+  312 A=BA(1)                                                           ELS20065
+      B=BA(2)                                                           ELS20066
+      C=BA(3)                                                           ELS20067
+      D=BA(4)                                                           ELS20068
+      DO 323 I=1,NT                                                     ELS20069
+      XB=EXP F(-B*U(1,I))                                               ELS20070
+      AXB=XB*A                                                          ELS20071
+      XD=EXP F(-D*U(1,I))                                               ELS20072
+      CXD=XD*C                                                          ELS20073
+      XT=AXB+CXD                                                        ELS20074
+      U(3,I)=XT+CN                                                      ELS20075
+      IF(NE-I) 323,322,322                                              ELS20076
+  322 RXT=1.0/XT                                                        ELS20077
+C                        DERIVATIVES                                    ELS20078
+      U(6,I)=-XB*RXT                                                    ELS20079
+      U(7,I)=U(1,I)*AXB*RXT                                             ELS20080
+      U(8,I)=-XD*RXT                                                    ELS20081
+      U(9,I)=U(1,I)*CXD*RXT                                             ELS20082
+      U(10,I)=LOGF((U(2,I)-CN)*RXT)                                     ELS20083
+  323 CONTINUE                                                          ELS20084
+C                       SUMS OF DERIVATIVES                             ELS20085
+      DO 328 K=1,5                                                      ELS20086
+      DO 328 J=1,5                                                      ELS20087
+      W(J,K)=0.0                                                        ELS20088
+      DO 328 I=1,NE                                                     ELS20089
+      AA=ABSF(U(K+5,I))                                                 ELS20090
+      IF(AA-1.0E-25)  328,326,326                                       ELS20091
+  326 AA=ABSF(U(J+5,I))                                                 ELS20092
+      IF(AA-1.0E-25)  328,327,327                                       ELS20093
+  327 W(J,K)=W(J,K)+U(K+5,I)*U(J+5,I)                                   ELS20094
+  328 CONTINUE                                                          ELS20095
+      IF(MC(6)) 412,422,412                                             ELS20096
+  412 WRITEOUTPUTTAPE6,42,W                                             ELS20097
+   42 FORMAT(2X10H W BEFORE  /(1H 1P5E14.7))                            ELS20098
+C                       SOLVE MATRIX                                    ELS20099
+  422 WVV=W(5,5)                                                        ELS20100
+      DO 428 I=1,4                                                      ELS20101
+      W(5,5)=1.0/W(1,1)                                                 ELS20102
+      DO 423 J=1,4                                                      ELS20103
+  423 W(J,5)=W(J+1,1)/W(1,1)                                            ELS20104
+      DO 424 J=1,3                                                      ELS20105
+      W(5,J)=-W(5,5)*W(1,J+1)                                           ELS20106
+      DO 424 K=1,4                                                      ELS20107
+  424 W(K,J)=-W(K,5)*W(1,J+1)+W(K+1,J+1)                                ELS20108
+      DO 428 J=1,5                                                      ELS20109
+      W(J,4)=W(J,5)                                                     ELS20110
+  428 CONTINUE                                                          ELS20111
+      IF(MC(6))  512,522,512                                            ELS20112
+  512 WRITEOUTPUTTAPE6,52,W                                             ELS20113
+   52 FORMAT(3X9H W AFTER /(1P5E14.7))                                  ELS20114
+C                        TEST NEW CONSTANTS                             ELS20115
+  522 MA=1                                                              ELS20116
+      DO 525 J=1,4                                                      ELS20117
+      BN(J)=BA(J)-W(1,J)                                                ELS20118
+      BB=ABSF(BN(J)/BA(J)-1.0)                                          ELS20119
+      IF (BB-20.0) 513,513,533                                          ELS20120
+  533 WRITEOUTPUTTAPE6,53                                               ELS20121
+   53 FORMAT(12H WILD COEFS  )                                          ELS20122
+      GOTO 639                                                          ELS20123
+  513 BA(J)=BN(J)                                                       ELS20124
+      IF(BB-ET) 525,523,523                                             ELS20125
+  523 MA=MA+1                                                           ELS20126
+  525 CONTINUE                                                          ELS20127
+      IF(MA-1) 777,529,526                                              LLS20128
+  526 MB=MB+1                                                           ELS20129
+      IF(MB-MT) 517,528,528                                             ELS20130
+  517 IF(MC(5)) 527,312,527                                             ELS20131
+  527 WRITEOUTPUTTAPE6,57,BA                                            ELS20132
+   57 FORMAT(10X4E14.7)                                                 ELS20133
+      GOTO 312                                                          ELS20134
+C                        END OF MAIN LOOP                               ELS20135
+  528 WRITEOUTPUTTAPE6,58,MT,MB                                         ELS20136
+   58 FORMAT(18H EXIT DUE TO OVER  I5, 8H CYCLES  I5 )                  ELS20137
+      GOTO 639                                                          ELS20138
+  529 WRITEOUTPUTTAPE6,59,BA,MB                                         ELS20139
+   59 FORMAT(7X7H FINAL 4E14.7/1H I3,8H CYCLES )                        ELS20140
+C                       STANDARD DEVIATIONS                             ELS20141
+      ANE=NE                                                            ELS20142
+      SE=W(5,5)/(ANE-4.0)                                               ELS20143
+      DO 539 J=1,4                                                      ELS20144
+      R(J)=SQRTF(SE*W(J+1,J))                                           ELS20145
+  539 RF(J)=R(J)/BA(J)                                                  ELS20146
+      WRITEOUTPUTTAPE6,62,R,RF                                          ELS20147
+   62 FORMAT(1H 2X11H STD. DEV. 4E14.7/2X12H S.D./FINAL 4F14.3)         ELS20148
+      IF(MC(3)) 549,559,549                                             ELS20149
+  549 WRITEOUTPUTTAPE6,61,SE,W(5,5),(W(J+1,J),J=1,4)                    ELS20150
+   61 FORMAT(30H SE  W55  W21  W32  W43  W54  /6E15.8)                  ELS20151
+C                       START OF LINE                                   ELS20152
+  559 IF(NT-NE) 621,636,611                                             ELS20153
+  621 WRITEOUTPUTTAPE6,63                                               ELS20154
+   63 FORMAT(50H EXIT DUE TO ERROR TOTAL PTS LESS THAN CURVE PTS  )     ELS20155
+      GOTO 639                                                          ELS20156
+  611 DO 622 I=1,NT                                                     ELS20157
+      ND=NT-I+1                                                         ELS20158
+      ERL=U(2,ND)/U(3,ND)                                               ELS20159
+      IF(ERL-1.0) 612,623,623                                           ELS20160
+  612 U(5,ND)=ERL                                                       ELS20161
+  622 CONTINUE                                                          ELS20162
+  623 ANL=I-1                                                           ELS20163
+      WRITEOUTPUTTAPE6,602,ANL                                          ELS20164
+  602 FORMAT(33H NO OF END POINTS CALC FROM LINE F5.0)                  ELS20165
+      NDA=ND+1                                                          ELS20166
+      SX=0.0                                                            ELS20167
+      SY=0.0                                                            ELS20168
+      SXX=0 .0                                                          ELS20169
+      SXY=0.0                                                           ELS20170
+      SYY=0.0                                                           ELS20171
+      DO 624 I=NDA,NT                                                   ELS20172
+      SX=SX+U(1,I)                                                      ELS20173
+      SY=SY+U(5,I)                                                      ELS20174
+      SXX=SXX+U(1,I)*U(1,I)                                             ELS20175
+      SXY=SXY+U(1,I)*U(5,I)                                             ELS20176
+  624 SYY=SYY+U(5,I)*U(5,I)                                             ELS20177
+      AVX=SX/ANL                                                        ELS20178
+      AVY=SY/ANL                                                        ELS20179
+      S9X=SXX-(SX*SX)/ANL                                               ELS20180
+      S9XY=SXY-(SX*SY)/ANL                                              ELS20181
+      S9Y=SYY-(SY*SY)/ANL                                               ELS20182
+      SL=S9XY/S9X                                                       ELS20183
+      YA=AVY-AVX*SL                                                     ELS20184
+      TP=(1.0-AVY)/SL+AVX                                               ELS20185
+      SLM=-SL                                                           ELS20186
+      WRITEOUTPUTTAPE6,64,YA,SLM,TP                                     ELS20187
+   64 FORMAT(1H 3X11H INTERCEPT 7X7H SLOPE 10X4H TP /1H 3E14.7)         ELS20188
+      AN2=ANL-2.0                                                       ELS20189
+      SSD=S9Y-SL*S9XY                                                   ELS20190
+      IF(AN2) 635,635,625                                               ELS20191
+  625 EYA=SQRTF(((AVX*AVX)/S9X+1.0/ANL)*SSD)                            ELS20192
+      ESL=SQRTF(SSD/(S9X*AN2))                                          ELS20193
+      TD=U(1,NDA)-AVX                                                   ELS20194
+      ETP=SQRTF(((TD*TD)/S9X+1.0/ANL)*SSD)                              ELS20195
+      WRITEOUTPUTTAPE6,65,EYA,ESL,ETP,SSD                               ELS20196
+   65 FORMAT(1H 6X8H ERR YA 4X10H ER SLOPE 4X10H ERROR TP 9X5H SSD      ELS20197
+     1 /1H 4E14.7)                                                      ELS20198
+      GOTO 645                                                          ELS20199
+  635 WRITEOUTPUTTAPE6,605,S9X,SSD                                      ELS20200
+  605 FORMAT(18H NEG ARG FOR SQRT 8H S9X IS E10.3,8H SSD IS E10.3 )     ELS20201
+C                        END OF LINE                                    ELS20202
+  645 DO 626 I=NDA,NT                                                   ELS20203
+  626 U(3,I)=U(3,I)*(SL*U(1,I)+YA)                                      ELS20204
+C                          FINAL RESULTS                                ELS20205
+  636 IF(MC(4)) 696,686,696                                             ELS20206
+  686 IF(IP) 656,696,656                                                ELS20207
+  696 IF(MC(7)) 656,646,656                                             ELS20208
+  656 WRITEOUTPUTTAPE6,67                                               ELS20209
+   67 FORMAT(24H EXIT NOT PRINT RESULTS  )                              ELS20210
+      GOTO 639                                                          ELS20211
+  646 WRITEOUTPUTTAPE6,66                                               ELS20212
+   66 FORMAT(1H 4X10H ABSCISSA 4X10H OBSERVED 2X12H CALCULATED 3X6HRATIOELS20213
+     1 2X7H  DIFF 2X4H WT )                                             ELS20214
+      IP=1                                                              ELS20215
+      IW=1                                                              ELS20216
+      DO 628 I=1,NT                                                     ELS20217
+      IF(NT-I) 687,668,687                                              ELS20218
+  687 IF(U(2,I)-U(2,I+1)) 668,638,668                                   ELS20219
+  638 IW=IW+1                                                           ELS20220
+      GOTO 628                                                          LES20221
+  668 ED=U(2,I)-U(3,I)                                                  ELS20222
+      IF(U(3,I)) 627,637,627                                            ELS20223
+  627 ER=U(2,I)/U(3,I)                                                  ELS20224
+      GOTO 648                                                          ELS20225
+  637 ER=0.0                                                            ELS20226
+  648 WRITEOUTPUTTAPE6,68,U(1,I),U(2,I),U(3,I),ER,ED,IW                 ELS20227
+   68 FORMAT(1H 3E14.7,2F9.4,I5)                                        ELS20228
+      IW=1                                                              ELS20229
+  628 CONTINUE                                                          ELS20230
+      GOTO 639                                                          ELS20231
+  777 WRITEOUTPUTTAPE6,77                                               ELS20232
+   77 FORMAT(10H STOP 777  )                                            ELS20233
+  639 MC(9)=0                                                           ELS20234
+      IF(MC(8)) 121,133,121                                             ELS20235
+      END                                                               ELS20236

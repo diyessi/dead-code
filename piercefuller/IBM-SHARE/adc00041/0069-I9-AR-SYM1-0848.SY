@@ -1,0 +1,834 @@
+ARSYM1 REM  SYMBOLIC MULTIDIMENSION FN II INPUT SUBROUTINE. AVCO (AR)   SYM10001
+       ORG 0                  PROGRAM CARD MAKE-UP                      SYM10002
+       FUL                                                              SYM10003
+       MZE 0,0,PGMCRD-2                                                 SYM10004
+       PZE                                                              SYM10005
+       PZE DONE,,VECTOR                                                 SYM10006
+       PZE COUNT                                                        SYM10007
+       BCD 1BCDCON                                                      SYM10008
+       PZE BCDCON                                                       SYM10009
+       BCD 1SYMBLS            CALL 1 = STANDARD SENSE SWITCH ENTRY      SYM10010
+       PZE SYMBLS                                                       SYM10011
+       BCD 1SYMBLL            CALL 2 = STANDARD SENSE LITE ENTRY        SYM10012
+       PZE SYMBLL                                                       SYM10013
+       BCD 1SYMBLV            CALL 3 = VARIABLE SWITCH, LITE AND TAPE   SYM10014
+       PZE SYMBLV                        ENTRY                          SYM10015
+PGMCRD SYN *                                                            SYM10016
+       REM                                                              SYM10017
+       REM                    CALL STATEMENTS                           SYM10018
+       REM                                                              SYM10019
+       REM  CALL SYMBL S   ( IN )                                       SYM10020
+       REM  CALL SYMBL L   ( IN )                                       SYM10021
+       REM  CALL SYMBL V   ( IN, ITAPE, ISWLIT )                        SYM10022
+       REM                                                              SYM10023
+       REM     WHERE  IN      =  LOCATION TO STORE COL.1 EXIT CODE.     SYM10024
+       REM            ITAPE  =  O FOR ON-LINE, 1 - 10 FOR TAPE          SYM10025
+       REM            ISWLIT =  O FOR ON-LINE, (+1) - (+12) FOR SWITCH, SYM10026
+       REM                           AND (-1) - (-4) FOR LITE.          SYM10027
+       REM                                                              SYM10028
+       REL                                                              SYM10029
+       REM                    INPUT PROGRAM  PROPER                     SYM10030
+       REM                                                              SYM10031
+  N*C  OPD 076100400000       SWITCH NORMALLY CLOSED.                   SYM10032
+  N*O  OPD 776100400000       SWITCH NORMALLY OPEN.                     SYM10033
+INSWT  EQU 2                                                            SYM10034
+INLITE EQU 2                                                            SYM10035
+INTAPE EQU 2                                                            SYM10036
+OUTSWT EQU 3                                                            SYM10037
+OUTAPE EQU 3                                                            SYM10038
+       REM                                                              SYM10039
+       ORG 0                                                            SYM10041
+(BDC)  BCD 1(BDC)             OUTPUT TRANSFER VECTOR                    SYM10042
+(FIL)  BCD 1(FIL)                                                       SYM10043
+(SPH)  BCD 1(SPH)                                                       SYM10044
+(LEV)  BCD 1(LEV)                                                       SYM10045
+AR(RTN BCD 1AR(RTN                                                      SYM10046
+HDING  BCD 1HDING*            LOCATION + 12 TO STORE HEADING LINE       SYM10047
+VECTOR SYN *                                                            SYM10048
+SYMBLV TIX *+1,4,2                                                      SYM10049
+       CAL *                                                            SYM10050
+       TTR (LEV)                                                        SYM10051
+       CLA 1,4                OBTAIN =SWITCH / LITE= CODE.              SYM10052
+       STA *+1                                                          SYM10053
+       CLS **                                                           SYM10054
+       TZE CARDON             CARDS ONLY, SET-UP FOR IT.                SYM10055
+       TPL SYMV               SENSE LITE TEST                           SYM10056
+       PDX ,2                                                           SYM10057
+       TNX *+2,2,6                                                      SYM10058
+       PXD -,2                                                          SYM10059
+       ORA XTRABT             OR IN EXTRA BIT                           SYM10060
+SYMV   ARS 18                                                           SYM10061
+       ORA SLTOP                                                        SYM10062
+       CHS                                                              SYM10063
+SYMV1  STO TESTOP                                                       SYM10064
+       CLA 0,4                OBTAIN =TAPE= CODE.                       SYM10065
+       STA *+1                                                          SYM10066
+       CLA **                                                           SYM10067
+       ARS 18                                                           SYM10068
+       ORA TAPROP                                                       SYM10069
+       TXI SMB,4,2                                                      SYM10070
+CARDON ORA TSTOP2             MAKE =TXL= FOR +0(CARDS ONLY) OR =TXH=    SYM10071
+       TXL SYMV1,,-           FOR -0(TAPE ONLY),ACTS AS =NOP=           SYM10072
+TSTOP2 TXH TESTOP+2,,-                                                  SYM10073
+SYMBLL CLA SLT                STANDARD SENSE LITE ENTRY                 SYM10074
+       TXL *+2,,-                                                       SYM10075
+SYMBLS CLA SWT                STANDARD SENSE SWITCH ENTRY               SYM10076
+       STO TESTOP                                                       SYM10077
+       CAL *                  PRESERVE CONSOLE                          SYM10078
+       TTR (LEV)                                                        SYM10079
+       CLA NORMTP             SET NORMAL TAPE                           SYM10080
+SMB    STO TAPE               STORE CORRECT UNIT SELECT.                SYM10081
+       CLA 1,4                MOVE =IN= TO SET EXIT CODE                SYM10082
+       STZ L(IN)                                                        SYM10083
+       STZ JK                                                           SYM10084
+       STZ SSCPTC                                                       SYM10085
+       STZ LOC                                                          SYM10086
+       LDQ RCD                                                          SYM10087
+       CLA TAPCRD             TAPE,,CARD                                SYM10088
+TESTOP SWT - OR SLT -         EITHER =SWT= OR =SLT= DEPENDS UPON ENTRY  SYM10089
+       TSX SETAPE,4           SIGNAL  UP ON                             SYM10090
+  RCD  RCD                                                              SYM10091
+       STQ NOPCDS             SET =NOP/RCD= AND =TSX TAPE,4/TSX CARDS,4=SYM10092
+       STA CRDTAP                                                       SYM10093
+CRDTAP TSX TAPE,1 OO CARDS,1  READ IN RECORD FROM CARDS OR TAPE.        SYM10094
+       LXA (5),1              CHECK COLUMN 1 FOR NUMERIC FOR EXIT.      SYM10095
+       LXA (13),2                                                       SYM10096
+       LDQ BCD                                                          SYM10097
+ (13)  PXD 13,-                                                         SYM10098
+ (6)   LGL 6                                                            SYM10099
+ (5)   PAX 5,4                                                          SYM10100
+       TXL L(IN),4,9          YES, BYPASS SELECT, ETC.                  SYM10101
+       TXH TX1,4,23           27)8 TEST FOR =G=                         SYM10102
+       TXL TX1,4,22           26)8                                      SYM10103
+       STP OUTSW                                                        SYM10104
+       CAL TXL                                                          SYM10105
+       TXL L(IN),,-           BY-PASS =RCD/NOP=                         SYM10106
+ TX1   CAL TXL                OBTAIN SWITCH RETURN.                     SYM10107
+       TXH *+2,4,21           25)8 TEST FOR =E=                         SYM10108
+       TXH ENDCRD,4,20        24)8 YES, OFF MACHINE                     SYM10109
+NOPCDS NOP   RCD                                                        SYM10110
+       TXH *+2,4,24           30)8 TEST FOR =H=                         SYM10111
+       TXH HEADCD,4,23        27)8 YES, SAVE LINE FOR LATER USE         SYM10112
+ L(IN) SXD **,4               STORE EXIT CODE.                          SYM10113
+       STP XITSWT             SET EXIT SWITCH                           SYM10114
+RESET  PXD -,-                RESET ALL CELLS AND SWITCHES              SYM10115
+       STP GSTRTS                                                       SYM10116
+       STZ COUNT                                                        SYM10117
+       STP FESW                                                         SYM10118
+       STZ SIGN                                                         SYM10119
+       STZ COUNTR                                                       SYM10120
+       STP ACUMSW                                                       SYM10121
+       STP FLPIN1                                                       SYM10122
+       STP FLPIN2                                                       SYM10123
+RSET1A STZ SUM                                                          SYM10124
+BLANK  SYN *                                                            SYM10125
+RESET1 TSX NXTCHR,4           GET NEXT CHARACTER FROM LINE              SYM10126
+       TXL XITSWT,,**         COL. 73 = GET NEXT RECORD                 SYM10127
+       PAX -,4                OCTAL. CHARACTER(S).ACTION                SYM10128
+       TXL DIGIT,4,9          00-11)8 0 - 9 DIGIT                       SYM10129
+       TXL MINUS,4,12         14)8 - REDUNDANT MINUS                    SYM10130
+       TXL PLUSGN,4,16        20)8 + BY-PASS PLUS SIGN                  SYM10131
+       TXL ALPHA,4,25         21-31)8 A - I START OF SYMBOL             SYM10132
+       TXL POINT,4,27         33)8 . DECIMAL POINT                      SYM10133
+       TXL MINUS,4,32         40)8 - MINUS SIGN                         SYM10134
+       TXL ALPHA,4,41         41-51)8 J - R START OF SYMBOL             SYM10135
+       TXL STAR,4,44          54)8 * ASTERISK, GET NEXT CARD            SYM10136
+       TXL BLANK,4,48         60)8 BYPASS BLANK                         SYM10137
+       TXL ALPHA,4,57         62-71)8 S - Z START OF SYMBOL             SYM10138
+OPEN(  LXA (0),4              ASSUME START OF SUBSCRIPT                 SYM10139
+       STZ J                                                            SYM10140
+       STZ K                                                            SYM10141
+OPEN(2 SXD SSCPTC,4                                                     SYM10142
+OPEN(1 TSX NXTCHR,4                                                     SYM10143
+       TXL SUBDEL-1,,-        ASSUME END OF SUBSCRIPT                   SYM10144
+       PAX -,4                                                          SYM10145
+       TXL SUBDGT,4,9         (0-9)                                     SYM10146
+       TXL SUBDEL,4,32  40)8 ASSUME =-= OR =)=.SUBSCRIPT END OR BREAK   SYM10147
+       TXL OPEN(1,4,48        60)8 WALK OFF BLANK                       SYM10148
+       LXD SSCPTC,4           ASSUME =,=. MOVE UP SUBSCRIPT             SYM10149
+       TXH SUBERR,4,3         ERROR, MORE THAN 3 SUBSCRIPTS             SYM10150
+       TRA *+3,4                                                        SYM10151
+       CLA J                  MOVE SUBSCRIPTS UP ONE.                   SYM10152
+       STO K                                                            SYM10153
+       CLA SUM                                                          SYM10154
+       SUB (1)                                                          SYM10155
+       STO J                                                            SYM10156
+       STZ SUM                                                          SYM10157
+       TXI OPEN(2,4,2                                                   SYM10158
+       LXD =)=,4              COL.73 ASSUME =)=                         SYM10159
+SUBDEL CLA SUM                FOUND EITHER =-= OR =)=.                  SYM10160
+       STO I                                                            SYM10161
+       CLA SSCPTC                                                       SYM10162
+       TZE SUBD1              TEST FOR MULTISUBSCRIPT                   SYM10163
+       CLA JK                                                           SYM10164
+       STO TRANS+3                                                      SYM10165
+       CLA SUM                CONVERT SUBSCRIPTS.                       SYM10166
+       SUB (1)                                                          SYM10167
+       TNZ *+2                                                          SYM10168
+       STD TRANS+3                                                      SYM10169
+       ALS 18                                                           SYM10170
+       STO TRANS+4                                                      SYM10171
+       CLA J                                                            SYM10172
+       TNZ *+2                                                          SYM10173
+       STA TRANS+3                                                      SYM10174
+       ADD TRANS+4                                                      SYM10175
+       TZE ADDK-1                                                       SYM10176
+       STO TRANS                                                        SYM10177
+       STQ TRANS+1                                                      SYM10178
+       LDQ TRANS                                                        SYM10179
+       MPY TRANS+3                                                      SYM10180
+       STQ TRANS                                                        SYM10181
+       ARS 1                                                            SYM10182
+       LDQ TRANS+1                                                      SYM10183
+       ADD TRANS                                                        SYM10184
+       ADD (1)                                                          SYM10185
+ADDK   ADD K                                                            SYM10186
+       STA SUM                                                          SYM10187
+       CLA DIFPRM             SET =DIFF= FOR MULTI-SUBSCRIPT.           SYM10188
+ =)=   TXL SBSCT),4,28        34)8 OUT IF =)= ENTRY.                    SYM10189
+       STO DIFF                                                         SYM10190
+       CLA I                                                            SYM10191
+       STO DELTA                                                        SYM10192
+       CAL TXL                SET UP AREA SET GENERATOR.                SYM10193
+       STP ARGNSW                                                       SYM10194
+       STP GNSW2                                                        SYM10195
+       CAL LOC                                                          SYM10196
+       STP RETNSW                                                       SYM10197
+ SUB1  SUB SUM                                                          SYM10198
+       STZ SUM                                                          SYM10199
+       STA STOWRD                                                       SYM10200
+       TXH OPEN(,4,28                                                   SYM10201
+       TXL RESET,,-                                                     SYM10202
+SUBDGT TSX ACUM,4                                                       SYM10203
+       TXL OPEN(1,,-                                                    SYM10204
+SUBD1  CLA (1)                SET =DIFF= TO (1)                         SYM10205
+       TXH =)=+1,4,28                                                   SYM10206
+GNSW2  SYN *                                                            SYM10207
+SBSCT) N*C SUBSCT             COMPUTE STORING LOCATION                  SYM10208
+       STO DIFF                                                         SYM10209
+       CLA LOC                                                          SYM10210
+       TXL SUB1,,-                                                      SYM10211
+SUBSCT CLA I                  COMPUTE COUNT FOR AREA SET GENERATOR      SYM10212
+       SUB DELTA                                                        SYM10213
+       ADD (1)                                                          SYM10214
+       STO DELCNT                                                       SYM10215
+       TXL RSET1A,,-                                                    SYM10216
+       REM                    FOUND EITHER MINUS (-) (11) OR (8-4)      SYM10217
+MINUS  SSM                    SET SIGN MINUS                            SYM10218
+       STO SIGN                                                         SYM10219
+       TXL DIGIT+1,,-         START NUMBER                              SYM10220
+       REM                    FOUND . (12-8-4).                         SYM10221
+POINT  CLA (1)                CONVERT NUMBER AS FLOATING POINT          SYM10222
+       STO COUNTR                                                       SYM10223
+       TXL TXL-2,,-           OUT TO SET UP FOR FLTG-PT CONVERSION      SYM10224
+       REM                    GET-NEXT CHARACTER                        SYM10225
+NXTCHR SYN *                                                            SYM10226
+ (2)   PXD 2,-                                                          SYM10227
+       TXL TRA14,2,1          COL.73 ATTEMPT HAS BEEN MADE.             SYM10228
+       LGL 6                                                            SYM10229
+       TIX TRA24,1,1          TEST FOR EMPTY MQ.                        SYM10230
+       LDQ BCD+14,2           LOAD UP MQ                                SYM10231
+       TIX *+1,2,1            DECREASE RECORD-WORD COUNT                SYM10232
+       LXA (6),1              RESET CHARACTER COUNT                     SYM10233
+TRA24  TRA 2,4                EXIT                                      SYM10234
+       PXD -,-                                                          SYM10235
+       STP ACUMSW                                                       SYM10236
+RESETA STP FESW               SET F/E SWITCH                            SYM10237
+       STZ SIGN               ZERO OUT CELLS                            SYM10238
+       STZ COUNTR                                                       SYM10239
+       STZ SUM                                                          SYM10240
+RESETB STP FLPIN1             SET F/I SWITCHES                          SYM10241
+       STP FLPIN2                                                       SYM10242
+       TXL PLUSGN,,-                                                    SYM10243
+       REM                    FOUND DIGIT 0-9, START CONVERTING         SYM10244
+DIGIT  TSX ACUM,4             ACCUMULATE DIGIT                          SYM10245
+PLUSGN SYN *                                                            SYM10246
+       TSX NXTCHR,4           GET NEXT CHARACTER                        SYM10247
+       TXL TGENSW,,-          ASSUME BLANK                              SYM10248
+ (12)  PAX 12,4                                                         SYM10249
+       TXL DIGIT,4,9          0-11)8 ACCUMULATE THIS DIGIT              SYM10250
+       TXL PLUSGN,4,16        20)8 BYPASS + SIGN.                       SYM10251
+       TXL EXPONT,4,21        25)8 ASSUME =E= FOUND, NUMBER HAS EXPONT. SYM10252
+       TXL POINT,4,27         33)8 ASSUME =.= FOUND, NUMBER IS FLTG-PT. SYM10253
+       TXL CLOSE),4,28        34)8 CONVERT DELTA,THEN BACK FOR TOP VALUESYM10254
+       TXL MINUS,4,32   40)8 SET SIGN MINUS AND CONTINUE PROCESSING.    SYM10255
+       TXH (OPEN,4,59         73/74)8 SET UP FOR DELTA ENTRY            SYM10256
+       REM              ASSUME BLANK FOUND. PROCESS NUMBER PER SIGNALS  SYM10257
+       REM                    ( SET UP DURING ACCUMULATION.             SYM10258
+TGENSW N*C GENTOP             NORMAL OR GENERATOR MODE SWITCH.          SYM10259
+       TSX CONVRT,4                                                     SYM10260
+STOTX  STO TX                                                           SYM10261
+STOWRD STO **                                                           SYM10262
+       CAL STOWRD             INCREMENT STORING ADDRESS                 SYM10263
+       SUB DIFF               ROW-WISE INCREMENT = 1, J, OR J*K         SYM10264
+       STA STOWRD                                                       SYM10265
+RETNSW N*O RESET              GET NEXT NUMBER / CONTINUE IN GENERATING. SYM10266
+ARGNSW N*C ARGEN1             CONTINUE INCREMENTING / SETTING TABLE.    SYM10267
+FLPIN1 N*C GENFLO             GENERATE INTEGER / FLOATING TABLE.        SYM10268
+       CLA TSTART             ** INTEGER GENERATION                     SYM10269
+       ADD DELTA                                                        SYM10270
+       STO TSTART                                                       SYM10271
+       TXL DELTST,,-          OUT TO TEST                               SYM10272
+GENFLO STQ TRANMQ             ** FLOATING POINT GENERATION              SYM10273
+       CLA DELCNT             UP COUNT                                  SYM10274
+       FAD 1.0                                                          SYM10275
+       STO DELCNT                                                       SYM10276
+       LDQ DELTA              CREATE NEW ENTRY                          SYM10277
+       FMP DELCNT                                                       SYM10278
+       FAD TSTART                                                       SYM10279
+       LDQ TRANMQ                                                       SYM10280
+DELTST STO TRANS              TEST IF ENTRY IS OK                       SYM10281
+       SUB TEND                                                         SYM10282
+DELSW  CHS  NOP                                                         SYM10283
+       TZE CLATX              OK, ENTER NUMBER                          SYM10284
+       TMI CLATX                                                        SYM10285
+GENEND CLA TX                                                           SYM10286
+GXITSW N*C STOTST                                                       SYM10287
+       PXD -,-                RESET SWITCHES                            SYM10288
+       STP 2ND(SW                                                       SYM10289
+       STP TGENSW                                                       SYM10290
+GXIT2  CAL TXL                                                          SYM10291
+       STP RETNSW                                                       SYM10292
+       TXL RESET,,-                                                     SYM10293
+(OPEN  CAL TXL                                                          SYM10294
+2ND(SW N*C GENTOP                                                       SYM10295
+       STP TGENSW             OPEN SWITCHES                             SYM10296
+       STP 2ND(SW                                                       SYM10297
+       PXD -,-                                                          SYM10298
+       STP RETNSW             CLOSE SWITCH                              SYM10299
+       TSX CONVRT,4                                                     SYM10300
+STOTST STO TSTART                                                       SYM10301
+       TXL RESETA-2,,-                                                  SYM10302
+CLOSE) TSX CONVRT,4                                                     SYM10303
+       STO DELTA                                                        SYM10304
+       STZ DELCNT                                                       SYM10305
+       LXD NOP,4                                                        SYM10306
+       TPL *+2                                                          SYM10307
+       LXD CHS,4                                                        SYM10308
+       SXD DELSW,4                                                      SYM10309
+       TXL RESETA-2,,-                                                  SYM10310
+GENTOP STP GXITSW             ACCUMULATED FINAL VALUE,STORE             SYM10311
+       TSX CONVRT,4           AND START GENERATING TABLE                SYM10312
+       STO TEND                                                         SYM10313
+GSTRTS N*C FLPIN1                                                       SYM10314
+       CAL TXL                OPEN SWITCH FOR GENERATOR                 SYM10315
+       STP GSTRTS                                                       SYM10316
+       CLA TSTART                                                       SYM10317
+       TXL STOTX,,-                                                     SYM10318
+CLATX  CLA TRANS                                                        SYM10319
+       TXL STOTX,,-                                                     SYM10320
+       REM              FOUND =E=. SET UP FOR EXPONENT + FLTG-PT NUMBER SYM10321
+EXPONT CLA SIGN                                                         SYM10322
+ CHS   CLM                                                              SYM10323
+       ORA SUM                                                          SYM10324
+       STO TRANS                                                        SYM10325
+       CAL TXL                                                          SYM10326
+       STP ACUMSW             OPEN =ACUMSW= TO COUNT FRAC. DIGITS       SYM10327
+TXL    TXL RESETA,4,21        25)8 IF =E= GO ZERO OUT CELLS             SYM10328
+       TXL RESETB,,-          IF =.= ONLY SET FLP/INT SIGNAL.           SYM10329
+       REM                    NUMBER TO BE CONVERTED TO FLOATING POINT  SYM10330
+CONVRT SYN *                                                            SYM10331
+FLPIN2 N*C FLP                SWITCH TO SET CONVERSION                  SYM10332
+       CLA SIGN               INTEGER CONVERSION                        SYM10333
+       CLM                                                              SYM10334
+       ORA SUM                                                          SYM10335
+       ALS 18                                                           SYM10336
+       TRA 1,4                                                          SYM10337
+FLP    STQ TRANMQ             FLOATING POINT CONVERSION                 SYM10338
+       SXD CNVX4,4                                                      SYM10339
+ FESW  N*C FPXPNT             OUT TO EXPONENT CONVERSION                SYM10340
+       CLA 1.0                FLOATING POINT (NO EXPOENTN) CONVERSION   SYM10341
+       STO MQ                 SET M/Q VALUE = 1.0                       SYM10342
+       CLA SIGN                                                         SYM10343
+       CLM                                                              SYM10344
+       ORA SUM                                                          SYM10345
+FLP1   ORA MGNUM                                                        SYM10346
+       FAD MGNUM                                                        SYM10347
+       LXA COUNT,4                                                      SYM10348
+       STZ COUNT                                                        SYM10349
+       TXL LRS35,4,0                                                    SYM10350
+       TXL *+4,4,9                                                      SYM10351
+       FDP 10X10                                                        SYM10352
+       LLS 35                                                           SYM10353
+       TXI *-4,4,-10                                                    SYM10354
+       FDP 10X10+10,4                                                   SYM10355
+CNVX4  TXL *+2,,**                                                      SYM10356
+ LRS35 LRS 35                                                           SYM10357
+       FMP MQ                                                           SYM10358
+       LDQ TRANMQ             RESET MQ + XR-4, EXIT                     SYM10359
+       LXD CNVX4,4                                                      SYM10360
+       TRA 1,4                                                          SYM10361
+       REM                    EXPONENT CONVERSION                       SYM10362
+FPXPNT LXA SUM,4              OBTAIN VALUE OF EXPONENT                  SYM10363
+       CLA 1.0                                                          SYM10364
+       TXL FPXP1,4,0          BY-PASS IF EXPONENT = 0                   SYM10365
+       LRS 35                 COMPUTE M/Q                               SYM10366
+       TXL *+3,4,9                                                      SYM10367
+       FMP 10X10                                                        SYM10368
+       TXI *-4,4,-10                                                    SYM10369
+       FMP 10X10+10,4                                                   SYM10370
+ FPXP1 STO MQ                                                           SYM10371
+       CLA SIGN               TEST IF M/Q SHOULD BE RECIPROCATED        SYM10372
+       TPL FPXP2              NO                                        SYM10373
+       CLA 1.0                YES                                       SYM10374
+       FDP MQ                                                           SYM10375
+       STQ MQ                                                           SYM10376
+FPXP2  CLA TRANS              OBTAIN SIGNED INTEGER                     SYM10377
+       TXL FLP1,,-                                                      SYM10378
+ARGEN1 CLA DELCNT             ** AREA SET GENERATOR                     SYM10379
+       SUB (1)                TEST IF DONE                              SYM10380
+       TZE GENXIT             YES                                       SYM10381
+       STO DELCNT             NO                                        SYM10382
+       CLA TX                                                           SYM10383
+       TXL STOWRD,,-                                                    SYM10384
+GENXIT PXD -,-                DONE ENTERING                             SYM10385
+       STP ARGNSW             RETURN SWITCHES.                          SYM10386
+       STP GNSW2                                                        SYM10387
+       TXL GXIT2,,-                                                     SYM10388
+STAR   SYN *                                                            SYM10389
+XITSWT N*C CRDTAP             YES                                       SYM10390
+       CAL *                                                            SYM10391
+       TTR AR(RTN                                                       SYM10392
+       TRA 2,4                                                          SYM10393
+       REM                    FOUND SYMBOL                              SYM10394
+ALPHA  LXA (5),4                                                        SYM10395
+       ALS 6                                                            SYM10396
+       SLW SUM                                                          SYM10397
+       SXD ALFAX4,4                                                     SYM10398
+       TSX NXTCHR,4                                                     SYM10399
+ALFAX4 TXL ALFA3,,-                                                     SYM10400
+       PAX ,4                                                           SYM10401
+       SXD SYM,4                                                        SYM10402
+       TXH *+2,4,60           74)8 TEST FOR =(-                         SYM10403
+       TXH ALFA3+1,4,59       73)8 YES, OBTAIN SYMBOL AS IS.            SYM10404
+       ORA SUM                CREATE SYMBOL TO DATE.                    SYM10405
+       TXH *+2,4,48           60)8                                      SYM10406
+       TXH ALFA2,4,47         57)8                                      SYM10407
+       LXD ALFAX4,4                                                     SYM10408
+       TIX ALPHA+1,4,1                                                  SYM10409
+       SLW SYMBOL             STORE SYMBOL, 6 CHARACTERS                SYM10410
+ALFA6  TSX NXTCHR,4           WALK OFF EXTRA LETTERS TO =(= OR BLANK    SYM10411
+       TXL ALFA5,,-           END OF CARD ALSO ENDS CHARACTER NAME      SYM10412
+       PAX ,4                                                           SYM10413
+       TXH ALFA5,4,59                                                   SYM10414
+       TXH ALFA6,4,48         NON-BLANK AND NON-=(= BY-PASS.            SYM10415
+       TXL ALFA6,4,47                                                   SYM10416
+ALFA5  SXD SYM,4              SET =SYM= TO LAST CHARACTER GOTTEN        SYM10417
+       TXL *+2,,-                                                       SYM10418
+ALFA1  SLW SYMBOL                                                       SYM10419
+       LXA M,4                SET-UP FOR TABLE-LOOK-UP ON SYMBOL.       SYM10420
+ B)TBL CAL **,4               B)+M OBTAIN ENTRY                         SYM10421
+       ANA MASK1              TEST FOR BCD NAME                         SYM10422
+       TZE B)TBL2             NO BCD WORD                               SYM10423
+B)TBL1 CLA **,4               B)+M                                      SYM10424
+       CAS SYMBOL                                                       SYM10425
+       TXL *+2,,-                                                       SYM10426
+       TXL FOUND,,-                                                     SYM10427
+       TIX B)TBL,4,2                                                    SYM10428
+B)TBL2 TIX B)TBL,4,1                                                    SYM10429
+ERRLN  CAL (BDC)              START OF ERROR CONDITIONS                 SYM10430
+       SLW 1                                                            SYM10431
+       CAL (SPH)                                                        SYM10432
+       ETM                                                              SYM10433
+FORM   TXI FORMAT,,-          SET TO =NO ENTRY IN TABLE= LINE.          SYM10434
+       LTM                                                              SYM10435
+       CAL *                                                            SYM10436
+       TTR (FIL)                                                        SYM10437
+       WPR                    EJECT PAPER                               SYM10438
+       SPR 1                                                            SYM10439
+       HPR 32767,7,56         HPR 77777,7,70                            SYM10440
+       TXL *-1,,-                                                       SYM10441
+ALFA3  SXD SYM,4                                                        SYM10442
+       CAL SUM                                                          SYM10443
+       ORA 1BLANK                                                       SYM10444
+ALFA2  LXD ALFAX4,4                                                     SYM10445
+       TNX ALFA1,4,1                                                    SYM10446
+       ALS 6                                                            SYM10447
+       ORA 1BLANK                                                       SYM10448
+SYM    TXL ALFA2+1,,**                                                  SYM10449
+FOUND  CAL **,4               B)+M+1                                    SYM10450
+       STA STOWRD                                                       SYM10451
+       ADD (1)                                                          SYM10452
+       STA LOC                                                          SYM10453
+ FND1  CAL **,4         B)+M+2 OBTAIN THIRD WORD IN CASE OF MULTISUBSCT.SYM10454
+       TZE SINGLE             END OF TABLE, SPECIAL CASE                SYM10455
+       ANA MASK1              TEST FOR MULTI-SUBSCRIPT                  SYM10456
+       TNZ SINGLE             NO                                        SYM10457
+ FND2  CAL **,4               B)+M+2                                    SYM10458
+       STO JK                                                           SYM10459
+       ARS 18                                                           SYM10460
+       TXL SINGLE+2,,-                                                  SYM10461
+SINGLE CLA (1)                                                          SYM10462
+       STZ JK                                                           SYM10463
+       STO DIFPRM                                                       SYM10464
+       STO DIFF                                                         SYM10465
+       LXD SYM,4              TEST IF LAST CHARACTER WAS =(=            SYM10466
+       TXL RESET,4,59         73)8 NO.                                  SYM10467
+       STZ SUM                YES, GO PROCESS SUBSCRIPT.                SYM10468
+       TXL OPEN(,,-                                                     SYM10469
+ CARDS SXD CXR1,1                                                       SYM10470
+OUTSW  N*O GENA                                                         SYM10471
+       RCD                                                              SYM10472
+       CAL TXL                                                          SYM10473
+       STP OUTSW                                                        SYM10474
+ GENA  SYN *                                                            SYM10475
+       LXD (40),1             ZERO OUT =TRANS= AND =BCD= BLOCKS.        SYM10476
+       STZ TRANS+40,1                                                   SYM10477
+       TIX *-1,1,1                                                      SYM10478
+       CLA NOP                SET UP EXPANSION LOOP                     SYM10479
+       STO XPND1                                                        SYM10480
+       CLA (9)                SET ROW COUNTER TO (9)                    SYM10481
+ CRD1  STO TRANS+3                                                      SYM10482
+       CPY TRANS+33           COPY LEFT ROW                             SYM10483
+ (40)  TXL *+3,,40                                                      SYM10484
+ CXR1  TXL EOF,,**            EOF STOP                                  SYM10485
+ XR2   TXL EOR,,**            EOR, FINISH OUT RECORD                    SYM10486
+       CPY TRANS+34           COPY RIGHT ROW                            SYM10487
+       TZE ZROW               TEST ROW COUNT FOR ZERO, OUT TO SPECIAL   SYM10488
+       CAL TRANS+33           OR LEFT ROW TO (PROCESSING.               SYM10489
+       ORS TRANS+31           PUNCH REGISTER                            SYM10490
+       CAL TRANS+34           OR RIGHT ROW TO                           SYM10491
+ CRD2  ORS TRANS+32           PUNCH REGISTER                            SYM10492
+       TSX EXPND,1            EXPAND ROW                                SYM10493
+       CLA TRANS+3            TEST ROW COUNTER                          SYM10494
+       SUB (1)                                                          SYM10495
+       CAS L(M3)                                                        SYM10496
+       TRA CRD1                                                         SYM10497
+ EOR   CAL TRANS+31           END OF RECORD                             SYM10498
+       COM                    COMPLEMENT PUNCH LEFT                     SYM10499
+       SLW TRANS+33                                                     SYM10500
+       CAL TRANS+32           COMPLEMENT PUNCH RIGHT                    SYM10501
+       COM                                                              SYM10502
+       SLW TRANS+34                                                     SYM10503
+       CLA TALS4              SET =TRA ALS4= INTO ROUTINE.              SYM10504
+       STO XPND1                                                        SYM10505
+       TSX EXPND,1                                                      SYM10506
+       LXD CXR1,1             EXIT TO SUPER-PROGRAM                     SYM10507
+ TRA11 TRA 1,1                                                          SYM10508
+ ZROW  LXA (12),1             ZERO SPECIAL PROCESSING.                  SYM10509
+       STZ TRANS+31,1         RE-ZERO HOPPERS                           SYM10510
+       TIX *-1,1,1                                                      SYM10511
+       CLA ALS4               SET =ALS 4= OP.                           SYM10512
+       STO XPND1                                                        SYM10513
+       CAL TRANS+33           LEFT ROW                                  SYM10514
+       SLW TRANS+4            HOLD                                      SYM10515
+       ANA TRANS+31           LEFT PUNCH                                SYM10516
+       SLW TRANS+33           LEFT ROW                                  SYM10517
+       CAL TRANS+4                                                      SYM10518
+       ORS TRANS+31           LEFT PUNCH                                SYM10519
+       CAL TRANS+34           REPEAT WITH RIGHT ROW                     SYM10520
+       SLW TRANS+4                                                      SYM10521
+       ANA TRANS+32                                                     SYM10522
+       SLW TRANS+34                                                     SYM10523
+       CAL TRANS+4                                                      SYM10524
+ XR4   TXL CRD2,,**                                                     SYM10525
+EXPND  LXA (12),4             EXPAND LOOP XR4 = 12                      SYM10526
+       LDQ TRANS+33           DO LEFT HALF ROW.                         SYM10527
+       LXA (6),2                                                        SYM10528
+       CLM                                                              SYM10529
+       LGL 1                                                            SYM10530
+       ALS 5                                                            SYM10531
+       LGL 1                                                            SYM10532
+       ALS 5                                                            SYM10533
+       LGL 1                                                            SYM10534
+       ALS 5                                                            SYM10535
+       LGL 1                                                            SYM10536
+       ALS 5                                                            SYM10537
+       LGL 1                                                            SYM10538
+       ALS 5                                                            SYM10539
+       LGL 1                                                            SYM10540
+ XPND1 NOP   ALS4  TRA ALS4   VARIABLE OPERATION                        SYM10541
+       ACL TRANS+31,4         ADD HOPPER                                SYM10542
+       SLW TRANS+31,4                                                   SYM10543
+ XPND2 ACL TRANS+19,4         ADD BIN                                   SYM10544
+       SLW TRANS+19,4                                                   SYM10545
+       TNX TRA11,4,1          EXIT TO SUPER-PROGRAM.                    SYM10546
+       TIX EXPND+3,2,1        PROCESS NEXT 6 BITS                       SYM10547
+       LDQ TRANS+34           DO RIGHT HALF ROW                         SYM10548
+       TXL EXPND+2,,-                                                   SYM10549
+ ALS4  ALS 4                  EXTRA BLANK BIT.                          SYM10550
+       ORS TRANS+19,4                                                   SYM10551
+       ALS 1                                                            SYM10552
+       TXL XPND2,,-                                                     SYM10553
+SETAPE LDQ NOP                PREPARE FOR TAPE ENTRY                    SYM10554
+ (18)  ARS 18                                                           SYM10555
+       TRA 2,4                                                          SYM10556
+ TAPE  RTD INTAPE             READ A RECORD FROM TAPE                   SYM10557
+       LXA (18),2                                                       SYM10558
+       CPY BCD+18,2                                                     SYM10559
+       TIX *-1,2,1                                                      SYM10560
+       TXL EOF,,-             EOF                                       SYM10561
+       IOD                                                              SYM10562
+       TRA 1,1                EOR                                       SYM10563
+ACUMSW SYN *                  *** ACCUMULATE DIGIT                      SYM10564
+ACUM   N*C ACUM1                                                        SYM10565
+       TZE 1,4                BY-PASS ALL LEADING ZEROS.                SYM10566
+       STO TRANS+3            PRESERVE DIGIT.                           SYM10567
+       CAL TXL                OPEN SWITCH FOR RES OF DIGITS             SYM10568
+       STP ACUMSW                                                       SYM10569
+       TXL DIGNTR,,-                                                    SYM10570
+ACUM1  STO TRANS+3                                                      SYM10571
+       CLA HIGHTS             TEST IF OK TO ENTER NEXT DIGIT            SYM10572
+       SUB SUM                                                          SYM10573
+       TMI 1,4                                                          SYM10574
+DIGNTR CLA SUM                                                          SYM10575
+       ALS 1                                                            SYM10576
+       STO SUM                                                          SYM10577
+       ALS 2                                                            SYM10578
+       ADD SUM                                                          SYM10579
+       ADD TRANS+3                                                      SYM10580
+       STO SUM                                                          SYM10581
+FRCNT  CLA COUNT                                                        SYM10582
+       ADD COUNTR                                                       SYM10583
+       STO COUNT                                                        SYM10584
+TRA14  TRA 1,4                                                          SYM10585
+HEADCD REM                    FOUND =H=. MOVE LINE INTO BUFFER          SYM10586
+HEADCD LXA (12),4                                                       SYM10587
+       CLA (1)                                                          SYM10588
+       LGL 30                                                           SYM10589
+       SLW BCD                                                          SYM10590
+       CAL HDING              OBTAIN LOCATION OF BUFFER                 SYM10591
+       STA *+2                                                          SYM10592
+       CLA BCD+12,4           MOVE LINE OF TEXT                         SYM10593
+       STO **,4                                                         SYM10594
+       TIX *-2,4,1                                                      SYM10595
+       TXL CRDTAP,,**                                                   SYM10596
+       REM                                                              SYM10597
+       REM FOUND =END= CARD, RESTORE PAPER AND PUSH LOAD BUTTON         SYM10598
+       REM                                                              SYM10599
+ENDCRD WTD OUTAPE             PUT A RESTORE ON TPAE =OUTAPE=            SYM10600
+       CPY RESTRE                                                       SYM10601
+       IOD                                                              SYM10602
+BUTTON RCD                                                              SYM10603
+       CPY 0                                                            SYM10604
+       CPY 1                                                            SYM10605
+       TRA 0                                                            SYM10606
+EOF    WEF OUTAPE                                                       SYM10607
+       TRA BUTTON                                                       SYM10608
+       REM                                                              SYM10609
+       REM TO CONVERT BCD LIST TO TABLE USABLE FOR INPUT PROGRAM        SYM10610
+       REM                                                              SYM10611
+BCDCON CLA 1,4                TEST IF ENTRY HAS BEEN MADE FROM THERE    SYM10612
+       ANA MASK               PREVIOUSLY                                SYM10613
+       TNZ 1,4                YES, RETURN IMMEDIATELY                   SYM10614
+       CAL *                  SAVE CONSOLE                              SYM10615
+       TTR (LEV)                                                        SYM10616
+       CLA 1,4                                                          SYM10617
+       N*C BCD1               BY-PASS EXCEPT FIRST TIME, SET-UP ENTRY.  SYM10618
+       ORA MASK                                                         SYM10619
+       STP *-2                CHANGE SWITCH                             SYM10620
+       STA B)                 STORE FOR =M= COMPUTATION.                SYM10621
+       STA NTRNAM             STORE FOR TABLE ENTRY.                    SYM10622
+       ADD (1)                                                          SYM10623
+       STA NTRLOC                                                       SYM10624
+       ADD (1)                                                          SYM10625
+       STA NTRJK                                                        SYM10626
+       SUB (2A)                                                         SYM10627
+ BCD1  ADD (95)                                                         SYM10628
+       STA BCD2                                                         SYM10629
+       STZ LOC                                                          SYM10630
+       LXA (95),3             MOVE TEXT TO TRANSIENT AREA (SET XR1=95)  SYM10631
+ BCD2  CLA **,2               B)+95                                     SYM10632
+       STO BCD+95,2                                                     SYM10633
+       TIX BCD2,2,1                                                     SYM10634
+       TIX *+1,1,1            DROP XR 1 FOR 2ND WORD OF =BCD=           SYM10635
+       LDQ BCD                SET-UP FOR CHARACTER PICK-UP              SYM10636
+       LXA (6),2                                                        SYM10637
+       STZ J                                                            SYM10638
+       STZ K                                                            SYM10639
+       CLA (2)                SET NAME COUNT = 2 FOR STARTING VALUE     SYM10640
+RETURN STA NAMCNT                                                       SYM10641
+       TIX *+1,4,1            SET XR4 FOR NEXT NAME                     SYM10642
+       SXD BCDXR4,4                                                     SYM10643
+       STZ SUM                                                          SYM10644
+       STZ NAME                                                         SYM10645
+       TSX BCDCHR,4                                                     SYM10646
+ (95)  PAX 95,4                                                         SYM10647
+       TXH ALLDON,4,62        76)8 DONE WITH LIST. EXIT                 SYM10648
+       TXH (95)-1,4,58        72)8 WALK OFF =,= + =(=                   SYM10649
+       TXH *+2,4,48           60)8                                      SYM10650
+       TXH (95)-1,4,47        57)8 BY-PASS BLANKS                       SYM10651
+       LXA (6),4              ASSUME CHARACTER SO START ACCUMULATING    SYM10652
+ NAME1 ORA NAME               ( NAME                                    SYM10653
+       TNX NM4,4,1            TEST FOR 6-CHARACTER ENTRY.               SYM10654
+       ALS 6                                                            SYM10655
+       SLW NAME                                                         SYM10656
+       SXD CHACNT,4                                                     SYM10657
+ NM1   TSX BCDCHR,4           GET NEXT CHARACTER                        SYM10658
+       STA CHAR               PRESERVE CHARACTER FOR LATER TESTING      SYM10659
+ CHAR  PAX **,4                                                         SYM10660
+       TXH NM2,4,58           72)8 EITHER =,= OR =(= OR =77)8=          SYM10661
+       TXH *+2,4,48           60)8 CHARACTER = S - Z =                  SYM10662
+       TXH NM1,4,47           57)8 WALK OF BLANKS.                      SYM10663
+       LXD CHACNT,4           ALL OTHER CHARACTERS                      SYM10664
+CHACNT TXL NAME1,,**                                                    SYM10665
+  NM2  LXD CHACNT,4           OR IN BLANKS TO FILL UP =NAME=            SYM10666
+       CAL NAME                                                         SYM10667
+       TXL *+2,,-                                                       SYM10668
+       ALS 6                                                            SYM10669
+       ORA 1BLANK                                                       SYM10670
+       TIX *-2,4,1                                                      SYM10671
+ NM4   SLW NAME                                                         SYM10672
+       LXA CHAR,4             RE-LOAD XR WITH ENTRY CHARACTER.          SYM10673
+  NM3  TXH SETNAM,4,62        76)8 END OF RUN= CHARACTER =77)8=         SYM10674
+       TXH SSCPT,4,59         73)8 CHARACTER =(=, START SUBSCRIPT       SYM10675
+       TXH SETNAM,4,58        72)8 CHARACTER =,=, STORE ENTRY.          SYM10676
+       TSX BCDCHR,4           GET NEXT CHARACTER                        SYM10677
+  M    PAX **,4                                                         SYM10678
+       TXL NM3,,-                                                       SYM10679
+SETNAM LXD BCDXR4,4           STORE =NAME=, =LOC,,I=, =K,,J= BACK IN    SYM10680
+       CAL 1,4                OBTAIN =LOC.NAME= ( TABLE.                SYM10681
+       STA LOC                                                          SYM10682
+       ANA MASK1              TEST JUST PREFIX FOR =NTR=                SYM10683
+       TNZ NAMERR             ERROR, RUN OUT OF NAMES                   SYM10684
+       LXA SUM,4              CREATE =LOC,,I= (FOR NO SUBSCRIPT, I=0 )  SYM10685
+       SXD LOC,4                                                        SYM10686
+       LXA J,4                BY-PASS FOR SINGLE DIMENSION              SYM10687
+       TXL NTRNAM-1,4,0       1 DIMENSIONAL                             SYM10688
+       CLA K                                                            SYM10689
+       TZE SET2               2 DIMENSIONAL                             SYM10690
+       STQ TRANS              3 DIMENSIONAL                             SYM10691
+       LDQ K                                                            SYM10692
+       MPY J                                                            SYM10693
+       LLS 53                                                           SYM10694
+       LDQ TRANS                                                        SYM10695
+       ADD K                                                            SYM10696
+       TXL *+3,,-                                                       SYM10697
+ SET2  PXD ,4                                                           SYM10698
+       ADD (1)                                                          SYM10699
+       SLW K                                                            SYM10700
+       CAL NAME               MOVE =NAM= BACK INTO NEW TABLE            SYM10701
+NTRNAM SLW **                 B)                                        SYM10702
+       CAL LOC                MOVE =LOC,,I= BACK INTO TABLE             SYM10703
+NTRLOC SLW **                 B)+1                                      SYM10704
+       CAL *-1                                                          SYM10705
+       TXL NTR1,4,0           TEST FOR THIRD ENTRY ( XR4 = J STILL)     SYM10706
+       CAL K                  ENTER THIRD WORD                          SYM10707
+NTRJK  SLW **                 B)+2                                      SYM10708
+       CAL *-1                                                          SYM10709
+ NTR1  ADD (1)                                                          SYM10710
+       STA NTRNAM                                                       SYM10711
+       ADD (1)                                                          SYM10712
+       STA NTRLOC                                                       SYM10713
+       ADD (1)                                                          SYM10714
+       STA NTRJK                                                        SYM10715
+       CAL NAMCNT             UP =NAME COUNT= RE-ENTRY EXIT.            SYM10716
+       ADD (1)                                                          SYM10717
+       LXD BCDXR4,4           OBTAIN XR4 FOR MODIFICATION.              SYM10718
+BCDXR4 TXL RETURN,,**                                                   SYM10719
+SSCPT  LXA (0),4              FOUND A SUBSCRIPT,                        SYM10720
+       STZ J                  ZERO OUT CELLS                            SYM10721
+       STZ K                                                            SYM10722
+  SS1  SXD SSCPTC,4                                                     SYM10723
+  SS2  TSX BCDCHR,4           GET CHARACTER                             SYM10724
+  (0)  PAX 0,4                                                          SYM10725
+       TXL SSDIG,4,9          (0-9) TEST FOR DIGIT                      SYM10726
+       TXL SETNAM,4,28        34)8 ASSUME =)= WHICH ENDS SUBSCRIPT.     SYM10727
+       TXL SS2,4,48           60)8 ASSUME BLANK, WALK OFF.              SYM10728
+       LXD SSCPTC,4           ASSUME =,= MOVE AS SUBSCRIPT + STORE      SYM10729
+       TXH SUBERR,4,3                                                   SYM10730
+       TRA *+3,4              UP SUBSCRIPTS                             SYM10731
+       CLA J                                                            SYM10732
+       STO K                                                            SYM10733
+       CLA SUM                                                          SYM10734
+       STO J                                                            SYM10735
+       STZ SUM                                                          SYM10736
+       TXI SS1,4,2                                                      SYM10737
+SUBERR CLA LSSCER             ERROR, MORE THAN 3 SUBSCRIPTS GIVEN       SYM10738
+       ARS 18                                                           SYM10739
+       STA FORM                                                         SYM10740
+LSSCER TXL ERRLN,,SSCERR                                                SYM10741
+NAMERR CLA NMERRL                                                       SYM10742
+NMERRL TXL SUBERR+1,,FNMERR                                             SYM10743
+SSDIG  TSX ACUM,4                                                       SYM10744
+       TXL SS2,,-                                                       SYM10745
+ALLDON LXD BCDXR4,4           ALL DONE PROCESSING. CHECK IF NEXT WORD   SYM10746
+       CLA 1,4                IN SET-UP IS IN =NTR=                     SYM10747
+       ANA MASK1                                                        SYM10748
+       TNZ DN1                OK                                        SYM10749
+       CLA MERRL                                                        SYM10750
+MERRL  TXL SUBERR+1,,LISTER                                             SYM10751
+ DN1   CAL NTRNAM             MOVE =B)+M= INTO TABLE LOOK-1+            SYM10752
+       STA B)TBL                                                        SYM10753
+       STA B)TBL1                                                       SYM10754
+       STA *+1                                                          SYM10755
+       STZ **                 SET END OPERATION                         SYM10756
+       ADD (1)                                                          SYM10757
+       STA FOUND                                                        SYM10758
+       ADD (1)                                                          SYM10759
+       STA FND1                                                         SYM10760
+       STA FND2                                                         SYM10761
+       SUB (2A)                                                         SYM10762
+       SUB B)                 COMPUTE =M= FOR TABLE LOOK-UP TEST        SYM10763
+       STA M                                                            SYM10764
+       CAL *                                                            SYM10765
+       TTR AR(RTN                                                       SYM10766
+       CAL NAMCNT                                                       SYM10767
+       STO 1,4                                                          SYM10768
+NAMCNT TTR **,4                                                         SYM10769
+BCDCHR PXD -,-                                                          SYM10770
+       LGL 6                                                            SYM10771
+       TIX TRA14,2,1                                                    SYM10772
+       LXA (6),2                                                        SYM10773
+       LDQ BCD+95,1                                                     SYM10774
+       TXI TRA14,1,-1                                                   SYM10775
+TAPCRD     CARDS,,TAPE                                                  SYM10776
+  NOP  NOP                                                              SYM10777
+ SWT   SWT INSWT                                                        SYM10778
+ SLT   SLT INLITE                                                       SYM10779
+XTRABT OCT 000020000000       PUTS IN EXTRA BIT FOR SWITCH TESTS.       SYM10780
+SLTOP  SLT -                  BASIC SENSE TEST OPERATION.               SYM10781
+TAPROP RTD -                  SPECIAL READ TAPE                         SYM10782
+NORMTP RTD INTAPE                                                       SYM10783
+SSCERR BCD 7( 32H1MORE THAN 3 SUBSCRIPTS ARE GIVEN )                    SYM10784
+       OCT -377777777777                                                SYM10785
+FNMERR BCD 6( 27H1LIST OF ENTRIES TOO SHORT  )                          SYM10786
+       OCT -377777777777                                                SYM10787
+LISTER BCD 7( 34H1MORE ENTRIES IN LIST THAN IN TEST )                   SYM10788
+       OCT -377777777777                                                SYM10789
+FORMAT BCD 3( 28H1 NO SYMBOL =                                          SYM10790
+SYMBOL BCD 3 = LISTED )                                                 SYM10791
+       OCT -377777777777                                                SYM10792
+RESTRE BCD 11                                                           SYM10793
+ TALS4 TRA ALS4                                                         SYM10794
+1BLANK OCT 60                                                           SYM10795
+MGNUM  OCT 233000000000                                                 SYM10796
+ L(M3) DEC -3                                                           SYM10797
+ (1)   DEC 1                                                            SYM10798
+ (2A)  DEC 2                                                            SYM10799
+ (9)   DEC 9                                                            SYM10800
+ (10)  DEC 10                                                           SYM10801
+HIGHTS DEC 13421771           ENTRY TEST ONE MORE DIGIT CAN STILL GO    SYM10802
+1AND1      1,,1                                                         SYM10803
+MASK1  OCT -300000000000                                                SYM10804
+ MASK  OCT -377777000000                                                SYM10805
+ B)    SLW ** B)                                                        SYM10806
+ 10X10 DEC 1.E10,1.E9,1.E8,1.E7,1.E6,1.E5,1.E4,1.E3,1.E2,1.E1           SYM10807
+ 1.0   DEC 1.0                                                          SYM10808
+ DONE  SYN *                                                            SYM10809
+       ORG 32563                                                        SYM10810
+ COUNT BSS 1                                                            SYM10811
+ LOC   BSS 1                                                            SYM10812
+SUM    BSS 1                                                            SYM10813
+SIGN   BSS 1                                                            SYM10814
+COUNTR BSS 1                                                            SYM10815
+TRANMQ BSS 1                                                            SYM10816
+ MQ    BSS 1                                                            SYM10817
+TSTART BSS 1                                                            SYM10818
+TX     BSS 1                                                            SYM10819
+TEND   BSS 1                                                            SYM10820
+DELTA  BSS 1                                                            SYM10821
+DELCNT BSS 1                                                            SYM10822
+DIFPRM BSS 1                                                            SYM10823
+  HIN  BSS 1                                                            SYM10824
+SSCPTC BSS 1                                                            SYM10825
+ DIFF  BSS 1                                                            SYM10826
+ I     BSS 1                                                            SYM10827
+ NAME  BSS 1                                                            SYM10828
+ J     BSS 1                                                            SYM10829
+ K     BSS 1                                                            SYM10830
+ JK    BSS 1                                                            SYM10831
+ JKM1  BSS 1                                                            SYM10832
+ TRANS BSS 7                                                            SYM10833
+ BCD   BSS 100                                                          SYM10834
+       END 0                                                            SYM10836

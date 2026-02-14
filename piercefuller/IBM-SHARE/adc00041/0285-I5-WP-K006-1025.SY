@@ -1,0 +1,580 @@
+*                  WPK06 - DECIMAL INPUT UNDER SENSE LIGHT CONTROL      WPK06001
+*                   (FORMERLY INP2M - MODIFIED VERSION OF NY INP2)      WPK06002
+WPK06  TEFA *+1           TURN OFF EOF INDICATOR                        WPK06003
+       SXD PX1,1          SAVE PROGRAM INDEX REGISTERS                  WPK06004
+       SXD PX2,2                                                        WPK06005
+       SXD PX4,4                                                        WPK06006
+       CAL 1,4            OBTAIN LOADING ADDRESS                        WPK06007
+       STA LOC                                                          WPK06008
+       SLT 1                                                            WPK06009
+ SAVE  TXL TPINP,0,0      OBTAIN FIRST RECORD FROM TAPE                 WPK06010
+       SLN 1              OBTAIN FIRST RECORD FROM CARD                 WPK06011
+ RSTRT RCDA                                                             WPK06012
+       RCHA IORD2         FIRST CARD TO LOADING BUFFER                  WPK06013
+ NEXT  SLT 1              UNIT RECORD REENTRY POINT                     WPK06014
+       TXL PASS2,0,0      TAPE INPUT                                    WPK06015
+       SLN 1              CARDS INPUT                                   WPK06016
+       AXT 21,1           INITIALIZE CONTROL FOR                        WPK06017
+       SXD SAVE,1              DUMMY COPY LOOP                          WPK06018
+       TCOA *             DELAY UNTIL CARD IS IN                        WPK06019
+       TEFA EOFCD         EXIT ON END OF FILE                           WPK06020
+       AXT 8,1            NTH CARD IS IN LOADING BUFFER,                WPK06021
+       CAL IMGE2               COMPUTE SLIDING SUM                      WPK06022
+       ANA MASK1               FOR TRA PSEUDO-OP                        WPK06023
+       ARS 3                                                            WPK06024
+       SLW TEMP                                                         WPK06025
+       CAL IMGE2+12                                                     WPK06026
+       ANA MASK1                                                        WPK06027
+       ORA TEMP                                                         WPK06028
+       ARS 3                                                            WPK06029
+       SLW TEMP                                                         WPK06030
+       CAL IMGE2+24,1                                                   WPK06031
+       ANA MASK1                                                        WPK06032
+       ORA TEMP                                                         WPK06033
+       ARS 3                                                            WPK06034
+       SLW TEMP                                                         WPK06035
+       TIX *-5,1,2                                                      WPK06036
+       ERA TRAPC          TEST FOR TRA PSEUDO-OP                        WPK06037
+       TZE SKIP           TRA CAUGHT                                    WPK06038
+       RCDA               MORE CARDS, SELECT READER                     WPK06039
+       AXT 24,1                                                         WPK06040
+       CLA IMGE2+24,1     MOVE CURRENT CARD TO                          WPK06041
+       STO IMGE1+24,1          CONVERSION BUFFER                        WPK06042
+       TIX *-2,1,1                                                      WPK06043
+       RCHA IORD2         LOAD NEXT CARD TO BUFFER 2.                   WPK06044
+ FINAL TSX RTX,4                                                        WPK06045
+ RTD2      BCD,,-1                                                      WPK06046
+ FIL   CLA MASK           NORMAL RETURN - SET END OF VARIABLE FIELD     WPK06047
+       STO BCD+12                                                       WPK06048
+       SUB BCD                                                          WPK06049
+       TZE CTRL1                                                        WPK06050
+       LDQ BCD                                                          WPK06051
+       PXD 0,0                                                          WPK06052
+       SLW SYMB                                                         WPK06053
+       TSX LOCB-1,2                                                     WPK06054
+       STA LOC                                                          WPK06055
+ CTRL1 LXD RTD2,2         SET BEGINNING OF                              WPK06056
+       LXA 2INP,1              VARIABLE FIELD                           WPK06057
+       LDQ BCD,2                                                        WPK06058
+       LGL 30                                                           WPK06059
+       STQ MQINP                                                        WPK06060
+       CAL MQINP                                                        WPK06061
+       ARS 30                                                           WPK06062
+       SLW CH                                                           WPK06063
+       CAL BCD+1                                                        WPK06064
+       ALS 7                                                            WPK06065
+       ARS 19                                                           WPK06066
+       LXD TX4,4                                                        WPK06067
+ TSINP CAS BCDO+1,4                                                     WPK06068
+ TX4   TXL INSTR,0,4                                                    WPK06069
+       TRA BCDOP+1,4                                                    WPK06070
+       TIX TSINP,4,1                                                    WPK06071
+ INSTR HTR NEXT                                                         WPK06072
+ PX1   TXL TRAOP,0,0                                                    WPK06073
+ PX2   TXL OCTOP,0,0                                                    WPK06074
+ PX4   TXL DECOP,0,0                                                    WPK06075
+ BCDOP CLA CH             DETERMINE NUMBER                              WPK06076
+       CAS Q10                 OF BCD WORDS                             WPK06077
+       CLA Q10                                                          WPK06078
+       TXH **,0,0                                                       WPK06079
+       PAX ,1                                                           WPK06080
+ BCD2  CLA BCD+1,2                                                      WPK06081
+       TSX LOC,4                                                        WPK06082
+       TNX NEXT,1,1                                                     WPK06083
+       TXI BCD2,2,-1                                                    WPK06084
+ TRAOP CAL CH             PREPARE TO COMPUTE                            WPK06085
+       STO SYMB                EXIT ADDRESS                             WPK06086
+       LDQ BCD+2                                                        WPK06087
+       PXD 0,0                                                          WPK06088
+       TSX LOCB-1,2                                                     WPK06089
+       STO EXIT2                                                        WPK06090
+       LXD PX1,1          RESTORE PROGRAM                               WPK06091
+       LXD PX2,2               INDEX REGISTERS                          WPK06092
+       LXD PX4,4                                                        WPK06093
+ EXIT2 TRA **             EXIT2 TRANSFER                                WPK06094
+ TAG   LGL 3                                                            WPK06095
+       PXD 0,0                                                          WPK06096
+       LGL 3                                                            WPK06097
+       ALS 15                                                           WPK06098
+       ORA SYMB                                                         WPK06099
+       TXL LOCC,0,0                                                     WPK06100
+       LXA LOCB,4         SET CHARACTER COUNT                           WPK06101
+ LOCB  LGL 6              COMPUTE ABSOLUTE LOCATION                     WPK06102
+       CAS COINP                                                        WPK06103
+       TRA 2,2                                                          WPK06104
+       TXL TAG,0,0                                                      WPK06105
+       CAS BLINP                                                        WPK06106
+       TRA 2,2                                                          WPK06107
+       TXL LOCA,0,0                                                     WPK06108
+       CAS TENIN                                                        WPK06109
+       TRA 2,2                                                          WPK06110
+       TRA 2,2                                                          WPK06111
+       STO CHD                                                          WPK06112
+       CLA SYMB                                                         WPK06113
+ 2INP  ALS 2                                                            WPK06114
+       ADD SYMB                                                         WPK06115
+       ALS 1                                                            WPK06116
+       ADD CHD                                                          WPK06117
+       STO SYMB                                                         WPK06118
+ LOCA  PXD 0,0                                                          WPK06119
+       TIX LOCB,4,1                                                     WPK06120
+       CLA SYMB                                                         WPK06121
+ LOCC  ORA TAGC                                                         WPK06122
+       TRA 1,2                                                          WPK06123
+ OCTOP LDQ MQINP                                                        WPK06124
+       CLA OCT10          RESET SWITCH FOR EXIT FROM                    WPK06125
+       STP OCT10               OCTOP                                    WPK06126
+       PXD 0,0            CLEAR WORD                                    WPK06127
+       TXL OCT9,0,0                                                     WPK06128
+ OCT1  PXD 0,0                                                          WPK06129
+       LGL 3                                                            WPK06130
+       TNZ OCT8                                                         WPK06131
+       CLA DATUS                                                        WPK06132
+       LGL 3                                                            WPK06133
+ OCT9  STO DATUS                                                        WPK06134
+       ORS DATUS                                                        WPK06135
+ OCT6  TIX OCT1,1,1                                                     WPK06136
+       TXI OCT2,2,-1                                                    WPK06137
+ OCT2  LDQ BCD,2                                                        WPK06138
+       TXI OCT1,1,5                                                     WPK06139
+ OCT8  LGL 3                                                            WPK06140
+       STQ MQINP                                                        WPK06141
+       CAS COINP                                                        WPK06142
+       TXL OCT3,0,0                                                     WPK06143
+       TXL OCT4,0,0                                                     WPK06144
+       CAS MIINP                                                        WPK06145
+       TXL OCT3,0,0                                                     WPK06146
+       TXL OCT5,0,0                                                     WPK06147
+       CAS PLUS                                                         WPK06148
+       TXL OCT3,0,0                                                     WPK06149
+       TXL OCT6,0,0                                                     WPK06150
+ OCT3  CLS OCT10          INVERT SWITCH TO EXIT FROM OCTOP              WPK06151
+       STO OCT10               AFTER LAST WORD ON THIS CARD IS STORED   WPK06152
+ OCT4  CLA DATUS                                                        WPK06153
+       TSX LOC,4                                                        WPK06154
+ OCT10 TXH NEXT,0,0       SWITCH - INVERTED TO TXL NEXT, FOR EXIT       WPK06155
+       TXL OCTOP,0,0                                                    WPK06156
+ OCT5  CLA PBIT           SET NEGATIVE SIGN                             WPK06157
+       TXL OCT9,0,0                                                     WPK06158
+ DECOP PXD 0,0            CLEAR CONVERSION                              WPK06159
+ BN2   SLW BN                  REGISTERS                                WPK06160
+ EX2   SLW EXPN                                                         WPK06161
+ INTN  SLW N                                                            WPK06162
+       AXT 0,4            SET DECIMAL COUNT TO ZERO                     WPK06163
+       CAL SW1            RESET SWITCHES FOR -                          WPK06164
+       STP CM2                 - FIXED POINT                            WPK06165
+       STP CM6                                                          WPK06166
+       STP EXS                 - EXP                                    WPK06167
+       STP CM3                 - POINT                                  WPK06168
+       STP NX4                 - EXIT FROM DECOP                        WPK06169
+       CAL INTN           INITIALIZE CONVERSION                         WPK06170
+ SW1   TXL BN3,0,0                                                      WPK06171
+ PT1   CLS CM3            INVERT SWITCH TO SIGNAL DECIMAL POINT         WPK06172
+       STO CM3                                                          WPK06173
+       CAL CV3                                                          WPK06174
+       STA CV5            ROUTINE TO COUNT                              WPK06175
+       STA CV6                 DECIMAL PLACES                           WPK06176
+       TXI CV5,4,1                                                      WPK06177
+ PT3   TXI CV3,4,-1       COUNT DECIMAL PLACES                          WPK06178
+ EX1   CLS EXS            INVERT SWITCH TO SIGNAL EXPONENT              WPK06179
+       STO EXS                                                          WPK06180
+       CAL EX2            SET UP EXPONENT CONVERSION                    WPK06181
+ BN3   STA CV7            STORE CONVERSION                              WPK06182
+       STA CV8                 ADDRESS                                  WPK06183
+       STA CV9                                                          WPK06184
+       CAL PT3            INITIAL CONVERSION                            WPK06185
+       STA CV5                 WITHOUT DECIMAL COUNT                    WPK06186
+       STA CV6                                                          WPK06187
+ PL1   CAL CV8                                                          WPK06188
+ MN3   STD CV10                                                         WPK06189
+       TOV CV5                                                          WPK06190
+       TXL CV5,0,0                                                      WPK06191
+ BN1   CLA CM2            INVERT SWITCHES TO SIGNAL FIXED POINT         WPK06192
+       STP CM2                                                          WPK06193
+       STP CM6                                                          WPK06194
+       CAL BN2            SET UP B CONVERSION                           WPK06195
+       TXL BN3,0,0                                                      WPK06196
+ MN1   CAL MN2                                                          WPK06197
+ MN2   TXL MN3,0,258*64                                                 WPK06198
+ CV3   PXD PT3,0                                                        WPK06199
+       LGL 6                                                            WPK06200
+       CAS TENIN          TEST FOR DIGIT                                WPK06201
+       TXL CM,0,0                                                       WPK06202
+       TXL CV2,0,0                                                      WPK06203
+       SLW CH             PERFORM CODED                                 WPK06204
+ CV7   CLA N                   MULTIPLICATION                           WPK06205
+       ALS 2                   BY TEN AND ADD                           WPK06206
+ CV8   ADD N                   CURRENT DIGIT                            WPK06207
+       ALS 1                                                            WPK06208
+ CV10  ADD CH                                                           WPK06209
+       TOV OVF            TEST FOR OVERFLOW                             WPK06210
+ CV9   STO N                                                            WPK06211
+ CV5   TIX CV3,1,1        COUNT CHARACTERS                              WPK06212
+       TXI CV4,2,-1       OBTAIN NEXT BCD                               WPK06213
+ CV4   LDQ BCD,2               WORD AND RESTORE                         WPK06214
+ CV6   TXI CV3,1,5             CHARACTER COUNT                          WPK06215
+ OVF   TXI CV5,4,1        COUNT DECIMAL OVERFLOWS                       WPK06216
+ CM    CAS COINP                                                        WPK06217
+       TXL CV2,0,0                                                      WPK06218
+       TXL CM1,0,0                                                      WPK06219
+       CAS MIINP                                                        WPK06220
+       TXL CV2,0,0                                                      WPK06221
+       TXL MN1,0,0                                                      WPK06222
+       CAS PNTIN                                                        WPK06223
+       TXL CV2,0,0                                                      WPK06224
+       TXL PT1,0,0                                                      WPK06225
+       CAS EINP                                                         WPK06226
+       TXL CV2,0,0                                                      WPK06227
+       TXL EX1,0,0                                                      WPK06228
+       CAS B                                                            WPK06229
+       TXL CV2,0,0                                                      WPK06230
+       TXL BN1,0,0                                                      WPK06231
+       CAS PLUS                                                         WPK06232
+       TXL CV2,0,0                                                      WPK06233
+       TXL PL1,0,0                                                      WPK06234
+ CV2   CLS NX4            INVERT SWITCH TO SIGNAL END OF                WPK06235
+       STO NX4                 VARIABLE FIELD                           WPK06236
+ CM1   STQ MQINP                                                        WPK06237
+       CLA N                                                            WPK06238
+       TZE STOR                                                         WPK06239
+ EXS   TXL CM2,0,0        SWITCH - INVERTED TO TXH INDICATES EXPONENT   WPK06240
+       CAL PBIT           PREPARE TRUE                                  WPK06241
+       ADD EXPN                DECIMAL EXPONENT                         WPK06242
+       ALS 18                                                           WPK06243
+       STD CM4                                                          WPK06244
+       CLA N                                                            WPK06245
+ CM4   TXI CM5,4,0        FLOAT CONVERTED                               WPK06246
+ CM2   TXL CM3,0,0        SWITCH - INVERTED TO TXH INDICATES FIXED POINTWPK06247
+       TXL CM5,0,0                                                      WPK06248
+ CM3   TXL STOR,0,0       SWITCH - INVERTED TO TXH INDICATES POINT      WPK06249
+ CM5   STA FL1            35 BIT INTEGER                                WPK06250
+       ARS 15                                                           WPK06251
+       ORA FL2                                                          WPK06252
+       FAD FL2                                                          WPK06253
+       TPL CMF1                                                         WPK06254
+       FSB FL1                                                          WPK06255
+       TXL CMF2,0,0                                                     WPK06256
+ CMF1  FAD FL1                                                          WPK06257
+ CMF2  STQ RESID                                                        WPK06258
+       TXL CM6,4,0                                                      WPK06259
+       TXH CM7,4,38       TEST FOR NEGATIVE EXP                         WPK06260
+ CM11  TXI CM9,4,-1       COMPUTE ABSOLUTE                              WPK06261
+ CM9   SXD CM10,4              VALUE OF EXPONENT                        WPK06262
+       LXD CM11,4                                                       WPK06263
+ CM10  TNX CM8,4,**                                                     WPK06264
+       STO DATUS                                                        WPK06265
+       LDQ ONEIN,4        COMPUTE FLOATING                              WPK06266
+       FMP DATUS               BINARY REPRESENTATION                    WPK06267
+       STO T                   OF INTEGER TIMES THE                     WPK06268
+       STQ T+1                 POWER OF TEN GIVEN                       WPK06269
+       LDQ ONEIN,4             BY THE TRUE EXPONENT                     WPK06270
+       FMP RESID                                                        WPK06271
+       FAD T+1                                                          WPK06272
+       FAD T                                                            WPK06273
+       ACL EXC1                                                         WPK06274
+       PBT                                                              WPK06275
+       TXL CM6,0,0                                                      WPK06276
+ CM8   PXD 0,0                                                          WPK06277
+       HTR STOR                                                         WPK06278
+ CM7   TXL CM8,4,-49      TEST FOR ILLEGAL EXP                          WPK06279
+ CM13  TQO CM13+1                                                       WPK06280
+       FDP ONEIN,4        COMPUTE FLOATING                              WPK06281
+       STQ T                   BINARY EQUIVALENT                        WPK06282
+       FAD RESID               OF INTEGER TIMES                         WPK06283
+       FDP ONEIN,4             POWER OF TEN GIVEN                       WPK06284
+       TQO CM8                 BY TRUE EXPONENT                         WPK06285
+       STQ T+1                                                          WPK06286
+       CLA T+1                                                          WPK06287
+       FAD T                                                            WPK06288
+       ACL EXC2                                                         WPK06289
+       PBT                                                              WPK06290
+       TXL CM8,0,0                                                      WPK06291
+ CM6   TXL STOR,0,0       SWITCH - INVERTED TO TXH INDICATES FIXED POINTWPK06292
+       STO T                                                            WPK06293
+       ALS 2                                                            WPK06294
+       SSM                DETERMINE SHIFT                               WPK06295
+       ARS 29                  NECESSARY TO POSITION                    WPK06296
+       ADD Q128                NUMBER AS INDICATED                      WPK06297
+       ADD BN                  BY B                                     WPK06298
+       TPL SHIFT                                                        WPK06299
+       TNZ CM8                                                          WPK06300
+ SHIFT STA CM12                                                         WPK06301
+       CLA T              REMOVE CHARACTERISTICS                        WPK06302
+       LLS 8                   FROM FLOATING NUMBER                     WPK06303
+       ALS 2                                                            WPK06304
+       ARS 10                                                           WPK06305
+       LLS 8                                                            WPK06306
+ CM12  LRS **             POSITION FIXED NUMBER                         WPK06307
+ STOR  TSX LOC,4                                                        WPK06308
+       LDQ MQINP                                                        WPK06309
+ NX4   TXL DECOP,0,**     SWITCH - INVERTED TO TXH INDICATES END OF CARDWPK06310
+ LX4   TXL NEXT,0,0                                                     WPK06311
+ LOC   STO **                                                           WPK06312
+       CLA LOC                                                          WPK06313
+       ADD Q1                                                           WPK06314
+       STA LOC                                                          WPK06315
+       TRA 1,4                                                          WPK06316
+ TPINP CAL SAVE           SET SWITCH TO TXL FOR FIRST                   WPK06317
+       STP FAIL1               PASS                                     WPK06318
+       RTDA 10            INPUT FROM TAPE 10, CHANNEL A                 WPK06319
+       RCHA IORP1                                                       WPK06320
+       TCOA *             DELAY FOR FIRST RECORD                        WPK06321
+       TEFA EOFCD         EOF EXIT                                      WPK06322
+       TRCA FAIL1         REDUNDANCY FAILURE                            WPK06323
+ RETRN PXD 0,0            CLEAR ACCUMULATOR                             WPK06324
+       LDQ BCD+1          OBTAIN OPERATION FIELD AND TEST               WPK06325
+       RQL 6                   FOR TRA PSEUDO-OP                        WPK06326
+       LGL 18                                                           WPK06327
+       ERA TRA                                                          WPK06328
+       TZE FIL            TRA CAUGHT                                    WPK06329
+       RTDA 10            MORE INPUT, SELECT TAPE FOR                   WPK06330
+       RCHA IORP2              NEXT RECORD                              WPK06331
+       TRA FIL            EXIT FOR CONVERSION                           WPK06332
+ PASS2 TCOA *             TAPE REENTRY POINT, DELAY FOR CURRENT RECORD  WPK06333
+       TEFA EOFCD         EXIT ON EOF                                   WPK06334
+       TRCA FAIL2                                                       WPK06335
+ RECVR SXA IORP1+1,1      SAVE INDEX 1                                  WPK06336
+       AXT 14,1           MOVE RECORD FROM LOADING                      WPK06337
+       CLA IMGE2+14,1          BUFFER TO BCD LINE                       WPK06338
+       STO BCD+14,1            IMAGE                                    WPK06339
+       TIX *-2,1,1                                                      WPK06340
+       LXA IORP1+1,1      RESTORE INDEX 1                               WPK06341
+       TRA RETRN          CONTINUE                                      WPK06342
+ TRAPC OCT 000052061000   TRA FROM CARDS                                WPK06343
+ IORP1 IORP BCD,,-1                                                     WPK06344
+       IOCD **,,**                                                      WPK06345
+ IORP2 IORP IMGE2,,-1                                                   WPK06346
+       IOCD **,,**                                                      WPK06347
+ FAIL1 TXL *+3,0,0        FIRST PASS, TRY AGAIN                         WPK06348
+       SSM                SECOND FAILURE, EXIT                          WPK06349
+       TXL EOFCD+1,0,0    EOF EXIT WITH NEGATIVE AC                     WPK06350
+       BSRA 10            BACKSPACE FIRST RECORD                        WPK06351
+       CLS FAIL1          SET SWITCH                                    WPK06352
+       STO FAIL1               AND RETURN                               WPK06353
+       TXL TPINP+2,0,0                                                  WPK06354
+ FAIL2 BSRA 10            REDUNDANCY FAILURE,                           WPK06355
+       RTDA 10                 RECOVER LAST RECORD                      WPK06356
+       RCHA IORP2              AND DELAY                                WPK06357
+       TCOA *                                                           WPK06358
+       TRCA FAIL1+1       2ND REDUNDANCY FAILURE                        WPK06359
+       TXL RECVR,0,0      O. K., RETURN                                 WPK06360
+ SKIP  AXT 24,1           TRA CAUGHT, MOVE TRA                          WPK06361
+       CLA IMGE2+24,1          CARD TO CONVERSION                       WPK06362
+       STO IMGE1+24,1          BUFFER, DO NOT LOAD                      WPK06363
+       TIX *-2,1,1             ANOTHER CARD                             WPK06364
+       TRA FINAL                                                        WPK06365
+ EOFCD SSP                EOF EXIT FOR CARDS                            WPK06366
+       LXD PX1,1          RESTORE INDEX REGISTERS                       WPK06367
+       LXD PX2,2                                                        WPK06368
+       LXD PX4,4                                                        WPK06369
+       TRA 2,4            EOF RETURN OR TWO FAILURES ON TAPE            WPK06370
+ IORD2 IOCD IMGE2,,24                                                   WPK06371
+ MASK1 OCT 003400000000                                                 WPK06372
+ Q1        1                                                            WPK06373
+ Q10       10                                                           WPK06374
+ Q128  DEC 128                                                          WPK06375
+ MASK  BCD 1                                                            WPK06376
+ TRA   BCD 1000TRA                                                      WPK06377
+ OCT   BCD 1000OCT                                                      WPK06378
+ DEC   BCD 1000DEC                                                      WPK06379
+ BCDO  BCD 1000BCD                                                      WPK06380
+ TAGC  TRA **                                                           WPK06381
+ PBIT  MZE                                                              WPK06382
+ BLINP BCD 100000                                                       WPK06383
+ COINP BCD 100000,                                                      WPK06384
+ MIINP BCD 100000-                                                      WPK06385
+ PNTIN BCD 100000.                                                      WPK06386
+ EINP  BCD 100000E                                                      WPK06387
+ B     BCD 100000B                                                      WPK06388
+ PLUS  BCD 100000+                                                      WPK06389
+ EXC1  DEC 35B8           CHARACTERISTIC=35                             WPK06390
+ EXC2  DEC 221B8          CHAR.=COMPL. 35                               WPK06391
+ FL1   DEC 155B8                                                        WPK06392
+ FL2   DEC 170B8                                                        WPK06393
+       OCT 141500000000,144620000000,147764000000,153470400000          WPK06394
+       OCT 156606500000,161750220000,165461132000,170575360400          WPK06395
+       OCT 173734654500,177452013710,202564416672,205721522451          WPK06396
+       OCT 211443023471,214553630410,217706576512,223434157116          WPK06397
+       OCT 226543212741,231674055532,235425434430,240532743536          WPK06398
+       OCT 243661534466,247417031702,252522640262,255647410336          WPK06399
+       OCT 261410545213,264512676456,267635456171,273402374714          WPK06400
+       OCT 276503074077,301623713116,304770675742,310473426555          WPK06401
+       OCT 313612334311,316755023373,322464114135,325601137164          WPK06402
+       OCT 330741367021,334454732313,337570120775,342726145174          WPK06403
+       OCT 346445677216,351557257061,354713132676,360436770626          WPK06404
+       OCT 363546566774,366700324573,372430204755,375536246150          WPK06405
+ TENIN EQU Q10                                                          WPK06406
+ ONEIN EQU FL2                                                          WPK06407
+ RTX   LDQ IMGE1          9 LEFT ROW                                    WPK06408
+       STQ L                                                            WPK06409
+ B1    STQ LS                                                           WPK06410
+       SXD B2,1           SAVE INDEX REGISTERS                          WPK06411
+       SXD B3,2                                                         WPK06412
+       LXD B4,1           SET DIGIT ROW COUNT                           WPK06413
+       LDQ IMGE1+1        9 RIGHT ROW                                   WPK06414
+       STQ R                                                            WPK06415
+       STQ RS             SET RIGHT SUM                                 WPK06416
+       TSX C1,2           ENTER CONVERSION LOOP                         WPK06417
+ B2    TXL B5,0,0         LEAVE CONVERSION LOOP                         WPK06418
+       ALS 1                                                            WPK06419
+ B3    TXL C2,0,0         INITIALIZE BCD RECORD                         WPK06420
+ B5    LDQ IMGE1+2        8 LEFT ROW                                    WPK06421
+       STQ 8L                                                           WPK06422
+       STQ LS             USE AS SUM                                    WPK06423
+       LDQ IMGE1+3        8 RIGHT ROW                                   WPK06424
+       STQ 8R                                                           WPK06425
+       STQ RS                                                           WPK06426
+       TSX C1,2           ENTER CONVERSION LOOP                         WPK06427
+ B4    TXL B6,0,8         LEAVE CONVERSION LOOP                         WPK06428
+       ALS 3              ADD 8 TIMES 8 ROW                             WPK06429
+       TXL C3,0,0                                                       WPK06430
+ B6    CAL L              USE 9 ROW AS SUM                              WPK06431
+       SLW LS                                                           WPK06432
+       CAL R                                                            WPK06433
+       SLW RS                                                           WPK06434
+ B13   TXL B7,1,1         TEST FOR ZERO ROW                             WPK06435
+ B14   LXD SAVE,2         TEST FOR END-OF-RECORD                        WPK06436
+       TNX B9,2,2         EOR EXIT                                      WPK06437
+       SXD SAVE,2         SAVE ITEM COUNT                               WPK06438
+       LDQ IMGE1+23,2     LEFT ROWS, 7 - 1,11,12                        WPK06439
+       STQ L                                                            WPK06440
+ B8    CAL L                                                            WPK06441
+       ANA LS             TEST LEFT ROW FOR                             WPK06442
+       TNZ B17            ILLEGAL DOUBLE PUNCH                          WPK06443
+ B10   CAL L              FORM LOGICAL SUM                              WPK06444
+       ORS LS                  OF LEFT ROWS                             WPK06445
+       LDQ IMGE1+24,2     RIGHT ROWS, 7 - 1,11,12                       WPK06446
+       STQ R                                                            WPK06447
+       CAL R              TEST FOR ILLEGAL                              WPK06448
+       ANA RS                  DOUBLE PUNCH                             WPK06449
+       TNZ B17                                                          WPK06450
+ B11   CAL R              FORM LOGICAL SUM OF                           WPK06451
+       ORS RS                  RIGHT ROWS                               WPK06452
+       TNX B12,1,1        TEST FOR ZONE ROWS                            WPK06453
+       TSX C1,2           ENTER CONVERSION LOOP                         WPK06454
+       TXL B13,0,0        LEAVE CONVERSION LOOP                         WPK06455
+       TXL C3,0,0         ADD TO BCD RECORD                             WPK06456
+ B7    CAL 8L             ADD 8 LEFT ROW TO                             WPK06457
+       ORA LS                  LEFT LOGICAL SUM                         WPK06458
+       SLW LDS                                                          WPK06459
+       LXD SAVE,2         REDUCE ITEM COUNTER FOR ZERO ROW              WPK06460
+       TXI *+1,2,-2                                                     WPK06461
+       SXD SAVE,2                                                       WPK06462
+       LDQ IMGE1+18       ZERO LEFT                                     WPK06463
+       STQ LZ                                                           WPK06464
+       ANA LZ             FORM INDICATOR FOR                            WPK06465
+       SLW LS                  BOTH DIGIT AND ZERO                      WPK06466
+       CAL 8R             ADD 8 RIGHT ROW TO                            WPK06467
+       ORA RS                  RIGHT LOGICAL SUM                        WPK06468
+       SLW RDS                                                          WPK06469
+       LDQ IMGE1+19       ZERO RIGHT                                    WPK06470
+       STQ RZ                                                           WPK06471
+       ANA RZ             FORM INDICATOR FOR                            WPK06472
+       SLW RS                  BOTH DIGIT AND ZERO                      WPK06473
+ B12   TSX C1,2           ENTER CONVERSION LOOP                         WPK06474
+       TXL B14,0,0        LEAVE CONVERSION LOOP                         WPK06475
+       ALS 4              SHIFT TO ZONE POSITION                        WPK06476
+       TXL C3,0,0                                                       WPK06477
+ B9    CAL LS             SAVE LEFT ZONE SUM                            WPK06478
+       SLW L                                                            WPK06479
+       CAL LDS            FORM INDICATOR FOR                            WPK06480
+       COM                     ZERO AND X AND/OR Y                      WPK06481
+       ANA LZ                  IN LEFT ROWS                             WPK06482
+       ANS LS                                                           WPK06483
+       CAL RS             SAVE RIGHT ZONE SUM                           WPK06484
+       SLW R                                                            WPK06485
+       CAL RDS            FORM INDICATOR FOR                            WPK06486
+       COM                     ZERO AND X AND/OR Y                      WPK06487
+       ANA RZ                  IN RIGHT ROWS                            WPK06488
+       ANS RS                                                           WPK06489
+       TSX C1,2           ENTER CONVERSION LOOP                         WPK06490
+       TXL B15,0,0        LEAVE CONVERSION LOOP                         WPK06491
+       SLW TP             MULTIPLY INDICATOR                            WPK06492
+       ALS 2                   BITS BY TEN                              WPK06493
+       ACL TP                                                           WPK06494
+       ALS 1                                                            WPK06495
+       TXL C3,0,0                                                       WPK06496
+ B15   CAL LDS            FORM INDICATOR FOR                            WPK06497
+       ORA LZ                  BLANK COLUMNS IN                         WPK06498
+       ORA L                   LEFT HALF OF CARD                        WPK06499
+       COM                                                              WPK06500
+       SLW LS                                                           WPK06501
+       CAL RDS            FORM INDICATOR FOR                            WPK06502
+       ORA RZ                  BLANK COLUMNS IN                         WPK06503
+       ORA R                   RIGHT HALF OF CARD                       WPK06504
+       COM                                                              WPK06505
+       SLW RS                                                           WPK06506
+       TSX C1,2           ENTER CONVERSION LOOP                         WPK06507
+       TXL B16,0,0        LEAVE CONVERSION LOOP                         WPK06508
+       SLW TP             MULTIPLY INDICATOR                            WPK06509
+       ALS 1                   BITS BY 3 AND                            WPK06510
+       ACL TP                  SHIFT TO ZONE POSITION                   WPK06511
+       ALS 4                                                            WPK06512
+       TXL C3,0,0                                                       WPK06513
+ B16   LXD B2,1           RESTORE INDEX REGISTERS                       WPK06514
+       LXD B3,2                AND RETURN TO MAIN                       WPK06515
+       TRA 2,4                 PROGRAM                                  WPK06516
+ B17   HTR RSTRT          RESTART AFTER ERROR                           WPK06517
+ C1    SXD C4,1           SAVE ROW COUNT                                WPK06518
+ C9    CAL 1,4            INITIALIZE ADDRESSES                          WPK06519
+       ADM C7                  (ADD 6)                                  WPK06520
+ C4    TXL C6,0,**        TRANSFER TO LEFT ROW                          WPK06521
+       ADM C7             RIGHT ROW, ADD 6 MORE                         WPK06522
+       LDQ RS             OBTAIN RIGHT SUM AND                          WPK06523
+       TXI C8,0,0              SKIP OVER LEFT SUM                       WPK06524
+ C6    LDQ LS             OBTAIN LEFT SUM                               WPK06525
+ C8    STA C2             SET BCD RECORD ADDRESS                        WPK06526
+       STA C3                                                           WPK06527
+       TXH C5,1,1         SKIP TEST IF DIGIT ROW                        WPK06528
+       STQ TP             TEST FOR NO SUM                               WPK06529
+       CAL TP                                                           WPK06530
+       TZE C11                                                          WPK06531
+ C5    LXA C7,1           SET WORD COUNT                                WPK06532
+ C7    PXD 6,0            CONVERT ROW                                   WPK06533
+       LGL 1                                                            WPK06534
+       ALS 5                                                            WPK06535
+       LGL 1                                                            WPK06536
+       ALS 5                                                            WPK06537
+       LGL 1                                                            WPK06538
+       ALS 5                                                            WPK06539
+       LGL 1                                                            WPK06540
+       ALS 5                                                            WPK06541
+       LGL 1                                                            WPK06542
+       ALS 5                                                            WPK06543
+       LGL 1                                                            WPK06544
+       TRA 2,2            EXIT FOR ROW PROCEDURE                        WPK06545
+ C3    ACL 0,1            ADD TO BCD RECORD                             WPK06546
+ C2    SLW 0,1            STORE IN BCD RECORD                           WPK06547
+       TIX C7,1,1         COUNT WORDS                                   WPK06548
+       LXD C4,1           RESTORE ROW COUNT                             WPK06549
+ C11   CLS C4             INVERT ROW SWITCH AND                         WPK06550
+       STO C4                  TEST FOR RIGHT ROW DONE                  WPK06551
+       TMI 1,2            TRANSFER IF RIGHT ROW DONE                    WPK06552
+ C10   TXI C9,0,0         GO CONVERT RIGHT ROW                          WPK06553
+*                  ERASABLE STORAGE FOR INP2M                           WPK06554
+ EXPN  SYN COMMON                                                       WPK06555
+ CH    SYN COMMON+1                                                     WPK06556
+ CHD   SYN COMMON+2                                                     WPK06557
+ T     SYN COMMON+2                                                     WPK06558
+ SYMB  SYN COMMON+3                                                     WPK06559
+ MQINP EQU COMMON+4                                                     WPK06560
+ N     SYN COMMON+5                                                     WPK06561
+ DATUS EQU COMMON+6                                                     WPK06562
+ RESID SYN COMMON+7                                                     WPK06563
+ BN    SYN COMMON+8                                                     WPK06564
+ BCD   SYN COMMON+9                                                     WPK06565
+ TP    SYN COMMON+23      TEMPORARY                                     WPK06566
+ LS    SYN COMMON+24      LEFT SUM                                      WPK06567
+ RS    SYN COMMON+25      RIGHT SUM                                     WPK06568
+ LDS   SYN COMMON+26      LEFT DIGIT SUM                                WPK06569
+ RDS   SYN COMMON+27      RIGHT DIGIT SUM                               WPK06570
+ LZ    SYN COMMON+28      LEFT ZERO ROW                                 WPK06571
+ RZ    SYN COMMON+29      RIGHT ZERO ROW                                WPK06572
+ L     SYN COMMON+30      LEFT ROW                                      WPK06573
+ R     SYN COMMON+31      RIGHT ROW                                     WPK06574
+ 8L    SYN COMMON+26      8 LEFT ROW                                    WPK06575
+ 8R    SYN COMMON+27      8 RIGHT ROW                                   WPK06576
+ TEMP  SYN COMMON+32                                                    WPK06577
+ IMGE1 SYN COMMON+33      LOADING BUFFER                                WPK06578
+ IMGE2 SYN COMMON+57      CONVERSION BUFFER                             WPK06579
+INP2M  SYN WPK06                                                        WPK06580

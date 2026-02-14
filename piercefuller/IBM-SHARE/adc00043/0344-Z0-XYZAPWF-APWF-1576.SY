@@ -1,0 +1,167 @@
+*     XEQ                                                                       
+CP+WFCO                                                                      001
+C     THIS PROGRAM WILL DETERMINE AGGREGATE PRODUCTION AND                   002
+C        WORK FORCE COEFFICIENTS.                                            003
+      DIMENSION C(13),XLAM(2),CW1(4),CW2(4),CSR(4),CW0(6),CI0(6),CC(6),      004
+     1CSRL1(6),CSRL2(6),XLAM1(25),XLAM2(25),BETA(28),ALPHA(28),              005
+     8COSPHI(25),SINPHI(25),RHO(25)                                          006
+      COMMON CW1,CW2,CSR,CW0,CI0,CC,CSRL1,CSRL2,C                            007
+      INPT=7                                                                 008
+      IO=10                                                                  009
+ 96   IF DIVIDE CHECK 3,3                                                    010
+    3 READ INPUT TAPE INPT,80,IT,(C(N),N=1,8)                                011
+ 80   FORMAT(I4/(4F12.6))                                                    012
+      IF(C(4))13,13,14                                                       013
+ 14   IF(C(7))13,13,15                                                       014
+ 13   PRINT 16                                                               015
+ 16   FORMAT(1H1,67HYOU HAVE NOT CONFORMED WITH ONE OF THE FOLLOWING INP     016
+     1UT RESTRICTIONS/10X47H1. BOTH C(4) AND C(7) MUST BE GREATER THAN Z     017
+     2ERO/                                                                   018
+     310X52H2. ((C(5)+C(8))**2)-4.*C(6)*C(7) MUST NOT EQUAL ZERO//1X66HP     019
+     4LEASE CORRECT INPUT DATA AND PRESS START IF YOU WISH TO CONTINUE.)     020
+      GO TO 6                                                                021
+ 15   C(9)=C(6)+C(8)+2.*C(5)+3.*C(7)                                         022
+      C(10)=C(5)+3.*C(7)+C(8)                                                023
+      C(11)=(C(5)+C(8))+4.*C(7)                                              024
+      C(12)=C(6)+2.*(C(5)+C(8))+6.*C(7)                                      025
+      C(13)=C(6)+2.*C(5)                                                     026
+      S=C(5)+C(8)                                                            027
+      T=(S**2)-4.*C(6)*C(7)                                                  028
+      IF(ABSF(T)-.00005)13,13,17                                             029
+ 17   D=0.5/C(7)                                                             030
+      SQTB=D*SQRTF(ABSF(T))                                                  031
+      IF(T) 30,20,20                                                         032
+C     TO 30 IF COMPLEX ROOT, TO 20 IF REAL ROOT.                             033
+ 20   S1=D*S+SQTB                                                            034
+      S2=D*S-SQTB                                                            035
+      XLAM(1)=0.5*((2.+S1)-SQRTF(S1*(4.+S1)))                                036
+      XLAM(2)=0.5*((2.+S2)-SQRTF(S2*(4.+S2)))                                037
+ 40   DO 50 I=1,2                                                            038
+      CW1(I)=C(9)-C(11)*XLAM(I)+C(7)*XLAM(I)**2                              039
+      CW2(I)=C(7)*(1.-(XLAM(I)**(-1)))                                       040
+      CSR(I)=1.+C(2)*(1.-XLAM(I))                                            041
+      CW0(I)=C(5)+C(7)*(1.-XLAM(I))                                          042
+      CI0(I)=-1.                                                             043
+ 50   CC(I)=C(1)-C(3)/(C(4)*(1.-XLAM(I)))                                    044
+      CALL SOLVEQ                                                            045
+      DO 70 K=1,IT                                                           046
+      XLAM1(K)=XLAM(1)**(K-1)                                                047
+      XLAM2(K)=XLAM(2)**(K-1)                                                048
+      BETA(K)=CSRL1(4)*XLAM1(K)+CSRL2(4)*XLAM2(K)                            049
+ 70   ALPHA(K)=CSRL1(6)*XLAM1(K)+CSRL2(6)*XLAM2(K)                           050
+      GO TO 75                                                               051
+ 30   SR=D*S                                                                 052
+      SI=SQTB                                                                053
+      X=SR*(4.+SR)-((D**2)*ABSF(T))                                          054
+      Y=SR*SQTB+(4.+SR)*SQTB                                                 055
+      R=SQRTF((X**(2))+(Y**(2)))                                             056
+      G=1./SQRTF(2.)                                                         057
+      U=G*SQRTF(R+X)                                                         058
+      V=G*SQRTF(R-X)                                                         059
+      A=(2.+SR-U)/2.                                                         060
+      B=(SQTB-V)/2.                                                          061
+      XRHO=SQRTF((A**(2))+(B**(2)))                                          062
+      PHI=ATANF(B/A)                                                         063
+C     LET AR1=CW1(1), AI1,CW1(2), BRI=CW2(1), BI1=CW2(2), CR1=CSR(1),        064
+C     CI1=CSR(2), DR1=CW0(1), DI1=CW0(2), ER1=CI0(1), EI1=CI0(2),            065
+C     FR1=CC(1), FI1=CC(2)                                                   066
+      CW1(1)=C(9)-C(11)*A+C(7)*((A**(2))-(B**(2)))                           067
+      CW1(2)=-C(11)*B+C(7)*2.*A*B                                            068
+      CW2(1)=C(7)*(1.-A/((A**(2))+(B**(2))))                                 069
+      CW2(2)=C(7)*B/((A**(2))+(B**(2)))                                      070
+      CSR(1)=1.                                                              071
+      CSR(2)=1.                                                              072
+      CW0(1)=C(5)+C(7)*(1.-A)                                                073
+      CW0(2)=-C(7)*B                                                         074
+      CI0(1)=-1.                                                             075
+      CI0(2)=0.                                                              076
+      CC(1)=C(1)-((C(3)*(1.-A)) /(C(4)*(((1.-A)**(2))+(B**(2)))))            077
+      CC(2)=(-C(3)*B)/(C(4)*((( 1.-A)**(2))+(B**(2))))                       078
+      CALL SOLVEQ                                                            079
+      AA=1.+C(2)-C(2)*A                                                      080
+      BB=-C(2)*B                                                             081
+      DO 55 I=4,6                                                            082
+      CSRL1(I)=AA*CSRL1(I)+BB*CSRL2(I)                                       083
+ 55   CSRL2(I)=AA*CSRL2(I)-BB*CSRL1(I)                                       084
+      DO 60 K=1,IT                                                           085
+      XK=K-1                                                                 086
+      COSPHI(K)=COSF(PHI*XK)                                                 087
+      SINPHI(K)=SINF(PHI*XK)                                                 088
+      RHO(K)=XRHO**(K-1)                                                     089
+      BETA(K)=(CSRL1(4)*COSPHI(K)+CSRL2(4)*SINPHI(K))*RHO(K)                 090
+ 60   ALPHA(K)=(CSRL1(6)*COSPHI(K)+CSRL2(6)*SINPHI(K))*RHO(K)                091
+ 75   BETA(IT+1)=CW0(4)                                                      092
+      BETA(IT+2)=CC(4)                                                       093
+      BETA(IT+3)=CI0(4)                                                      094
+      ALPHA(IT+1)=CW0(6)                                                     095
+      ALPHA(IT+2)=CC(6)                                                      096
+      ALPHA(IT+3)=CI0(6)                                                     097
+      WRITE OUTPUT TAPEIO,90                                                 098
+ 90   FORMAT(1H1,45X28H****LINEAR DECISION RULE****/                         099
+     $50X20H------ -------- ----/////17X9HS(R) TERM,10X33HAGGREGATE PROD     100
+     $UCTION COEFFICIENTS,10X23HWORK FORCE COEFFICIENTS/                     101
+     $17X9H---- ----,10X33H--------- ---------- ------------,                102
+     $10X23H---- ----- ------------/17X9HFOR R=1,T,23X7H(ALPHA),             103
+     $31X6H(BETA))                                                           104
+      WRITE OUTPUT TAPEIO,115,(K,ALPHA(K),BETA(K),K=1,IT)                    105
+ 115  FORMAT(1H0/(19XI3,22XF13.7,25XF13.7))                                  106
+      WRITE OUTPUT TAPEIO,95,ALPHA(IT+1),BETA(IT+1),ALPHA(IT+2),             107
+     $BETA(IT+2),ALPHA(IT+3),BETA(IT+3)                                      108
+ 95   FORMAT(1H016X15HW TERM....(T+1),12XF13.7,25XF13.7//                    109
+     $17X15HCONSTANT..(T+2),12XF13.7,25XF13.7//17X15HI TERM....(T+3),        110
+     $12XF13.7,25XF13.7)                                                     111
+      END FILE IO                                                            112
+ 4    IF DIVIDE CHECK 5,6                                                    113
+ 5    PRINT 11                                                               114
+ 11   FORMAT(1H1,93HDIVIDE CHECK INDICATOR WAS TURNED ON WITH THE RESULT     115
+     5ING POSSIBILITY OF ERRONEOUS OUTPUT DATA.//1X66HKINDLY CHECK INPUT     116
+     6 DATA TO SEE IF ALL INPUT RESTRICTIONS WERE MET.)                      117
+    6 CALL EXIT                                                              118
+      END                                                                    119
+*     LIST8                                                                     
+*     LABEL                                                                     
+CSOLVEQ                                                                      001
+      SUBROUTINE SOLVEQ                                                      002
+C     SUBROUTINE(SOLVEQ) WILL SOLVE THE TWO SIMULTANEOUS WORK FORCE          003
+C     EQUATIONS AND CALCULATE THE W1,W2, AND P1 COEFFICIENTS                 004
+      DIMENSION CW1(4),CW2(4),CSR(4),CW0(6),CI0(6),CC(6),CSRL1(6),           005
+     1CSRL2(6),C(13)                                                         006
+      COMMON CW1,CW2,CSR,CW0,CI0,CC,CSRL1,CSRL2,C                            007
+      RATIO=-CW2(2)/CW2(1)                                                   008
+      CW1(3)=CW1(1)*RATIO                                                    009
+      CW2(3)=-CW2(2)                                                         010
+      CSR(3)=CSR(1)*RATIO                                                    011
+      CW0(3)=CW0(1)*RATIO                                                    012
+      CI0(3)=CI0(1)*RATIO                                                    013
+      CC(3)=CC(1)*RATIO                                                      014
+      CW1(4)=CW1(2)+CW1(3)                                                   015
+      CSRL1(4)=CSR(3)/CW1(4)                                                 016
+      CSRL2(4)=CSR(2)/CW1(4)                                                 017
+      CW0(4)=(CW0(2)+CW0(3))/CW1(4)                                          018
+      CI0(4)=(CI0(2)+CI0(3))/CW1(4)                                          019
+      CC(4)=(CC(2)+CC(3))/CW1(4)                                             020
+      CSRL1(5)=(CSR(1)-CW1(1)*CSRL1(4))/CW2(1)                               021
+      CSRL2(5)=(-CSRL2(4)/CW2(1))*CW1(1)                                     022
+      CW0(5)=(CW0(1)-CW1(1)*CW0(4))/CW2(1)                                   023
+      CI0(5)=(CI0(1)-CW1(1)*CI0(4))/CW2(1)                                   024
+      CC(5)=(CC(1)-CW1(1)*CC(4))/CW2(1)                                      025
+C     SUBSTITUTE INTO P EQUATION                                             026
+      CSRL1(6)=C(13)*CSRL1(4)-C(5)*CSRL1(5)                                  027
+      CSRL2(6)=C(13)*CSRL2(4)-C(5)*CSRL2(5)                                  028
+      CW0(6)=C(13)*CW0(4)-C(5)*CW0(5)-C(5)                                   029
+      CI0(6)=C(13)*CI0(4)-C(5)*CI0(5)                                        030
+      CC(6)=C(13)*CC(4)-C(5)*CC(5)+C(3)/C(4)                                 031
+      RETURN                                                                 032
+      END                                                                    033
+*     DATA                                                                      
+  12                                                                            
+ 9300.          1.        383.7         0.0513                                  
+  761.79       70.0     11750.0         0.                                      
+√                                                                               
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√
+√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√√

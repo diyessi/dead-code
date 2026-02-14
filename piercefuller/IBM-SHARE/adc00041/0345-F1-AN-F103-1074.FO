@@ -1,0 +1,99 @@
+CANF103      99 01031                                                   F1030001
+C     COMPLEX MATRIX INVERSION                                          F1030002
+C                                                                       F1030003
+      SUBROUTINE CMPINV(A,B,C,D,N,INDEX)                                F1030004
+C                                                                       F1030005
+      DIMENSION A(20,20), B(20,20), C(20,20), D(20,20), BLANK(60),      F1030006
+     X          IPIVOT(20)                                              F1030007
+      COMMON BLANK, IPIVOT                                              F1030008
+C                                                                       F1030009
+C     SAVE A AND INVERT -A.                                             F1030010
+C                                                                       F1030011
+    5 M=N                                                               F1030012
+    7 L=1                                                               F1030013
+   10 DO 30 I=1,M                                                       F1030014
+   20 DO 30 J=1,M                                                       F1030015
+   30 D(I,J)=-A(I,J)                                                    F1030016
+   40 CALL MATINV (D,M,DUMMY,0,DUMMY)                                   F1030017
+C                                                                       F1030018
+C     CHECK IF A WAS NON-SINGULAR.                                      F1030019
+C                                                                       F1030020
+   50 DO 70 I=1,M                                                       F1030021
+   60 IF (IPIVOT(I)-1) 250, 70, 250                                     F1030022
+   70 CONTINUE                                                          F1030023
+C                                                                       F1030024
+C     COMPUTE C=INVERSE OF(A+BA(INVERSE)B).                             F1030025
+C                                                                       F1030026
+   80 CALL SQMULT (B,D,D,M)                                             F1030027
+   90 CALL SQMULT (D,B,C,M)                                             F1030028
+  100 DO 120 I=1,M                                                      F1030029
+  110 DO 120 J=1,M                                                      F1030030
+  120 C(I,J)=A(I,J)-C(I,J)                                              F1030031
+  130 CALL MATINV (C,M,DUMMY,0,DUMMY)                                   F1030032
+C                                                                       F1030033
+C     CHECK THAT C EXISTS.                                              F1030034
+C                                                                       F1030035
+  140 DO 170 I=1,M                                                      F1030036
+  150 IF (IPIVOT(I)-1) 155, 170, 155                                    F1030037
+C                                                                       F1030038
+C     INVERSE DOES NOT EXIST, SET SIGNAL AND RETURN.                    F1030039
+C                                                                       F1030040
+  155 INDEX=2                                                           F1030041
+  160 RETURN                                                            F1030042
+  170 CONTINUE                                                          F1030043
+C                                                                       F1030044
+C     COMPUTE D=-CBA(INVERSE).                                          F1030045
+C                                                                       F1030046
+  180 CALL SQMULT (C,D,D,M)                                             F1030047
+  220 GO TO (230,330), L                                                F1030048
+C                                                                       F1030049
+C     SUCCESSFUL INVERSION                                              F1030050
+C                                                                       F1030051
+  230 INDEX=1                                                           F1030052
+  240 RETURN                                                            F1030053
+C                                                                       F1030054
+C     A IS SINGULAR, SO INTERCHANGE A AND B AND TRY AGAIN.              F1030055
+C                                                                       F1030056
+  250 DO 300 I=1,M                                                      F1030057
+  280 DO 300 J=1,M                                                      F1030058
+  290 DUMMY=A(I,J)                                                      F1030059
+      A(I,J)=B(I,J)                                                     F1030060
+  300 B(I,J)=DUMMY                                                      F1030061
+  305 IF (L-2) 310, 370, 370                                            F1030062
+  310 L=2                                                               F1030063
+      GO TO 10                                                          F1030064
+C                                                                       F1030065
+C     INTERCHANGE A AND B, C AND D WITH CHANGED SIGNS.                  F1030066
+C                                                                       F1030067
+  330 DO 350 I=1,M                                                      F1030068
+  340 DO 350 J=1,M                                                      F1030069
+      DUMMY=A(I,J)                                                      F1030070
+      A(I,J)=B(I,J)                                                     F1030071
+      B(I,J)=DUMMY                                                      F1030072
+      DUMMY=-C(I,J)                                                     F1030073
+      C(I,J)=-D(I,J)                                                    F1030074
+  350 D(I,J)=DUMMY                                                      F1030075
+  360 GO TO 230                                                         F1030076
+C                                                                       F1030077
+C     A AND B BOTH SINGULAR. CANNOT FIND INVERSE. SET SIGNAL AND RETURN.F1030078
+C                                                                       F1030079
+  370 INDEX=3                                                           F1030080
+  380 RETURN                                                            F1030081
+10300 END (0,1,0,0,0)                                                   F1030082
+C     SQUARE MATRIX MULTIPLICATION                                      F1030083
+C                                                                       F1030084
+      SUBROUTINE SQMULT(A,B,C,N)                                        F1030085
+C                                                                       F1030086
+      DIMENSION A(20,20), B(20,20), C(20,20), COLUMN(20)                F1030087
+      COMMON COLUMN                                                     F1030088
+C                                                                       F1030089
+    5 M=N                                                               F1030090
+   10 DO 50 J=1,M                                                       F1030091
+   20 DO 25 K=1,M                                                       F1030092
+   25 COLUMN(K)=B(K,J)                                                  F1030093
+   30 DO 50 I=1,M                                                       F1030094
+   35 C(I,J)=0.0                                                        F1030095
+   40 DO 50 K=1,M                                                       F1030096
+   50 C(I,J)=C(I,J)+A(I,K)*COLUMN(K)                                    F1030097
+   60 RETURN                                                            F1030098
+10301 END (0,1,0,0,0)                                                   F1030099

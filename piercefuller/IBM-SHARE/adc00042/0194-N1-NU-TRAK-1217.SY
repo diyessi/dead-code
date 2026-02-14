@@ -1,0 +1,174 @@
+* TRAK      174 11081    ERROR DETECTION SUBROUTINE                     TRAK0001
+*     FAP                                                               TRAK0002
+NUTRAK COUNT 200                                                        TRAK0003
+*NUTRAK STANDARD ERROR TRACER. 7090 VERSION OF J. COOLEY,S NUBACK FOR704TRAK0004
+*      REWRITTEN FOR THE 7090 BY F. RAGUSA. AUGUST 1961.                TRAK0005
+* TO USE WITHIN A FORTRAN PROGRAMCALL NUTRAK (I,N,BCD,C,D,.....,Y,Z)    TRAK0006
+* TO USE WITHIN A FAP PROGRAM CALL NUTRAK ,I,N,LBCD,C,D,....,Y,Z        TRAK0007
+*    WHERE     I=0  IF ONE WANTS TO SIGNAL THAT TRAK  HAS BEEN CALLED   TRAK0008
+*               BY PRINTING THE CURRENT VALUE OF C AND D.               TRAK0009
+*      OR      I=SOME NUMBER OTHER THAN ZERO IF ONE WANTS TO PERFORM THETRAK0010
+*               ENTIRE BACK TRACE FROM THE CALLING PROG. TO THE MAIN    TRAK0011
+*      AND     N=0  CAUSES PRINTING ON LINE  (IF NOT IN MONITOR MODE)   TRAK0012
+*      OR      N= NUMBER OF THE TAPE ON WHICH OUTPUT IS TO BE WRITTEN   TRAK0013
+*      NOTE    IF IN MONITOR MODE (SENSE SWITCH 6 UP) N IS ALWAYS       TRAK0014
+*              ASSUMED TO BE EQUAL TO 6 (A3) THE MONITOR,S OUTPUT TAPE. TRAK0015
+*      AND     BCD = TO A HOLLERITH ARGUMENT OF NOT MORE THAN 120 BCD   TRAK0016
+*              CHARACTERS.  THESE CHARACTERS WILL BE PRINTED AS THE     TRAK0017
+*              FIRST LINE OF OUTPUT UPON ENTRY TO TRACK.                TRAK0018
+* FAP NOTE     BCD= LOCATION OF WHERE HOLLERITH CHARACTERS HAVE BEEN    TRAK0019
+*              STORED IN MEMORY (FORWARDS).                             TRAK0020
+*FORTRAN NOTE  BCD= TO AN ARGUMENT OF THE FORM.. 72H PRINT THIS ETC.,   TRAK0021
+*      AND     C,D,E,....Y,Z   ARELOCATIONS OF NUMBERS ONE WANTS PRINTEDTRAK0022
+*      NOTE    THERE MAY BE ANY NUMBER OF SUCH QUANTITIES, OR NONE.     TRAK0023
+*                       AND AWAY WE GO                                  TRAK0024
+       ENTRY   NUTRAK                                                   TRAK0025
+NUTRAK SXD     *-2,4                                                    TRAK0026
+       CAL     LHOL           A TSX HOLLY,0,0                           TRAK0027
+       SLW     COULD+1                                                  TRAK0028
+       CLA     1,4     IF I IS NOT ZERO THEN IT MUST BE SOME NUMBER LESSTRAK0029
+       STA     ONCE     THAN 100 OR THE ARGUMENT  IS ASSUMED TO BE THE  TRAK0030
+       ANA     =O77777    ADDRESS OF WHERE I IS LOCATED.                TRAK0031
+       CAS     =O143                                                    TRAK0032
+       TRA     ONCE                                                     TRAK0033
+ STORY NOP                                                              TRAK0034
+       ALS     18                                                       TRAK0035
+       TRA     UPON                                                     TRAK0036
+ ONCE  CLA     **                                                       TRAK0037
+ UPON  STD     I                                                        TRAK0038
+       SWT     6       S.S. 6 TESTS FOR MONITOR MODE.                   TRAK0039
+       TRA     ATIME   UP= IN MONITOR MODE                              TRAK0040
+       CLA     2,4     DOWN= OUTSIDE MONITOR                            TRAK0041
+       ANA     =O777777                                                 TRAK0042
+       CAS     =O144   IF ADDRESS  GREATER 144 THEN=L(TAPE NO.) WORD    TRAK0043
+       TRA     THERE                                                    TRAK0044
+       TRA     THERE    DITTO IF EQUAL TO 144                           TRAK0045
+       ALS     18      IF LESS THAN 144 THEN ADDRESS IS THE TAPE NUMBER TRAK0046
+       TRA     WAS                                                      TRAK0047
+ ATIME CLA     SIXDC   WHEN IN MONITOR MAKE TAPE = A3 (6)               TRAK0048
+       TRA     WAS     FOR OUTPUT . IGNORE ARGUMENT OF ZERO FOR ONLINE  TRAK0049
+ THERE CLA*    2,4                                                      TRAK0050
+ WAS   STD     TAPNO                                                    TRAK0051
+       CLA     TAPNO   IF TAPE NO. (N)= 0 AND RUN IS OUTSIDE MONITOR USETRAK0052
+       TZE     AHEP    FORTRAN ROUTINE SPH  INSTEAD OF  STH.            TRAK0053
+       CAL     CALTN    THIS IS A  CAL TAPNO USED FOR STH ROUTINE       TRAK0054
+       SLW     REALY    PARDON THE SPELLLING                            TRAK0055
+       SLW     THIS                                                     TRAK0056
+       CAL     A(STH)    A TSX  $(STH),4                                TRAK0057
+       TRA     CAT                                                      TRAK0058
+ AHEP  CLA     STORY    A  NOP                                          TRAK0059
+       STO     REALY                                                    TRAK0060
+       STO     THIS                                                     TRAK0061
+       CAL     A(SPH)   A  TSX $(SPH),4                                 TRAK0062
+ CAT   SLW     COULD                                                    TRAK0063
+       SLW     DAD                                                      TRAK0064
+       CLA     NUTRAK-1                                                 TRAK0065
+       STO     NAME                                                     TRAK0066
+       STZ     IFN  INTERNAL FORMULA NUMBER                             TRAK0067
+       STZ     EFN     EXTERN                                           TRAK0068
+       CLA     3,4    LOCATION OF HEADING  IN BCD                       TRAK0069
+       STA     HEDING                                                   TRAK0070
+       SXA     X2,2                                                     TRAK0071
+       SXA     X1,1                                                     TRAK0072
+       AXT     0,2                                                      TRAK0073
+       AXT     12,1                                                     TRAK0074
+HEDING CAL     **,2                                                     TRAK0075
+       LAS     =O777777777777   IS THE BCD WORD THE FENCE               TRAK0076
+       TRA     *+2     NO                                               TRAK0077
+       TRA     FENCE     YES                                            TRAK0078
+       SLW     HOLLY+14,1     STORE THE BCD WORD IN OUR BUFFER          TRAK0079
+       TXI     *+1,2,-1    PICK UP NEXT WORD (STORED FOWRWARDS)         TRAK0080
+       TIX     HEDING,1,1   STORE MAXIMUM OF 12 WORDS ONLY              TRAK0081
+       TRA     X2                                                       TRAK0082
+ FENCE CAL     =H        IF LESS THAN 12 BCD WORDS FILL BUFFER WITH BLKSTRAK0083
+       SLW     HOLLY+14,1                                               TRAK0084
+       TIX     *-1,1,1                                                  TRAK0085
+ X2    AXT     **,2                                                     TRAK0086
+ X1    AXT     **,1                                                     TRAK0087
+       TXI     *+1,4,-3                                                 TRAK0088
+ WHAT  SXA     SWING,4                                                  TRAK0089
+ REALY PZE     0       THIS WILL BE A NOP OR A CAL TAPNO                TRAK0090
+ COULD TSX     **,4    THIS WILL BE TO SPH OR STH                       TRAK0091
+       TSX     HOLLY,0,0  LOCATION OF FORMAT STORED FORWARDS            TRAK0092
+       LDQ     EFN                                                      TRAK0093
+       STR             PART OF FORTRAN OUTPUT RTN. CALLING SEQUENCE     TRAK0094
+       LDQ     IFN                                                      TRAK0095
+       STR                                                              TRAK0096
+       TSX     $(FIL),4                                                 TRAK0097
+       CAL     LF1                                                      TRAK0098
+       SLW     COULD+1          A TSX F1,0,0                            TRAK0099
+ SWING AXT     **,4    SEE SYM. LOC. WHAT  WHICH STORES ADDRESS HERE    TRAK0100
+       TXH     SWEET,4,0                                                TRAK0101
+ NOW   LXD     NUTRAK-2,4                                               TRAK0102
+       CAL     4,4                                                      TRAK0103
+       ANA     =O700000000000                                           TRAK0104
+       TNZ     4,4                                                      TRAK0105
+       TXI     NOW+1,4,-1                                               TRAK0106
+SWEET  SXD     IR,4                                                     TRAK0107
+ WHEN  CAL     1,4                                                      TRAK0108
+       ANA     =O700000000000                                           TRAK0109
+       TNZ     PAD                                                      TRAK0110
+       CLA     1,4                                                      TRAK0111
+       STA     TOOK                                                     TRAK0112
+       STA     HIS                                                      TRAK0113
+       STA     HORN                                                     TRAK0114
+       SXA     TOA,4                                                    TRAK0115
+ THIS  PZE     0       THIS IS A NOP OR A CAL TAPNO                     TRAK0116
+ DAD   TSX     **,4    THIS IS TO STH OR SPH                            TRAK0117
+       TSX     F2,0,0  F2 IS THE FORMAT AND THE TSX USED BECAUSE ITS FORTRAK0118
+ TOOK  LDQ     **    ARGUMENT WILL BE FIRST A AND THEN B         WARD   TRAK0119
+       STR                                                              TRAK0120
+ HIS   LDQ     **                                                       TRAK0121
+       STR                                                              TRAK0122
+ HORN  LDQ     **                                                       TRAK0123
+       STR                                                              TRAK0124
+       TSX     $(FIL),4                                                 TRAK0125
+ TOA   AXT     **,4                                                     TRAK0126
+       TXI     WHEN,4,-1                                                TRAK0127
+ PAD   CLA     I                                                        TRAK0128
+       TZE     NOW                                                      TRAK0129
+       CLA     1,4                                                      TRAK0130
+       STD     EFN                                                      TRAK0131
+       CLA     2,4                                                      TRAK0132
+       STD     IFN                                                      TRAK0133
+       STA     THE+1                                                    TRAK0134
+       ANA     =O77777                                                  TRAK0135
+       TZE     JOINT                                                    TRAK0136
+       CAS     =O77777                                                  TRAK0137
+       TRA     *+2                                                      TRAK0138
+       TRA     WOULD                                                    TRAK0139
+       ADD     =1                                                       TRAK0140
+       STA     THE                                                      TRAK0141
+ THE   CLA     **                                                       TRAK0142
+       LXD     **,4                                                     TRAK0143
+       STO     NAME                                                     TRAK0144
+       TRA     WHAT                                                     TRAK0145
+ JOINT CLA     MAIN                                                     TRAK0146
+       AXT     0,4                                                      TRAK0147
+       TRA     THE+2                                                    TRAK0148
+ WOULD LXD     IR,4                                                     TRAK0149
+       CLA     -1,4                                                     TRAK0150
+       STA     THE+1                                                    TRAK0151
+       CLA     MAIN+1                                                   TRAK0152
+ ROCK  TRA     THE+1                                                    TRAK0153
+*                                                                       TRAK0154
+ MAIN  BCI     1,MAIN-                                                  TRAK0155
+       BCI     1,FU-DEF                                                 TRAK0156
+ HOLLY BCI 1,(1H4,                 SHOULD GIVE DOUBLE SPACE BEFORE ENTRYTRAK0157
+       BCI 1,75H                                                        TRAK0158
+       BSS     12                                                       TRAK0159
+ F1    BCI     1,/14H0                                                  TRAK0160
+ NAME  BCI     7,        EFN=I5,7H   IFN=I5,11H   ARG.ARE-)             TRAK0161
+ F2    BCI ,(11H0     OCT  O12,10H     DEC  1PE14.7,10H     INT  I15)   TRAK0162
+ I     PZE     0                                                        TRAK0163
+ SIXDC PZE     0,0,6                                                    TRAK0164
+ TAPNO PZE     0                                                        TRAK0165
+ CALTN CAL     TAPNO                                                    TRAK0166
+A(STH) TSX     $(STH),4                                                 TRAK0167
+A(SPH) TSX     $(SPH),4                                                 TRAK0168
+ IFN   PZE     0                                                        TRAK0169
+ EFN   PZE     0                                                        TRAK0170
+ IR    PZE     0                                                        TRAK0171
+ LHOL  TSX     HOLLY,0,0                                                TRAK0172
+ LF1   TSX     F1,0,0                                                   TRAK0173
+ THEND END                                                              TRAK0174

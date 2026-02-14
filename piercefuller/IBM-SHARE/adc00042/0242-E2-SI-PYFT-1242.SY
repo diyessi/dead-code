@@ -1,0 +1,169 @@
+*      SMITHSONIAN ASTROPHYSICAL OBSERVATORY PROGRAM                        0000
+*      LEAST SQUARES FIT OF POLYNOMIAL EQUATIONS OF DEGREE 15(MAX.)         0001
+*     LABEL                                                                 0002
+*     LIST 8                                                                0003
+C PYFT   PROGRAM TO FIT POLYNOMIAL OF DEGREE 15 (MAX.)                      0004
+      DIMENSION X(600),Y(600),YC(600),R(600),C(29),A(16,17),Z(16,1),KADK     005
+     1IA(12) ,W(600)                                                         006
+C     IW=0,WEIGHTS ARE PUNCHED, IW=1 NONE ARE PUNCHED.                       007
+C     MM = NUMBER OF POLY. FITS TO THE PRESENT DATA.                         008
+C     N  = NUMBER OF OBSERVATIONS,CONSIDERING(X,Y) AS ONE OBSERVATION.       009
+C     ND = DEGREE OF THE POLY. TO BE FITTED                                  010
+C     NA = ND + 1, NUMBER OF COEFFICIENTS IN POLY.                           011
+   50 READ INPUT TAPE 5,11,(KADKIA(I),I=1,12)                                012
+      READ INPUT TAPE 5,7,IW,N,ND,MM                                         013
+      IF ( IW ) 41,41,42                                                     014
+   42 READ INPUT TAPE 5,53,( X(I),Y(I),I=1,N )                               015
+      GO TO 70                                                               016
+   41 READ INPUT TAPE 5,533,( X(I),Y(I),W(I),I=1,N)                          017
+      GO TO 70                                                               018
+   60 READ INPUT TAPE 5,11,(KADKIA(I),I=1,12)                                019
+      READ INPUT TAPE 5,18,ND                                                020
+   70 NA = ND+1                                                              021
+      JJ= NA+1                                                               022
+      M = 2*NA-1                                                             023
+      NN  =  N - NA                                                          024
+      AAA  =  FLOATF(NN)                                                     025
+      IF ( IW) 71,71,72                                                      026
+   71 DO 8 I=1,M                                                             027
+      II = I-1                                                               028
+      C(I) =0.                                                               029
+      DO 8  J=1,N                                                            030
+   8  C(I) = C(I) + W(J)*( X(J)**II)                                         031
+      DO 9 I = 1,NA                                                          032
+      DO 9 J = 1,NA                                                          033
+      KK = (I+J-1)                                                           034
+   9  A(I,J) = C(KK)                                                        0035
+      DO 10 I=1,NA                                                           036
+      II = I-1                                                               037
+      A(I,JJ) = 0.                                                           038
+      DO 10 J=1,N                                                            039
+   10 A(I,JJ) = A(I,JJ) + W(J)*Y(J)*(X(J)**II)                               040
+      GO TO 101                                                              041
+   72 DO 88 I=1,M                                                             42
+      II=I-1                                                                 043
+      C(I) =0.                                                               044
+      DO 88 J=1,N                                                            045
+   88 C(I) = C(I) + X(J)**II                                                 046
+      DO 99 I=1,NA                                                           047
+      DO 99 J=1,NA                                                           048
+      KK= (I+J-1)                                                            049
+   99 A(I,J) = C(KK)                                                         050
+      DO 100 I=1,NA                                                          051
+      II= I-1                                                                052
+      A(I,JJ) = 0.                                                           053
+      DO 100 J=1,N                                                           054
+  100 A(I,JJ) = A(I,JJ) + Y(J)*X(J)**II                                      055
+  101 CALL TRIANG ( A,NA,1,DET )                                             056
+      CALL SOLVE ( A,NA,1,Z )                                                057
+      SUM = 0.                                                               058
+      DO 15 I=1,N                                                            059
+      R(I)=0.                                                                060
+      YC(I) = Z(1)                                                           061
+      IF ( NA - 1 ) 166,15,166                                               062
+  166 DO 16 J=2,NA                                                           063
+      JJJ = J-1                                                              064
+   16 YC(I) = YC(I) + Z(J)* X(I)**JJJ                                        065
+   15 R(I) = Y(I) - YC(I)                                                    066
+      IF ( IW) 73,73,74                                                     0067
+   73 DO 91 I=1,N                                                            068
+   91 SUM = SUM+W(I)*(R(I)**2)                                               069
+      GO TO 17                                                               070
+   74 DO 92 I=1,N                                                            071
+   92 SUM = SUM + R(I)**2                                                    072
+   17 CONTINUE                                                               073
+      SUM1 = SUM                                                             074
+      SUM = SUM /AAA                                                           6
+      STDERR = SQRTF(SUM)                                                    076
+      WRITE OUTPUT TAPE 6,12, ( KADKIA(I),I=1,12 )                           077
+      WRITE OUTPUT TAPE 6,21                                                 07 
+      WRITE OUTPUT TAPE 6,22, ( I,X(I),Y(I),YC(I),R(I), I=1,N)               079
+      WRITE OUTPUT TAPE 6,23                                                 080
+      WRITE OUTPUT TAPE 6,244,(Z(J),J=1,NA)                                  081
+      IF(IW) 77,77,78                                                        082
+   77 WRITE OUTPUT TAPE 6,25                                                 083
+      GO TO 79                                                               084
+   78 WRITE OUTPUT TAPE 6,26                                                 08 
+   79 WRITE OUTPUT TAPE 6,24,SUM1,STDERR                                     086
+   7  FORMAT (I1,I3,2I2)                                                     087
+   11 FORMAT ( 12A6 )                                                        088
+   12 FORMAT (45H1  S A O LEAST SQUARES FIT TO A SET OF (X,Y),12A6)          08 
+  18  FORMAT (I2)                                                            1 1
+   21 FORMAT ( //15X,15HX ( IND. VAR. )10X,15HY ( DEP. VAR. )8X,17HYC (      091
+     1COMPUTED Y )11X,19HRESIDUAL ( Y - YC )//)                              09 
+   22 FORMAT ( I5,3E25.8,E30.8 )                                                
+   23 FORMAT (//13X,38HPOLYNOMIAL COEFF.(IN ASCENDING POWERS)//)             094
+   24 FORMAT ( 2E40.8)                                                       095
+  244 FORMAT ( E30.8)                                                        096
+   25 FORMAT (//3X,37HSUM OF SQUARES OF RESIDUALS(WEIGHTED)16X,24HSTANDA     096
+     1RD ERROR(WEIGHTED)//)                                                  097
+   26 FORMAT (//13X,27HSUM OF SQUARES OF RESIDUALS26X,14HSTANDARD ERROR//)   098
+     1/)                                                                     099
+   53 FORMAT (8F9.4               )                                          100
+  533 FORMAT ( 3 ( 2F9.4,     F6.3     ))                                    212
+      MM = MM- 1                                                             102
+      IF ( MM)60,50,60                                                       103
+      END                                                                    104
+*          SUBROUTINE TRIANG TO BE USED WITH PYFT                            105
+*     LABEL                                                                  106
+*     LIST 8                                                                 107
+CTRIANG    SUBROUTINE TRIANG                                                 108
+      SUBROUTINE TRIANG(A,M,N,DET )                                          109
+C .              WHERE A IS THE MATRIX WITH M ROWS AND M+N COLUMNS TO        110
+C                BE TRIANGULARIZED.                                          111
+      DIMENSION A(16,17)                                                     112
+      DET=1.                                                                 113
+      MM1=M-1                                                                114
+      MPN=M+N                                                                115
+      DO 5 J=1,MM1                                                           116
+      MAXX = J                                                               117
+      VALUE = ABSF ( A(J,J))                                                 118
+      JP1=J+1                                                                119
+      DO 1 K=JP1,M                                                           120
+      IF ( VALUE - ABSF(A(K,J)))  2,1,1                                      121
+   2  VALUE = ABSF(A(K,J))                                                   122
+      MAXX=K                                                                 123
+   1  CONTINUE                                                               124
+      DO 3 L=J,MPN                                                           125
+      TEMP = A(MAXX,L)                                                       126
+      A(MAXX,L) = A(J,L)                                                     127
+   3  A(J,L) = TEMP                                                          128
+      IF ( MAXX-J) 7,6,7                                                     129
+   7  DET  = - DET                                                           130
+   6  DET = DET*A(J,J)                                                       131
+      ROW = A(J,J)                                                           132
+      DO 4 L=J,MPN                                                           133
+   4  A(J,L) = A(J,L)/ROW                                                    134
+      DO 5 K=JP1,M                                                           135
+      ROW = A(K,J)                                                           136
+      DO 5 L=J,MPN                                                           137
+   5  A(K,L) = A(K,L)-ROW*A(J,L)                                             138
+      DET = DET*A(M,M)                                                       139
+      ROW = A(M,M)                                                           140
+      DO 9 L = M,MPN                                                         141
+   9  A(M,L) = A(M,L)/ROW                                                    142
+      RETURN                                                                 143
+      END                                                                    144
+*          SUBROUTINE SOLVE TO BE USED WITH PYFT                             145
+*     LABEL                                                                  146
+*     LIST 8                                                                 147
+CSOLVE     SUBROUTINE SOLVE                                                  148
+      SUBROUTINE SOLVE(A,M,N,X)                                              149
+C                WHERE A IS THE TRIANGULARIZED MATRIX WITH M ROWS AND        150
+C                M+N COLUMNS.                                                151
+C                      X IS THE SOLUTION MATRIX WITH M ROWS AND N            152
+C                COLUMNS.                                                    153
+      DIMENSION A(16,17),X(16,1)                                             154
+      MM1=M-1                                                                155
+      DO 2 L=1,N                                                             156
+      MPL=M+L                                                                157
+      DO 2 K=1,MM1                                                           158
+      MMK=M-K                                                                159
+      MMKP1=MMK+1                                                            160
+      X(M,L)=A(M,MPL)/A(M,M)                                                 161
+      SUM=0.                                                                 162
+      DO 3 I=MMKP1,M                                                         163
+ 3    SUM=SUM+A(MMK,I)*X(I,L)                                                164
+ 2    X(MMK,L)=A(MMK,MPL)-SUM                                                165
+      RETURN                                                                 166
+      END                                                                    167

@@ -1,0 +1,515 @@
+      SUBROUTINE SCALE(NPTS,X,KRSTR)                                    SCAL0001
+      DIMENSION X(1)                                                    SCAL0002
+  100 N=NPTS                                                            SCAL0003
+  102 XMAX=X(1)                                                         SCAL0004
+  104 DO 106 J=1,N                                                      SCAL0005
+  106 XMAX=MAX1F(ABSF(XMAX),ABSF(X(J)))                                 SCAL0006
+  108 KHAR = XINTF(LOGF(XMAX)/2.302585+40.)-40                          SCAL0007
+  116 IF((4-KHAR)*(KHAR+2))120,118,118                                  SCAL0008
+  118 KPWR=0                                                            SCAL0009
+  119 GO TO 130                                                         SCAL0010
+  120 KPWR=3-KHAR                                                       SCAL0011
+  122 FACT=10.**KPWR                                                    SCAL0012
+  126 DO 128 J=1,N                                                      SCAL0013
+  128 X(J)=X(J)*FACT                                                    SCAL0014
+  130 KRSTR=KPWR                                                        SCAL0015
+  140 RETURN                                                            SCAL0016
+      END                                                               SCAL0017
+      SUBROUTINE PISTUG(KXY,NPTS,ARRAY,DELTA,FIRST,KSHIFT,KHAR)         PIST0001
+C                                                                       PIST0002
+      DIMENSION ARRAY(1)                                                PIST0003
+C                                        RENAME INPUT                   PIST0004
+  100 N=NPTS                                                            PIST0005
+  102 K=KXY                                                             PIST0006
+C                                        FIND MIN AND MAX OF ARRAY      PIST0007
+  104 X1=ARRAY(1)                                                       PIST0008
+  106 XN=ARRAY(N)                                                       PIST0009
+  107 GO TO(302,302,110),K                                              PIST0010
+C                                                                       PIST0011
+  302 DO 306 J=1,N                                                      PIST0012
+  304 X1 = MIN1F(X1,ARRAY(J))                                           PIST0013
+  306 XN  = MAX1F(XN,ARRAY(J))                                          PIST0014
+C                                        TLIN = F(NPTS) OR 101          PIST0015
+  110 GO TO (112,116,112),K                                             PIST0016
+C                                                                       PIST0017
+  112 NP=N/35+1                                                         PIST0018
+  113 TLIN=FLOATF(NP)*55.                                               PIST0019
+  114 GO TO 118                                                         PIST0020
+C                                                                       PIST0021
+  116 TLIN=101.                                                         PIST0022
+C                                        COMPUTE TOTAL RANGE            PIST0023
+  118 C3 = XN-X1                                                        PIST0024
+C                                     CALCULATE MEASURE OF SIZE AND TESTPIST0025
+  120 C4=C3/TLIN                                                        PIST0026
+  122 KCDX = XINTF(LOGF(ABSF(C4))/2.302585 +40.) -40                    PIST0027
+C                                                                       PIST0028
+C                                        TO ERROR EXIT IF N.G.          PIST0029
+  124 IF(25-KCDX*KCDX) 900,140,140                                      PIST0030
+C                                        CALC MAX POSSIBLE DELTA        PIST0031
+  140 TENCDX=10.**KCDX                                                  PIST0032
+  142 C5=C4/TENCDX                                                      PIST0033
+  144 AC5=ABSF(C5)                                                      PIST0034
+C                                        CHOOSE BEST VALUE OF D         PIST0035
+  150 IF(2.5-AC5) 154,204,152                                           PIST0036
+  152 IF(2.0-AC5) 204,200,200                                           PIST0037
+  154 IF(5.0-AC5) 212,208,208                                           PIST0038
+C                                                                       PIST0039
+  200 D=2.                                                              PIST0040
+  202 GO TO 214                                                         PIST0041
+  204 D=2.5                                                             PIST0042
+  206 GO TO 214                                                         PIST0043
+  208 D=5.                                                              PIST0044
+  210 GO TO 214                                                         PIST0045
+  212 D=10.                                                             PIST0046
+C                                        CALC  SCALE FACTOR             PIST0047
+  214 DX=SIGNF(D,C5)*TENCDX                                             PIST0048
+C                                 IF SCALING X,PLOT ENDS TOO NEAR TOP OFPIST0049
+C                                    PAGE,CHANGE TOTAL LINES AND GO BACKPIST0050
+  216 GO TO (220,230,220),K                                             PIST0051
+C                                                                       PIST0052
+  220 IF( (2.*C3/DX-TLIN)/TLIN-.2)222,230,230                           PIST0053
+C                                                                       PIST0054
+  222 TLIN=TLIN+35.                                                     PIST0055
+  224 GO TO 120                                                         PIST0056
+C                                        CALC STARTING VALUE            PIST0057
+  230 ADX=ABSF(DX)                                                      PIST0058
+  232 INT=ABSF(X1)/ADX                                                  PIST0059
+  234 BELOW=ADX*FLOATF(INT)                                             PIST0060
+  236 IF(DX*X1+1.E-20) 244,240,240                                      PIST0061
+  240 F=BELOW                                                           PIST0062
+  242 GO TO 246                                                         PIST0063
+  244 F=BELOW+ADX                                                       PIST0064
+  246 FX=SIGNF(F,X1)                                                    PIST0065
+C                                     IF SCALE VALUES INTEGRAL,GO TO 270PIST0066
+  250 IF(KCDX) 256,256,252                                              PIST0067
+  252 KSX=6                                                             PIST0068
+  254 GO TO 270                                                         PIST0069
+C                                       IF NOT,ALTER AND CALC SHIFT CODEPIST0070
+  256 KSFT=XABSF(KCDX)+1                                                PIST0071
+  258 TEMP=10.**KSFT                                                    PIST0072
+  260 DX=DX*TEMP                                                        PIST0073
+  262 FX=FX*TEMP                                                        PIST0074
+  264 KSX = 6-KSFT                                                      PIST0075
+C                                        RENAME OUTPUT AND CALC KHAR    PIST0076
+  270 DELTA = INTF(DX+SIGNF(.5,DX))                                     PIST0077
+  272 FIRST = INTF(FX+SIGNF(.5,FX))                                     PIST0078
+  274 KSHIFT=KSX                                                        PIST0079
+  276 KHAR = XINTF(LOGF(MAX1F(ABSF(X1),ABSF(XN)))/2.302585 +40.)-40     PIST0080
+  280 RETURN                                                            PIST0081
+C                                                                       PIST0082
+C                                                                       PIST0083
+C                                        ERROR MESSAGE                  PIST0084
+  900       WRITE OUTPUT TAPE 6,500,K,  KCDX                            PIST0085
+  500   FORMAT(30HPL PLOT HALTED BY ARRAY NUMBER,I2,26H VALUES OUT OF RAPIST0086
+  5001NGE. KCD=,I4)                                                     PIST0087
+  902 DX=0.                                                             PIST0088
+  904 GO TO 270                                                         PIST0089
+      END                                                               PIST0090
+                                                                        SORT0000
+       SUBROUTINE SORTXY(X,Y,NPTS)                                      SORT0001
+      DIMENSION X(100),Y(100)                                           SORT0002
+  100 N=NPTS                                                            SORT0003
+  102 NN=N-1                                                            SORT0004
+  104 DO 140 KT=1,NN                                                    SORT0005
+      XMIN=X(KT)                                                        SORT0006
+      JAD=KT                                                            SORT0007
+      JKL=KT+1                                                          SORT0008
+  112 DO 120 JK=JKL,N                                                   SORT0009
+  114 IF (XMIN-X(JK)) 120,120,116                                       SORT0010
+  116 XMIN=X(JK)                                                        SORT0011
+  118 JAD=JK                                                            SORT0012
+  120 CONTINUE                                                          SORT0013
+  122 YMIN=Y(JAD)                                                       SORT0014
+      X(JAD)= X(KT)                                                     SORT0015
+      Y(JAD)= Y(KT)                                                     SORT0016
+      X(KT)= XMIN                                                       SORT0017
+      Y(KT)= YMIN                                                       SORT0018
+  140 CONTINUE                                                          SORT0019
+       RETURN                                                           SORT0020
+      END                                                               SORT0021
+      SUBROUTINE PLOTXY(X,Y,BK,P)                                       PTXY0001
+C                                   THIRD ARGUMENT IS A BOOLEAN VARIABLEPTXY0002
+C                                                                       PTXY0003
+      DIMENSION X(100),Y(100),P(111),KX(21),KY(21),XOW(10),YOW(10),     PTXY0004
+     1 POW(10)                                                          PTXY0005
+C                                        IT IS ALSO USED AS AN INTEGER  PTXY0006
+      EQUIVALENCE (   BKK,KK)                                           PTXY0007
+C                                                                       PTXY0008
+  100 N=P(1)+SIGNF(.5,P(1))                                             PTXY0009
+  101 BKK=BK                                                            PTXY0010
+  102 KSW=0                                                             PTXY0011
+  103 KHDG=2                                                            PTXY0012
+C                                        GO TO 140 IF KODE IS NOT ZERO  PTXY0013
+  104 IF(KK) 140,106,140                                                PTXY0014
+  106 A1=1H*                                                            PTXY0015
+  107 M=10                                                              PTXY0016
+  108 NY = 10                                                           PTXY0017
+  109 NF1=0                                                             PTXY0018
+C                                       SCALE X AND TO 190 OR ERROR EXITPTXY0019
+  120 K=3                                                               PTXY0020
+  121 CALL PISTUG(K,N,X,DX,FX,KSX,KHARX)                                PTXY0021
+  122 KDX=DX                                                            PTXY0022
+  124 IF(KDX) 190,900,190                                               PTXY0023
+C                                       SCALE Y AND TO 220 OR ERROR EXITPTXY0024
+  126 K=2                                                               PTXY0025
+  128 CALL PISTUG(K,N,Y,DY,FY,KSY,KHARY)                                PTXY0026
+  130 KDY=DY                                                            PTXY0027
+  132 IF(KDY) 220,900,220                                               PTXY0028
+C                                                                       PTXY0029
+C                                                                       PTXY0030
+C                                        OPTION 1 - USE * OR P(2)       PTXY0031
+B 140 IF(BKK*1000000) 148,148,144                                       PTXY0032
+  144 A1=P(2)                                                           PTXY0033
+  146 GO TO 150                                                         PTXY0034
+  148 A1=1H*                                                            PTXY0035
+C                                        OPTION 2 - USE 10 OR P(3)      PTXY0036
+B 150 IF(BKK*2000000) 158,158,154                                       PTXY0037
+  154 M=P(3)+SIGNF(.5,P(3))                                             PTXY0038
+  156 GO TO 160                                                         PTXY0039
+  158 M=10                                                              PTXY0040
+C                                        OPTION 4 - USE 10 OR P(4)      PTXY0041
+B 160 IF(BKK*4000000) 168,168,164                                       PTXY0042
+  164 NY = P(4)+SIGNF(.5,P(4))                                          PTXY0043
+  166 GO TO 170                                                         PTXY0044
+  168 NY = 10                                                           PTXY0045
+C                                        OPTION 8 - ALTER KSW AND NF1   PTXY0046
+B 170 IF(BKK*10000000) 178,178,174                                      PTXY0047
+  174 NF1=P(5)+SIGNF(.5,P(5))                                           PTXY0048
+  176 KSW=1                                                             PTXY0049
+  177 GO TO 200                                                         PTXY0050
+  178 NF1=0                                                             PTXY0051
+C                                        OPTION 64 - ALTER KSW AND NF1  PTXY0052
+B 200 IF(BKK*100000000) 180,180,204                                     PTXY0053
+  204 NF1=NF1+13                                                        PTXY0054
+  206 KSW=KSW+2                                                         PTXY0055
+  208 KHDG=1                                                            PTXY0056
+C                                    OPTION 16 - GO TO 120 OR USE P(6-8)PTXY0057
+B 180 IF(BKK*20000000) 120,120,184                                      PTXY0058
+  184 KSX=P(6)+SIGNF(.5,P(6))                                           PTXY0059
+  185 FX=P(7)                                                           PTXY0060
+  186 DX=P(8)                                                           PTXY0061
+  187 RFX=FX*(10.**(KSX-6))                                             PTXY0062
+      RDX=DX*(10.**(KSX-6))                                             PTXY0063
+      PFX=RFX+100.*RDX                                                  PTXY0064
+      XMAX=MAX1F(ABSF(RFX),ABSF(PFX))                                   PTXY0065
+      KHARX=XINTF(LOGF(XMAX)/2.302585+40.)-40                           PTXY0066
+C                                   OPTION 32 - GO TO 126 OR USE P(9-11)PTXY0067
+B 190 IF(BKK*40000000) 126,126,194                                      PTXY0068
+  194 KSY=P(9)+SIGNF(.5,P(9))                                           PTXY0069
+  196 FY=P(10)                                                          PTXY0070
+  198 DY=P(11)                                                          PTXY0071
+  199 RFY=FY*(10.**(KSY-6))                                             PTXY0072
+      RDY=DY*(10.**(KSY-6))                                             PTXY0073
+      PFY=RFY+100.*RDY                                                  PTXY0074
+      YMAX=MAX1F(ABSF(RFY),ABSF(PFY))                                   PTXY0075
+      KHARY=XINTF(LOGF(YMAX)/2.302585+40.)-40                           PTXY0076
+C                                     GO TO 250 OR PRINT SPECIAL HEADINGPTXY0077
+  220 GO TO (230,250),KHDG                                              PTXY0078
+  230 KPWRX=3-KHARX                                                     PTXY0079
+  232 KPWRY=3-KHARY                                                     PTXY0080
+  234 F10X=10.**KPWRX                                                   PTXY0081
+  236 F10Y=10.**KPWRY                                                   PTXY0082
+  238 WRITE OUTPUT TAPE 6,500,KPWRX,KPWRY                               PTXY0083
+  250 ODX = DX* 1.E-6+SIGNF(.0000005,DX )                               PTXY0084
+      OFX = FX* 1.E-6+SIGNF(.0000005,FX )                               PTXY0085
+      ODY = DY*1 .E-6+SIGNF(.0000005,DY )                               PTXY0086
+      OFY = FY* 1.E-6+SIGNF(.0000005, FY)                               PTXY0087
+C                                        WRITE INFO RECORD              PTXY0088
+  251 WRITE OUTPUT TAPE 6,502,A1,KSX,KSY,OFX,OFY,ODX,ODY,M,NY,NF1       PTXY0089
+C                                                                       PTXY0090
+C                                                                       PTXY0091
+C                                        INITIALIZE FOR OUTPUT LOOPING  PTXY0092
+  300 L=130/(6+NF1)                                                     PTXY0093
+      J=1                                                               PTXY0094
+C                                             FOR ALL POINTS            PTXY0095
+  310 DO 498 I=1,N                                                      PTXY0096
+C                                        COMPUTE COUNT DOWN AND ACROSS  PTXY0097
+  320 C6 = X(I)*(10.**(6-KSX))/DX                                       PTXY0098
+  322 C7=INTF(C6+SIGNF(.5,C6))                                          PTXY0099
+  324 KX(J)=(DX*C7-FX)/DX+.5                                            PTXY0100
+  330 C6 = Y(I)*(10.**(6-KSY))/DY                                       PTXY0101
+  332 C7=INTF(C6+SIGNF(.5,C6) )                                         PTXY0102
+  334 KY(J)=(DY*C7-FY)/DY+.5                                            PTXY0103
+C                                        GO TO 346 OR PICKUP COORDINATESPTXY0104
+  338 KBR=KSW/2+1                                                       PTXY0105
+  340 GO TO (346,342),KBR                                               PTXY0106
+  342 XOW(J)=F10X*X(I)                                                  PTXY0107
+  344 YOW(J)=F10Y*Y(I)                                                  PTXY0108
+C                                    GO TO 350 OR PICKUP P ARRAY MESSAGEPTXY0109
+  346 KBR2=KSW+1                                                        PTXY0110
+  347 GO TO(350,348,350,348),KBR2                                       PTXY0111
+  348 POW(J)=P(I+11)                                                    PTXY0112
+C                                 GO TO 360 UNLESS READY TO WRITE RECORDPTXY0113
+  350 IF(J-L) 360,352,360                                               PTXY0114
+  352 J=0                                                               PTXY0115
+  354 GO TO 400                                                         PTXY0116
+C                                       GO TO 498 IF ALL POINTS NOT DONEPTXY0117
+  360 IF(I-N) 498,362,498                                               PTXY0118
+  362 L=J                                                               PTXY0119
+C                                        WRITE A DATA RECORD            PTXY0120
+  400 KBRM=KSW+1                                                        PTXY0121
+  402 GO TO (410,420,430,440),KBRM                                      PTXY0122
+  410 WRITE OUTPUT TAPE 6,510,(KX(J),KY(J),J=1,L)                       PTXY0123
+  412 GO TO 498                                                         PTXY0124
+  420 WRITE OUTPUT TAPE 6,520,(POW(J),KX(J),KY(J),J=1,L)                PTXY0125
+  422 GO TO 498                                                         PTXY0126
+  430 WRITE OUTPUT TAPE 6,530,(XOW(J),YOW(J),KX(J),KY(J),J=1,L)         PTXY0127
+  432 GO TO 498                                                         PTXY0128
+  440 WRITE OUTPUT TAPE 6,540,(POW(J),XOW(J),YOW(J),KX(J),KY(J),J=1,L)  PTXY0129
+  498 J=J+1                                                             PTXY0130
+C                                        END OF DO THAT STARTED AT  310 PTXY0131
+  900 RETURN                                                            PTXY0132
+C                                                                       PTXY0133
+  500 FORMAT(2HPT/2HPT/2HPT,8X,3HX*E,I2,5H  Y*E,I2)                     PTXY0134
+  502 FORMAT(2HPI,A1,2I1,4F9.6,3I3)                                     PTXY0135
+  510 FORMAT (2HPD,42I3)                                                PTXY0136
+  520 FORMAT (2HPD,10(A6,I3,I3))                                        PTXY0137
+  530 FORMAT (2HPD,6(F6.0,F7.0,    I3,I3))                              PTXY0138
+  540 FORMAT (2HPD,5(A6,F6.0,F7.0,    I3,I3))                           PTXY0139
+      END                                                               PTXY0140
+      SUBROUTINE PLOTMY(X,Y,K,P)                                        PTMY0001
+C                                                                       PTMY0002
+      EQUIVALENCE (BKK,KK),(A,KPC),(FUSE(5),FUSEM),(B,KB)               PTMY0003
+      DIMENSION X(1),Y(1),K(1),P(1),A(6),KPC(6),FUSE(21),FUSEM(16),B(64)PTMY0004
+     1,KB(64)                                                           PTMY0005
+C                                                                       PTMY0006
+C                                        RENAME INPUT                   PTMY0007
+  100 KK=K(1)                                                           PTMY0008
+  101 KN=K(2)                                                           PTMY0009
+  102 NPTS=K(3)                                                         PTMY0010
+C                                SET UP FORMAT STATEMENT FOR DATA OUTPUTPTMY0011
+B 103 FUSE(1)=740230472473                                              PTMY0012
+B 104 FUSE(2)= 020074606060                                             PTMY0013
+B 105 FUSE(3) = 606060606060                                            PTMY0014
+B 106 FUSE(4) = 603103736060                                            PTMY0015
+  107 DO 108 I=1,16                                                     PTMY0016
+  108 FUSEM(I) = FUSE(3)                                                PTMY0017
+  109 FUSE(21)= 6H A1))                                                 PTMY0018
+C                                 INITIALIZE SWITCHES,COUNTERS,CONSTANTSPTMY0019
+  110 KEXIT=1                                                           PTMY0020
+  111 KTL=1                                                             PTMY0021
+  112 KSW64=1                                                           PTMY0022
+  113 KSW8=1                                                            PTMY0023
+  114 KSW1=1                                                            PTMY0024
+  116 KSW3=1                                                            PTMY0025
+  117 KWADD=2                                                           PTMY0026
+  118 KLADD=4                                                           PTMY0027
+  119 NF1=0                                                             PTMY0028
+      M = 10                                                            PTMY0029
+      NY=10                                                             PTMY0030
+C                                                                       PTMY0031
+C                                   OPTION 1'GET STD. P.C.S OR GO TO 150PTMY0032
+B 120 IF(BKK*1000000)122,122,150                                        PTMY0033
+  122 A(1)= 1H*                                                         PTMY0034
+      A(2)= 1H+                                                         PTMY0035
+      A(3)= 1H0                                                         PTMY0036
+      A(4)=1HX                                                          PTMY0037
+      A(5)= 1H=                                                         PTMY0038
+      A(6)= 1HO                                                         PTMY0039
+      K(4)= KPC(1)                                                      PTMY0040
+      K(6)= KPC(2)                                                      PTMY0041
+      K(8)= KPC(3)                                                      PTMY0042
+      K(10)=KPC(4)                                                      PTMY0043
+      K(12)=KPC(5)                                                      PTMY0044
+      K(14)=KPC(6)                                                      PTMY0045
+C                                        GO TO 200 IF KODE IS ZERO      PTMY0046
+  140 IF(KK) 150,200,150                                                PTMY0047
+C                                  INITIALIZE FOR OPTION 64 OR GO TO 160PTMY0048
+B 150 IF(BKK*100000000) 160,160,152                                     PTMY0049
+  152 KSW64=2                                                           PTMY0050
+B 154 FUSE(3)=602607330073                                              PTMY0051
+  156 NF1=7                                                             PTMY0052
+  158 KLADD=KLADD+7                                                     PTMY0053
+  159 KWADD=KWADD+1                                                     PTMY0054
+C                                                                       PTMY0055
+C                                                                       PTMY0056
+C                                   INITIALIZE FOR OPTION 8 OR GO TO 170PTMY0057
+B 160 IF(BKK*10000000) 170,170,162                                      PTMY0058
+  162 KSW8=2                                                            PTMY0059
+B 164 FUSE(2)=020074210673                                              PTMY0060
+  166 NF1=NF1+6                                                         PTMY0061
+  168 KLADD=KLADD+6                                                     PTMY0062
+  169 KWADD=KWADD+1                                                     PTMY0063
+C                                        IF  OPTION  2, USE P(3)        PTMY0064
+B 170 IF(BKK*2000000) 180,180,172                                       PTMY0065
+  172 M=P(3)+SIGNF(.5,P(3))                                             PTMY0066
+C                                        IF OPTION 4, USE P(4)          PTMY0067
+B 180 IF(BKK*4000000) 200,200,182                                       PTMY0068
+  182 NY=P(4)+SIGNF(.5,P(4))                                            PTMY0069
+C                                        INITIALIZE FOR V.I OR GO TO 210PTMY0070
+  200 IF (P(1)-2.5) 202,210,210                                         PTMY0071
+  202 KTL=KN                                                            PTMY0072
+  204 KSW1=2                                                            PTMY0073
+  208 GO TO 228                                                         PTMY0074
+C                                      INITIALIZE FOR V.III OR GO TO 220PTMY0075
+  210 IF(P(1)-4.) 220,220,214                                           PTMY0076
+  214 NPTST=0                                                           PTMY0077
+  216 DO 218 I=1,KN                                                     PTMY0078
+  218 NPTST=NPTST+K(2*I+1)                                              PTMY0079
+  219 GO TO 230                                                         PTMY0080
+C                                        INITIALIZE FOR V.II            PTMY0081
+  220 KTIMES=KN-1                                                       PTMY0082
+  221 DO 225 I=1,KTIMES                                                 PTMY0083
+  222 MM=NPTS*I                                                         PTMY0084
+ 1222 K(2*I+3) = NPTS                                                   PTMY0085
+  223 DO 225 II=1,NPTS                                                  PTMY0086
+  224 L=MM+II                                                           PTMY0087
+  225 Y(L)=Y(II)                                                        PTMY0088
+  226 KSW3=2                                                            PTMY0089
+C                                        FOR V.I  AND V.II              PTMY0090
+  228 NPTST=KN*NPTS                                                     PTMY0091
+C                                        IF OPTION 16,USE P(6-8)        PTMY0092
+B 230 IF(BKK*20000000)250,250,231                                       PTMY0093
+  231 KSX=P(6)+SIGNF(.5,P(6))                                           PTMY0094
+  232 FX=P(7)                                                           PTMY0095
+  233 DX=P(8)                                                           PTMY0096
+  234 RFX=FX*(10.**(KSX-6))                                             PTMY0097
+  235 RDX=DX*(10.**(KSX-6))                                             PTMY0098
+  236 PFX=RFX+100.*RDX                                                  PTMY0099
+  237 XMAX=MAX1F(ABSF(RFX),ABSF(PFX))                                   PTMY0100
+  238 KHARX=XINTF(LOGF(XMAX)/2.302585+40.)-40                           PTMY0101
+C                                        IF OPTION 32, USE P(9-11)      PTMY0102
+B 240 IF(BKK*40000000) 270,270,242                                      PTMY0103
+  242 KSY=P(9)+SIGNF(.5,P(9))                                           PTMY0104
+  244 FY=P(10)                                                          PTMY0105
+  246 DY=P(11)                                                          PTMY0106
+  248 GO TO 300                                                         PTMY0107
+C                                        NSX DIFFERS FOR V.I            PTMY0108
+  250 GO TO (256,252),KSW1                                              PTMY0109
+  252 NSX=NPTS                                                          PTMY0110
+  254 GO TO 260                                                         PTMY0111
+  256 NSX=NPTST                                                         PTMY0112
+C                                       SCALE X AND TO 240 OR ERROR EXITPTMY0113
+  260 CALL PISTUG( 1 ,NSX,X,DX,FX,KSX,KHARX)                            PTMY0114
+  262 KDX=DX                                                            PTMY0115
+  264 IF(KDX) 240,900,240                                               PTMY0116
+C                                        NSY DIFFERS FOR V.II           PTMY0117
+  270 GO TO (276,272),KSW3                                              PTMY0118
+  272 NSY=NPTS                                                          PTMY0119
+  274 GO TO 280                                                         PTMY0120
+  276 NSY=NPTST                                                         PTMY0121
+C                                       SCALE Y AND TO 300 OR ERROR EXITPTMY0122
+  280 CALL PISTUG (2,NSY,Y,DY,FY,KSY,KHARY)                             PTMY0123
+  282 KDY=DY                                                            PTMY0124
+  284 IF(KDY) 300,900,300                                               PTMY0125
+C                                       WRITE OPT64 HEADING OR GO TO 310PTMY0126
+  300 GO TO (310,302),KSW64                                             PTMY0127
+  302 KPWRX=3-KHARX                                                     PTMY0128
+  304 F10X=10.**KPWRX                                                   PTMY0129
+  306 WRITE OUTPUT TAPE 6,500,KPWRX                                     PTMY0130
+  500 FORMAT(2HPT/2HPT/2HPT,15X,3HX*E,I2)                               PTMY0131
+C                                        WRITE THE INFO RECORD          PTMY0132
+  310 RD= 5.E-7                                                         PTMY0133
+  311 SFT=1.E-6                                                         PTMY0134
+  312 ODX=DX*SFT+SIGNF(RD,DX)                                           PTMY0135
+  313 OFX=FX*SFT+SIGNF(RD,FX)                                           PTMY0136
+  314 ODY=DY*SFT+SIGNF(RD,DY)                                           PTMY0137
+  315 OFY=FY*SFT+SIGNF(RD,FY)                                           PTMY0138
+  316 XMF=(10.**(6-KSX))/DX                                             PTMY0139
+  317 YMF=(10.**(6-KSY))/DY                                             PTMY0140
+  318 WRITE OUTPUT TAPE 6,502,KSX,KSY,OFX,OFY,ODX,ODY,M,NY,NF1          PTMY0141
+C                                                                       PTMY0142
+  502 FORMAT(3HPI-,2I1,4F9.6,3I3)                                       PTMY0143
+C                                                                       PTMY0144
+C                                        INITIALIZE FOR DATA OUTPUT     PTMY0145
+C                                                                       PTMY0146
+C                                          FINISH FORMAT STATEMENT      PTMY0147
+  320 DO 322 I = 1,KTL                                                  PTMY0148
+B 322 FUSEM(I) = 310373210173                                           PTMY0149
+C                                  COMPUTE BUFFER CONSTANTS AND SET CTRSPTMY0150
+  330 KLC=KLADD+4*KTL                                                   PTMY0151
+  332 NBR=130/KLC                                                       PTMY0152
+  334 KW =KWADD+2*KTL                                                   PTMY0153
+  336 NBW=KW*NBR                                                        PTMY0154
+  337 J = 1                                                             PTMY0155
+  338 KBW=1                                                             PTMY0156
+  339 KBBC=1                                                            PTMY0157
+  340 KLAST=2*KN+1                                                      PTMY0158
+C                                          ILIM DIFFERS FOR V.I         PTMY0159
+  342 GO TO (348,344),KSW1                                              PTMY0160
+  344 ILIM=NPTS                                                         PTMY0161
+  346 GO TO 350                                                         PTMY0162
+  348 ILIM=NPTST                                                        PTMY0163
+C                                          READY TO FIND SMALLEST X     PTMY0164
+  350 XMIN=1.E15                                                        PTMY0165
+  352 IMIN=1                                                            PTMY0166
+C                                                                       PTMY0167
+C                                                                       PTMY0168
+C                                FIND SMALLEST X AND ITS SUBSCRIPT IMIN PTMY0169
+  360 DO 368 I=1,ILIM                                                   PTMY0170
+  362 IF(XMIN-X(I)) 368,368,364                                         PTMY0171
+  364 XMIN=X(I)                                                         PTMY0172
+  366 IMIN=I                                                            PTMY0173
+  368 CONTINUE                                                          PTMY0174
+C                                  IF OPTION 8,MOVE P(IMIN+11) TO BUFFERPTMY0175
+  370 GO TO (380,372),KSW8                                              PTMY0176
+  372 B(KBW)=P(IMIN+11)                                                 PTMY0177
+  374 KBW=KBW+1                                                         PTMY0178
+C                                    IF OPTION 64,MOVE X(IMIN) TO BUFFERPTMY0179
+  380 GO TO (390,382),KSW64                                             PTMY0180
+  382 B(KBW)=F10X*XMIN                                                  PTMY0181
+  384 KBW=KBW+1                                                         PTMY0182
+C                                        COMPUTE KX AND MOVE TO BUFFER  PTMY0183
+  390 C6  =XMIN*XMF                                                     PTMY0184
+  392 C7  =INTF(C6+SIGNF(.5,C6))                                        PTMY0185
+  394 KB(KBW)=(DX*C7-FX)/DX+.5                                          PTMY0186
+  396 KBW=KBW+1                                                         PTMY0187
+C                                        OVERWRITE SMALLEST X           PTMY0188
+  398 X(IMIN) = 1.E15                                                   PTMY0189
+C                                                                       PTMY0190
+C                                  ASSOCIATED KYS AND P.C.S GO TO BUFFERPTMY0191
+C                                                                       PTMY0192
+  400 DO 446IM=1,KTL                                                    PTMY0193
+  402 LL=IMIN+(IM-1)*NPTS                                               PTMY0194
+  404 YS=Y(LL)                                                          PTMY0195
+  406 C6=YS*YMF                                                         PTMY0196
+  408 C7=INTF(C6+SIGNF(.5,C6))                                          PTMY0197
+  410 KB(KBW)= (DY*C7-FY)/DY+.5                                         PTMY0198
+  412 KBW=KBW+1                                                         PTMY0199
+C                                          IF NOT V.I,SEARCH FOR P.C.   PTMY0200
+  420 GO TO (422,440),KSW1                                              PTMY0201
+  422 IK=0                                                              PTMY0202
+  424 DO 430IL=3,KLAST,2                                                PTMY0203
+  426 IK=IK+K(IL)                                                       PTMY0204
+  428 IF (IK-IMIN) 430,436,436                                          PTMY0205
+  430 CONTINUE                                                          PTMY0206
+C                                          IF NOT FOUND,ERROR EXIT      PTMY0207
+  432 WRITE OUTPUT TAPE 6,600,IMIN                                      PTMY0208
+  600 FORMAT  (2HPL, 42H NPTS IS MISSING OR WRONG IN KARRAY.IMIN= ,I3)  PTMY0209
+  434 GO TO 900                                                         PTMY0210
+C                                          P.C. FOUND FOR V.II AND V.IIIPTMY0211
+  436 KPCI = K(IL+1)                                                    PTMY0212
+  438 GO TO 442                                                         PTMY0213
+C                                          P.C. FOR V.I                 PTMY0214
+  440 KPCI = K(2*IM+2)                                                  PTMY0215
+C                                          MOVE PLOT CHAR. TO BUFFER    PTMY0216
+  442 KB (KBW)=KPC I                                                    PTMY0217
+  444 KBW=KBW+1                                                         PTMY0218
+  446 CONTINUE                                                          PTMY0219
+C                                        DELIMITER TO BUFFER            PTMY0220
+  448 B(KBW)=1HE                                                        PTMY0221
+  449 KBW=KBW+1                                                         PTMY0222
+C                                        GO TO 460 IF BUFFER FILLED     PTMY0223
+  450 IF(NBW-KBW) 460,452,452                                           PTMY0224
+C                                       GO TO 470 IF ALL POINTS COMPUTDPTMY0225 
+  452 IF(ILIM-J) 470,470,454                                            PTMY0226
+C                                        STEP COUNTERS AND GO BACK TO 35PTMY0227
+  454 J=J+1                                                             PTMY0228
+  456 KBBC=KBBC+1                                                       PTMY0229
+  458 GO TO 350                                                         PTMY0230
+C                                        WRITE A DATA RECORD            PTMY0231
+  460 KBL=KW*KBBC                                                       PTMY0232
+  462 WRITE OUTPUT TAPE 6,FUSE,(B(N),N=1,KBL)                           PTMY0233
+C                                        RESET BUFFER COUNTERS          PTMY0234
+  464 KBW=1                                                             PTMY0235
+  466 KBBC=0                                                            PTMY0236
+C                                        GO TO 452 OR QUIT              PTMY0237
+  468 GO TO (452,900), KEXIT                                            PTMY0238
+C                                        IF ALL RECORDS WRITTEN,QUIT    PTMY0239
+  470 IF(KBBC) 471,900,471                                              PTMY0240
+C                                        IF NOT,SET EXIT TO QUIT AND GO PTMY0241
+  471 KEXIT=2                                                           PTMY0242
+  472 GO TO 460                                                         PTMY0243
+C                                                                       PTMY0244
+  900 RETURN                                                            PTMY0245
+      END                                                               PTMY0246

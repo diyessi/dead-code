@@ -1,0 +1,115 @@
+*      FAP    JCPM(FCN,A,P1,P2,...,PN,B)                                JCPM 000
+       COUNT  114                                                       JCPM 001
+       ENTRY  JCPM           JCPM(FCN,A,P1,P2,...,PN,B)                 JCPM 002
+ JCPM  SXA    AXT,4                                                     JCPM 003
+       CAL    2,4            FIND A                                     JCPM 004
+       STA    A              CHANGE TSX A,0 TO                          JCPM 005
+       CAL    SETZB+1               TSX Z,0                             JCPM 006
+       STA    2,4                                                       JCPM 007
+ FINDB CAL    4,4                                                       JCPM 008
+       ORA    MASK                                                      JCPM 009
+       LAS    TSX            FIND TSX B,0                               JCPM 010
+       TRA    *+2                 ... ...                               JCPM 011
+       TXI    FINDB,4,-1                                                JCPM 012
+       CAL    3,4                                                       JCPM 013
+       STA    B                                                         JCPM 014
+       CAL    JCPM           CHANGE TSX B,0 TO                          JCPM 015
+       STA    3,4                   TSX AXT,0                           JCPM 016
+       SXA    REPLB,4        REMEMBER WHERE TSX B,0 WAS.                JCPM 017
+       LXA    AXT,4          CHANGE TSX FCN,0  TO                       JCPM 018
+       STT    1,4                   TSX FCN,4                           JCPM 019
+       STZ    FA             FA=0.0                                     JCPM 020
+ SETZB CLA*   B                                                         JCPM 021
+       STO    Z              Z=B                                        JCPM 022
+       TRA    1,4            CALCULATE FCN(Z,P1,P2,...,PN)              JCPM 023
+ AXT   AXT    **,4           RETURN FROM FCN. RESTORE XR4.              JCPM 024
+       TNZ    STOFZ                                                     JCPM 025
+       LDQ    Z              EXIT IF FCN(Z,...)=0.0,SETTING             JCPM 026
+       STQ*   A              A=Z,                                       JCPM 027
+       STQ*   B              B=Z,AND JCPM=0.0                           JCPM 028
+ EXIT  XCA                   TO SAVE JCPM                               JCPM 029
+       CAL    A                                                         JCPM 030
+       STA    2,4            RESTORE TSX A,0 AND                        JCPM 031
+       STT    1,4                    TSX FCN,0                          JCPM 032
+ REPLB AXT    **,4           RECALL WHERE TSX B,0 WAS                   JCPM 033
+       CAL    B                                                         JCPM 034
+       STA    3,4            RESTORE TSX B,0                            JCPM 035
+       XCA                   AC = JCPM(FCN,A,P1,...,PN,B).              JCPM 036
+       TRA    4,4            RETURN                                     JCPM 037
+ STOFZ STO    FZ             FZ = FCN(Z,...) IS NON ZERO.               JCPM 038
+       XCA                                                              JCPM 039
+       MPY    FA             TEST FA*FZ                                 JCPM 040
+       TMI    RVRSE                                                     JCPM 041
+       TZE    RVRSE                                                     JCPM 042
+       NZT    FB             IF FA*FZ IS POSITIVE,TEST FB.              JCPM 043
+       TRA    EXIT           EXIT WITH POSITIVE JCPM IF FB = 0.         JCPM 044
+       CLA    FB             OTHERWISE REPLACE FB BY                    JCPM 045
+       NZT    GAMMA           MIN(GAMMA,HALF)*FB                        JCPM 046
+       ACL    HALF                                                      JCPM 047
+       ACL    GAMMA                                                     JCPM 048
+       PBT                   UNLESS IT UNDERFLOWS                       JCPM 049
+       TRA    CLSFZ          IN WHICH CASE SET  FB=-FZ                  JCPM 050
+       STO    FB                                                        JCPM 051
+       CLA    GAMMA                                                     JCPM 052
+       ACL    HALF                                                      JCPM 053
+       STO    GAMMA          NEW GAMMA = 0.5*GAMMA                      JCPM 054
+ CLAFZ CLA    FZ                                                        JCPM 055
+       STO    FA             FA = FZ                                    JCPM 056
+       CLA    Z                                                         JCPM 057
+       STO*   A              A = Z                                      JCPM 058
+ NEWZ  CLA    FB                                                        JCPM 059
+       TZE    SETZB          IF FB = 0, SET Z = B. OTHERWISE            JCPM 060
+       FDH    FA             CALCULATE NEW  Z                           JCPM 061
+       XCA                                                              JCPM 062
+       FSB    ONE1           AC = FB/FA - 1.0-2.**(-26)                 JCPM 063
+       STO    FZ             = (FB-FA)/FA , IS LESS THAN  -1.           JCPM 064
+       CLA*   A                                                         JCPM 065
+ B     FSB    **                                                        JCPM 066
+       FDH    FZ             NOTE THAT Z WILL ALWAYS                    JCPM 067
+       XCA                   LIE  BETWEEN A AND B                       JCPM 068
+ A     FAD    **                                                        JCPM 069
+       FRN                                                              JCPM 070
+       STO    Z              =A + (A-B)/((FB-FA)/FA)                    JCPM 071
+       SUB*   A                                                         JCPM 072
+       TNZ    1,4            IF Z DIFFERS FROM A, ITERATE AGAIN.        JCPM 073
+       CLA*   A              IF Z = A, CONSIDER NEW Z = (A+B)/2.        JCPM 074
+       LFTM                  SUPPRESS FLOATING PT. OVERFLOW TRAP        JCPM 075
+       FAD*   B              AC = A+B                                   JCPM 076
+       EFTM                  RESTORE FLOATING PT. OVERFLOW TRAP         JCPM 077
+       ACL    HALF           (A+B)/2. WITHOUT FLOATING PT. OVERFLOW,    JCPM 078
+       PBT                   BUT FIXED PT. AC/MQ OVERFLOW MAY OCCUR.    JCPM 079
+       ZAC                   SET UNDERFLOWED Z = 0.0                    JCPM 080
+       STO    Z              =(A+B)/2.                                  JCPM 081
+       CLA    Z              CLEAR P-BIT.                               JCPM 082
+       SUB*   A                                                         JCPM 083
+       TZE    CHS            IF (A+B)/2. = A, EXIT TO CHS               JCPM 084
+       CLA    Z                                                         JCPM 085
+       SUB*   B                                                         JCPM 086
+       TZE    CHS            IF (A+B)/2. = B, EXIT TO CHS               JCPM 087
+       CLA    FB                                                        JCPM 088
+       ACL    HALF           OTHERWISE SET FB = 0.5*FB.                 JCPM 089
+       PBT                   IF FB UNDERFLOWS LEAVE Z = (A+B)/2. ,      JCPM 090
+       TRA    1,4            AND ITERATE AGAIN.                         JCPM 091
+       STO    FB                                                        JCPM 092
+       TRA    NEWZ           OTHERWISE CALCULATE NEW Z                  JCPM 093
+ CLSFZ CLS    FZ             FB = -FZ                                   JCPM 094
+       TRA    STZ                                                       JCPM 095
+ RVRSE CLA*   A              IF FA*FZ IS NOT POSITIVE,SET               JCPM 096
+       STO*   B              B=A,                                       JCPM 097
+       CLA    FA             FB = FA.                                   JCPM 098
+ STZ   STZ    GAMMA          RESET  GAMMA = 1.0                         JCPM 099
+       STO    FB                                                        JCPM 100
+       TRA    CLAFZ                                                     JCPM 101
+ CHS   CLS    ONE1           SET JCPM NEGATIVE BEFORE EXIT              JCPM 102
+       TRA    EXIT                                                      JCPM 103
+ MASK  OCT    77777          THIS PROGRAM ASSUMES THAT                  JCPM 104
+ Z     PZE    0              FLOATING PT. OVER/UNDERFLOW                JCPM 105
+ TSX   TSX    32767,0        WILL BE DEALT WITH BY (FPT),               JCPM 106
+ FA    PZE    0              AND THAT  A, B, AND  FCN                   JCPM 107
+ HALF  OCT    377000000000   ARE ALWAYS NORMALIZED.                     JCPM 108
+ ONE1  OCT    201400000001                                              JCPM 109
+ FB    PZE    0                                                         JCPM 110
+ GAMMA PZE    0               109  LOCATIONS  +  77777                  JCPM 111
+       COMMON -206                                                      JCPM 112
+ FZ    COMMON 1                              V. KAHAN   AUG.  1963      JCPM 113
+       END                                                              JCPM 114

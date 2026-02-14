@@ -1,0 +1,456 @@
+*INOT     INPUT-OUTPUT PROGRAM - BUFFERED AND TRAPPED                   INOT0000
+       COUNT   470                                                      INOT0001
+       ENTRY   OBIN                                                     INOT0002
+       ENTRY   ODEC                                                     INOT0003
+       ENTRY   IBIN                                                     INOT0004
+       ENTRY   IDEC                                                     INOT0005
+       ENTRY   NIBIN                                                    INOT0006
+       ENTRY   NIDEC                                                    INOT0007
+       ENTRY   IORPT                                                    INOT0008
+       ENTRY   IOEND                                                    INOT0009
+       ENTRY   IORDY                                                    INOT0010
+       ENTRY   SKIP                                                     INOT0011
+       ENTRY   USE                                                      INOT0012
+       ENTRY   LOOK                                                     INOT0013
+       EXTERN  (IOU)                                                    INOT0014
+CHNLS  EQU     2              NUMBER OF CHANNELS                        INOT0015
+CAP    EQU     6              CAPACITY FOR SIMULTANEOUS IO S            INOT0016
+OBIN   SXA     PN+2,2         ENTRIES - WRITE BINARY                    INOT0017
+       TXI     MODE,2,128                                               INOT0018
+IBIN   SXA     PN+2,2         READ BINARY                               INOT0019
+       TXI     MODE,2,416                                               INOT0020
+IDEC   SXA     PN+2,2         READ BCD                                  INOT0021
+       TXI     MODE,2,288                                               INOT0022
+NIBIN  SXA     PN+2,2         READ BINARY NON-BUFFERED                  INOT0023
+       TXI     MODE,2,384                                               INOT0024
+NIDEC  SXA     PN+2,2         READ BCD NON-BUFFERED                     INOT0025
+       TXI     MODE,2,256                                               INOT0026
+IOEND  SXA     PN+2,2         END TRANSMISSION                          INOT0027
+       TXI     MODE,2,16                                                INOT0028
+IORPT  SXA     PN+2,2         REPEAT TRANSMISSION                       INOT0029
+       TXI     MODE,2,8                                                 INOT0030
+IORDY  SXA     PN+2,2         INITIALIZE                                INOT0031
+       TXI     MODE,2,20                                                INOT0032
+ODEC   SXA     PN+2,2         WRITE BCD                                 INOT0033
+MODE   SXD     *+2,2                                                    INOT0034
+       LAC     PN+2,2         SET MODE BITS                             INOT0035
+       TXI     *+1,2,**                                                 INOT0036
+       SXA     PN,1                                                     INOT0037
+       STI     PREWD+5                                                  INOT0038
+       PXD     0,2                                                      INOT0039
+       ALS     9                                                        INOT0040
+       PAI                    PUT BITS IN SI                            INOT0041
+GETAP  CAL     1,4            GET TAPE NUMBER                           INOT0042
+       PAX     ,2                                                       INOT0043
+       TXL     *+3,2,99                                                 INOT0044
+       CAL*    1,4                                                      INOT0045
+       ARS     18                                                       INOT0046
+       ADM     (IOU)                                                    INOT0047
+       PAC     0,2                                                      INOT0048
+       CAL     0,2                                                      INOT0049
+       SLW     CANDU          STORE CHANNEL AND UNIT                    INOT0050
+       ALS     10             SET XR TO CHANNEL                         INOT0051
+       ANA     =O36000000                                               INOT0052
+       STD     *+2                                                      INOT0053
+       AXC     A-1,1                                                    INOT0054
+       TNX     *-1,1,**                                                 INOT0055
+       LFT     SWL                                                      INOT0056
+       TXI     STFOR-1,4,4    CHANGE EXIT INDEX IF IOEND OR IORDY       INOT0057
+       LFT     SWRPT                                                    INOT0058
+       TXI     STFOR,4,4      CHANGE EXIT INDEX IF IORPT                INOT0059
+       CAL     5,4            GET RECORD LENGTH OR FLAG                 INOT0060
+       ALS     18                                                       INOT0061
+       SLW     RECOL          STORE RECORD LENGTH                       INOT0062
+       ANA     =O1000000                                                INOT0063
+       ALS     15                                                       INOT0064
+       OAI                    STORE FLAG FOR BLOCK OF RECORDS           INOT0065
+       CAL     2,4            GET FIRST WORD TO BE TRANSMITTED          INOT0066
+       STA     RECOL          STORE IT                                  INOT0067
+       STI     BLOCK          STORE 3 BITS OF MODE                      INOT0068
+       CAL     4,4            GET BLOCK LENGTH                          INOT0069
+       ALS     18                                                       INOT0070
+       STD     BLOCK          STORE BLOCK LENGTH                        INOT0071
+       CAL     3,4            GET HALF BUFFER LENGTH                    INOT0072
+       STA     BLOCK                                                    INOT0073
+       STI     PREWD+4                                                  INOT0074
+STFOR  SXA     PN+1,4                                                   INOT0075
+GEPRE  LDQ     TBL-A-1,1      GET TCO FOR CHANNEL                       INOT0076
+       LGL     12                                                       INOT0077
+       LDQ     =0                                                       INOT0078
+       LGR     12                                                       INOT0079
+       SLQ     TCO            STORE IN TRANSFER INSTRUCTION             INOT0080
+       SLQ     TCHO                                                     INOT0081
+       AXT     CAP,2          FIND PREVIOUS OP THIS C AND U             INOT0082
+       CAL     QUEF+CAP,2                                               INOT0083
+       ANA     =O17777                                                  INOT0084
+       ERA     CANDU                                                    INOT0085
+       TZE     FOUND          ONE FOUND                                 INOT0086
+       TIX     *-4,2,1                                                  INOT0087
+FIRST  LFT     SWRPT+SWL      NOT FOUND - FIRST USE OF THIS C AND U     INOT0088
+       TRA     PN             EXIT IF IOEND, IORPT OR IORDY             INOT0089
+       STZ     XIDAT                                                    INOT0090
+       LNT     SWI+SWBUF                                                INOT0091
+       TRA     *+2                                                      INOT0092
+       TRA     STOT                                                     INOT0093
+       LXD     BLOCK,4        FAKE EXIT DATA IF OUTPUT OR               INOT0094
+       PXA     0,4            NON-BUFFERED INPUT                        INOT0095
+       SXD     XIDAT,4                                                  INOT0096
+       ADM     BLOCK                                                    INOT0097
+       ADM     RECOL                                                    INOT0098
+       STA     XIDAT                                                    INOT0099
+STOT   TRA     *+1                                                      INOT0100
+       AXT     CUTAB,2                                                  INOT0101
+       SXA     STOT,2                                                   INOT0102
+       CAL     TRA            STORE TRANSFERS IN DC TRAP                INOT0103
+       AXT     2*CHNLS,2                                                INOT0104
+       ADD     =2                                                       INOT0105
+       SLW     TRAP+2*CHNLS,2                                           INOT0106
+       TIX     *-2,2,2                                                  INOT0107
+CUTAB  AXT     CAP,2          ADD THIS C AND U TO TABLE                 INOT0108
+       LDQ     CANDU                                                    INOT0109
+       NZT     QUEF+CAP,2                                               INOT0110
+       TRA     *+3                                                      INOT0111
+       TIX     *-2,2,1                                                  INOT0112
+       HTR     PN             OVERFLOW OF CAPACITY                      INOT0113
+       STQ     QUEF+CAP,2                                               INOT0114
+       TRA     PNO            GO TO FIND PRIORITY NUMBER                INOT0115
+TRA    TRA     A-2                                                      INOT0116
+FOUND  LFT     SWRDY          IS MODE IORDY                             INOT0117
+       TRA     REM                                                      INOT0118
+ISDUN  LNT     SWRPT          IS PREVIOUS OP DONE                       INOT0119
+       TRA     *+3                                                      INOT0120
+       STZ     XIDAT                                                    INOT0121
+       TRA     PNO                                                      INOT0122
+       CAL     QUEF+CAP,2     HOLD HERE UNTIL DONE                      INOT0123
+       ANA     =O760000                                                 INOT0124
+       TZE     GEX                                                      INOT0125
+TCHO   TCOD    *-3                                                      INOT0126
+       CAL     QUEF+CAP,2                                               INOT0127
+       ANA     =O760000                                                 INOT0128
+       TZE     GEX                                                      INOT0129
+       SIL     SWRV           REVIVE IF CHANNEL NOT IN OP AND NOT DONE  INOT0130
+       SXA     PRX,2                                                    INOT0131
+       ENB     =0                                                       INOT0132
+       TRA     STARR                                                    INOT0133
+GEX    CLA     QUET+CAP,2     GET EXIT DATA                             INOT0134
+       STZ     QUET+CAP,2                                               INOT0135
+       TMI     PN             TRANSFER OUT IF ERROR FLAG                INOT0136
+       LNT     SWL                                                      INOT0137
+       TRA     *+4                                                      INOT0138
+REM    STZ     QUEF+CAP,2     REMOVE UNIT IF MODE IS IOEND OR IORDY     INOT0139
+       STZ     QUES+CAP,2                                               INOT0140
+       TRA     PN                                                       INOT0141
+       STO     XIDAT          STORE EXIT DATA                           INOT0142
+PNO    ENB     =0                                                       INOT0143
+       CLA     =O20000        ADD ONE TO ALL WORKING PRIORITIES         INOT0144
+       STO     COMPA                                                    INOT0145
+       STZ     TEMP                                                     INOT0146
+       TSX     PRIOR,4                                                  INOT0147
+       CAL     =O20000                                                  INOT0148
+       ORS     QUEF+CAP,2     MAKE THIS REQUEST PRIORITY ONE            INOT0149
+       LFT     SWRPT                                                    INOT0150
+       TRA     STAR                                                     INOT0151
+       LDQ     BLOCK          PUT ARGUMENTS INTO REQUEST                INOT0152
+       SLQ     QUEF+CAP,2                                               INOT0153
+       LDQ     QUES+CAP,2     GET BUFFER BIT                            INOT0154
+       PXA     0,0                                                      INOT0155
+       TQP     *+3                                                      INOT0156
+       LXA     BLOCK,4                                                  INOT0157
+       PXA     0,4                                                      INOT0158
+       ADM     RECOL                                                    INOT0159
+       STD     QUES+CAP,2     STORE RECORD LENGTH                       INOT0160
+       STA     QUES+CAP,2     STORE FIRST WORD                          INOT0161
+STAR   STT     QUES+CAP,2     CLEAR RETRY INDEX                         INOT0162
+TCO    TCOF    ENB            EXIT IF CHANNEL IN OP                     INOT0163
+STARR  CAL     CANDU          INITIATE IO IF CHANNEL NOT IN OP          INOT0164
+NEXT   ALS     5              DO NEXT IO THIS CHANNEL                   INOT0165
+       ANA     =O760000                                                 INOT0166
+       SLW     THIS                                                     INOT0167
+       RIL     SWC            SET SWITCH C OFF                          INOT0168
+       AXT     CAP,2          FIND HIGHEST PRIORITY THIS CHANNEL        INOT0169
+       AXT     0,4                                                      INOT0170
+       SXD     CF,4                                                     INOT0171
+TRY    CAL     QUEF+CAP,2                                               INOT0172
+       ANA     =O777777                                                 INOT0173
+       ALS     5                                                        INOT0174
+       PDX     0,4                                                      INOT0175
+       ANA     =O760000                                                 INOT0176
+       ERA     THIS                                                     INOT0177
+       TNZ     INC                                                      INOT0178
+CF     TXL     INC,4,**                                                 INOT0179
+       SIL     SWC            SET SWITCH C ON - FOUND                   INOT0180
+       SXD     CF,4           STORE PRIORITY NUMBER                     INOT0181
+       PXA     0,2                                                      INOT0182
+       SLW     ATAB-A-1,1     PUT ADDRESS IN TABLE                      INOT0183
+INC    TIX     TRY,2,1                                                  INOT0184
+       LNT     SWC                                                      INOT0185
+       TRA     LEAVE          ANOTHER REQUEST THIS CHANNEL NOT FOUND    INOT0186
+       CLS     ATAB-A-1,1     FOUND                                     INOT0187
+       ADD     FA             FILL ADDRESS TABLES THIS CHANNEL          INOT0188
+       STO     ATAB-A-1,1                                               INOT0189
+       ADD     SMIF                                                     INOT0190
+       STO     ATAB-A,1                                                 INOT0191
+       ADD     TMIS                                                     INOT0192
+       STO     TBL-A,1                                                  INOT0193
+       TRA     FORMI          GO TO FORM IO INSTRUCTIONS                INOT0194
+SMIF   PZE     QUES-QUEF                                                INOT0195
+TMIS   PZE     QUET-QUES                                                INOT0196
+FA     PZE     QUEF+CAP                                                 INOT0197
+       DUP     2,CHNLS        CH TRAP ENTRIES - XR1 A FUNCTION OF CHAN. INOT0198
+A      SXA     XRN,1                                                    INOT0199
+       TSX     PREZ,1                                                   INOT0200
+PREZ   SLW     PREWD          STORE AC P,1-35                           INOT0201
+       ARS     1                                                        INOT0202
+       SLW     PREWD+6        STORE Q BIT                               INOT0203
+       CLM                                                              INOT0204
+       TNO     *+2            TRANSFER IF NO OVERFLOW                   INOT0205
+       ORA     =O600000000000 PUT 1 IN AC 1                             INOT0206
+       STO     PREWD+2        STORE SIGN AND OVERFLOW FLAG              INOT0207
+       CAL     =-0                                                      INOT0208
+       ANS     PREWD+6                                                  INOT0209
+       SXA     XRN+1,4                                                  INOT0210
+       SXA     XRN+2,2                                                  INOT0211
+       STQ     PREWD+1                                                  INOT0212
+       STI     PREWD+3                                                  INOT0213
+       SIL     SWT            SET SWITCH T ON                           INOT0214
+       AXC     A-TRAP+2,2                                               INOT0215
+       SXA     *+1,2                                                    INOT0216
+       CAL     **,1           GET DC TRAP RETURN LOCATION               INOT0217
+       STD     RET                                                      INOT0218
+       STA     RET                                                      INOT0219
+       ZET     ATAB-A-1,1                                               INOT0220
+       NZT*    ATAB-A-1,1                                               INOT0221
+       TRA     REST           UNTRAP IF NO IO IN PROGRESS THIS CHANNEL  INOT0222
+FORMI  CAL     TBL-A-1,1      COMPLETE INSTRUCTIONS BY TABLE            INOT0223
+       LDQ     RCH                                                      INOT0224
+       RQL     12                                                       INOT0225
+       LGR     12                                                       INOT0226
+       STQ     RCH                                                      INOT0227
+       LGL     12                                                       INOT0228
+       ERA     =O300                                                    INOT0229
+       LDQ     =0                                                       INOT0230
+       LGR     12                                                       INOT0231
+       SLQ     SCH                                                      INOT0232
+       LDQ     =0                                                       INOT0233
+       LGR     12                                                       INOT0234
+       SLQ     TRC                                                      INOT0235
+       LDQ     =0                                                       INOT0236
+       LGR     12                                                       INOT0237
+       SLQ     TC                                                       INOT0238
+       SLQ     TCP                                                      INOT0239
+       RIL     700000                                                   INOT0240
+       CAL*    ATAB-A,1       COMPLETE INSTRUCTIONS AND TESTS           INOT0241
+       PAX     0,4                                                      INOT0242
+       CAL*    ATAB-A-1,1                                               INOT0243
+       STD     *+1                                                      INOT0244
+       TXI     *+1,4,**                                                 INOT0245
+       SXA     ENTES,4                                                  INOT0246
+       ANA     =O700000017777                                           INOT0247
+       OAI                                                              INOT0248
+       STA     BSR                                                      INOT0249
+       LFT     SWBIN                                                    INOT0250
+       ORA     =O20                                                     INOT0251
+       STA     SELCH                                                    INOT0252
+       ANA     =O17000                                                  INOT0253
+       STA     ET                                                       INOT0254
+       AXT     31872,4        76200 OCTAL                               INOT0255
+       LNT     SWI                                                      INOT0256
+       TXI     *+1,4,256      400 OCTAL                                 INOT0257
+       SXD     SELCH,4                                                  INOT0258
+       CAL*    ATAB-A,1                                                 INOT0259
+       STA     CHAN                                                     INOT0260
+       STD     CMD                                                      INOT0261
+       ANA     =O700000       GET RETRY INDEX                           INOT0262
+       ALS     3                                                        INOT0263
+       PDX     0,RX                                                     INOT0264
+       TXL     FIR,RX,0       IF RX IS ZERO, FIRST RECORD THIS BLOCK    INOT0265
+TC     TCOF    *                                                        INOT0266
+SCH    SCHF    CHAN           STORE CHANNEL                             INOT0267
+       IOT                                                              INOT0268
+       TRA     TER                                                      INOT0269
+       LXD     RET,4          GET TRAPPING SIGNAL                       INOT0270
+       TXL     *+3,4,3        TRANSFER IF NO END OF FILE                INOT0271
+       CAL     =O600000000000 SET FLAG FOR END OF FILE                  INOT0272
+       TRA     SWAP                                                     INOT0273
+TRC    TRCF    TER                                                      INOT0274
+SETRE  LNT     SWI            OK - SET RETRY INDEX                      INOT0275
+       TRA     IRE            GO TO OUTPUT                              INOT0276
+       LNT     SWBLO                                                    INOT0277
+       TRA     ENTES+2        DONE IF INPUT AND NOT BLOCK               INOT0278
+       TRA     IRE                                                      INOT0279
+TER    RIL     SWS            SWAP SWITCH OFF                           INOT0280
+       LNT     SWI                                                      INOT0281
+       TRA     FORK           TRANSFER IF OUTPUT                        INOT0282
+STEPR  TNX     PRC,RX,1                                                 INOT0283
+BSR    BSRA    1              RETRY OF TAPE ERROR                       INOT0284
+       PXD     0,RX                                                     INOT0285
+       ARS     3                                                        INOT0286
+       STT*    ATAB-A,1                                                 INOT0287
+       TRA     SELCH          GO TO PROCESS BEGINNING OF IO             INOT0288
+FORK   TRA     *+8,RX         TAPE WRITE ERROR -                        INOT0289
+       TRA     STEPR          FIRST                                     INOT0290
+       TXI     *+3,RX,-1      SECOND                                    INOT0291
+       XEC     BSR            THIRD AND LAST                            INOT0292
+       TRA     PRC                                                      INOT0293
+       XEC     BSR                                                      INOT0294
+       PXD     0,RX                                                     INOT0295
+       ARS     3                                                        INOT0296
+       STT*    ATAB-A,1                                                 INOT0297
+       CAL*    TBL-A,1        LENGTH OF ERASE FUNCTION OF WORD COUNT    INOT0298
+       PDX     ,RX                                                      INOT0299
+       XEC     SELCH          ERASE FORWARD                             INOT0300
+TCP    TCOF    *                                                        INOT0301
+       TIX     *-2,RX,290                                               INOT0302
+       TRA     SELCH                                                    INOT0303
+PRC    CAL     =O500000000000 SET TAPE ERROR FLAG                       INOT0304
+       TRA     ENBLO                                                    INOT0305
+FIR    LDQ     CMD            FIRST RECORD THIS BLOCK                   INOT0306
+       STQ*    TBL-A,1                                                  INOT0307
+IRE    AXT     7,RX           INPUT - INITIALIZE ERROR INDEX            INOT0308
+       PXD     0,RX           PUT ERROR INDEX IN REQUEST                INOT0309
+       ARS     3                                                        INOT0310
+       STT*    ATAB-A,1                                                 INOT0311
+       LXA     CHAN,4         TEST FOR END OF BLOCK                     INOT0312
+       SXD     *+2,4                                                    INOT0313
+ENTES  AXT     **,4                                                     INOT0314
+       TIX     NEXCO,4,**                                               INOT0315
+       PXA     0,0                                                      INOT0316
+ET     ETTF                   TEST END OF TAPE                          INOT0317
+       TRA     NEWTP          GO TO START NEW TAPE                      INOT0318
+SWAP   SIL     SWS            TURN ON SWAP SWITCH                       INOT0319
+ENBLO  STP     CHAN           END BLOCK OF TRANSMISSION                 INOT0320
+       CAL*    ATAB-A,1       MAKE UP EXIT DATA                         INOT0321
+       ANA     =O77777                                                  INOT0322
+       SSM                                                              INOT0323
+       ADM     CHAN                                                     INOT0324
+       ALS     18                                                       INOT0325
+       STD     CHAN                                                     INOT0326
+       STT     CHAN                                                     INOT0327
+       CLA     CHAN                                                     INOT0328
+LOOK   NOP                    EXIT TO TEST BLOCK JUST TRANSMITTED       INOT0329
+USE    LNT     SWS            ENTRY TO USE BLOCK JUST COMPLETED         INOT0330
+       TRA     *+3                                                      INOT0331
+       CLS*    ATAB-A,1       SWAP BUFFER                               INOT0332
+       STO*    ATAB-A,1                                                 INOT0333
+       LDQ     CHAN                                                     INOT0334
+       STQ*    TBL-A,1        STORE EXIT DATA                           INOT0335
+       CLS     =O20000        UPDATE PRIORITY NUMBERS                   INOT0336
+       STO     COMPA                                                    INOT0337
+       CAL*    ATAB-A-1,1                                               INOT0338
+       ANA     =O760000                                                 INOT0339
+       SLW     TEMP                                                     INOT0340
+       TSX     PRIOR,4                                                  INOT0341
+       CAL     =O777777017777 AND SET TO ZERO ONE JUST COMPLETED        INOT0342
+       ANS*    ATAB-A-1,1                                               INOT0343
+       CAL*    ATAB-A-1,1     GET CHANNEL AND UNIT                      INOT0344
+       STZ     ATAB-A-1,1     REMOVE ITEM FROM CHANNEL                  INOT0345
+       TRA     NEXT           GET NEXT REQUEST THIS CHANNEL             INOT0346
+NEXCO  LFT     SWI            COMPUTE WORD COUNT OF NEXT IO             INOT0347
+       TRA     *+4                                                      INOT0348
+       CAL*    ATAB-A,1                                                 INOT0349
+       STD     *+1                                                      INOT0350
+       TXH     *+3,4,**                                                 INOT0351
+       PXD     0,4            IF REMAINING WORDS LESS THAN RECORD       INOT0352
+       STD*    TBL-A,1        STORE FIRST WOR                           INOT0353
+       CAL     CHAN                                                     INOT0354
+       STA*    TBL-A,1        STORE FIRST WORD IN COMMAND               INOT0355
+SELCH  PZE                    SELECT CHANNEL AND UNIT                   INOT0356
+RCH    RCHF*   TBL-A,1        RESET AND LOAD COMMAND                    INOT0357
+LEAVE  LFT     SWT            LEAVE TRANSMISSION ROUTINE                INOT0358
+       TRA     REST           TRANSFER IF ENTERED VIA DC TRAP           INOT0359
+ENB    ENB     =O377          IF NOT, RETURN TO INO                     INOT0360
+       LNT     SWRV                                                     INOT0361
+       TRA     EXIT                                                     INOT0362
+       RIL     SWRV                                                     INOT0363
+PRX    AXT     **,2                                                     INOT0364
+       TRA     TCHO-3                                                   INOT0365
+REST   TOV     *+1            RESTORE REGISTERS FROM TRAP               INOT0366
+       CLA     PREWD+2        GET SIGN AND 1                            INOT0367
+       ALS     3              TURN ON OVERFLOW IF BIT IN 1              INOT0368
+       ORA     PREWD+6        GET Q BIT                                 INOT0369
+       ALS     1                                                        INOT0370
+       ORA     PREWD                                                    INOT0371
+       LDQ     PREWD+1                                                  INOT0372
+       LDI     PREWD+3                                                  INOT0373
+XRN    AXT     **,1                                                     INOT0374
+       AXT     **,4                                                     INOT0375
+       AXT     **,2                                                     INOT0376
+       RCT                                                              INOT0377
+       TRA*    RET            UNTRAP                                    INOT0378
+EXIT   CLA     XIDAT          LEAVE SUBROUTINE                          INOT0379
+       TNZ     PN                                                       INOT0380
+       LDI     PREWD+4        TRANSMIT AGAIN IF NO EXIT DATA            INOT0381
+       TRA     GEPRE                                                    INOT0382
+PN     AXT     **,1           RESTORE REGISTERS                         INOT0383
+       AXT     **,4                                                     INOT0384
+       AXT     **,2                                                     INOT0385
+       LDI     PREWD+5                                                  INOT0386
+       TRA     6,4            RETURN TO CALLING PROGRAM                 INOT0387
+PRIOR  SXA     XN,4           PRIORITY SUBROUTINE                       INOT0388
+       AXT     CAP,4                                                    INOT0389
+       CAL     QUEF+CAP,4                                               INOT0390
+       ANA     =O760000                                                 INOT0391
+       LAS     TEMP                                                     INOT0392
+       TRA     *+5                                                      INOT0393
+       TRA     *+1                                                      INOT0394
+ST     TIX     *-5,4,1                                                  INOT0395
+XN     AXT     **,4                                                     INOT0396
+       TRA     1,4                                                      INOT0397
+       CAL     QUEF+CAP,4                                               INOT0398
+       ADD     COMPA                                                    INOT0399
+       SLW     QUEF+CAP,4                                               INOT0400
+       TRA     ST                                                       INOT0401
+SKIP   CAL*    ATAB-A-1,1     ENTRY TO SKIP BLOCK JUST COMPLETED        INOT0402
+       STD*    TBL-A,1                                                  INOT0403
+       CAL*    ATAB-A,1                                                 INOT0404
+       TRA     SELCH-1                                                  INOT0405
+NEWTP  CLA     =O600000000000 END OF REEL                               INOT0406
+       TRA     SWAP                                                     INOT0407
+RX     EQU     2                                                        INOT0408
+SWT    BOOL    10             TRAP SWITCH                               INOT0409
+SWS    BOOL    4              SWAP SWITCH                               INOT0410
+SWC    BOOL    2                                                        INOT0411
+SWRV   BOOL    20             REVIVE SWITCH                             INOT0412
+TRAP   BOOL    13                                                       INOT0413
+SWBIN  BOOL    200000         BINARY FLAG                               INOT0414
+SWI    BOOL    400000         INPUT FLAG                                INOT0415
+SWBLO  BOOL    100000         BLOCK FLAG                                INOT0416
+SWL    BOOL    20000          FLAG FOR IOEND                            INOT0417
+SWRPT  BOOL    10000          FLAG FOR IORPT                            INOT0418
+SWBUF  BOOL    40000          BUFFERED OP FLAG                          INOT0419
+SWRDY  BOOL    4000                                                     INOT0420
+TBL    OCT     006000220540   IO CHANNEL TABLE                          INOT0421
+       PZE                                                              INOT0422
+       OCT     006140224540                                             INOT0423
+       PZE                                                              INOT0424
+       OCT     006200240541                                             INOT0425
+       PZE                                                              INOT0426
+       OCT     006340244541                                             INOT0427
+       PZE                                                              INOT0428
+       OCT     006400260542                                             INOT0429
+       PZE                                                              INOT0430
+       OCT     006540264542                                             INOT0431
+       PZE                                                              INOT0432
+       OCT     006600270543                                             INOT0433
+       PZE                                                              INOT0434
+       OCT     006740274543                                             INOT0435
+       PZE                                                              INOT0436
+XIDAT  PZE                    EXIT DATA                                 INOT0437
+RECOL  PZE                    RECORD LENGTH                             INOT0438
+BLOCK  PZE                    BLOCK LENGTH                              INOT0439
+CANDU  PZE                    CHANNEL AND UNIT                          INOT0440
+COMPA  PZE                                                              INOT0441
+TEMP   PZE                                                              INOT0442
+RET    PZE                    RETURN                                    INOT0443
+CHAN   PZE                    CHANNEL REGISTERS                         INOT0444
+THIS   PZE                                                              INOT0445
+PREWD  BSS     7              PRESERVE WORDS                            INOT0446
+ATAB   BSS     2*CHNLS        ADDRESS TABLE                             INOT0447
+QUEF   DUP     1,CAP          QUEUE TABLE - FIRST                       INOT0448
+       PZE                                                              INOT0449
+QUES   DUP     1,CAP          QUEUE TABLE - SECOND                      INOT0450
+       PZE                                                              INOT0451
+QUET   DUP     1,CAP          QUEUE TABLE - THIRD                       INOT0452
+       PZE                                                              INOT0453
+CMD    IORT    0,,0           CHANNEL COMMAND                           INOT0454
+       END                                                              INOT0455

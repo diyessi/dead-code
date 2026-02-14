@@ -1,0 +1,1140 @@
+C     RS OKF1, OUT OF KILTER FLOW ROUTINE ONE, 1 MARCH 1961             RSOKF101
+*      CARDSCOLUMN                                                      OKF10002
+*      LIST                                                             OKF10003
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10004
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10005
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10006
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10007
+      DIMENSION KE(101)                                                 OKF10008
+      FREQUENCY 6(1000),27(3,1,0),38(0,1),7(0,1,0),25(0,1,0),8(100,1,5) OKF10009
+C    SYSTEM INPUT TAPE                                                  OKF10010
+      KI=5                                                              OKF10011
+C    SYSTEM OUTPUT TAPE                                                 OKF10012
+      KO=6                                                              OKF10013
+C    SCRATCH TAPE                                                       OKF10014
+      KQ(1)=4                                                           OKF10015
+C    RESERVED OUTPUT TAPE                                               OKF10016
+      KQ(2)=10                                                          OKF10017
+C    RESERVED INPUT TAPE                                                OKF10018
+      KQ(3)=9                                                           OKF10019
+C    MAXIMUM ARCS(DIMENSION OF JI, KC, KU, AND KX)                      OKF10020
+      KQ(4)=4500                                                        OKF10021
+C    MAXIMUM NODES(DIMENSION OF NL, NN, NP, AND IJ)                     OKF10022
+      KQ(5)=1500                                                        OKF10023
+      KQ(6)=0                                                           OKF10024
+      KQ(9)=0                                                           OKF10025
+      IFIN=131071                                                       OKF10026
+  100 CALL PREDAT(KS)                                                   OKF10027
+      IF (KS) 1,200,1                                                   OKF10028
+  200 CALL  ARCASY(L)                                                   OKF10029
+      CALL MAKEJL                                                       OKF10030
+      IF(LER-KQ(4)) 2,88,88                                             OKF10031
+    2 LER=LER*KQ(8)                                                     OKF10032
+      IF (L) 3,1,3                                                      OKF10033
+    3 CALL NODASY                                                       OKF10034
+    1 CALL READER                                                       OKF10035
+      CALL TRANSL                                                       OKF10036
+      IF (LER) 88,4,88                                                  OKF10037
+    4 I=0                                                               OKF10038
+      KUP=1                                                             OKF10039
+      KE(101)=0                                                         OKF10040
+    6 DO 26 K=1,N                                                       OKF10041
+   27 IF(K-KUP) 38,39,39                                                OKF10042
+   39 I=I+1                                                             OKF10043
+      KUP=LADDR(IL(I+1))                                                OKF10044
+   38 IF(SENSE SWITCH 5) 16,17                                          OKF10045
+   17 CALL KILTER (I)                                                   OKF10046
+    7 IF (LER) 25,26,25                                                 OKF10047
+   25 IF (LER-107) 24,28,24                                             OKF10048
+   28 KE(101)=KE(101)+1                                                 OKF10049
+      KF=KE(101)                                                        OKF10050
+    8 IF(KE(101)-100) 31,31,26                                          OKF10051
+   31 KE(KF)=K                                                          OKF10052
+   26 CONTINUE                                                          OKF10053
+COMPLETED CHECKING ALL ARCS                                             OKF10054
+      LER=0                                                             OKF10055
+   99 CALL OUTPUT (KE)                                                  OKF10056
+CYCLE BACK FOR ANOTHER RUN                                              OKF10057
+      GO TO 100                                                         OKF10058
+   16 WRITE OUTPUT TAPE KO,53                                           OKF10059
+      LER=5555                                                          OKF10060
+      GO TO 5                                                           OKF10061
+   24 WRITE OUTPUT TAPE KO,54                                           OKF10062
+    5 LL=IJ(K)                                                          OKF10063
+      WRITE OUTPUT TAPE KO,55,NN(I),NN(LL)                              OKF10064
+      GO TO 99                                                          OKF10065
+   88 READ INPUT TAPE KI,51,KA(1,1)                                     OKF10066
+      IF (LISTNO(KA(1,1),12HREADY PAUSE )-2) 90,90,88                   OKF10067
+   90 BACKSPACE KI                                                      OKF10068
+      GO TO 100                                                         OKF10069
+   51 FORMAT(A6)                                                        OKF10070
+   53 FORMAT(38H0JOB PULLED BY DEPRESSING SENSE SWITCH)                 OKF10071
+   54 FORMAT(24H0OVERFLOW IN NODE PRICES)                               OKF10072
+   55 FORMAT(23H0RUN TERMINATED AT ARC ,A6,1X,A6)                       OKF10073
+       END                                                              OKF10074
+*      CARDSCOLUMN                                                      OKF10075
+*      LIST                                                             OKF10076
+C   PREDAT. HANDLES INITIAL CONTROLS                                    OKF10077
+      SUBROUTINE PREDAT(KS)                                             OKF10078
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10079
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10080
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10081
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10082
+      DO 200 I=1,9                                                      OKF10083
+  200 LC(I)=0                                                           OKF10084
+      KOR=KQ(3)                                                         OKF10085
+      KQ(7)=0                                                           OKF10086
+      IF (SENSE SWITCH 5)11,20                                          OKF10087
+   11 WRITE OUTPUT TAPE KO,97                                           OKF10088
+      PRINT 97                                                          OKF10089
+C           END JOB                                                     OKF10090
+  180 IF(KQ(6)) 181,182,181                                             OKF10091
+  181 K2=KQ(2)                                                          OKF10092
+      WRITE OUTPUT TAPE KO,98                                           OKF10093
+      PRINT 98                                                          OKF10094
+      END FILE K2                                                       OKF10095
+      GO TO 183                                                         OKF10096
+  182 WRITE OUTPUT TAPE KO,99                                           OKF10097
+      PRINT 99                                                          OKF10098
+  183 CALL EXIT                                                         OKF10099
+   20 KS=0                                                              OKF10100
+   21 READ INPUT TAPE KI,90,(KA(I,1),I=1,12)                            OKF10101
+      WRITE OUTPUT TAPE KO,91,(KA(I,1),I=1,12)                          OKF10102
+      PRINT 93,(KA(I,1),I=2,12)                                         OKF10103
+      L=LISTNO(KA,17HPAUSE SAVE  READY)                                 OKF10104
+      GO TO (180,50,100,21),L                                           OKF10105
+C           SAVE                                                        OKF10106
+   50 KS=1                                                              OKF10107
+    8 RETURN                                                            OKF10108
+C           READY                                                       OKF10109
+  100 IE=4*KQ(4)+3*KQ(5)+XMAX0F(KQ(4),3*KQ(5)+2)+3                      OKF10110
+      DO 101 I=1,IE                                                     OKF10111
+  101 JI(I)=0                                                           OKF10112
+      KQ(8)=1                                                           OKF10113
+    3 READ INPUT TAPE KI,90, (KA(I,1), I = 1,12)                        OKF10114
+      WRITE OUTPUT TAPE KO,91,(KA(I,1), I = 1,12)                       OKF10115
+      L=LISTNO(KA,24HCARDS TAPE  SKIP  TRANSP)                          OKF10116
+      GO TO (1,6, 6,14,3),L                                             OKF10117
+   14 KQ(8)=0                                                           OKF10118
+      GO TO 3                                                           OKF10119
+    6 IF(KQ(9)) 7,2,7                                                   OKF10120
+    2 KQ(9)=1                                                           OKF10121
+      REWIND KOR                                                        OKF10122
+    7  IF (L-2) 4,4,13                                                  OKF10123
+    1 KOR=KI                                                            OKF10124
+    4 READ INPUT TAPE KOR,90,(KA(I,1),I=1,12)                           OKF10125
+      WRITE OUTPUT TAPE KO,91, (KA(I,1), I = 1,12)                      OKF10126
+      IF( LISTNO(KA,4HARCS) -2) 8,9,9                                   OKF10127
+C           TITLE                                                       OKF10128
+    9 DO 10 I=1,12                                                      OKF10129
+   10 KA(I,2)=KA(I,1)                                                   OKF10130
+      GO TO 4                                                           OKF10131
+   13 READ INPUT TAPE KOR,92,KA(1,1)                                    OKF10132
+      IF( LISTNO(KA,3HEND) -2) 3,13,13                                  OKF10133
+   89 FORMAT(1H112A6)                                                   OKF10134
+   90 FORMAT(12A6)                                                      OKF10135
+   91 FORMAT(1H012A6)                                                   OKF10136
+   92 FORMAT(A6)                                                        OKF10137
+   93 FORMAT(1H011A6)                                                   OKF10138
+   97 FORMAT(11H0JOB PULLED)                                            OKF10139
+   98 FORMAT(31H0RESERVED TAPE HAS BEEN WRITTEN///1H0)                  OKF10140
+   99 FORMAT(34H0NO RESERVED TAPE HAS BEEN WRITTEN)                     OKF10141
+       END                                                              OKF10142
+*      CARDSCOLUMN                                                      OKF10143
+*      LIST                                                             OKF10144
+C   ARCASY. ARC ASSEMBLY. INPUTS ARC DATA, FORMS IJ,IL                  OKF10145
+      SUBROUTINE ARCASY (LL)                                            OKF10146
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10147
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10148
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10149
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10150
+      LER=0                                                             OKF10151
+      KF = 0                                                            OKF10152
+      M = 0                                                             OKF10153
+      N = 1                                                             OKF10154
+    6 READ INPUT TAPE KOR,90,KD,KE,IJ(N),(KA(I,1),I=1,8)                OKF10155
+      K=LISTNO(KD,13HEND   NODES  )                                     OKF10156
+      GO TO (01,02,03,04), K                                            OKF10157
+C                 NO NODES TO DO                                        OKF10158
+    1 LL=0                                                              OKF10159
+      GO TO 05                                                          OKF10160
+C                 NODES TO DO                                           OKF10161
+    2 LL=2                                                              OKF10162
+    5 N=N-1                                                             OKF10163
+   99 IF(LER) 100,101,100                                               OKF10164
+  100 KQ(8)=2                                                           OKF10165
+  101 RETURN                                                            OKF10166
+C                 ARC TO FILE                                           OKF10167
+    3 IF( LISTNO(KE,6H      ) -2) 6,7,7                                 OKF10168
+    7 KC(N)=LCVR(KA(1,1))                                               OKF10169
+      KU(N)=LCVR(KA(3,1))                                               OKF10170
+      JI(N)=LCVR(KA(5,1))                                               OKF10171
+      KX(N)=LCVR(KA(7,1))                                               OKF10172
+      IF(KE-KF) 08,09,08                                                OKF10173
+    8 IF(NODENO(KE)-M-1) 10,11,10                                       OKF10174
+   10 WRITE OUTPUT TAPE KO,91,KE,IJ(N)                                  OKF10175
+      GO TO 12                                                          OKF10176
+   11 KF = KE                                                           OKF10177
+      IF(M-KQ(5)) 22,22,23                                              OKF10178
+   22 M=M+1                                                             OKF10179
+      NN(M) = KE                                                        OKF10180
+      NL(M)=N                                                           OKF10181
+    9 IF(N-KQ(4)) 21,21,20                                              OKF10182
+   21 N=N+1                                                             OKF10183
+      GO TO 06                                                          OKF10184
+    4 WRITE OUTPUT TAPE KO,92,N                                         OKF10185
+   12 WRITE OUTPUT TAPE KO,93,KD,KE,IJ(N),(KA(I,1),I=1,8)               OKF10186
+      LER=LER+1                                                         OKF10187
+      GO TO 6                                                           OKF10188
+   20 WRITE OUTPUT TAPE KO,89                                           OKF10189
+   25 LER=10000                                                         OKF10190
+      GO TO 99                                                          OKF10191
+   23 WRITE OUTPUT TAPE KO,88                                           OKF10192
+      GO TO 25                                                          OKF10193
+   88 FORMAT(27H0TOO MANY NODES IN THIS RUN)                            OKF10194
+   89 FORMAT(26H0TOO MANY ARCS IN THIS RUN)                             OKF10195
+   90 FORMAT(3A6,2X,4(A6,A4))                                           OKF10196
+   91 FORMAT(36H0SOURCE NODES ARE NOT ADJACENT, ARC A6,1X,A6)           OKF10197
+   92 FORMAT(36H0CARD PUNCHING ERROR IN ARC CARD NO.,I6)                OKF10198
+   93 FORMAT(1H0,3A6,2X,4(A6,A4))                                       OKF10199
+       END                                                              OKF10200
+*      CARDSCOLUMN                                                      OKF10201
+*      LIST                                                             OKF10202
+C   MAKEJL. NUMBERS J-S AND FORMS JL                                    OKF10203
+      SUBROUTINE  MAKEJL                                                OKF10204
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10205
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10206
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10207
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10208
+C                 NUMBERS TO IJ LIST                                    OKF10209
+      I=1                                                               OKF10210
+      DO 1 L=1,N                                                        OKF10211
+    3 K=NODENO(IJ(L))                                                   OKF10212
+      IF (K-M) 6,6,7                                                    OKF10213
+    7 IF(M-KQ(5))17,9,9                                                 OKF10214
+   17 M=M+1                                                             OKF10215
+      NN(M)=IJ(L)                                                       OKF10216
+      IJ(L)=K                                                           OKF10217
+      NL(M)=N+1                                                         OKF10218
+      LER=LER+1                                                         OKF10219
+   19 IF (NL(I+1)-L) 5,5,18                                             OKF10220
+    5 I=I+1                                                             OKF10221
+      IF (I-M) 19,18,18                                                 OKF10222
+   18 WRITE OUTPUT TAPE KO,90,NN(I),NN(M)                               OKF10223
+      GO TO 1                                                           OKF10224
+    6 IJ(L)=K                                                           OKF10225
+    1 CONTINUE                                                          OKF10226
+C                 FIX IL LIST                                           OKF10227
+      DO 8 I=1,M                                                        OKF10228
+      CALL PLACE(NL(I),IL(I))                                           OKF10229
+    8 NL(I)=0                                                           OKF10230
+      CALL PLACE (N+1,IL(M+1))                                          OKF10231
+C                 COUNT J-S                                             OKF10232
+      DO 10 J=1,N                                                       OKF10233
+      I=IJ(J)                                                           OKF10234
+   10 NL(I)=NL(I)+1                                                     OKF10235
+C                 FORM JL LIST                                          OKF10236
+      KK=1                                                              OKF10237
+      CALL PLACE (KK,JL(1))                                             OKF10238
+      DO 20 I=1,M                                                       OKF10239
+      IF (NL(I)) 23,22,23                                               OKF10240
+   22 WRITE OUTPUT TAPE KO,91,NN(I)                                     OKF10241
+      LER=1                                                             OKF10242
+   23 KK=KK+NL(I)                                                       OKF10243
+   20 CALL PLACE (KK,JL(I+1))                                           OKF10244
+  100 RETURN                                                            OKF10245
+    9 LER=10000                                                         OKF10246
+      WRITE OUTPUT TAPE KO,92                                           OKF10247
+      GO TO 100                                                         OKF10248
+   90 FORMAT( 5H0ARC ,A6,1X,A6,18H IS A DEAD END ARC)                   OKF10249
+   91 FORMAT(21H0NO ARC ENDS AT NODE ,A6)                               OKF10250
+   92 FORMAT(27H0TOO MANY NODES IN THIS RUN)                            OKF10251
+       END                                                              OKF10252
+*      CARDSCOLUMN                                                      OKF10253
+*      LIST                                                             OKF10254
+C   NODASY.  INPUTS NODE PRICES                                         OKF10255
+      SUBROUTINE  NODASY                                                OKF10256
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10257
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10258
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10259
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10260
+      I = 0                                                             OKF10261
+   03 I = I+1                                                           OKF10262
+      READ INPUT TAPE KOR,90,KD,KE,KA(1,1),KA(2,1)                      OKF10263
+      IF( LISTNO(KD,12HEND         ) -2) 99,1,2                         OKF10264
+    1 IF( LISTNO(KE,6H      ) -2) 3,4,4                                 OKF10265
+    4 K=NODENO(KE)                                                      OKF10266
+      IF (K - M) 05,05,06                                               OKF10267
+    5 NP(K)=LCVR(KA)                                                    OKF10268
+      GO TO 03                                                          OKF10269
+    6 WRITE OUTPUT TAPE KO,91,I,KE                                      OKF10270
+   10 LER=LER+1                                                         OKF10271
+      GO TO 03                                                          OKF10272
+    2 WRITE OUTPUT TAPE KO,92,I,KD,KE,KA(1,1),KA(2,1)                   OKF10273
+      GO TO 10                                                          OKF10274
+   99 RETURN                                                            OKF10275
+   90 FORMAT(2A6,8X,A6,A4)                                              OKF10276
+   91 FORMAT(5H0CARD I6,6H NODE A6,12H NOT IN ARCS)                     OKF10277
+   92 FORMAT(37H0CARD PUNCHING ERROR IN NODE CARD NO.I6/1H 2A6,8X,A6,A4)OKF10278
+       END                                                              OKF10279
+*      CARDSCOLUMN                                                      OKF10280
+*      LIST                                                             OKF10281
+C           READER CONTROL                                              OKF10282
+      SUBROUTINE READER                                                 OKF10283
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10284
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10285
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10286
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10287
+    5 READ INPUT TAPE KI,95,(KA(I,1),I=1,12)                            OKF10288
+      L=LISTNO(KA,18HALTER OUTPUTCOMPUT)                                OKF10289
+      GO TO (18,121,111,10),L                                           OKF10290
+   10 WRITE OUTPUT TAPE  KO,96,(KA(I,1),I=1,12)                         OKF10291
+      DO 15 I=1,12                                                      OKF10292
+   15 KA(I,2)=KA(I,1)                                                   OKF10293
+      GO TO 5                                                           OKF10294
+   18 BACKSPACE KI                                                      OKF10295
+   20 READ INPUT TAPE KI,90,(KA(I,1),I=1,12)                            OKF10296
+      L=LISTNO(KA,18HALTER OUTPUTCOMPUT)                                OKF10297
+      GO TO (140,121,111,200),L                                         OKF10298
+C           COMPUTE                                                     OKF10299
+  111 WRITE OUTPUT TAPE KO,93,N,M                                       OKF10300
+  999 RETURN                                                            OKF10301
+C           SET OUTPUT CONTROL                                          OKF10302
+  121 WRITE OUTPUT TAPE KO,88,KA(1,1),KA(2,1),KA(3,1)                   OKF10303
+  120 L=LISTNO(KA(2,1),30H TAPE  IF PU PUNCH NODES PRINT)               OKF10304
+      IF (L-5) 81,86,200                                                OKF10305
+   81 LC(L)=1                                                           OKF10306
+      GO TO 20                                                          OKF10307
+   86 KQ(7)=1                                                           OKF10308
+      GO TO 20                                                          OKF10309
+C                 ALTER                                                 OKF10310
+  140 IF(KA(4,1)) 141,141,142                                           OKF10311
+  141 KA(4,1)=1                                                         OKF10312
+  142 WRITE OUTPUT TAPE KO,91,(KA(I,1),I=1,12)                          OKF10313
+      N1=NODENO(KA(2,1))                                                OKF10314
+      N2=NODENO(KA(3,1))                                                OKF10315
+      IF (N1-M) 143,143,144                                             OKF10316
+  143 IF (N2-M) 145,145,144                                             OKF10317
+  144 WRITE OUTPUT TAPE KO,92                                           OKF10318
+      LER=1                                                             OKF10319
+      GO TO 20                                                          OKF10320
+  145 L1=LADDR(IL(N1))                                                  OKF10321
+      L2=LADDR(IL(N1+1))-1                                              OKF10322
+      IF(L2-L1) 144,146,146                                             OKF10323
+  146 DO 147 LL=L1,L2                                                   OKF10324
+      IF(IJ(LL)/1-N2) 147,148,147                                       OKF10325
+  148 KA(4,1)=KA(4,1)-1                                                 OKF10326
+      IF (KA(4,1)) 147,149,147                                          OKF10327
+  147 CONTINUE                                                          OKF10328
+      GO TO 144                                                         OKF10329
+  149 KC(LL)=LCVR(KA(5,1))                                              OKF10330
+      KU(LL)=LCVR(KA(7,1))                                              OKF10331
+      JI(LL)=LCVR(KA(9,1))                                              OKF10332
+      KX(LL)=KX(LL)+LCVR(KA(11,1))                                      OKF10333
+      GO TO 20                                                          OKF10334
+CARD PUNCHING ERROR                                                     OKF10335
+  200 LER=1                                                             OKF10336
+      WRITE OUTPUT TAPE KO,87,KA(1,1),KA(2,1),KA(3,1)                   OKF10337
+      GO TO 20                                                          OKF10338
+   87 FORMAT(23H ILLEGAL CONTROL CARD (3A6,1H))                         OKF10339
+   88 FORMAT(1H03A6)                                                    OKF10340
+   90 FORMAT(3A6,I2,4(A6,A4))                                           OKF10341
+   91 FORMAT(1H0,3A6,I2,4(A6,A4))                                       OKF10342
+   92 FORMAT(47H0THE ARC ON THE ABOVE ALTER CARD IS NOT IN CORE)        OKF10343
+   93 FORMAT(12H0NO OF ARCS=I5,  13H NO OF NODES=I5)                    OKF10344
+   95 FORMAT(12A6)                                                      OKF10345
+   96 FORMAT(1H012A6)                                                   OKF10346
+       END                                                              OKF10347
+*      CARDSCOLUMN                                                      OKF10348
+*      LIST                                                             OKF10349
+      SUBROUTINE  TRANSL                                                OKF10350
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10351
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10352
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10353
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10354
+CLEAR NL STORAGE                                                        OKF10355
+      DO 11 I=1,M                                                       OKF10356
+   11 NL(I)=0                                                           OKF10357
+CAST OUT LOWER BOUNDS                                                   OKF10358
+      REWIND KQ                                                         OKF10359
+      WRITE TAPE KQ,(JI(J),J=1,N)                                       OKF10360
+      END FILE KQ                                                       OKF10361
+      REWIND KQ                                                         OKF10362
+CALCULATE CIRCULATION AND C-BAR                                         OKF10363
+      I=0                                                               OKF10364
+      LUP=1                                                             OKF10365
+      DO 2 L=1,N                                                        OKF10366
+    4 IF (L-LUP) 13,12,12                                               OKF10367
+   12 I=I+1                                                             OKF10368
+      LUP=LADDR(IL(I+1))                                                OKF10369
+   13 LU=IJ(L)                                                          OKF10370
+      NL(I)=NL(I)-KX(L)                                                 OKF10371
+      NL(LU)=NL(LU)+KX(L)                                               OKF10372
+    2 KC(L)=KC(L)+NP(I)-NP(LU)                                          OKF10373
+CIRCULATION MESSAGE FOR NON-ZERO CIRCULATION AND MOVE JL LIST           OKF10374
+      DO 5 I=1,M                                                        OKF10375
+      IF (NL(I)) 6,5,6                                                  OKF10376
+    6 CALL IBCD(NL(I),KA,12)                                            OKF10377
+      WRITE OUTPUT TAPE KO,90,NN(I),KA(1,1),KA(2,1)                     OKF10378
+    5 NL(I)=LADDR(JL(I))                                                OKF10379
+COMPUTE EXCESS OF X AND UPPER BOUND OVER LOWER BOUND                    OKF10380
+      DO 1 J=1,N                                                        OKF10381
+      KU(J)=KU(J)-JI(J)                                                 OKF10382
+      IF(KU(J)) 50,1,1                                                  OKF10383
+   50 WRITE OUTPUT TAPE KO,51,J                                         OKF10384
+      LER=LER+1                                                         OKF10385
+    1 KX(J)=KX(J)-JI(J)                                                 OKF10386
+COMPUTE JI LISTS                                                        OKF10387
+      I=0                                                               OKF10388
+      LUP=1                                                             OKF10389
+      DO 22 L=1,N                                                       OKF10390
+   27 IF (L-LUP) 25,26,26                                               OKF10391
+   26 I=I+1                                                             OKF10392
+      LUP=LADDR(IL(I+1))                                                OKF10393
+   25 K=IJ(L)                                                           OKF10394
+      J=NL(K)                                                           OKF10395
+      JI(J)=I                                                           OKF10396
+      CALL PLACE (L,JI(J))                                              OKF10397
+   22 NL(K)=NL(K)+1                                                     OKF10398
+CLEAR NL STORAGE                                                        OKF10399
+      DO 60 I=1,M                                                       OKF10400
+   60 NL(I)=0                                                           OKF10401
+      RETURN                                                            OKF10402
+   51 FORMAT(4H0ARC, I6  ,42H HAS LOWER BOUND GREATER THAN UPPER BOUND.)OKF10403
+   90 FORMAT(6H0NODE A6,28H NON-CONSERVATIVE, NET FLOW=2A6)             OKF10404
+       END                                                              OKF10405
+*      CARDSCOLUMN                                                      OKF10406
+*      LIST                                                             OKF10407
+      SUBROUTINE KILTER (I)                                             OKF10408
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10409
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10410
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10411
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10412
+      FREQUENCY 1(0,100,1),2(1000),5(0,1,2),10(2,1,0),25(8,1,0)         OKF10413
+      FREQUENCY 66(0,2,1),39(0,100,1),20(1,2,3),30(1,2,3)               OKF10414
+    1 IF(LADDR(IJ(1))) 71,70,71                                         OKF10415
+   71 CALL PLACE (0,IJ(1))                                              OKF10416
+    2 DO 69 J=1,M                                                       OKF10417
+   69 NL(J)=0                                                           OKF10418
+   70 LER=0                                                             OKF10419
+    5 IF (KC(K)) 10,20,30                                               OKF10420
+   10 IF(KX(K)-KU(K)) 13,40,14                                          OKF10421
+   13 MINE=-KX(K)+KU(K)                                                 OKF10422
+      GO TO 50                                                          OKF10423
+   14 MINE=KX(K)-KU(K)                                                  OKF10424
+      GO TO 60                                                          OKF10425
+   20 IF(KX(K))13,25,25                                                 OKF10426
+   25 IF(KX(K)-KU(K))40,40,35                                           OKF10427
+   30 IF(KX(K))32,40,35                                                 OKF10428
+   32 MINE=-KX(K)                                                       OKF10429
+      GO TO 50                                                          OKF10430
+   35 MINE=KX(K)                                                        OKF10431
+      GO TO 60                                                          OKF10432
+   50 KOR=IJ(K)                                                         OKF10433
+      KAT=0                                                             OKF10434
+      KTER=I                                                            OKF10435
+      GO TO 65                                                          OKF10436
+   60 KOR=I                                                             OKF10437
+      KAT=10                                                            OKF10438
+      KTER=IJ(K)                                                        OKF10439
+   65 CALL LABELN(KBR)                                                  OKF10440
+   66 IF (KBR) 67,68,67                                                 OKF10441
+   67 CALL BREAKT                                                       OKF10442
+      GO TO 5                                                           OKF10443
+   68 CALL UPNOPR                                                       OKF10444
+   39 IF (LER) 40,5,40                                                  OKF10445
+   40 RETURN                                                            OKF10446
+       END                                                              OKF10447
+*      CARDSCOLUMN                                                      OKF10448
+*      LIST                                                             OKF10449
+      SUBROUTINE OUTPUT (KZ)                                            OKF10450
+      COMMON JI,KC,KU,KX,NL,NN,NP,IJ,IL,JL                              OKF10451
+      COMMON M,N,LER,KAT,KOR,KTER,MINE,LC,KA,IFIN,KI,KO,KQ,K            OKF10452
+      DIMENSION JI(4500),KC(4500),KU(4500),KX(4500),NL(1500),NN(1500)   OKF10453
+      DIMENSION NP(1500),IJ(1500),IL(1501),JL(1501),LC(9),KA(12,2),KQ(9)OKF10454
+      DIMENSION KB(16),KZ(101)                                          OKF10455
+      IF (KZ(101)) 10,11,10                                             OKF10456
+   11 IF (LER) 30,20,30                                                 OKF10457
+   20 MZ=-8192                                                          OKF10458
+      GO TO 13                                                          OKF10459
+   10 IF (LER) 18,19,18                                                 OKF10460
+   19 WRITE OUTPUT TAPE KO,99,KZ(101)                                   OKF10461
+   18 KZ(101)=XMIN0F(KZ(101),100)                                       OKF10462
+   30 MZ=-65536                                                         OKF10463
+   13 IF(LC(1)+LC(3)+KQ(7)) 100,101,100                                 OKF10464
+  101 KQ(7)=1                                                           OKF10465
+  100 IF (SENSE SWITCH 5) 2,1                                           OKF10466
+    2 IF (LC(2)) 8,1,8                                                  OKF10467
+    8 LC(1)=1                                                           OKF10468
+    1 K2=KQ(2)                                                          OKF10469
+      REWIND KQ                                                         OKF10470
+      READ TAPE KQ,(JI(K),K=1,N)                                        OKF10471
+      REWIND KQ                                                         OKF10472
+   52 IF(LC(3))62,12,62                                                 OKF10473
+   62 PUNCH 90,(KA(I,2),I=1,12)                                         OKF10474
+      WRITE OUTPUT TAPE KO,89                                           OKF10475
+   12 IF(LC(1))22,41,22                                                 OKF10476
+   22 IF(KQ(6)) 24,23,24                                                OKF10477
+   23 KQ(6) =1                                                          OKF10478
+      REWIND K2                                                         OKF10479
+   24 WRITE OUTPUT TAPE K2,90,(KA(I,2),I=1,12)                          OKF10480
+      WRITE OUTPUT TAPE KO,88                                           OKF10481
+   41 IF (KQ(7)) 42,7,42                                                OKF10482
+   42 WRITE OUTPUT TAPE KO,91,(KA(I,2),I=1,12)                          OKF10483
+    7 L=1                                                               OKF10484
+      LL=1                                                              OKF10485
+      DO 3 I=1,M                                                        OKF10486
+      LUP=LADDR(IL(I+1))                                                OKF10487
+  302 IF (L-LUP) 301,3,3                                                OKF10488
+  301 LU=IJ(L)                                                          OKF10489
+      LLC=KC(L)                                                         OKF10490
+      KC(L)=KC(L)-NP(I)+NP(LU)                                          OKF10491
+      KX(L)=KX(L)+JI(L)                                                 OKF10492
+      KU(L)=KU(L)+JI(L)                                                 OKF10493
+      LZ=LPROD(KC(L),KX(L))                                             OKF10494
+      CALL IBCD(KC(L),KB(1),10)                                         OKF10495
+      CALL IBCD(KU(L),KB(3),10)                                         OKF10496
+      CALL IBCD(JI(L),KB(5),10)                                         OKF10497
+      CALL IBCD(KX(L),KB(7),10)                                         OKF10498
+      CALL IBCD(LZ,KB(9),12)                                            OKF10499
+      MX=MZ                                                             OKF10500
+      IF(KZ(101)) 16,16,14                                              OKF10501
+   14 IF(KZ(LL)-L) 16,17,16                                             OKF10502
+   17 KZ(101)=KZ(101)-1                                                 OKF10503
+      LL=LL+1                                                           OKF10504
+      MX=-20480                                                         OKF10505
+   16 IF(LC(1))26,51,26                                                 OKF10506
+   26 WRITE OUTPUT TAPE K2,93,NN(I),NN(LU),(KB(II),II=1,10),MX          OKF10507
+   51 IF (KQ(7)) 46,56,46                                               OKF10508
+   46 CALL IBCD(NP(I),KB(11),12)                                        OKF10509
+      CALL IBCD(NP(LU),KB(13),12)                                       OKF10510
+      CALL IBCD(LLC,KB(15),12)                                          OKF10511
+      WRITE OUTPUT TAPE KO,94,NN(I),NN(LU),(KB(II),II=1,16),MX          OKF10512
+   56 IF(LC(3)) 66,333,66                                               OKF10513
+   66 PUNCH 93,NN(I),NN(LU),(KB(II),II=1,10)                            OKF10514
+  333 L=L+1                                                             OKF10515
+      GO TO 302                                                         OKF10516
+    3 CONTINUE                                                          OKF10517
+      IF (LC(4)) 555,15,555                                             OKF10518
+  555 IF (LC(1)+LC(3)) 201,27,201                                       OKF10519
+  201 IF (LC(1)) 202,203,202                                            OKF10520
+  202 WRITE OUTPUT TAPE K2,96                                           OKF10521
+  203 IF (LC(3)) 204,115,204                                            OKF10522
+  204 PUNCH 96                                                          OKF10523
+  115 DO 200 I=1,M                                                      OKF10524
+      CALL IBCD(NP(I),KB,12)                                            OKF10525
+      IF(LC(1))25,85,25                                                 OKF10526
+   25 WRITE OUTPUT TAPE K2,95,NN(I),KB(1),KB(2)                         OKF10527
+   85 IF(LC(3))65,200,65                                                OKF10528
+   65 PUNCH 95,NN(I),KB(1),KB(2)                                        OKF10529
+  200 CONTINUE                                                          OKF10530
+   15 IF(LC(1))48,27,48                                                 OKF10531
+   48 WRITE OUTPUT TAPE K2,97                                           OKF10532
+   27 IF (KQ(7)) 47,57,47                                               OKF10533
+   47 WRITE OUTPUT TAPE KO,98                                           OKF10534
+   57 IF(LC(3))67,77,67                                                 OKF10535
+   67 PUNCH 97                                                          OKF10536
+   77 CALL IBCD(LC(5),KA,12)                                            OKF10537
+      CALL IBCD(LC(6),KA(3,1),12)                                       OKF10538
+      CALL IBCD(LC(7),KA(5,1),12)                                       OKF10539
+      CALL IBCD(LC(8),KA(7,1),12)                                       OKF10540
+      WRITE OUTPUT TAPE KO,92,(KA(II,1),II=1,8)                         OKF10541
+      RETURN                                                            OKF10542
+   88 FORMAT(24H0THIS RUN OUTPUT TO TAPE )                              OKF10543
+   89 FORMAT(25H0THIS RUN OUTPUT TO PUNCH)                              OKF10544
+   90 FORMAT(12A6/4HARCS22X,4HCOST5X,5HUPPER5X,5HLOWER9X,1HX8X,4HFLOW)  OKF10545
+   91 FORMAT(1H112A6/5H ARCS16X,4HCOST6X,5HUPPER6X,5HLOWER10X,1HX8X,    OKF10546
+     X 4HFLOW9X,3HPI19X,3HPI28X,4HCBAR/1X)                              OKF10547
+   92 FORMAT(18H0NO OF BREAKTHRUS=2A6,22H, NO OF NONBREAKTHRUS=2A6,18H, OKF10548
+     1NO OF X CHANGES=2A6,/42H NO OF NODES FROM WHICH LABELING WAS DONE=OKF10549
+     22A6)                                                              OKF10550
+   93 FORMAT(6X,2A6,2X,4(A6,A4),2A6,1X,A1)                              OKF10551
+   94 FORMAT(2(1X,A6),4(1X,A6,A4),8A6,1X,A1)                            OKF10552
+   95 FORMAT(6X,A6,6X,2A6)                                              OKF10553
+   96 FORMAT (6HNODES )                                                 OKF10554
+   97 FORMAT(3HEND)                                                     OKF10555
+   98 FORMAT(4H0END)                                                    OKF10556
+   99 FORMAT(1H0I5,23H ARCS ARE OUT OF KILTER)                          OKF10557
+       END                                                              OKF10558
+*      CARDS   COLUMN                                                   OKF10559
+*      FAP                                                              OKF10560
+*              FAP SUBROUTINES THAT USE COMMON                          OKF10561
+       COUNT   500                                                      OKF10562
+       ENTRY   LABELN                                                   OKF10563
+       ENTRY   BREAKT                                                   OKF10564
+       ENTRY   UPNOPR                                                   OKF10565
+       ENTRY   NODENO                                                   OKF10566
+       ENTRY   LCVR                                                     OKF10567
+LABELN SXA     49L,1                     SUBROUTINE LABELN(KBR)         OKF10568
+       SXA     49L+1,2                                                  OKF10569
+       SXA     49L+2,4                                                  OKF10570
+       LXD     KTER,2                                                   OKF10571
+       PXA     0,2                                                      OKF10572
+       STO     KTRR                                                     OKF10573
+6L     LDQ     K                                                        OKF10574
+7L     STZ*    1,4                       KBR=0                          OKF10575
+8L     CLA     KOR                       I=KOR                          OKF10576
+       STO     I                                                        OKF10577
+       LXD     I,1                                                      OKF10578
+9L     CLA     =2B17                     NU=2                           OKF10579
+       STO     NU                                                       OKF10580
+10L    LXA     IJ,2                      IF(LADDR(IJ(1)))14,11,14       OKF10581
+       TXH     14L,2,0                                                  OKF10582
+11L    CLA     IFIN                11    NL(I)=IFIN                     OKF10583
+       STO     NL+1,1                                                   OKF10584
+12L    SXA     IJ,1                      CALL PLACE(I,IJ(I))            OKF10585
+13L    AXT     2,2                       NUP=2                          OKF10586
+       SXD     NUP,2                                                    OKF10587
+14L    CLA     IL,1                14    L2=LADDR(IL(I+1))-1            OKF10588
+       PAX     0,2                                                      OKF10589
+       TXI     14L2,2,-1                                                OKF10590
+14L2   SXD     27L2,2                                                   OKF10591
+15L    CLA     IL+1,1                    L=LADDR(IL(I))                 OKF10592
+       PAX     0,2                                                      OKF10593
+27L2   TXH     28L,2,**            16    IF(L2-L)28,17,17               OKF10594
+17L    CLA     IJ+1,2              17    J=IJ(L)                        OKF10595
+       PDX     0,4                                                      OKF10596
+18L    ZET     NL+1,4                    IF(NL(J))27,19,27              OKF10597
+       TXI     27L2,2,1                                                 OKF10598
+19L    CLA     KC+1,2              19    IF(KC(L))20,20,21              OKF10599
+19L1   TZE     20L                                                      OKF10600
+       TPL     21L                                                      OKF10601
+20L    CLA     KX+1,2              20    IF(KX(L)-KU(L))22,27,27        OKF10602
+       SUB     KU+1,2                                                   OKF10603
+20L1   TZE     27L                                                      OKF10604
+       TMI     22L                                                      OKF10605
+       TXI     27L2,2,1                                                 OKF10606
+21L    CLA     KX+1,2              21    IF(KX(L))22,27,27              OKF10607
+       TZE     27L                                                      OKF10608
+       TPL     27L                                                      OKF10609
+22L    SXA     I,2                 22    CALL PLACE(L,I)                OKF10610
+23L    CLA     I                         NL(J)= I                       OKF10611
+       STO     NL+1,4                                                   OKF10612
+24L    PXA     0,4                       CALL PLACE(J,IJ(NUP))          OKF10613
+       LXD     NUP,4                                                    OKF10614
+       STA     IJ+1,4                                                   OKF10615
+25L    TXI     25L2,4,1                  NUP=NUP+1                      OKF10616
+25L2   SXD     NUP,4                                                    OKF10617
+26L    SUB     KTRR                      IF(L-KTER)27,47,27             OKF10618
+       TZE     47L                 27    L=L+1                          OKF10619
+27L    TXI     27L2,2,1                  GO TO 16                       OKF10620
+28L    CLA     JL,1                28    L2=LADDR(JL(I+1))-1            OKF10621
+       PAX     0,2                                                      OKF10622
+       TXI     28L2,2,-1                                                OKF10623
+28L2   SXD     42L2,2                                                   OKF10624
+29L    CLA     JL+1,1                    L=LADDR(JL(I))                 OKF10625
+       PAX     0,2                                                      OKF10626
+42L2   TXH     43L,2,**                  IF(L2-L)43,31,31               OKF10627
+31L    CLA     JI+1,2              31    J=JI(L)                        OKF10628
+       PDX     0,4                                                      OKF10629
+32L    ZET     NL+1,4                    IF(NL(J))42,33,42              OKF10630
+       TXI     42L2,2,1                                                 OKF10631
+33L    CLA     JI+1,2              33    KR=LADDR(JI(K))                OKF10632
+       PAX     0,1                                                      OKF10633
+34L    CLA     KC+1,1                    IF(KC(KR))35,36,36             OKF10634
+34L1   TZE     36L                                                      OKF10635
+       TPL     36L                                                      OKF10636
+35L    CLA     KX+1,1              35    IF(KX(KR)-KU(KR))42,42,37      OKF10637
+       SUB     KU+1,1                                                   OKF10638
+35L1   TZE     42L                                                      OKF10639
+       TPL     37L                                                      OKF10640
+       TXI     42L2,2,1                                                 OKF10641
+36L    CLA     KX+1,1              36    IF(KX(KR))42,42,37             OKF10642
+36L1   TZE     42L                                                      OKF10643
+       TMI     42L                                                      OKF10644
+37L    SXA     I,1                 37    CALL PLACE(KR,I)               OKF10645
+38L    CLS     I                         NL(J)=-I                       OKF10646
+       STO     NL+1,4                                                   OKF10647
+39L    PXA     0,4                       CALL PLACE(J,IJ(NUP))          OKF10648
+       LXD     NUP,4                                                    OKF10649
+       STA     IJ+1,4                                                   OKF10650
+40L    TXI     40L2,4,1                  NUP=NUP+1                      OKF10651
+40L2   SXD     NUP,4                     IF(KR-KTER)42,47,42            OKF10652
+41L    SUB     KTRR                                                     OKF10653
+       TZE     47L                 42    L=L+1                          OKF10654
+42L    TXI     42L2,2,1                  GO TO 31                       OKF10655
+43L    LXD     NU,4                43    NU=NU+1                        OKF10656
+       CLA     IJ+1,4                                                   OKF10657
+       TXI     NUP,4,1                                                  OKF10658
+NUP    TXH     48L,4,**                  IF(NU-NUP)44,44,48             OKF10659
+44L    PAX     0,1                 44    I=LADDR(IJ(NU-1))              OKF10660
+       SXD     I,1                                                      OKF10661
+       SXD     NU,4                                                     OKF10662
+46L    TRA     14L                       GO TO 14                       OKF10663
+47L    LXA     49L+2,4             47    KBR=1                          OKF10664
+       CLA     =1B17                                                    OKF10665
+       STO*    1,4                                                      OKF10666
+48L    LXD     NU,4                48    LC(8)=LC(8)+NU-1               OKF10667
+       TXI     48L2,4,-1                                                OKF10668
+48L2   PXA     0,4                                                      OKF10669
+       ADD     LC-7                                                     OKF10670
+       STO     LC-7                                                     OKF10671
+49L    AXT     **,1                      RETURN                         OKF10672
+       AXT     **,2                                                     OKF10673
+       AXT     **,4                                                     OKF10674
+       TRA     2,4                                                      OKF10675
+KTRR   BSS     1                                                        OKF10676
+I      BSS     1                                                        OKF10677
+NU     BSS     1                         END                            OKF10678
+       EJECT                                                            OKF10679
+BREAKT SXA     47A,1               SUBROUTINE BREAKT                    OKF10680
+       SXA     47A+1,2                                                  OKF10681
+       SXA     47A+2,4                                                  OKF10682
+5A     CLA     LC-4                 LC(5)=LC(5)+1                       OKF10683
+       ADD     =1B35                                                    OKF10684
+       STO     LC-4                                                     OKF10685
+       LDQ     MINE                                                     OKF10686
+7A     STZ     LER                 LER=0                                OKF10687
+10A    CLA     KTER                KT=KTER                              OKF10688
+       PDX     0,2                                                      OKF10689
+11A    AXT     1,4                 DO 29 J=1,M                          OKF10690
+       CLA     M                                                        OKF10691
+       STD     29A2                                                     OKF10692
+12A    CLA     NL+1,2              KP=NL(KT)                            OKF10693
+       STO     KP                                                       OKF10694
+13A    PAX     0,1                 KK=LADDR(KT)                         OKF10695
+14A    CAS     IFIN                IF (KP-IFIN) 15,31,31                OKF10696
+       TRA     31A                                                      OKF10697
+       TRA     31A                                                      OKF10698
+15A    TPL     23A            15   IF(KP) 16,23,23                      OKF10699
+16A    CLA     KC+1,1         16   IF(KC(KK))17,19,19                   OKF10700
+       TZE     19A                                                      OKF10701
+       TPL     19A                                                      OKF10702
+17A    CLA     KX+1,1              MINE=XMIN0F(MINE,KX(KK)-KU(KK))      OKF10703
+       SUB     KU+1,1                                                   OKF10704
+       TLQ     *+2                                                      OKF10705
+       XCA                                                              OKF10706
+18A    TRA     21A                 GO TO 21                             OKF10707
+19A    CLA     KX+1,1              MINE=XMIN0F(MINE,KX(KK))             OKF10708
+       TLQ     *+2                                                      OKF10709
+       XCA                                                              OKF10710
+21A    PXA     0,1            21   CALL PLACE(32767-KK,IJ(J))           OKF10711
+       COM                                                              OKF10712
+       STA     IJ+1,4                                                   OKF10713
+22A    TRA     29A                 GO TO 29                             OKF10714
+23A    CLA     KC+1,1         23   IF(KC(KK))  24,24,26                 OKF10715
+       TZE     24A                                                      OKF10716
+       TPL     26A                                                      OKF10717
+24A    CLA     KU+1,1         24   MINE=XMIN0F(MINE,KU(KK)-KX(KK))      OKF10718
+       SUB     KX+1,1                                                   OKF10719
+       TLQ     *+2                                                      OKF10720
+       XCA                                                              OKF10721
+25A    TRA     28A                 GO TO 28                             OKF10722
+26A    CLS     KX+1,1         26   MINE=XMIN0F(MINE,-KX(KK))            OKF10723
+       TLQ     *+2                                                      OKF10724
+       XCA                                                              OKF10725
+28A    PXA     0,1            28   CALL PLACE(KK,IJ(J))                 OKF10726
+       STA     IJ+1,4                                                   OKF10727
+29A    LXD     KP,2           29   KT=XABSF(KP)                         OKF10728
+       TXI     *+1,4,1                                                  OKF10729
+29A2   TXL     12A,4,**                                                 OKF10730
+31A    STQ     MINE                                                     OKF10731
+       LXD     K,2                                                      OKF10732
+       LXD     KAT,1                                                    OKF10733
+       CLA     KX+1,2                                                   OKF10734
+       TXH     34A,1,3             IF(KAT-4) 32,34,34                   OKF10735
+32A    ADD     MINE           32   KX(K)=KX(K)+MINE                     OKF10736
+33A    TRA     35A                 GO TO 35                             OKF10737
+34A    SUB     MINE           34   KX(K)=KX(K)-MINE                     OKF10738
+35A    STO     KX+1,2                                                   OKF10739
+       TXI     *+1,4,-1       35   JJ=J-1                               OKF10740
+       PXA     0,4                  LC(7)=LC(7)+JJ                      OKF10741
+       ADD     LC-6                                                     OKF10742
+       STO     LC-6                DO 43 J=1,JJ                         OKF10743
+37A    CLA     IJ+1,4              KK=LADDR(IJ(J))                      OKF10744
+       PAX     0,1                                                      OKF10745
+       TXL     42A,1,16000         IF (KK-16000) 42,42,39               OKF10746
+       COM                    39   KK=32767-KK                          OKF10747
+       PAX     0,1                                                      OKF10748
+39A    CLA     KX+1,1              KX(KK)=KX(KK)-MINE                   OKF10749
+       SUB     MINE                                                     OKF10750
+       STO     KX+1,1                                                   OKF10751
+40A    TRA     43A                 GO TO 43                             OKF10752
+42A    CLA     KX+1,1         42   KX(KK)=KX(KK)-MINE                   OKF10753
+       ADD     MINE                                                     OKF10754
+       STO     KX+1,1                                                   OKF10755
+43A    TIX     37A,4,1        43   CONTINUE                             OKF10756
+44A    LXD     M,4                 DO 45 J=1,M                          OKF10757
+45A    STZ     NL+1,4         45   NL(J)=0                              OKF10758
+       TIX     45A,4,1                                                  OKF10759
+       PXD                         CALL PLACE (0,IJ(1))                 OKF10760
+       STA     IJ                                                       OKF10761
+47A    AXT     **,1                RETURN                               OKF10762
+       AXT     **,2                                                     OKF10763
+       AXT     **,4                                                     OKF10764
+       TRA     1,4                                                      OKF10765
+KP     BSS     1                         END                            OKF10766
+       EJECT                                                            OKF10767
+UPNOPR SXA     50U,1                     SUBROUTINE UPNOPR              OKF10768
+       SXA     50U+1,2                                                  OKF10769
+       SXA     50U+2,4                                                  OKF10770
+4U     CLA     LC-5                      LC(6)=LC(6)+1                  OKF10771
+       ADD     =1B35                                                    OKF10772
+       STO     LC-5                                                     OKF10773
+5U     TOV     *+1                        IF(ACCUMULATOR OVERFLOW) 7,7  OKF10774
+7U     LDQ     IFIN                7     NDELTA=IFIN                    OKF10775
+8U     AXT     0,1                       I=0                            OKF10776
+9U     SXD     KUP,1                     KUP=0                          OKF10777
+10U    LXD     N,2                       DO 24 L=1,N                    OKF10778
+       SXD     24U,2                                                    OKF10779
+11U    AXT     1,2                                                      OKF10780
+KUP    TXL     16U,2,**                  IF(L-KUP) 16,16,13             OKF10781
+13U    TXI     14U,1,1             13    I=I+1                          OKF10782
+14U    CLA     IL,1                      KUP=LADDR(IL(I+1)) -1          OKF10783
+       PAX     0,4                                                      OKF10784
+       TXI     15U,4,-1                                                 OKF10785
+15U    SXD     KUP,4                                                    OKF10786
+16U    CLA     IJ+1,2              16    J=IJ(L)                        OKF10787
+       PDX     0,4                                                      OKF10788
+17U    NZT     NL+1,1                    IF(NL(I)) 18,20,18             OKF10789
+       TRA     20U                                                      OKF10790
+18U    ZET     NL+1,4              18    IF(NL(J)) 24,19,24             OKF10791
+       TXI     24U,2,1                                                  OKF10792
+19U    CLA     KX+1,2              19    IF(KX(L)-KU(L)) 22,24,24       OKF10793
+       SUB     KU+1,2                                                   OKF10794
+       TZE     23U                                                      OKF10795
+       TMI     22U                                                      OKF10796
+       TXI     24U,2,1                                                  OKF10797
+20U    NZT     NL+1,4              20    IF(NL(J)) 21,24,21             OKF10798
+       TXI     24U,2,1                                                  OKF10799
+21U    CLA     KX+1,2              21    IF(KX(L)) 24,24,22             OKF10800
+       TZE     23U                                                      OKF10801
+       TMI     23U                                                      OKF10802
+22U    CLA     KC+1,2              22    LL=XABSF(KC(L))                OKF10803
+       SSP                                                              OKF10804
+       TLQ     23U                       NDELTA=XMIN0F(LL,NDELTA)       OKF10805
+       XCA                                                              OKF10806
+23U    TXI     24U,2,1                                                  OKF10807
+24U    TXL     KUP,2,**            24    CONTINUE                       OKF10808
+       STQ     NDELTA                                                   OKF10809
+25U    CLA     IFIN                      IF(NDELTA-IFIN) 31,26,26       OKF10810
+       TLQ     31U                                                      OKF10811
+26U    LXD     K,2                 26    IF(KX(K)) 27,28,27             OKF10812
+       CLA     KX+1,2                                                   OKF10813
+       TZE     28U                                                      OKF10814
+27U    SUB     KU+1,2              27    IF(KX(K)-KU(K)) 51,28,51       OKF10815
+       TNZ     51U                                                      OKF10816
+28U    CLA     KC+1,2              28    NDELTA=XABSF(KC(K))            OKF10817
+       SLW     NDELTA                                                   OKF10818
+31U    LXD     M,1                 31    DO 47 I=1,M                    OKF10819
+32U    CLA     IL,1                      L2=LADDR(IL(I+1))-1            OKF10820
+       PAX     0,4                                                      OKF10821
+       TXI     33U,4,-1                                                 OKF10822
+33U    CLA     IL+1,1                    L=LADDR(IL(I))                 OKF10823
+       PAX     0,2                                                      OKF10824
+34U    ZET     NL+1,1                    IF(NL(I))41,35,41              OKF10825
+       TRA     41U                                                      OKF10826
+       SXD     36U,4,1                                                  OKF10827
+35U    CLA     NP+1,1              35    NP(I)=NP(I)+NDELTA             OKF10828
+       ADD     NDELTA                                                   OKF10829
+       STO     NP+1,1                                                   OKF10830
+36U    TXH     47U,2,**            36    IF(L2-L)47,37,37               OKF10831
+37U    CLA     IJ+1,2              37    J=IJ(L)                        OKF10832
+       PDX     0,4                                                      OKF10833
+38U    NZT     NL+1,4                    IF(NL(J))39,40,39              OKF10834
+       TXI     36U,2,1                                                  OKF10835
+39U    CLA     KC+1,2              39    KC(L)=KC(L)+NDELTA             OKF10836
+       ADD     NDELTA                                                   OKF10837
+       STO     KC+1,2              40    L=L+1                          OKF10838
+40U    TXI     36U,2,1                   GO TO 36                       OKF10839
+41U    SXD     42U,4,1                                                  OKF10840
+42U    TXH     47U,2,**            41    IF(L2-L)47,43,43               OKF10841
+43U    CLA     IJ+1,2              43    J=IJ(L)                        OKF10842
+       PDX     0,4                                                      OKF10843
+44U    ZET     NL+1,4                    IF(NL(J))46,45,46              OKF10844
+       TXI     42U,2,1                                                  OKF10845
+45U    CLA     KC+1,2              45    KC(L)=KC(L)-NDELTA             OKF10846
+       SUB     NDELTA                                                   OKF10847
+       STO     KC+1,2              46    L=L+1                          OKF10848
+46U    TXI     42U,2,1                   GO TO 41                       OKF10849
+47U    TIX     32U,1,1             47    CONTINUE                       OKF10850
+48U    TNO     50U                       IF(ACCUMULATOR OVERFLOW)49,50  OKF10851
+49U    AXT     404,4               49    LER=404                        OKF10852
+       SXD     LER,4                                                    OKF10853
+50U    AXT     **,1                50    RETURN                         OKF10854
+       AXT     **,2                                                     OKF10855
+       AXT     **,4                                                     OKF10856
+       TRA     1,4                                                      OKF10857
+51U    AXT     107,4               51    LER=107                        OKF10858
+       SXD     LER,4                                                    OKF10859
+52U    TRA     50U                       GO TO 50                       OKF10860
+NDELTA BSS     1                         END                            OKF10861
+       EJECT                                                            OKF10862
+NODENO SXA     13N,2               FUNCTION NODENO(I)                   OKF10863
+       CLA     1,4                                                      OKF10864
+       STA     7N+1                                                     OKF10865
+7N     LXD     M,2                 DO 9  K=1,M                          OKF10866
+       CAL     **                                                       OKF10867
+8N     LAS     NN+1,2              IF(I-NN(K)) 9,12,9                   OKF10868
+       TRA     9N                                                       OKF10869
+       TRA     12N                                                      OKF10870
+9N     TIX     8N,2,1           9  CONTINUE                             OKF10871
+10N    LXD     M,2                 NODENO=M+1                           OKF10872
+       TXI     12N,2,1             GO TO 13                             OKF10873
+12N    PXD     0,2                 NODENO=K                             OKF10874
+13N    AXT     **,2            13  RETURN                               OKF10875
+       TRA     2,4                 END                                  OKF10876
+       EJECT                                                            OKF10877
+LCVR   CAL     1,4                 FUNCTION LCVR(KA)                    OKF10878
+       SUB     =1B35               COMPUTES FULL WORD INTEGER FROM TEN  OKF10879
+       STA     *+1                 BCD CHARACTERS                       OKF10880
+       CAL     **                        KA=LOCATION OF BCD CHARACTERS  OKF10881
+       CVR     A,,6                                                     OKF10882
+       SLW     W+1                                                      OKF10883
+       CAL*    1,4                                                      OKF10884
+       CVR     A,,6                                                     OKF10885
+       LDQ     W+1                                                      OKF10886
+       LGR     6                                                        OKF10887
+       STQ     W+1                                                      OKF10888
+       SLW     W                                                        OKF10889
+       LGR     1                                                        OKF10890
+       ANA     =H++++++                                                 OKF10891
+       SLW     FLAG                                                     OKF10892
+       XCL                                                              OKF10893
+       ANA     =H++++++                                                 OKF10894
+       ORS     FLAG                                                     OKF10895
+       CAL     W                                                        OKF10896
+       LDQ     W+1                                                      OKF10897
+       ANA     =H++++++                                                 OKF10898
+       SLW     ERR                                                      OKF10899
+       XCL                                                              OKF10900
+       ANA     =H++++++                                                 OKF10901
+       ORA     ERR                                                      OKF10902
+       TNZ     PRINT                                                    OKF10903
+CAQ    CAL     =O171717171717                                           OKF10904
+       ANS     W                                                        OKF10905
+       ANS     W+1                                                      OKF10906
+       PXD                                                              OKF10907
+       LDQ     W+1                                                      OKF10908
+       CAQ     TABLE,,5                                                 OKF10909
+       ARS     18                                                       OKF10910
+       STO     W+1                                                      OKF10911
+       LDQ     W                                                        OKF10912
+       RQL     6                                                        OKF10913
+       PXD                                                              OKF10914
+       CAQ     TABLE,,5                                                 OKF10915
+       ARS     18                                                       OKF10916
+       XCA                                                              OKF10917
+       MPY     =1E5B35                                                  OKF10918
+       XCA                                                              OKF10919
+       ADD     W+1                                                      OKF10920
+       ZET     FLAG                                                     OKF10921
+       SSM                                                              OKF10922
+       TRA     2,4                                                      OKF10923
+TABLE  PZE     B                                                        OKF10924
+       PZE     B,,10000                                                 OKF10925
+       PZE     B,,20000            20000                                OKF10926
+       PZE     B,,30000            30000                                OKF10927
+       PON     B,,7232             40000                                OKF10928
+       PON     B,,17232            50000                                OKF10929
+       PON     B,,27232            60000                                OKF10930
+       PTW     B,,4464             70000                                OKF10931
+       PTW     B,,14464            80000                                OKF10932
+       PTW     B,,24464            90000                                OKF10933
+B      PZE     C                        0                               OKF10934
+       PZE     C,,1000               1000                               OKF10935
+       PZE     C,,2000               2000                               OKF10936
+       PZE     C,,3000               3000                               OKF10937
+       PZE     C,,4000               4000                               OKF10938
+       PZE     C,,5000               5000                               OKF10939
+       PZE     C,,6000               6000                               OKF10940
+       PZE     C,,7000               7000                               OKF10941
+       PZE     C,,8000               8000                               OKF10942
+       PZE     C,,9000               9000                               OKF10943
+C      PZE     D                        0                               OKF10944
+       PZE     D,,100                 100                               OKF10945
+       PZE     D,,200                 200                               OKF10946
+       PZE     D,,300                 300                               OKF10947
+       PZE     D,,400                 400                               OKF10948
+       PZE     D,,500                 500                               OKF10949
+       PZE     D,,600                 600                               OKF10950
+       PZE     D,,700                 700                               OKF10951
+       PZE     D,,800                 800                               OKF10952
+       PZE     D,,900                 900                               OKF10953
+D      PZE     E                        0                               OKF10954
+       PZE     E,,10                   10                               OKF10955
+       PZE     E,,20                   20                               OKF10956
+       PZE     E,,30                   30                               OKF10957
+       PZE     E,,40                   40                               OKF10958
+       PZE     E,,50                   50                               OKF10959
+       PZE     E,,60                   60                               OKF10960
+       PZE     E,,70                   70                               OKF10961
+       PZE     E,,80                   80                               OKF10962
+       PZE     E,,90                   90                               OKF10963
+E      DEC     0,1B17,2B17,3B17,4B17,5B17,6B17,7B17,8B17,9B17           OKF10964
+FLAG   BSS     1                                                        OKF10965
+W      BSS     2                                                        OKF10966
+ERR    BSS     1                                                        OKF10967
+PRINT  SXA     RET,4                                                    OKF10968
+       CAL     1,4                                                      OKF10969
+       SLW     FIELD                                                    OKF10970
+       CALL    ERROR,KO,N,K                                             OKF10971
+FIELD  TSX     **                                                       OKF10972
+RET    AXT     **,4                                                     OKF10973
+       TRA     CAQ                                                      OKF10974
+A      PZE     A,,0                00    T0    00                       OKF10975
+       PZE     A,,4096             01          01                       OKF10976
+       PZE     A,,8192             02          02                       OKF10977
+       PZE     A,,12288            03          03                       OKF10978
+       PZE     A,,16384            04          04                       OKF10979
+       PZE     A,,20480            05          05                       OKF10980
+       PZE     A,,24576            06          06                       OKF10981
+       PZE     A,,28672            07          07                       OKF10982
+       PON     A,,0                10          10                       OKF10983
+       PON     A,,4096             11          11                       OKF10984
+       DUP     1,6                                                      OKF10985
+       PTW     A                   12-17       20                       OKF10986
+       PZE     A,,0                20          00                       OKF10987
+       PTW     A,,4096             21          21                       OKF10988
+       PTW     A,,8192             22          22                       OKF10989
+       PTW     A,,12288            23          23                       OKF10990
+       PTW     A,,16384            24          24                       OKF10991
+       PTW     A,,20480            25          25                       OKF10992
+       PTW     A,,24576            26          26                       OKF10993
+       PTW     A,,28672            27          27                       OKF10994
+       PTH     A,,0                30          30                       OKF10995
+       PTH     A,,4096             31          31                       OKF10996
+       DUP     1,6                                                      OKF10997
+       PTW     A                   32-37       20                       OKF10998
+       FOR     A,,0                40          40                       OKF10999
+       SIX     A,,4096             41          61                       OKF11000
+       SIX     A,,8192             42          62                       OKF11001
+       SIX     A,,12288            43          63                       OKF11002
+       SIX     A,,16384            44          64                       OKF11003
+       SIX     A,,20480            45          65                       OKF11004
+       SIX     A,,24576            46          66                       OKF11005
+       SIX     A,,28672            47          67                       OKF11006
+       SVN     A,,0                50          70                       OKF11007
+       SVN     A,,4096             51          71                       OKF11008
+       FOR     A,,0                52          40                       OKF11009
+       DUP     1,5                                                      OKF11010
+       PTW     A                   53-57       20                       OKF11011
+       PZE     A                   60          00                       OKF11012
+       PTW     A,,4096             61          21                       OKF11013
+       PTW     A,,8192             62          22                       OKF11014
+       PTW     A,,12288            63          23                       OKF11015
+       PTW     A,,16384            64          24                       OKF11016
+       PTW     A,,20480            65          25                       OKF11017
+       PTW     A,,24576            66          26                       OKF11018
+       PTW     A,,28672            67          27                       OKF11019
+       PTH     A,,0                70          30                       OKF11020
+       PTH     A,,4096             71          31                       OKF11021
+       DUP     1,6                                                      OKF11022
+       PTW     A                   72-77       20                       OKF11023
+JI     COMMON  4500                                                     OKF11024
+KC     COMMON  4500                                                     OKF11025
+KU     COMMON  4500                                                     OKF11026
+KX     COMMON  4500                                                     OKF11027
+NL     COMMON  1500                                                     OKF11028
+NN     COMMON  1500                                                     OKF11029
+NP     COMMON  1500                                                     OKF11030
+IJ     COMMON  1500                                                     OKF11031
+IL     COMMON  1501                                                     OKF11032
+JL     COMMON  1501                                                     OKF11033
+M      COMMON  1                                                        OKF11034
+N      COMMON  1                                                        OKF11035
+LER    COMMON  1                                                        OKF11036
+KAT    COMMON  1                                                        OKF11037
+KOR    COMMON  1                                                        OKF11038
+KTER   COMMON  1                                                        OKF11039
+MINE   COMMON  1                                                        OKF11040
+LC     COMMON  9                                                        OKF11041
+KA     COMMON  24                                                       OKF11042
+IFIN   COMMON  1                                                        OKF11043
+KI     COMMON  1                                                        OKF11044
+KO     COMMON  1                                                        OKF11045
+KQ     COMMON  9                                                        OKF11046
+K      COMMON  1                                                        OKF11047
+       END                                                              OKF11048
+*      CARDS   COLUMN                                                   OKF11049
+*      FAP                                                              OKF11050
+*              SHORT FAP SUBROUTINES                                    OKF11051
+       COUNT   66                                                       OKF11052
+       ENTRY   IBCD                                                     OKF11053
+       ENTRY   LISTNO                                                   OKF11054
+       ENTRY   PLACE                                                    OKF11055
+       ENTRY   LADDR                                                    OKF11056
+       ENTRY   LPROD                                                    OKF11057
+IBCD   SXA     X2,2                SUBROUTINE IBCD(JJ,KA,I)             OKF11058
+       AXT     13,2                 CONVERTS THE FULL WORD INTEGER,JJ,  OKF11059
+       CAL     2,4                   TO I BCD CHARACTERS AND STORES     OKF11060
+       SUB     =1B35                  THEM LEFT ADJUSTED IN KA(1) AND   OKF11061
+       STA     SLW                     KA(2). I MUST NOT EXCEED 12.     OKF11062
+       LDQ     =H 00000                                                 OKF11063
+SLQ    SLQ     TABLE+13,2                                               OKF11064
+       TIX     SLQ,2,1                                                  OKF11065
+       CLA*    1,4                                                      OKF11066
+       TPL     PLUS                                                     OKF11067
+       TZE     PLUS                                                     OKF11068
+       LDQ     =H-00000                                                 OKF11069
+       SLQ     FLAG                                                     OKF11070
+PLUS   XCL                                                              OKF11071
+       CAL*    3,4                                                      OKF11072
+       PDX     0,2                                                      OKF11073
+       PXD                                                              OKF11074
+LOOP   DVP     =10B35                                                   OKF11075
+       STQ     W                                                        OKF11076
+       LGR     6                                                        OKF11077
+       SLQ     TABLE+12,2                                               OKF11078
+       NZT     W                                                        OKF11079
+       TRA     NEG                                                      OKF11080
+       LDQ     W                                                        OKF11081
+       TIX     LOOP,2,1                                                 OKF11082
+       TRA     AFTER                                                    OKF11083
+NEG    LDQ     FLAG                                                     OKF11084
+       SLQ     TABLE+13,2                                               OKF11085
+AFTER  CAL     =H543210                                                 OKF11086
+       CVR     TABLE+6,,6                                               OKF11087
+       SLW*    2,4                                                      OKF11088
+       CAL     =H543210                                                 OKF11089
+       CVR     TABLE,,6                                                 OKF11090
+SLW    SLW     **                                                       OKF11091
+X2     AXT     **,2                                                     OKF11092
+       TRA     4,4                                                      OKF11093
+TABLE  DUP     1,6                                                      OKF11094
+       PZE     TABLE                                                    OKF11095
+       DUP     1,6                                                      OKF11096
+       PZE     TABLE+6                                                  OKF11097
+FLAG   PZE                                                              OKF11098
+W      BSS     1                                                        OKF11099
+       SPACE   2                                                        OKF11100
+LISTNO SXA     S5,2           FUNCTION LISTNO(KA,...)                   OKF11101
+       CLA     2,4             SEARCHES LIST OF BCD WORDS               OKF11102
+       STA     S1               BEGINNING AT *2,4 FOR WORD WHICH        OKF11103
+       AXT     0,2               MATCHES KA OR IS ALL BINARY ONES,      OKF11104
+S1     CAL     **,2               AND PUTS COUNT IN ACCUMULATOR.        OKF11105
+       TXI     S2,2,-1                                                  OKF11106
+S2     LAS*    1,4                                                      OKF11107
+       TRA     S3                                                       OKF11108
+       TRA     S4                                                       OKF11109
+S3     ERA     =O777777777777                                           OKF11110
+       TNZ     S1                                                       OKF11111
+S4     PXD     0,2                                                      OKF11112
+       PDC     0,2                                                      OKF11113
+       PXD     0,2                                                      OKF11114
+S5     AXT     **,2                                                     OKF11115
+       TRA     3,4                                                      OKF11116
+       SPACE   2                                                        OKF11117
+LADDR  CAL*    1,4                 FUNCTION LADDR(J)                    OKF11118
+       ANA     =O77777              RETURNS ADDRESS OF J AS             OKF11119
+       ALS     18                    A FORTRAN INTEGER.                 OKF11120
+       TRA     2,4                                                      OKF11121
+       SPACE   2                                                        OKF11122
+LPROD  LDQ*    1,4                 FUNCTION LPROD(I,J)                  OKF11123
+       MPY*    2,4                  RETURNS THE LOWER 35 BITS OF THE    OKF11124
+       XCA                            PRODUCT OF I AND J, WHERE I AND J OKF11125
+       TRA     3,4                    ARE FULL WORD INTEGERS.           OKF11126
+       SPACE   2                                                        OKF11127
+PLACE  CLA*    1,4                 SUBROUTINE PLACE(I,J)                OKF11128
+       ARS     18                   REPLACES THE ADDRESS OF J BY THE    OKF11129
+       STA*    2,4                   DECREMENT OF I.                    OKF11130
+       TRA     3,4                                                      OKF11131
+       END                         END                                  OKF11132
+*      CARDS COLUMN                                                     OKF11133
+*      LIST                                                             OKF11134
+       SUBROUTINE ERROR(KO,N,K,KFIELD)                                  OKF11135
+       DIMENSION KFIELD(2)                                              OKF11136
+       WRITE OUTPUT TAPE KO,1,N,K,KFIELD(1),KFIELD(2)                   OKF11137
+      RETURN                                                            OKF11138
+    1  FORMAT(29H0DATA CARD PUNCHING ERROR, N=I5,3H K=I5,7H FIELD=2A6)  OKF11139
+       END                                                              OKF11140

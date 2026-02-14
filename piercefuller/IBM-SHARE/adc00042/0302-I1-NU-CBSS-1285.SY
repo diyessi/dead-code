@@ -1,0 +1,424 @@
+* CBSS      424 12141   COLUMN BINARY SYMBOLIC SUBROUTINE LOADER        CBSS0001
+*      FAP                                                              CBSS 002
+       LBL     CBSS,9                                                   CBSS 003
+*                                                                       CBSS 004
+       REM     THE FOLLOWING THREE INSTRUCTIONS ARE READ INTO 0,1,2     CBSS 005
+       FUL                                                              CBSS 006
+       ORG     32440                                                    CBSS 007
+       IOCD    TSTART,0,-TSTART   BOOTSTRAP                             CBSS 008
+       TCOA    1                                                        CBSS 009
+       TTR     TSTART                                                   CBSS 010
+*                                                                       CBSS 011
+TSTART AXT     TSTART,1           ZERO GARBBAGE                         CBSS 012
+       STZ     TSTART+3,1         LEFT BY LAST PROGRAM.                 CBSS 013
+       TXL     LSTART,1,4                                               CBSS 014
+       TXI     *-2,1,-1                                                 CBSS 015
+LSTART CLA     2                  PUT TTR IN MANUAL RESTART LOC.        CBSS 016
+       STO     95                                                       CBSS 017
+       LTM                        INITIALIZE THE MACHINE.               CBSS 018
+       SLF                                                              CBSS 019
+       LAXM                                                             CBSS 020
+       TRA     *+1                                                      CBSS 021
+       TEFA    *+1                                                      CBSS 022
+*                                                                       CBSS 023
+       REM     REENTRY IF SUBROUTINES MISSING AFTER TRANSFER CARD       CBSS 024
+       STZ     OVRLAP             RESET MISSING SUBROUTINE FLAG         CBSS 025
+RETURN STZ     FLOP               RESET FLIP FLOP STORAGE FOR ABS CARDS.CBSS 026
+RDCARD RCDA                       READS FIRST 2 WORDS                   CBSS 027
+       RCHA    IOCTL                                                    CBSS 028
+       LCHA    IOCTR                                                    CBSS 029
+       IOT                        TEST I/O CHECK INDICATOR              CBSS 030
+       TRA     WHAT               INDICATOR ON                          CBSS 031
+       TRA     IOCOK              INDICATOR OFF, GET NEXT CARD          CBSS 032
+ WHAT  TEFA    EOFRD              WAS THE I/O CHECK CAUSED BY AN EOF    CBSS 033
+PROGBK PZE                        NO,LOADING CAN NOT CONTINUE. (ALSO    CBSS 034
+*                                 USED FOR SAVING CURRENT PROGRAM BK)   CBSS 035
+ EOFRD HTR     RDCARD             YES,PAUSE AND THEN PROCEED.           CBSS 036
+ IOCOK CAL     ROW                                                      CBSS 037
+       ZET     LSTART             IS THIS A SELF LOADER.                CBSS 038
+       TRA     BLTEST             NO.                                   CBSS 039
+       SLW     BUF                YES, SET UP CARD LOADING SEQUENCE.    CBSS 040
+       LCHA    IOCT8                                                    CBSS 041
+       CLA     ROW+1                                                    CBSS 042
+       STO     BUF+1                                                    CBSS 043
+       LCHA    0                                                        CBSS 044
+       TRA     1                                                        CBSS 045
+BLTEST TZE     RDCARD             SKIP IF BLANK CARD.                   CBSS 046
+*                                                                       CBSS 047
+       REM     CONVERSION OF COL CARD TO ROW CARD                       CBSS 048
+ OK    AXT     12,3               INITIALIZE IR1 AND IR2 PER CARD       CBSS 049
+ C     LCHA    ROWLR              LOOPS HERE TO READ CARD 2 WORDS AT A  CBSS 050
+*                                 TIME                                  CBSS 051
+       LDQ     ROW+1              PREPARE LEFT WORD TO BE CONVERTED     CBSS 052
+       TRA     E                                                        CBSS 053
+ D     LDQ     ROW                PREPARE RIGHT WORD TO BE CONVERTED    CBSS 054
+ E     VLM     MULT,0,3           BEGIN CONVERSION                      CBSS 055
+       ANA     MASK                                                     CBSS 056
+       ALS     12,1                                                     CBSS 057
+       TXI     *+1,2,1                                                  CBSS 058
+       TXL     *+2,1,11           IS IT NECESSARY TO ZERO BUFFER        CBSS 059
+       STZ     BUF+36,2           YES                                   CBSS 060
+       ORS     BUF+36,2           NO, PAST THE 9 ROW                    CBSS 061
+       TXL     E,2,23             IS IT TIME TO CONVERT THE SIGN BIT OF CBSS 062
+*                                 9R                                    CBSS 063
+       TXL     *+2,2,24           IS 9R CONVERTED AS WELL               CBSS 064
+       TXL     E,2,35             IS IT TIME TO CONVERT THE SIGN BIT OF CBSS 065
+*                                 9L                                    CBSS 066
+       CLM                        BEGIN CONVERSION OF SIGN BIT          CBSS 067
+       LGL     37,1                                                     CBSS 068
+       ORS     BUF+36,2                                                 CBSS 069
+       TNX     D,2,24             LOOP FOR 9L                           CBSS 070
+       TIX     C,1,1              LOOP FOR NEXT 2 WORDS                 CBSS 071
+*                                                                       CBSS 072
+       REM     CHECK FOR ABSOLUTE  OR SELF LOADER CONTROL CARD          CBSS 073
+       LDI     BUF                                                      CBSS 074
+       LNT     700                IS THIS AN ABSOLUTE CONTROL CARD      CBSS 075
+       TRA     MOVE               NO                                    CBSS 076
+       ZET     FLOP               YES                                   CBSS 077
+       TRA     RETURN             END OF ABSOLUTE DECK                  CBSS 078
+       CLA     IOCTL              BEGINNING OF ABSOLUTE DECK            CBSS 079
+       STD     FLOP                                                     CBSS 080
+       TRA     RDCARD                                                   CBSS 081
+ MOVE  ZET     FLOP               IS THIS A 23 WORD ABS CARD.           CBSS 082
+       TRA     ABSCOL             YES.                                  CBSS 083
+       LNT     300                IS THIS A SELF LOADER CONTROL CARD    CBSS 084
+       TRA     RELCOL             NO                                    CBSS 085
+       STZ     LSTART             YES                                   CBSS 086
+       TRA     RDCARD             GO READ SELF LOADER                   CBSS 087
+*                                                                       CBSS 088
+       REM     CARD IS A 23 WORD ABSOLUTE CARD                          CBSS 089
+ABSCOL CAL     BUF                OBTAIN INITIAL INFO                   CBSS 090
+       LGR     12                                                       CBSS 091
+ MASK  PDC     4097,1             2,S COMP OF WC TO IR1                 CBSS 092
+       STQ     ROW+1              CHECK SUM                             CBSS 093
+       STO     ROW                COL 1 AND 2                           CBSS 094
+       LGR     12                                                       CBSS 095
+       ARS     3                                                        CBSS 096
+       LGL     12                 ADD OF AC = ADD                       CBSS 097
+       LFT     370000                                                   CBSS 098
+       TRA     ABSINS                                                   CBSS 099
+       STA     TRADDR                                                   CBSS 100
+       CLA     SKIP                                                     CBSS 101
+       STO     INITTA+3                                                 CBSS 102
+       TRA     FORTRA                                                   CBSS 103
+ABSINS STA     ABSLUP                                                   CBSS 104
+ABSLUP TNX     0,1                                                      CBSS 105
+       CLA     ROW                COMPUTE ABS CK SUM                    CBSS 106
+ GO    ACL     BUF,1                                                    CBSS 107
+       LDQ     BUF,1                                                    CBSS 108
+       TXI     *+1,1,1                                                  CBSS 109
+       STQ*    ABSLUP             ASSIGN INSTR LOC                      CBSS 110
+       TIX     GO,1               LOOP FOR ABS CKSUM                    CBSS 111
+ H     LDQ     ZERO                                                     CBSS 112
+       LGR     24                                                       CBSS 113
+       ALS     24                                                       CBSS 114
+       STQ     ROW                                                      CBSS 115
+       ACL     ROW                                                      CBSS 116
+       TIX     H,2,2                                                    CBSS 117
+       NZT     ROW+1              IS CK SUM BLANK                       CBSS 118
+       TRA     RDCARD                                                   CBSS 119
+       ERA     ROW+1                                                    CBSS 120
+       TZE     *+2                IS CHECK SUM CORRECT                  CBSS 121
+       TSX     NOCHK+1,2          NO                                    CBSS 122
+       TRA     RDCARD             YES                                   CBSS 123
+*                                                                       CBSS 124
+       REM     DECIDE THE KIND OF  CARD EXCLUDING 23 WD ABS,CBSS CONTROLCBSS 125
+       REM     CARDS AND A SELF LOADER                                  CBSS 126
+RELCOL CLA     BUF                                                      CBSS 127
+       ARS     15                 GET PREFIX OF CARD                    CBSS 128
+COMORG PDX     0,4                (ADDRESS FIELD USED AS COMMON         CBSS 129
+*                                 DECREMENT                             CBSS 130
+       ALS     28                                                       CBSS 131
+       ARS     13                                                       CBSS 132
+       PDX     BUF,1               WC GOES TO IR1                       CBSS 133
+       TXL     SORTCD,1,31        IS THIS A FORTRAN CONTROL CARD        CBSS 134
+*                                                                       CBSS 135
+       REM     CARD IS CONTROL CARD                                     CBSS 136
+CONCRD CLA     BUF                                                      CBSS 137
+       ADD     LOWCTR             CHANGE RELOCATED LOAD POINT           CBSS 138
+       STA     LOWCTR             BY VALUE OF 9L ADDRESS.               CBSS 139
+       CLA     BUF+1              SET COMMON ORIGIN                     CBSS 140
+       STA     COMORG             TO 9R ADDRESS                         CBSS 141
+       TRA     RDCARD                                                   CBSS 142
+*                                                                       CBSS 143
+       REM     CARD MAY BE DATA,TR,PROGCD,OR SYM TBL CARD               CBSS 144
+SORTCD TPL     INSTR              TRANSFER IF NOT A PROGRAM CARD, FORT  CBSS 145
+       REM                        CONTROL CARD, OR SYMBOL TABLE CARD    CBSS 146
+       TXH     RDCARD,4,1         TRANSFER IF A SYMBOL TABLE CARD       CBSS 147
+       TXL     FORTRA,1,0         TRANSFER IF FORTRAN TRANSFER CARD     CBSS 148
+*                                                                       CBSS 149
+       REM     CARD IS PROGRAM CARD                                     CBSS 150
+       TSX     PCABI,2            COMPUTE CHECKSUM                      CBSS 151
+       SLT     3                  IS THIS FIRST PROGRAM CARD            CBSS 152
+       TXI     *+3                YES SENSE LIGHT OFF                   CBSS 153
+       SLN     4                  NO SKIP 8L AND 8R SECTION             CBSS 154
+       TRA     CONPC                                                    CBSS 155
+       CLA     BUF+2              GET 8L.                               CBSS 156
+       LDQ     LOWCTR                                                   CBSS 157
+       STA     PROGBK             SAVE OBJECT PROGRAM BREAK             CBSS 158
+       ADD     LOWCTR             CALCULATE NEW RELOCATED LOAD POINT    CBSS 159
+       STA     LOWCTR             FOR NEXT SUBROUTINE                   CBSS 160
+       CLA     BUF+3              GET 8R                                CBSS 161
+       ADM     COMORG             COMPUTE NEW COMMON BREAK              CBSS 162
+       REM                        IF FORTRAN CONTROL CARD READ          CBSS 163
+       ANA     ADDMSK             GET RID OF JUNK                       CBSS 164
+       TZE     *+2                                                      CBSS 165
+       CAS     COMMBK             IS THIS COMMON BREAK LOWER            CBSS 166
+       CLA     COMMBK             NO,GET OLD COMMON BREAK.              CBSS 167
+ SKIP  NOP                                                              CBSS 168
+       STO     COMMBK             YES RESET COMMON BREAK                CBSS 169
+       SUB     LOWCTR             DOES COMMON STORAGE OVERLAP PROG INSTRCBSS 170
+       TMI     OVRLAP             YES, GO TO STOP                       CBSS 171
+       STQ     BUF+3              NO STO RELOCATED LD PT FOR PROG       CBSS 172
+ CONPC SXA     *+1,1              SAVE IR1                              CBSS 173
+       PXA     0,1                WC TO AC                              CBSS 174
+       SBM     EPLORG             OBTAIN ADDRESS OF 8L                  CBSS 175
+       STA     SHIFT              MOVE 8L ON TO ENTRY POINT LIST        CBSS 176
+       AXT     0,2                                                      CBSS 177
+LUPEPL CLA     BUF+2,2                                                  CBSS 178
+ SHIFT STO     0,2                 ADD GETS 4 FOR REL INSTR CARD        CBSS 179
+       TXI     *+1,2,-1                                                 CBSS 180
+       TIX     LUPEPL,1,1         LOOP TO FORM EPLIST                   CBSS 181
+       LXA     LUPEPL-4,4                                               CBSS 182
+       SLT     4                                                        CBSS 183
+       TXI     *+1,4,-2                                                 CBSS 184
+EPLORG CLA     EPLIST,1           EPLOC REL TO 0 INTO AC                CBSS 185
+       TSX     RELLOD,2           RELOCATE                              CBSS 186
+       STA*    EPLORG             INSERT RELOCATED ENTRY POINT IN LIST  CBSS 187
+       TXI     *+1,1,2                                                  CBSS 188
+       TIX     EPLORG,4,2                                               CBSS 189
+       CLA     SHIFT              RESET ORIGIN FOR NEXT CARD            CBSS 190
+       STA     EPLORG                                                   CBSS 191
+       ANA     ADDMSK                                                   CBSS 192
+       SLN     3                  SET PROGRAM CARD FLAG                 CBSS 193
+       SUB     LOWCTR             DOES ENTRY POINT LIST OVERLAP         CBSS 194
+*                                 LOADED DATA                           CBSS 195
+       TPL     RDCARD             NO, READ NEXT CARD                    CBSS 196
+ADDMSK PZE     -1                 YES, LOADING CAN NOT CONTINUE         CBSS 197
+*                                                                       CBSS 198
+       REM     CARD MAY BE REL OR ABS INSTR OR TRANSFER CARD            CBSS 199
+ INSTR TXH     RELCK,4,1          TRANSFER IF CARD IS RELOCATABLE       CBSS 200
+       TXL     ABSTR,1,0          TRANSFER IF CARD IS ABS TR CARD       CBSS 201
+*                                                                       CBSS 202
+       REM     CARD IS A 22 WORD ABSOLUTE INSTRUCTION CARD              CBSS 203
+       TSX     PCABI,2            CALCULATE CKSUM OF ABS INSTR CARD     CBSS 204
+       CLA     BUF                 BEGIN STORING WORDS  (22WORD) ABS    CBSS 205
+       STA     ABLOC               STORE LOAD ADDRESS                   CBSS 206
+       PXA     0,1                                                      CBSS 207
+       PAC     0,1                                                      CBSS 208
+       CLA     BUF+1,1             STORE LAST WORD FIRST                CBSS 209
+       TXI     *+1,1,1                                                  CBSS 210
+ ABLOC STO     0,1                                                      CBSS 211
+       TXH     *-3,1,0             LOOPS FOR 22 WORD ABS INSTR CARD     CBSS 212
+       TRA     RDCARD                                                   CBSS 213
+*                                                                       CBSS 214
+       REM     CARD IS AN ABSOLUTE TRANSFER CARD                        CBSS 215
+ ABSTR CLA     BUF                 HAVE AN ABSOLUTE TRANSFER CARD       CBSS 216
+       STA     TRADDR              TR ADDRESS TO 137 OCTAL              CBSS 217
+       CLA     SKIP                                                     CBSS 218
+       STO     INITTA+3                                                 CBSS 219
+       TRA     FORTRA              SEARCH ENTRY POINT LIST              CBSS 220
+*                                                                       CBSS 221
+       REM     CARD MAY BE REL INSTR CARD OR RELOCATABLE BINARY TR CARD CBSS 222
+ RELCK CAL     BUF                                                      CBSS 223
+       TSX     RELLOD,2                                                 CBSS 224
+       TXL     ABSTR+1,1,0        TRANSFER IS CARD IS REL BIN TR CARD   CBSS 225
+*                                                                       CBSS 226
+       REM     CARD IS A RELOCATABLE INSTRUCTION CARD                   CBSS 227
+       SXD     NOCHK+1,1                                                CBSS 228
+       STA     ADDRSS                                                   CBSS 229
+       AXT     BUF+4,2                                                  CBSS 230
+       SXA     SHIFT,2                                                  CBSS 231
+ADDRSS PXA     0,1,0                                                    CBSS 232
+       ADD     SHIFT                                                    CBSS 233
+       STA     RI                                                       CBSS 234
+       SUB     SHIFT                                                    CBSS 235
+       ADD     ADDRSS                                                   CBSS 236
+       STA     ORGCRD                                                   CBSS 237
+ RI    CLA     0,1                                                      CBSS 238
+       STO*    ORGCRD                                                   CBSS 239
+       TIX     RI,1,1             LOAD RELOCATABLE INSTRUCTION CARD     CBSS 240
+       LXD     NOCHK+1,1                                                CBSS 241
+       SLF                                                              CBSS 242
+       TSX     CHKSUM,2           COMPUTE CHECK SUM                     CBSS 243
+       LDQ     BUF+3              GET RIGHT HALF RELOCATION BITS        CBSS 244
+*                                                                       CBSS 245
+       REM     ENTRY TO RELOCATE EACH DATA WORD                         CBSS 246
+RELDEC TSX     RELBIT,4           GET NEXT RELOCATION BIT               CBSS 247
+       TPL     RELADD             IS DECREMENT RELOCATABLE              CBSS 248
+       CLA*    ORGCRD             YES, GET DECREMENT PORTION OF WORD    CBSS 249
+       ARS     18                                                       CBSS 250
+       TSX     RELDAT,2           RELOCATE DECREMENT                    CBSS 251
+       ALS     18                                                       CBSS 252
+       STD*    ORGCRD             INSERT RELOCATE DECREMENT             CBSS 253
+RELADD TSX     RELBIT,4           GET NEXT RELOCATION BIT               CBSS 254
+       TPL     *+4                IS ADDRESS RELOCATABLE                CBSS 255
+       CLA*    ORGCRD             YES, GET ADDRESS PORTION OF WORD      CBSS 256
+       TSX     RELDAT,2           RELOCATE ADDRESS                      CBSS 257
+       STA*    ORGCRD             INSERT RELOCATED ADDRESS              CBSS 258
+       TIX     RELDEC,1,1         IS CARD EXHAUSTED                     CBSS 259
+       TRA     RDCARD             YES, GET NEXT CARD                    CBSS 260
+*                                                                       CBSS 261
+       REM     CLOSED SUBROUTINE TO RELOCATE DATA                       CBSS 262
+RELDAT STA     ADDRSS             SAVE LOCATION TO BE RELOCATED         CBSS 263
+       TSX     RELBIT,4           GET NEXT RELOCATION BIT               CBSS 264
+       TPL     *+2                IS LOCATION DIRECTLY RELOCATABLE      CBSS 265
+       SLN     1                  NO, SET COMPLEMENT RELOCATABLE FLAG   CBSS 266
+       SLN     2                  SET DATA FLAG                         CBSS 267
+       CAL     ADDRSS             GET LOCATION TO BE RELOCATED          CBSS 268
+*                                                                       CBSS 269
+       REM     ENTRY POINT FOR LOAD OR TRANSFER ADDRESS.                CBSS 270
+RELLOD ANA     ADDMSK             COMPUTE DIFFERENCE BETWEEN LOCATION   CBSS 271
+       SUB     PROGBK             AND OBJECT PROGRAM BREAK.             CBSS 272
+       SLT     2                  IS THIS DATA                          CBSS 273
+       TRA     RELPRO             NO,THIS IS TRANSFER OR LOAD ADDRESS.  CBSS 274
+       TPL     RELCOM             YES,IS LOCATION ABOVE PROGRAM BREAK   CBSS 275
+       SLT     1                  NO, IS IT COMPLEMENT RELOCATABLE      CBSS 276
+       TRA     RELPRO             NO,GO RELOCATE UPWARD5.               CBSS 277
+*                                                                       CBSS 278
+       REM     RELOCATE COMMON STORAGE DOWNWARDS                        CBSS 279
+       CAL     ADDRSS             GET LOCATION TO BE RELOCATED          CBSS 280
+       ADM     COMORG             ADD COMMON REASSIGNMENT               CBSS 281
+       TRA     1,2                                                      CBSS 282
+*                                                                       CBSS 283
+       REM     REENTRY FOR LOCATIONS ABOVE PROGRAM BREAK                CBSS 284
+RELCOM SLT     1                  IS IT COMPLEMENT RELOCATABLE          CBSS 285
+       TRA     *-4                NO, GO RELOCATE DOWNWARDS             CBSS 286
+*                                                                       CBSS 287
+       REM     RELOCATE PROGRAM DATA UPWARDS.                           CBSS 288
+RELPRO ADD     LOWCTR             ADD RELOCATED PROGRAM BREAK TO        CBSS 289
+*                                 DIFFERENCE                            CBSS 290
+       TRA     1,2                BETWEEN LOCATION AND OBJECT PROGRAM   CBSS 291
+*                                 BREAK                                 CBSS 292
+*                                                                       CBSS 293
+       REM     CLOSED SUBROUTINE TO GET NEXT RELOCATION BIT             CBSS 294
+RELBIT CLA     BUF+2              GET CURRENT RELOCATION BITS           CBSS 295
+       LGL     1                  SHIFT IN NEXT BIT AND                 CBSS 296
+       SLW     BUF+2              SAVE RESIDUE                          CBSS 297
+       TRA     1,4                                                      CBSS 298
+*                                                                       CBSS 299
+       REM     CLOSED SUBROUTINE TO COMPUTE CHECK SUMS                  CBSS 300
+ PCABI PXA     0,1                                                      CBSS 301
+       ADD     CHKSUM+5                                                 CBSS 302
+       STA     ORGCRD                                                   CBSS 303
+CHKSUM SXD     NOCHK+1,1                                                CBSS 304
+       CAL     BUF                GET 9L                                CBSS 305
+       TXL     ORGCRD,4,0          TR IF PC OR 22 WORD ABS HAS COL 3=0  CBSS 306
+       TXL     NOCHK,4,1           TR IF PC OR 22 WORD ABS HAS COL 3=1  CBSS 307
+       TXH     NOCHK,4,2           TR IF REL INSTR CARD HAS COL 3=1     CBSS 308
+       ACL     BUF+2              BEGIN INSTR CHKSUM                    CBSS 309
+       ACL     BUF+3                                                    CBSS 310
+ORGCRD ACL     0,1,0                                                    CBSS 311
+       TIX     ORGCRD,1,1                                               CBSS 312
+       LAS     BUF+1              DO CHECKSUMS AGREE                    CBSS 313
+       NZT     BUF+1              NO IS 9R = 0                          CBSS 314
+ NOCHK TRA     *+2                YES 9R AGREES OR IS ZERO              CBSS 315
+       HTR     *+1                NO, PAUSE AND THEN ACCE+T             CBSS 316
+       LXD     NOCHK+1,1                                                CBSS 317
+       TRA     1,2                                                      CBSS 318
+*                                                                       CBSS 319
+       REM     CARD IS A TRANSFER CARD                                  CBSS 320
+FORTRA LAC     EPLORG,2           COMPUTE LENGTH OF ENTRY POINT LIST    CBSS 321
+       TXI     *+1,2,EPLIST                                             CBSS 322
+       SXA     EPLCNT,2           SAVE COUNT                            CBSS 323
+       TXI     ENDTST+1,2,2       BUMP TO TEST BEFORE USING DATA        CBSS 324
+*                                                                       CBSS 325
+       REM     REENTRY AFTER ONE OBJECT PROGRAM TRANSFER VECTOR IS DONE CBSS 326
+       REM     TO INITIALIZE TRANSFER VECTOR IN NEXT PROGRAM            CBSS 327
+INITTA CAL     EPLIST,2           GET NEXT NAME IN ENTRY POINT LIST     CBSS 328
+       TNZ     *+4                IS THIS MAIN PROGRAM                  CBSS 329
+       CLA     EPLIST+1,2         YES GET ENTRY POINT TO MAIN PROGRAM   CBSS 330
+       STA     TRADDR             INITIALIZE TRANSFER ADDRESS           CBSS 331
+       TRA     ENDTST+1           TEST FOR END OF ENTRY POINT LIST      CBSS 332
+       ANA     PREFLG             IS THIS 8L OF PROGRAM CARD,OR         CBSS 333
+       TNZ     ENDTST+1           NAME OF ENTRY POINT                   CBSS 334
+       CLA     EPLIST,2           NO GET TRANSFER VECTOR COUNT          CBSS 335
+       PDX     0,4                                                      CBSS 336
+       PXA     0,4                TRANSFER VECTOR COUNT TO AC           CBSS 337
+       ADD     EPLIST+1,2         COMPUTE ORIGIN AT TOP OF TRANSFER     CBSS 338
+*                                 VECTOR                                CBSS 339
+       STA     ORGVEC             INITIALIZE ORIGIN AT TOP OF VECTOR    CBSS 340
+*                                                                       CBSS 341
+       REM     REENTRY TO INITIALIZE NEXT VECTOR NAME IN OBJECT PROGRAM CBSS 342
+EPLCNT AXT     0,1                LOAD ENTRY POINT LIST COUNT           CBSS 343
+ORGVEC CAL     0,4                GET NEXT NAME ON OBJECT PROGRAM VECTORCBSS 344
+       ANA     PREFLG             HAS THIS NAME BEEN INITIALIZED        CBSS 345
+       TZE     ENDTST             YES                                   CBSS 346
+       CAL*    ORGVEC             NO, GET NAME AGAIN                    CBSS 347
+       LAS     EPLIST,1           IS NAME ON ENTRY POINT LIST           CBSS 348
+       TRA     *+2                                                      CBSS 349
+       TRA     INITVC             YES                                   CBSS 350
+       TIX     *-3,1,2            IS ENTRY POINT LIST EXHAUSTED         CBSS 351
+       AXT     20,1               YES GET COUNT OF MISSING LIST BUFFER  CBSS 352
+       NZT     TVLIST,1           IS THIS CELL EMPTY                    CBSS 353
+       TRA     ADLOST             YES                                   CBSS 354
+       LAS     TVLIST,1           NO, IS THIS LOST TRANSFER VECTOR NAME CBSS 355
+       TRA     *+2                                                      CBSS 356
+       TRA     ENDTST             YES, IGNORE THIS NAME                 CBSS 357
+       TIX     *-5,1,1            IS MISSING LIST EXHAUSTED             CBSS 358
+*                                 MISSING NAMES                         CBSS 359
+       HTR     RETURN-1           YES, STOP ON MORE THAN 20             CBSS 360
+*                                                                       CBSS 361
+       REM     ADD NAME TO MISSING TRANSFER VECTOR LIST                 CBSS 362
+ADLOST SLW     TVLIST,1           ADD NAME TO MISSING LIST              CBSS 363
+       STZ     TVLIST+1,1         CLEAR NEXT CELL TO SET SEARCH STOP    CBSS 364
+       TTR     ENDTST             TEST FOR END OF TRANSFER VECTOR       CBSS 365
+*                                                                       CBSS 366
+       REM     TRANSFER VECTOR NAME HAS BEEN FOUND                      CBSS 367
+INITVC CAL     *-1                GET TTR COMMOND                       CBSS 368
+       SLW*    ORGVEC             INSERT IN TRANSFER VECTOR             CBSS 369
+       CLA     EPLIST+1,1         GET ENTRY POINT AND                   CBSS 370
+       STA*    ORGVEC             SET TRANSFER VECTOR ADD               CBSS 371
+*                                                                       CBSS 372
+       REM     REENTRY FOR NAME ALREADY INITIALIZED OR MISSING          CBSS 373
+ENDTST TIX     EPLCNT,4,1         IS TRANSFER VECTOR EXHAUSTED          CBSS 374
+*                                                                       CBSS 375
+       REM     REENTRY FOR TRANSFER CARD OR MAIN PROGRAM                CBSS 376
+       TIX     INITTA,2,2         IS ENTRY POINT LIST EXHAUSTED         CBSS 377
+       ZET     OVRLAP             YES, ARE ANY ENTRY POINTS MISSING     CBSS 378
+       HTR     RETURN-1           MISSING SUBROUTINE STOP               CBSS 379
+       LXA     LOWCTR,4           NO, SET PARAMETERS FOR WD I/O PACKAGE CBSS 380
+       PXD     0,4                PLACE HIGHEST LOCATION IN LOWER CORES CBSS 381
+       ORA     COMMBK             IN DECREMENT AND LOWEST LOCATION IN   CBSS 382
+       STO     WDIO               COMMON IN THE ADDRESS                 CBSS 383
+       LXA     EPLCNT,2           COMPUTE LENGTH OF LOADER AND EPLIST   CBSS 384
+       TXI     TRAOUT,2,LCLEAR-EPLIST+1                                 CBSS 385
+*                                                                       CBSS 386
+       REM     CONSTANTS                                                CBSS 387
+LOWCTR PZE     100                RELOCATED PROGRAM BREAK OF PROGRAM    CBSS 388
+PREFLG SVN                                                              CBSS 389
+COMMBK PZE     -1                 LOWEST COMMON BREAK LOADED            CBSS 390
+ MULT  OCT     200040010                                                CBSS 391
+ FLOP  PZE                                                              CBSS 392
+ ZERO  PZE                                                              CBSS 393
+*                                                                       CBSS 394
+       REM     EDITING REMARKS                                          CBSS 395
+OVRLAP SYN     TSTART-21                                                CBSS 396
+ WDIO  SYN     99                                                       CBSS 397
+ BUF   EQU     0                                                        CBSS 398
+ ROW   SYN     BUF+24                                                   CBSS 399
+TVLIST SYN     TSTART-1                                                 CBSS 400
+EPLIST SYN     TSTART-22                                                CBSS 401
+TRADDR SYN     95                                                       CBSS 402
+*                                                                       CBSS 403
+       REM     COMMANDS USED BY PROG                                    CBSS 404
+ IOCTL IOCT    ROW,0,1                                                  CBSS 405
+ IOCTR IOCT    ROW+1,0,1                                                CBSS 406
+ IOCT8 IOCT    BUF+2,0,1                                                CBSS 407
+ ROWLR IOST    ROW,0,2                                                  CBSS 408
+*                                                                       CBSS 409
+       REM     AFTER SUCCESSFUL LOAD,ERASE LOADER, ENTRY POINT LIST,    CBSS 410
+       REM     AND TURN OFF ALL TRIGGERS                                CBSS 411
+TRAOUT LFTM                                                             CBSS 412
+       TOV     *+1                                                      CBSS 413
+       TQO     *+1                                                      CBSS 414
+       EFTM                                                             CBSS 415
+       AXT     26,1               CLEAR LOWER CORE                      CBSS 416
+ CLBUF STZ     BUF+26,1                                                 CBSS 417
+       TIX     CLBUF,1,1                                                CBSS 418
+LCLEAR STZ     *+1,2                                                    CBSS 419
+       TIX     *-1,2,1                                                  CBSS 420
+       AXT     0,7                                                      CBSS 421
+       TRA     TRADDR             TRANSFER TO MAIN PROGRAM              CBSS 422
+*                                                                       CBSS 423
+       END                                                              CBSS 424

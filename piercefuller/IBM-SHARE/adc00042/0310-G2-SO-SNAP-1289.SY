@@ -1,0 +1,590 @@
+*     SNAP (REGRESSION ANALYSIS)                                        SNAP0001
+*     XEQ                                                               SNAPB002
+*     LIST8                                                             SNAP0003
+*     LABEL                                                             SNAP0004
+C00183 SNAP - MULTIPLE REGRESSION ANALYSIS                              SNAP0005
+      DIMENSION X(60),NTRAN(30),SUMX(30),SUMX2(30),SUMXX(30,30),ZEAN(30)SNAP0006
+     1,CORR(30,30),          B(30,9),BO(9),TOTVAR(9),VARREG(9),R(9),VAR SNAP0007
+     2(9),STDEV(9),TT(30,9),T(34),IPIVOT(30),INDEX(30,2),PIVOT(30),CHI(9SNAP0008
+     3),YCALC(9),DIFSQD(9),YDIFR(9),VARCHK(9),CON(60),NCON(60)          SNAP0009
+     4,NTERM(30),NXCOD(30),IDENT(12),RSQD(9),DEVB(30,9)                 SNAP0010
+      COMMON PIVOT,INDEX,IPIVOT                                         SNAP0011
+      EQUIVALENCE (IROW,JROW),(ICOLUM,JCOLUM),(AMAX,T,SWAP)             SNAP0012
+      NEXT=2                                                            SNAP0013
+      INPUT5=5                                                          SNAP0014
+      LIST=6                                                            SNAP0015
+      INTER=3                                                           SNAP0016
+   10 READ INPUT TAPE INPUT5,101,IDENT,NOVAR,NODEP,NOTERM,NOOB,NORIGI,  SNAP0017
+     1IFTT,IFCHI,IFTRAN,IFEQUA,KONNO,NTRANS,INPUT,IFWT                  SNAP0018
+  101 FORMAT(12A6/3I2,I5,5I1,3I2,I1)                                    SNAP0019
+      REWIND INTER                                                      SNAP0020
+      REWIND NEXT                                                       SNAP0021
+      WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0022
+  200 FORMAT(1H1,12A6)                                                  SNAP0023
+      WRITE OUTPUT TAPE LIST,201,NOVAR,NOTERM ,NOOB, NODEP              SNAP0024
+  201 FORMAT(1H0,10HPARAMETERS,2X,6HNOVAR=I5,2X,7HNOTERM=I2,2X,5HNOOB=I5SNAP0025
+     1,2X,6HNODEP=I3)                                                   SNAP0026
+      ICOL=NOVAR + NODEP                                                SNAP0027
+      JCOL= NOTERM+NODEP                                                SNAP0028
+      DO 7 J=1,30                                                       SNAP0029
+      NTERM(J)=J                                                        SNAP0030
+      BO(J)=0.0                                                         SNAP0031
+    7 CONTINUE                                                          SNAP0032
+      IF(NORIGI)13,12,13                                                SNAP0033
+   12 WRITE OUTPUT TAPE LIST,202                                        SNAP0034
+  202 FORMAT(1H0,30HEQUATION PASSES THROUGH ORIGIN)                     SNAP0035
+      GO TO 14                                                          SNAP0036
+   13 WRITE OUTPUT TAPE LIST,203                                        SNAP0037
+  203 FORMAT(1H0,37HEQUATION DOES NOT PASS THROUGH ORIGIN)              SNAP0038
+   14 IF(IFTRAN)15,1,15                                                 SNAP0039
+    1 IF(IFEQUA)17,3,17                                                 SNAP0040
+    3 READ INPUT TAPE INPUT5,102,(NTERM(K),K=1,JCOL)                    SNAP0041
+      GO TO 17                                                          SNAP0042
+   15 READ INPUT TAPE INPUT5,102,(NTERM(K),K=1,JCOL)                    SNAP0043
+      READ INPUT TAPE INPUT5,102,(NXCOD(I),NTRAN(I),NCON(2*I-1),NCON(2*ISNAP0044
+     1),I=1,NTRANS )                                                    SNAP0045
+      IF(KONNO)17,17,5                                                  SNAP0046
+    5 READ INPUT TAPE INPUT5,104,(CON(I),I=1,KONNO)                     SNAP0047
+  102 FORMAT (36 I2)                                                    SNAP0048
+  104 FORMAT(7F10.4)                                                    SNAP0049
+   17 DO 20 I=1,JCOL                                                    SNAP0050
+      SUMX(I) =0.                                                       SNAP0051
+      SUMX2(I) =0.                                                      SNAP0052
+      DO 20 J=1,JCOL                                                    SNAP0053
+      SUMXX(I,J)=0.                                                     SNAP0054
+   20 CONTINUE                                                          SNAP0055
+      TOTWT = 0.0                                                       SNAP0056
+      WEIGHT = 1.0                                                      SNAP0057
+      DO 25 J=1,NOOB                                                    SNAP0058
+      IF (IFTRAN) 44,45,44                                              SNAP0059
+   45 IF(IFEQUA)44,21,44                                                SNAP0060
+   44 IF(IFWT)60,61,60                                                  SNAP0061
+   60 READ INPUT TAPE INPUT,104,(X(I),I=1,ICOL)                         SNAP0062
+      GO TO 62                                                          SNAP0063
+   61 READ INPUT TAPE INPUT ,104,(X(I),I=1,ICOL) ,WEIGHT                SNAP0064
+   62 WRITE OUTPUT TAPE LIST,204,WEIGHT                                 SNAP0065
+      WRITE OUTPUT TAPE LIST,205,(X(I),I=1,ICOL)                        SNAP0066
+  204 FORMAT(1H0,26HOBSERVED VARIABLES,WEIGHT=F6.0)                     SNAP0067
+  205 FORMAT(1H ,9F13.6)                                                SNAP0068
+      IF(IFTRAN)18,50,18                                                SNAP0069
+   18 DO 16 K=1,NTRANS                                                  SNAP0070
+      CALL TRANS(K,NXCOD,NTRAN,NCON,CON,X)                              SNAP0071
+   16 CONTINUE                                                          SNAP0072
+      WRITE TAPE NEXT ,(CON(I),I=1,60) ,WEIGHT                          SNAP0073
+      BACKSPACE NEXT                                                    SNAP0074
+   21 READ  TAPE NEXT ,(CON(I),I=1,60) ,WEIGHT                          SNAP0075
+      DO11K=1,JCOL                                                      SNAP0076
+      CALL TERMS(I,J,K,X,CON,NTERM)                                     SNAP0077
+   11 CONTINUE                                                          SNAP0078
+      GO TO 51                                                          SNAP0079
+   50 CALL EQUAT(X,J)                                                   SNAP0080
+      WRITE TAPE NEXT,(X(I),I=1,60),WEIGHT                              SNAP0081
+   51 WRITE OUTPUT TAPE LIST,206                                        SNAP0082
+  206 FORMAT(1H ,21HTERMS OF THE EQUATION)                              SNAP0083
+      WRITE OUTPUT TAPE LIST,205,(X(I),I=1,JCOL)                        SNAP0084
+      IF(IFCHI) 23,24,23                                                SNAP0085
+   23 WRITE TAPE INTER,(X(I),I=1,JCOL),WEIGHT                           SNAP0086
+   24 CALL SUMUP(SUMX,SUMX2,SUMXX,J,JCOL,X,WEIGHT,TOTWT)                SNAP0087
+   25 CONTINUE                                                          SNAP0088
+      REWIND INTER                                                      SNAP0089
+      REWIND NEXT                                                       SNAP0090
+      WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0091
+      WRITE OUTPUT TAPE LIST,230,TOTWT                                  SNAP0092
+  230 FORMAT(1H0,21HTOTAL OF THE WEIGHTS ,F8.0)                         SNAP0093
+      WRITE OUTPUT TAPE LIST,207                                        SNAP0094
+  207 FORMAT(1H0,4HSUMS)                                                SNAP0095
+      WRITE OUTPUT TAPE LIST,208,(SUMX(I),I=1,JCOL)                     SNAP0096
+  208 FORMAT(1H ,8(F12.4,1X))                                           SNAP0097
+      WRITE OUTPUT TAPE LIST,209                                        SNAP0098
+      WRITE OUTPUT TAPE LIST,208,(SUMX2(I),I=1,JCOL)                    SNAP0099
+  209 FORMAT(1H0,19HSUMS OF THE SQUARES)                                SNAP0100
+C     ZEAN IS THE MEAN                                                  SNAP0101
+      DO 310 I=1,JCOL                                                   SNAP0102
+      ZEAN(I)=SUMX(I)/TOTWT                                             SNAP0103
+  310 CONTINUE                                                          SNAP0104
+      WRITE OUTPUT TAPE LIST,211                                        SNAP0105
+  211 FORMAT(1H0,5HMEANS)                                               SNAP0106
+      WRITE OUTPUT TAPE LIST,208,(ZEAN(I),I=1,JCOL)                     SNAP0107
+      WRITE OUTPUT TAPE LIST,210                                        SNAP0108
+  210 FORMAT(1H0,18HCROSS PRODUCT SUMS)                                 SNAP0109
+      CALL WRITE(LIST,JCOL,NOTERM,SUMXX)                                SNAP0110
+      IF(NORIGI)70,71,70                                                SNAP0111
+   70 DO 73 J=1,JCOL                                                    SNAP0112
+      SUMX2(J) = SUMX2(J)-(SUMX(J)*SUMX(J))/TOTWT                       SNAP0113
+   73 CONTINUE                                                          SNAP0114
+      DO 72 J=1,JCOL                                                    SNAP0115
+      DO 72 K=1,JCOL                                                    SNAP0116
+      SUMXX(J,K)=SUMXX(J,K)-(SUMX(J)*SUMX(K))/TOTWT                     SNAP0117
+   72 CONTINUE                                                          SNAP0118
+      WRITE OUTPUT TAPE LIST,212                                        SNAP0119
+  212 FORMAT(1H0,28HCROSS PRODUCTS OF DEVIATIONS)                       SNAP0120
+      CALL WRITE(LIST,JCOL,NOTERM,SUMXX)                                SNAP0121
+C     CORR IS THE CORRELATION COEFFICIENT                               SNAP0122
+   71 DO 26 I=1,JCOL                                                    SNAP0123
+      DO 27 J=1,JCOL                                                    SNAP0124
+      CORR(I,J)=SUMXX(I,J)/(SQRTF(SUMX2(J)*SUMX2(I)))                   SNAP0125
+   27 CONTINUE                                                          SNAP0126
+   26 CONTINUE                                                          SNAP0127
+      WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0128
+      WRITE OUTPUT TAPE LIST,213                                        SNAP0129
+      CALL WRITE(LIST,JCOL,NOTERM,CORR)                                 SNAP0130
+  213 FORMAT(1H0,24HCORRELATION COEFFICIENTS)                           SNAP0131
+      CALL MATINV(CORR,NOTERM,B,0,DETERM)                               SNAP0132
+      WRITE OUTPUT TAPE LIST,214                                        SNAP0133
+  214 FORMAT(1H0,39HINVERTED CORRELATION COEFFICIENT MATRIX)            SNAP0134
+      CALL WRITE(LIST,NOTERM,NOTERM,CORR)                               SNAP0135
+      DO 28 I=1, NOTERM                                                 SNAP0136
+      DO 28 J=1,NOTERM                                                  SNAP0137
+      CORR(I,J)=CORR(I,J)/SQRTF(SUMX2(I)*SUMX2(J))                      SNAP0138
+   28 CONTINUE                                                          SNAP0139
+      DO 29J=1,NODEP                                                    SNAP0140
+      KBAR=NOTERM+J                                                     SNAP0141
+      DO 29K=1,NOTERM                                                   SNAP0142
+      B(K,J) = 0.0                                                      SNAP0143
+      DO 29 L=1,NOTERM                                                  SNAP0144
+      B(K,J)=B(K,J)+CORR(L,K)*SUMXX(L,KBAR)                             SNAP0145
+   29 CONTINUE                                                          SNAP0146
+      WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0147
+      WRITE OUTPUT TAPE LIST,231                                        SNAP0148
+  231 FORMAT(1H0,73HSUCCEEDING DATA IS PUT OUT COLUMNWISE, THE FIRST COLSNAP0149
+     1UMN CONTAINS THE DATA/49H PERTAINING TO THE FIRST DEPENDENT VARIABSNAP0150
+     2LE, ETC.)                                                         SNAP0151
+      IF(NORIGI)57,58,57                                                SNAP0152
+   57 DO 31 J=1,NODEP                                                   SNAP0153
+      SUM = 0.0                                                         SNAP0154
+      KBAR=NOTERM+J                                                     SNAP0155
+      DO 30K=1,NOTERM                                                   SNAP0156
+      SUM = SUM+B(K,J)*ZEAN(K)                                          SNAP0157
+   30 CONTINUE                                                          SNAP0158
+      BO(J)=ZEAN(KBAR)-SUM                                              SNAP0159
+   31 CONTINUE                                                          SNAP0160
+      WRITE OUTPUT TAPE LIST,215                                        SNAP0161
+      WRITE OUTPUT TAPE LIST,205,(BO(K),K=1,NODEP)                      SNAP0162
+  215 FORMAT(1H0,19HPURE CONSTANT TERMS)                                SNAP0163
+   58 WRITE OUTPUT TAPE LIST,216                                        SNAP0164
+  216 FORMAT(1H0,12HCOEFFICIENTS)                                       SNAP0165
+      DO 33 J=1,NOTERM                                                  SNAP0166
+      WRITE OUTPUT TAPE LIST,205,(B(J,K),K=1,NODEP)                     SNAP0167
+   33 CONTINUE                                                          SNAP0168
+C     TOTVAR IS THE TOTAL VARIATION                                     SNAP0169
+C     STDEV IS STANDARD DEVIATION                                       SNAP0170
+      DO 35 K=1, NODEP                                                  SNAP0171
+      KBAR=K+NOTERM                                                     SNAP0172
+      TOTVAR(K)=SUMX2(KBAR)                                             SNAP0173
+   38 STDEV(K)=SQRTF(TOTVAR(K)/(TOTWT-1.0))                             SNAP0174
+   35 CONTINUE                                                          SNAP0175
+      WRITE OUTPUT TAPE LIST,217                                        SNAP0176
+      WRITE OUTPUT TAPE LIST, 205,(TOTVAR(K),K=1,NODEP)                 SNAP0177
+  217 FORMAT(1H0,15HTOTAL VARIATION)                                    SNAP0178
+      WRITE OUTPUT TAPE LIST,218                                        SNAP0179
+      WRITE OUTPUT TAPE LIST,205,(STDEV(K),K=1,NODEP)                   SNAP0180
+  218 FORMAT(1H0,33HSTANDARD DEVIATION OF Y FROM MEAN)                  SNAP0181
+C     VARREG IS THE VARIATION OR SUM OF SQUARES  DUE TO REGRESSION      SNAP0182
+      DO 40 J=1,NODEP                                                   SNAP0183
+      KBAR=NOTERM+J                                                     SNAP0184
+      VARREG(J)=0.0                                                     SNAP0185
+      DO 40 K=1,NOTERM                                                  SNAP0186
+      VARREG(J)=VARREG(J)+B(K,J)*SUMXX(K,KBAR)                          SNAP0187
+   40 CONTINUE                                                          SNAP0188
+      WRITE OUTPUT TAPE LIST,219                                        SNAP0189
+      WRITE OUTPUT TAPE LIST,205,(VARREG(K),K=1,NODEP)                  SNAP0190
+  219 FORMAT(1H0,45HVARIATION OR SUM OF SQUARES DUE TO REGRESSION)      SNAP0191
+C     COMPUTE MULTIPLE CORRELATION COEFFICIENT                          SNAP0192
+      DO 42 J=1,NODEP                                                   SNAP0193
+      RSQD(J)=VARREG(J)/TOTVAR(J)                                       SNAP0194
+      R(J)=SQRTF(RSQD(J))                                               SNAP0195
+   42 CONTINUE                                                          SNAP0196
+      WRITE OUTPUT TAPE LIST,220                                        SNAP0197
+      WRITE OUTPUT TAPE LIST,205,(RSQD(K),K=1,NODEP)                    SNAP0198
+  220 FORMAT(1H0,83HCOEFFICIENT OF DETERMINATION, R SQUARED. (VARIATION SNAP0199
+     1BY REGRESSION/ TOTAL VARIATION))                                  SNAP0200
+      WRITE OUTPUT TAPE LIST,221                                        SNAP0201
+      WRITE OUTPUT TAPE LIST,205,(R(K),K=1,NODEP)                       SNAP0202
+  221 FORMAT(1H0,35HMULTIPLE CORRELATION COEFFICIENT, R)                SNAP0203
+C     COMPUTE DEGREES OF FREEDOM                                        SNAP0204
+      NDEG=XFIXF(TOTWT)-NOTERM-1                                        SNAP0205
+      IF(NORIGI)46,43,46                                                SNAP0206
+   43 NDEG=NDEG+1                                                       SNAP0207
+   46 WRITE OUTPUT TAPE LIST,222,NDEG                                   SNAP0208
+  222 FORMAT(1H0,21HDEGREES OF FREEDOM = ,I6)                           SNAP0209
+C     COMPUTE VARIANCE AND STANDARD ERROR OF ESTIMATE                   SNAP0210
+      DO 47 K=1,NODEP                                                   SNAP0211
+      VAR(K)=(TOTVAR(K)-VARREG(K))/FLOATF(NDEG)                         SNAP0212
+      STDEV(K)=SQRTF(VAR(K))                                            SNAP0213
+   47 CONTINUE                                                          SNAP0214
+      WRITE OUTPUT TAPE LIST,223                                        SNAP0215
+      WRITE OUTPUT TAPE LIST,205,(VAR(K),K=1,NODEP)                     SNAP0216
+      WRITE OUTPUT TAPE LIST,224                                        SNAP0217
+      WRITE OUTPUT TAPE LIST,205,(STDEV(K),K=1,NODEP)                   SNAP0218
+      WRITE OUTPUT TAPE LIST,225                                        SNAP0219
+  223 FORMAT(1H0,90HVARIANCE (=SIGMA SQUARED  =(TOTAL VARIATION - VARIATSNAP0220
+     1ION BY REGRESSION)/DEGREES OF FREEDOM))                           SNAP0221
+  224 FORMAT(1H0,56HSIGMA = STANDARD ERROR OF ESTIMATE OR STANDARD DEVIASNAP0222
+     1TION)                                                             SNAP0223
+  225 FORMAT(1H0,45HSTANDARD DEVIATION OF REGRESSION COEFFICIENTS)      SNAP0224
+      DO 48 J=1,NOTERM                                                  SNAP0225
+      DO 49 K=1,NODEP                                                   SNAP0226
+      DEVB(J,K)=SQRTF(VAR(K)*CORR(J,J))                                 SNAP0227
+   49 CONTINUE                                                          SNAP0228
+      WRITE OUTPUT TAPE LIST,205,(DEVB(J,K),K=1,NODEP)                  SNAP0229
+   48 CONTINUE                                                          SNAP0230
+      IF(IFTT)56,52,56                                                  SNAP0231
+   56 WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0232
+      CALL TTEST(LIST,NOTERM,NODEP,NDEG,B,DEVB,NTERM,I)                 SNAP0233
+      IF(JCOL-(I-1))81,52,80                                            SNAP0234
+   80 IFTRAN = 0                                                        SNAP0235
+      IFEQUA = 0                                                        SNAP0236
+      JCOL=I-1                                                          SNAP0237
+      NOTERM=JCOL-NODEP                                                 SNAP0238
+      WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0239
+      WRITE OUTPUT TAPE LIST,232                                        SNAP0240
+  232 FORMAT(1H0,54HREGRESSION AS RECOMPUTED MINUS INSIGNIFICANT VARIABLSNAP0241
+     1ES)                                                               SNAP0242
+      GO TO 17                                                          SNAP0243
+   81 CALL EXIT                                                         SNAP0244
+   52 IF(IFCHI)54,55,54                                                 SNAP0245
+   54 WRITE OUTPUT TAPE LIST,200,IDENT                                  SNAP0246
+      CALL CHISQ(INTER,LIST,NOOB,NODEP,NOTERM,NDEG,BO,B,X)              SNAP0247
+   55 GO TO 10                                                          SNAP0248
+      END                                                               SNAP0249
+*     SUBROUTINE TRANS  TRANSFORMS DATA ACCORDING TO FORM SHEETS        SNAP0250
+*     LIST8                                                             SNAP0251
+*     LABEL                                                             SNAP0252
+      SUBROUTINE TRANS(K,NXCOD,NTRAN,NCON,CON,X)                        SNAP0253
+      DIMENSION X(60),NXCOD(30),NTRAN(30),NCON(60),CON(60)              SNAP0254
+      I=NCON(2*K-1)                                                     SNAP0255
+      IF(I)800,800,801                                                  SNAP0256
+  800 CONS=0.0                                                          SNAP0257
+      GO TO 810                                                         SNAP0258
+  801 CONS=CON(I)                                                       SNAP0259
+  810 I=NXCOD(K)                                                        SNAP0260
+      Y=X(I)                                                            SNAP0261
+      MTRAN = NTRAN(K)                                                  SNAP0262
+      IF(MTRAN) 900,899,900                                             SNAP0263
+  899 MTRAN= 21                                                         SNAP0264
+  900 GO TO(901,902,903,904,905,906,907,908,909,910,911,912,913,914,915,SNAP0265
+     1916,  917,918,919,920,921),MTRAN                                  SNAP0266
+  901 CONS=Y+CONS                                                       SNAP0267
+      GO TO 999                                                         SNAP0268
+  902 CONS=Y*CONS                                                       SNAP0269
+      GO TO 999                                                         SNAP0270
+  903 CONS=CONS/Y                                                       SNAP0271
+      GO TO 999                                                         SNAP0272
+  904 CONS=EXPF(Y)                                                      SNAP0273
+      GO TO 999                                                         SNAP0274
+  905 CONS=Y**CONS                                                      SNAP0275
+      GO TO 999                                                         SNAP0276
+  906 CONS=LOGF(Y)                                                      SNAP0277
+      GO TO 999                                                         SNAP0278
+  907 CONS=LOGF(Y)/LOGF(10.0)                                           SNAP0279
+      GO TO 999                                                         SNAP0280
+  908 CONS=SINF(Y)                                                      SNAP0281
+      GO TO 999                                                         SNAP0282
+  909 CONS=COSF(Y)                                                      SNAP0283
+      GO TO 999                                                         SNAP0284
+  910 CONS=SINF(3.14159265*(CONS*Y) )                                   SNAP0285
+      GO TO 999                                                         SNAP0286
+  911 CONS=COSF(3.14159265*(CONS*Y) )                                   SNAP0287
+      GO TO 999                                                         SNAP0288
+  912 CONS=1.0/Y                                                        SNAP0289
+      GO TO 999                                                         SNAP0290
+  913 CONS=EXPF(CONS/Y)                                                 SNAP0291
+      GO TO 999                                                         SNAP0292
+  914 CONS=EXPF(CONS/(Y*Y))                                             SNAP0293
+      GO TO 999                                                         SNAP0294
+  915 CONS=SQRTF(Y)                                                     SNAP0295
+      GO TO 999                                                         SNAP0296
+  916 CONS=1.0/SQRTF(Y)                                                 SNAP0297
+      GO TO 999                                                         SNAP0298
+  917 CONS=CONS**Y                                                      SNAP0299
+      GO TO 999                                                         SNAP0300
+  918 CONS=10.0**Y                                                      SNAP0301
+      GO TO 999                                                         SNAP0302
+  919 CONS=.50(EXPF(Y)-1.0/EXPF(Y))                                     SNAP0303
+      GO TO 999                                                         SNAP0304
+  920 CONS=.50(EXPF(Y)+1.0/EXPF(Y))                                     SNAP0305
+      GO TO 999                                                         SNAP0306
+  921 CONS=Y                                                            SNAP0307
+  999 I=NCON(2*K)                                                       SNAP0308
+      IF(I)1000,1000,1001                                               SNAP0309
+ 1000 CON(K)=CONS                                                       SNAP0310
+      GO TO 1010                                                        SNAP0311
+ 1001 CON(I)=CONS                                                       SNAP0312
+      IF(I-30)1010,1010,1005                                            SNAP0313
+ 1005 X(I)=CONS                                                         SNAP0314
+ 1010 RETURN                                                            SNAP0315
+      END                                                               SNAP0316
+*     SUBROUTINE TERMS   PICKS VARIABLES TO BE TERMS OF EQUATION        SNAP0317
+*     LIST8                                                             SNAP0318
+*     LABEL                                                             SNAP0319
+      SUBROUTINE TERMS(I,J,K,X,CON,NTERM)                               SNAP0320
+      DIMENSION CON(60), NTERM(30) ,X(60)                               SNAP0321
+      I=NTERM(K)                                                        SNAP0322
+      X(K)=CON(I)                                                       SNAP0323
+      RETURN                                                            SNAP0324
+      END                                                               SNAP0325
+*     SUBROUTINE SUMUP  SUMS,SUMS OF SQUARES, AND SUMS OF CROSS PRODUCTSSNAP0326
+*     LIST8                                                             SNAP0327
+*     LABEL                                                             SNAP0328
+      SUBROUTINE SUMUP(SUMX,SUMX2,SUMXX,J,JCOL,X,WEIGHT,TOTWT)          SNAP0329
+      DIMENSION SUMX(30),SUMX2(30),SUMXX(30,30) ,X(60)                  SNAP0330
+      DO 500 I=1,JCOL                                                   SNAP0331
+      SUMX(I)=SUMX(I)+X(I)*WEIGHT                                       SNAP0332
+C     SUMX2 IS THE SUM OF THE PRODUCTS                                  SNAP0333
+      SUMX2(I)=SUMX2(I)+(X(I)*X(I)) *WEIGHT                             SNAP0334
+      DO 501 K=1,JCOL                                                   SNAP0335
+C     SUMXX IS THE CROSS PRODUCT SUM                                    SNAP0336
+      SUMXX(K,I)=SUMXX(K,I)+(X(I)*X(K))*WEIGHT                          SNAP0337
+  501 CONTINUE                                                          SNAP0338
+  500 CONTINUE                                                          SNAP0339
+      TOTWT=TOTWT+WEIGHT                                                SNAP0340
+      RETURN                                                            SNAP0341
+      END                                                               SNAP0342
+*      SUBROUTINE WRITE   OUTPUT FORMAT FOR MATRIX                      SNAP0343
+*     LIST8                                                             SNAP0344
+*     LABEL                                                             SNAP0345
+      SUBROUTINE WRITE(LIST,JCOL,NOTERM,CORR)                           SNAP0346
+      DIMENSION CORR(30,30)                                             SNAP0347
+      DO 500 K=1,NOTERM                                                 SNAP0348
+      WRITE OUTPUT TAPE LIST,230,K                                      SNAP0349
+      WRITE OUTPUT TAPE LIST,231,(CORR(K,J),J=1,JCOL)                   SNAP0350
+  230 FORMAT(1H ,6H  ROW ,I2)                                           SNAP0351
+  231 FORMAT(7H       ,8E14.6)                                          SNAP0352
+  500 CONTINUE                                                          SNAP0353
+      RETURN                                                            SNAP0354
+      END                                                               SNAP0355
+*     SUBROUTINE MATINV                                                 SNAP0356
+*     LABEL                                                             SNAP0357
+      SUBROUTINE MATINV(A,N,B,M,DETERM)                                 SNAP0358
+      DIMENSION IPIVOT(30),A(30,30),B(30,9),INDEX(30,2),PIVOT(30)       SNAP0359
+      COMMON PIVOT,INDEX,IPIVOT                                         SNAP0360
+      EQUIVALENCE (IROW,JROW), (ICOLUM,JCOLUM), (AMAX, T, SWAP)         SNAP0361
+   10 DETERM=1.0                                                        SNAP0362
+   15 DO 20 J=1,N                                                       SNAP0363
+   20 IPIVOT(J)=0                                                       SNAP0364
+   30 DO 550 I=1,N                                                      SNAP0365
+C     SEARCH FOR PIVOT ELEMENT                                          SNAP0366
+   40 AMAX=0.0                                                          SNAP0367
+   45 DO 105 J=1,N                                                      SNAP0368
+   50 IF (IPIVOT(J)-1) 60, 105, 60                                      SNAP0369
+   60 DO 100 K=1,N                                                      SNAP0370
+   70 IF (IPIVOT(K)-1) 80, 100, 740                                     SNAP0371
+   80 IF (ABSF(AMAX)-ABSF(A(J,K))) 85, 100, 100                         SNAP0372
+   85 IROW=J                                                            SNAP0373
+   90 ICOLUM=K                                                          SNAP0374
+   95 AMAX=A(J,K)                                                       SNAP0375
+  100 CONTINUE                                                          SNAP0376
+  105 CONTINUE                                                          SNAP0377
+  110 IPIVOT(ICOLUM)=IPIVOT(ICOLUM)+1                                   SNAP0378
+C     INTERCHANGE ROWS TO PUT PIVOT ELEMENT ON DIAGONAL                 SNAP0379
+  130 IF (IROW-ICOLUM) 140, 260, 140                                    SNAP0380
+  140 DETERM=-DETERM                                                    SNAP0381
+  150 DO 200 L=1,N                                                      SNAP0382
+  160 SWAP=A(IROW,L)                                                    SNAP0383
+  170 A(IROW,L)=A(ICOLUM,L)                                             SNAP0384
+  200 A(ICOLUM,L)=SWAP                                                  SNAP0385
+  205 IF(M) 260, 260, 210                                               SNAP0386
+  210 DO 250 L=1, M                                                     SNAP0387
+  220 SWAP = B(IROW,L)                                                  SNAP0388
+  230 B(IROW,L) = B(ICOLUM,L)                                           SNAP0389
+  250 B(ICOLUM,L) = SWAP                                                SNAP0390
+  260 INDEX(I,1)=IROW                                                   SNAP0391
+  270 INDEX(I,2)=ICOLUM                                                 SNAP0392
+  310 PIVOT(I)=A(ICOLUM,ICOLUM)                                         SNAP0393
+  320 DETERM=DETERM*PIVOT(I)                                            SNAP0394
+C     DIVIDE PIVOT ROW BY PIVOT ELEMENT                                 SNAP0395
+  330 A(ICOLUM,ICOLUM)=1.0                                              SNAP0396
+  340 DO 350 L=1,N                                                      SNAP0397
+  350 A(ICOLUM,L)=A(ICOLUM,L)/PIVOT(I)                                  SNAP0398
+  355 IF(M) 380, 380, 360                                               SNAP0399
+  360 DO 370 L=1,M                                                      SNAP0400
+  370 B(ICOLUM,L) = B(ICOLUM,L)/PIVOT(I)                                SNAP0401
+C     REDUCE NON-PIVOT ROWS                                             SNAP0402
+  380 DO 550 L1=1,N                                                     SNAP0403
+  390 IF(L1-ICOLUM) 400, 550, 400                                       SNAP0404
+  400 T=A(L1,ICOLUM)                                                    SNAP0405
+  420 A(L1,ICOLUM)=0.0                                                  SNAP0406
+  430 DO 450 L=1,N                                                      SNAP0407
+  450 A(L1,L)=A(L1,L)-A(ICOLUM,L)*T                                     SNAP0408
+  455 IF(M) 550, 550, 460                                               SNAP0409
+  460 DO 500 L=1,M                                                      SNAP0410
+  500 B(L1,L) = B(L1,L)-B(ICOLUM,L)*T                                   SNAP0411
+  550 CONTINUE                                                          SNAP0412
+C     INTERCHANGE COLUMNS                                               SNAP0413
+  600 DO 710 I=1,N                                                      SNAP0414
+  610 L=N+1-I                                                           SNAP0415
+  620 IF (INDEX(L,1)-INDEX(L,2)) 630, 710, 630                          SNAP0416
+  630 JROW=INDEX(L,1)                                                   SNAP0417
+  640 JCOLUM=INDEX(L,2)                                                 SNAP0418
+  650 DO 705 K=1,N                                                      SNAP0419
+  660 SWAP=A(K,JROW)                                                    SNAP0420
+  670 A(K,JROW)=A(K,JCOLUM)                                             SNAP0421
+  700 A(K,JCOLUM)=SWAP                                                  SNAP0422
+  705 CONTINUE                                                          SNAP0423
+  710 CONTINUE                                                          SNAP0424
+  740 RETURN                                                            SNAP0425
+  750 END (2,2,2,2,0)                                                   SNAP0426
+*     SUBROUTINE TTEST    ALSO DELETES INSIGNIFICANT VARIABLES          SNAP0427
+*     LIST8                                                             SNAP0428
+*     LABEL                                                             SNAP0429
+      SUBROUTINE TTEST(LIST,NOTERM,NODEP,NDEG,B,DEVB,NTERM,I)           SNAP0430
+      DIMENSION  NTERM(30), TT(30,9),B(30,9),STDEV(9),T(34),DEVB(30,9)  SNAP0431
+C     T(NDEG) IS FOR 95 PERCENT PROBABILITY                             SNAP0432
+C      I=DEGREES OF FREEDOM EXCEPT FOR                                  SNAP0433
+C      I=31 IS 40 DEGREES                                               SNAP0434
+C      I=32 IS 60                                                       SNAP0435
+C      I=33 IS 120                                                      SNAP0436
+C      I=34 IS INFINITY                                                 SNAP0437
+       T( 1  ) = 12.706                                                 SNAP0438
+       T( 2  ) = 4.3027                                                 SNAP0439
+       T( 3  ) = 3.1825                                                 SNAP0440
+       T( 4  ) = 2.7764                                                 SNAP0441
+       T( 5  ) = 2.5706                                                 SNAP0442
+       T( 6  ) = 2.4469                                                 SNAP0443
+       T( 7  ) = 2.3646                                                 SNAP0444
+       T( 8  ) = 2.3060                                                 SNAP0445
+       T( 9  ) = 2.2622                                                 SNAP0446
+       T(10  ) = 2.2281                                                 SNAP0447
+       T(11  ) = 2.2010                                                 SNAP0448
+       T(12  ) = 2.1788                                                 SNAP0449
+       T(13  ) = 2.1604                                                 SNAP0450
+       T(14  ) = 2.1448                                                 SNAP0451
+       T(15  ) = 2.1315                                                 SNAP0452
+       T(16  ) = 2.1199                                                 SNAP0453
+       T(17  ) = 2.1098                                                 SNAP0454
+       T(18  ) = 2.1009                                                 SNAP0455
+       T(19  ) = 2.0930                                                 SNAP0456
+       T(20  ) = 2.0860                                                 SNAP0457
+       T(21  ) = 2.0796                                                 SNAP0458
+       T(22  ) = 2.0739                                                 SNAP0459
+       T(23  ) = 2.0687                                                 SNAP0460
+       T(24  ) = 2.0639                                                 SNAP0461
+       T(25  ) = 2.0595                                                 SNAP0462
+       T(26  ) = 2.0555                                                 SNAP0463
+       T(27  ) = 2.0518                                                 SNAP0464
+       T(28  ) = 2.0484                                                 SNAP0465
+       T(29  ) = 2.0452                                                 SNAP0466
+       T(30  ) = 2.0423                                                 SNAP0467
+       T(31  ) = 2.0211                                                 SNAP0468
+       T(32  ) = 2.0003                                                 SNAP0469
+       T(33  ) = 1.9799                                                 SNAP0470
+       T(34  ) = 1.9600                                                 SNAP0471
+      WRITE OUTPUT TAPE LIST,224                                        SNAP0472
+  224 FORMAT(1H0,23HCALCULATED T STATISTICS/59H THE T STATISTICSCAN BE USNAP0473
+     1SED TO TEST THE COEFFICIENTS B(I)./61H IT IS SIGNIFICANTLY DIFFERESNAP0474
+     2NT FROM ZERO IF THE CORRESPONDING/48H T STATISTIC IS GREATER THAN SNAP0475
+     3THE CRITICAL VALUE.)                                              SNAP0476
+      DO 300 J=1,NOTERM                                                 SNAP0477
+      DO 301 K=1,NODEP                                                  SNAP0478
+      TT(J,K)=B(J,K)/DEVB(J,K)                                          SNAP0479
+      IF DIVIDE CHECK 50,301                                            SNAPA479
+  301 CONTINUE                                                          SNAP0480
+      WRITE OUTPUT TAPE LIST,225,(TT(J,K),K=1,NODEP)                    SNAP0481
+  300 CONTINUE                                                          SNAP0482
+      WRITE OUTPUT TAPE LIST,222                                        SNAP0483
+  225 FORMAT(6H      ,9F12.8)                                           SNAP0484
+      IF (NDEG-30) 226,226,227                                          SNAP0485
+  226 WRITE OUTPUT TAPE LIST,223,T(NDEG)                                SNAP0486
+      TO =T(NDEG)                                                       SNAP0487
+      GO TO 234                                                         SNAP0488
+  227 IF (NDEG-40) 228,228,229                                          SNAP0489
+  228 WRITE OUTPUT TAPE LIST,223,T(31)                                  SNAP0490
+      TO =T(31)                                                         SNAP0491
+      GO TO 234                                                         SNAP0492
+  229 IF (NDEG-60) 230,230,231                                          SNAP0493
+  230 WRITE OUTPUT TAPE LIST,223,T(32)                                  SNAP0494
+      TO=T(32)                                                          SNAP0495
+      GO TO 234                                                         SNAP0496
+  231 IF (NDEG-120) 232,232,233                                         SNAP0497
+  232 WRITE OUTPUT TAPE LIST,223,T(33)                                  SNAP0498
+      TO=T(33)                                                          SNAP0499
+      GO TO 234                                                         SNAP0500
+  233 WRITE OUTPUT TAPE LIST,223, T(34)                                 SNAP0501
+      TO=T(34)                                                          SNAP0502
+  222 FORMAT(1H0,46HCRITICAL VALUE OF T FOR 95 PERCENT PROBABILITY)     SNAP0503
+  223 FORMAT(1H ,F7.4)                                                  SNAP0504
+C     DELETION OF INSIGNIFICANT VARIABLES ONLY WITH ONE DEP.VAR.        SNAP0505
+  234 I=0                                                               SNAP0506
+      IF(NODEP-1)40,40,50                                               SNAP0507
+   40 AMIN=TO                                                           SNAP0508
+      DO 20 J=1,NOTERM                                                  SNAP0509
+    5 IF(ABSF(TT(J,1))-TO)15,20,20                                      SNAP0510
+   15 IF(ABSF(TT(J,1))-ABSF(AMIN))25,20,20                              SNAP0511
+   25 AMIN=TT(J,1)                                                      SNAP0512
+      I=J                                                               SNAP0513
+   20 CONTINUE                                                          SNAP0514
+      IF(I)50,50,30                                                     SNAP0515
+   30 JCOL=NOTERM+1                                                     SNAP0516
+      DO 35 K=I,JCOL                                                    SNAP0517
+      NTERM(K)=NTERM(K+1)                                               SNAP0518
+   35 CONTINUE                                                          SNAP0519
+      WRITE OUTPUT TAPE LIST,250,I                                      SNAP0520
+  250 FORMAT(1H0,11HVARIABLE X(,I2,18H) IS BEING DELETED)               SNAP0521
+      I=JCOL                                                            SNAPA518
+      GO TO 51                                                          SNAPA519
+   50 I=NOTERM+NODEP+1                                                  SNAPA520
+   51 RETURN                                                            SNAPA521
+      END                                                               SNAP0522
+*     SUBROUTINE CHISQ    ALSO COMPUTES OBSERVED AND CALCULATED Y S     SNAP0523
+*     LIST8                                                             SNAP0524
+*     LABEL                                                             SNAP0525
+      SUBROUTINE CHISQ(INTER,LIST,NOOB,NODEP,NOTERM,NDEG,BO,B, X)       SNAP0526
+      DIMENSION VARCHK(9),CHI(9),DIFSQD(9),YDIFR(9),YCALC(9), X(60)     SNAP0527
+     1, BO(9), B(30,9)                                                  SNAP0528
+      WRITE OUTPUT TAPE LIST,226                                        SNAP0529
+  226 FORMAT(1H0,44HY OBSERVED MINUS Y CALCULATED = Y DIFFERENCE)       SNAP0530
+      NUVAR = NOTERM+1                                                  SNAP0531
+      JCOL= NOTERM+NODEP                                                SNAP0532
+      DO 310 K=1,NODEP                                                  SNAP0533
+      CHI(K)=0.0                                                        SNAP0534
+      DIFSQD(K)=0.0                                                     SNAP0535
+  310 CONTINUE                                                          SNAP0536
+      DO315J=1,NOOB                                                     SNAP0537
+      READ TAPE INTER,(X(I),I=1,JCOL),WEIGHT                            SNAP0538
+      DO 311K=1,NODEP                                                   SNAP0539
+      YDIFR(K)=0.0                                                      SNAP0540
+      YCALC(K)=BO(K)                                                    SNAP0541
+  311 CONTINUE                                                          SNAP0542
+      DO 314 K=1,NODEP                                                  SNAP0543
+      KBAR=K+ NOTERM                                                    SNAP0544
+      DO 313I=1,NOTERM                                                  SNAP0545
+      YCALC(K)=YCALC(K)+B(I,K)*X(I)                                     SNAP0546
+  313 CONTINUE                                                          SNAP0547
+      YDIFR(K)=X(KBAR   )-YCALC(K)                                      SNAP0548
+      DIFSQD(K)=DIFSQD(K)+(YDIFR(K)*YDIFR(K))  *WEIGHT                  SNAP0549
+      CHI(K) =CHI(K)+(YDIFR(K)*YDIFR(K))/YCALC(K)*WEIGHT                SNAP0550
+  314 CONTINUE                                                          SNAP0551
+      WRITE OUTPUT TAPE LIST,227,(X(I),I=NUVAR,JCOL)                    SNAP0552
+      WRITE OUTPUT TAPE LIST,228,(YCALC(I),I=1,NODEP)                   SNAP0553
+      WRITE OUTPUT TAPE LIST,229,(YDIFR(I),I=1,NODEP)                   SNAP0554
+  227 FORMAT(1H0,10HY OBSERVED,1X,9F12.4)                               SNAP0555
+  228 FORMAT(1H , 6HY CALC,5X,9F12.4)                                   SNAP0556
+  229 FORMAT(1H , 6HY DIFF,5X,9F12.4)                                   SNAP0557
+  315 CONTINUE                                                          SNAP0558
+      WRITE OUTPUT TAPE LIST,230                                        SNAP0559
+      WRITE OUTPUT TAPE LIST,231,(DIFSQD(K),K=1,NODEP)                  SNAP0560
+      WRITE OUTPUT TAPE LIST,232                                        SNAP0561
+      WRITE OUTPUT TAPE LIST,231,(CHI(K),K=1,NODEP)                     SNAP0562
+  230 FORMAT(1H0,30HSUM OF THE DIFFERENCES SQUARED)                     SNAP0563
+  231 FORMAT(1H ,9F12.4)                                                SNAP0564
+  232 FORMAT(1H0,57HCHI SQUARE TEST = SUM OF DIFFERENCES SQUARED/Y,CALCUSNAP0565
+     1LATED)                                                            SNAP0566
+      DO 316 K=1,NODEP                                                  SNAP0567
+  316 VARCHK(K)=DIFSQD(K)/FLOATF(NDEG)                                  SNAP0568
+      WRITE OUTPUT TAPE LIST,233                                        SNAP0569
+      WRITE OUTPUT TAPE LIST,234,(VARCHK(K),K=1,NODEP)                  SNAP0570
+  233 FORMAT(1H0,50HVARIANCE CHECK = SUM OF DIFSQD/ DEGREES OF FREEDOM/5SNAP0571
+     19H ROUND OFF ERROR IS INSIGNIFICANT IN FIFTH DECIMAL POSITION)    SNAP0572
+  234 FORMAT(1H , 9F12.5)                                               SNAP0573
+      RETURN                                                            SNAP0574
+      END                                                               SNAP0575
+*     SUBROUTINE EQUAT   TO BE FILLED BY USER IF WANTED                 SNAP0576
+*     LIST8                                                             SNAP0577
+*      LABEL                                                            SNAP0578
+      SUBROUTINE EQUAT(X,J)                                             SNAP0579
+      DIMENSION X(60)                                                   SNAP0580
+      RETURN                                                            SNAP0581
+      END                                                               SNAP0582
+*     DATA                                                              SNAP0583
+Z0 UC SCUL 04-02-62 1290         CO 0001                                        
+/0801BA07?BA25003 BA25003XBA25003*K1   L036A08,?77?78,?83?91,?99A0710400045 SCUL

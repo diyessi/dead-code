@@ -1,0 +1,110 @@
+C     EQU OF STATE 3 (1 COMP, FUGAM,FUDEM)                              9137 001
+      DIMENSION DA(4),P(99),A(4),X(3),SUBST(4)                          9137 002
+      DIMENSION XX(2)                                                   9137 003
+    1 FORMAT(4A6,4F12.6)                                                9137 004
+    2 FORMAT(6X1HT, 9X1HP, 9X2HTR, 8X2HPR, 8X2HZ1, 8X2HZ2, 8X2HZ3)      9137 005
+    3 FORMAT(1H 4A6,4F12.6)                                             9137 006
+    4 FORMAT(F12.6)                                                     9137 007
+    5 FORMAT(2F12.6,4XI2,10XI2,6X2F12.6)                                9137 008
+    6 FORMAT(12XF12.6)                                                  9137 009
+    7 FORMAT(//)                                                        9137 010
+    8 FORMAT(2F12.6)                                                    9137 011
+    9 FORMAT(42X3F10.4)                                                 9137 012
+   10 FORMAT(F12.4,6F10.4)                                              9137 013
+   84 FORMAT(8H    LFU1F9.4,5H LFU2F9.4,5H LFU3F9.4,4H FU1F9.4,         9137 014
+     24H FU3F9.4)                                                       9137 015
+   87 FORMAT (28H EQU OF STATE 3(1 COMPONENT))                          9137 016
+      A(1)=1.0                                                          9137 017
+      A(2)=-1.0                                                         9137 018
+   11 READ INPUT TAPE 5,1,(SUBST(M),M=1,4),(DA(K),K=1,4)                9137 019
+   14 WRITE OUTPUT TAPE 6,87                                            9137 020
+      WRITE OUTPUT TAPE 6,3,(SUBST(M),M=1,4),(DA(K),K=1,4)              9137 021
+      READ INPUT TAPE 5,8,COT,COP                                       9137 022
+      WRITE OUTPUT TAPE 6,8,COT,COP                                     9137 023
+      TC = DA(1)*COT*0.001                                              9137 024
+      PC=DA(2)*COP                                                      9137 025
+      WRITE OUTPUT TAPE 6,8,TC,PC                                       9137 026
+      D=0.08667*DA(1)/DA(2)                                             9137 027
+      G=4.936*DA(1)**1.5                                                9137 028
+      WRITE OUTPUT TAPE 6,7                                             9137 029
+      READ INPUT TAPE 5,5,TL,PL,NOT,NOP,DT,DP                           9137 030
+   12 P(1)=PL                                                           9137 031
+      JP = 2                                                            9137 032
+      IF (DP)24,22,23                                                   9137 033
+   24 P(JP)=P(JP-1)*2.0                                                 9137 034
+      JP=JP+1                                                           9137 035
+      IF (JP-NOP)25,25,27                                               9137 036
+   25 P(JP)=P(JP-1)*2.5                                                 9137 037
+      JP=JP+1                                                           9137 038
+      IF (JP-NOP)26,26,27                                               9137 039
+   26 P(JP)=P(JP-1)*2.0                                                 9137 040
+      JP=JP+1                                                           9137 041
+      IF (JP-NOP)24,24,27                                               9137 042
+   28 READ INPUT TAPE 5,6,(P(JP))                                       9137 043
+      JP=JP+1                                                           9137 044
+   22 IF (JP-NOP)28,28,27                                               9137 045
+   29 P(JP)=P(JP-1)+DP                                                  9137 046
+      JP=JP+1                                                           9137 047
+   23 IF (JP-NOP)29,29,27                                               9137 048
+   27 T=TL                                                              9137 049
+      DO 37 JT=1,NOT                                                    9137 050
+      B=D/T                                                             9137 051
+      E=G/T**1.5                                                        9137 052
+      TR=T/DA(1)                                                        9137 053
+      IF (DA(4))61,61,62                                                9137 054
+   61 BDD = ((0.689 - 0.8316*TC)*TC/TR**4)**0.33333                     9137 055
+      BA=(4.996*DA(3)*DA(3)+(0.03086+0.07683/PC)*(TR-1.0)**2)*(TR-1.0)  9137 056
+     2/ (6.0*TR**4*BDD)                                                 9137 057
+      BB = (0.01734 - 0.0002754*PC - 0.09772*TC**2)/(6.0*TR**4*BDD**2)  9137 058
+      BC = 0.000000606*PC*(TR-1.0)/(TC*(0.689-0.8316*TC))               9137 059
+   62 DO 34 JP=1,NOP                                                    9137 060
+      Q=B*P(JP)                                                         9137 061
+      A(3)=Q*(E-1.0-Q)                                                  9137 062
+      A(4)=-E*Q**2                                                      9137 063
+      CALL VIETA(A,X,MTYPE)                                             9137 064
+      PR=P(JP)/DA(2)                                                    9137 065
+      S=DEV(TR,PR,TC,PC,DA(3))                                          9137 066
+      WRITE OUTPUT TAPE 6,2                                             9137 067
+      IF (MTYPE)42,41,41                                                9137 068
+   41 S1=X(1)+S                                                         9137 069
+      WRITE OUTPUT TAPE 6,10,T,P(JP),TR,PR,X(1),S,S1                    9137 070
+      IF (DA(4))63,63,34                                                9137 071
+   63 GNFU1 = FUGAM(Q,E,X(1))                                           9137 072
+      GNFU2 = FUDEM(BA,BB,BC,BDD,PR)                                    9137 073
+      GFU1  = GNFU1*0.434294                                            9137 074
+      GFU2  = GNFU2*0.434294                                            9137 075
+      GFU3  = GFU1 + GFU2                                               9137 076
+      FU1   = EXPF(GNFU1)                                               9137 077
+      FU3   = FU1*EXPF(GNFU2)                                           9137 078
+      WRITE OUTPUT TAPE 6,84,GFU1,GFU2,GFU3,FU1,FU3                     9137 079
+      GO TO 34                                                          9137 080
+   42 XX(1)=MAX1F(X(1),X(2),X(3))                                       9137 081
+      XX(2)=MIN1F(X(1),X(2),X(3))                                       9137 082
+      S1=XX(1)+S                                                        9137 083
+      S2=XX(2)+S                                                        9137 084
+      WRITE OUTPUT TAPE 6,10,T,P(JP),TR,PR,XX(1),S,S1                   9137 085
+      WRITE OUTPUT TAPE 6,9,XX(2),S,S2                                  9137 086
+      IF (DA(4))64,64,34                                                9137 087
+   64 GNFU2 = FUDEM(BA,BB,BC,BDD,PR)                                    9137 088
+      GFU2  = GNFU2*0.434294                                            9137 089
+      DO 43 JFU=1,2                                                     9137 090
+      GNFU1 = FUGAM(Q,E,XX(JFU))                                        9137 091
+      GFU1  = GNFU1*0.434294                                            9137 092
+      GFU3  = GFU1 + GFU2                                               9137 093
+      FU1   = EXPF(GNFU1)                                               9137 094
+      FU3   = FU1*EXPF(GNFU2)                                           9137 095
+   43 WRITE OUTPUT TAPE 6,84,GFU1,GFU2,GFU3,FU1,FU3                     9137 096
+   34 WRITE OUTPUT TAPE 6,7                                             9137 097
+      IF (DT)36,36,35                                                   9137 098
+   35 T=T+DT                                                            9137 099
+      GO TO 37                                                          9137 100
+   36 IF (JT-NOT)38,37,37                                               9137 101
+   38 READ INPUT TAPE 5,4,T                                             9137 102
+   37 CONTINUE                                                          9137 103
+      READ INPUT TAPE 5,5,TL,PL,NOT,NOP,DT,DP                           9137 104
+      IF (TL)39,39,12                                                   9137 105
+   39 WRITE OUTPUT TAPE 6,7                                             9137 106
+      READ INPUT TAPE 5,1,(SUBST(M),M=1,4),(DA(K),K=1,4)                9137 107
+      IF (DA(1))40,40,14                                                9137 108
+   40 CALL EXIT                                                         9137 109
+      END                                                               9137 110

@@ -1,0 +1,340 @@
+C     BE TISR     TIME SERIES PACKAGE                                           
+C     BE READIN   INPUT SUBROUTINE                                      READIN01
+      SUBROUTINEREADIN(A,N,NAME)                                        READIN02
+      DIMENSIONA(1),NAME(13),FMT(12)                                    READIN03
+      READ100,N,NAME                                                    READIN04
+ 100  FORMAT(I6,12A6,A2)                                                READIN05
+      READ101,(FMT(I),I=1,12)                                           READIN06
+ 101  FORMAT(12A6)                                                      READIN07
+      READFMT,(A(I),I=1,N)                                              READIN08
+      PRINT200,NAME,N                                                   READIN09
+ 200  FORMAT(9H0READ IN 12A6,A2,1H(I6,8H POINTS)/)                      READIN10
+      RETURN                                                            READIN11
+      END                                                               READIN12
+C     BE OUTPUT   OUTPUT SUBROUTINE                                     OUTPUT01
+      SUBROUTINEOUTPUT(A,NA,ANAME,INDIC)                                OUTPUT02
+      DIMENSIONA(1),ANAME(13)                                           OUTPUT03
+      PRINT200,ANAME                                                    OUTPUT04
+ 200  FORMAT(1H112A6,A2)                                                OUTPUT05
+      PRINT201,(A(I),I=1,NA)                                            OUTPUT06
+ 201  FORMAT(1P5E14.5)                                                  OUTPUT07
+      IF(INDIC)10,11,12                                                 OUTPUT08
+ 10   PUNCH202,NA,(ANAME(I),I=1,11),(A(I),I=1,NA)                       OUTPUT09
+ 202  FORMAT(I6,11A6/10H(1P5E12.5)/(1P5E12.5))                          OUTPUT10
+      GOTO11                                                            OUTPUT11
+ 12   WRITETAPEINDIC,NA                                                 OUTPUT12
+      WRITETAPEINDIC,ANAME                                              OUTPUT13
+      WRITETAPEINDIC,(A(I),I=1,NA)                                      OUTPUT14
+ 11   RETURN                                                            OUTPUT15
+      END                                                               OUTPUT16
+C     BE TAPEIN   TAPE READING SUBROUTINE                               TAPEIN01
+      SUBROUTINETAPEIN(A,NA,ANAME,NTAPE)                                TAPEIN02
+      DIMENSIONA(1),ANAME(13)                                           TAPEIN03
+      READTAPENTAPE,NA                                                  TAPEIN04
+      READTAPENTAPE,ANAME                                               TAPEIN05
+      READTAPENTAPE,(A(I),I=1,NA)                                       TAPEIN06
+      PRINT200,NTAPE,ANAME,NA                                           TAPEIN07
+ 200  FORMAT(18H0READ IN FROM TAPEI3,2H  12A6,A2,1H(I6,7HPOINTS))       TAPEIN08
+      RETURN                                                            TAPEIN09
+      END                                                               TAPEIN10
+C     BE DETRND   MEAN AND LINEAR TREND REMOVAL                         DETRND01
+      SUBROUTINEDETRND(X,N,Y,NDEG)                                      DETRND02
+      DIMENSIONX(1),Y(1)                                                DETRND03
+      AN=N                                                              DETRND04
+      ERASES1,S2                                                        DETRND05
+      IF(NDEG)11,11,20                                                  DETRND06
+ 11   DO12I=1,N                                                         DETRND07
+ 12   S1=S1+X(I)                                                        DETRND08
+      AVEX=S1/AN                                                        DETRND09
+      DO15I=1,N                                                         DETRND10
+ 15   Y(I)=X(I)-AVEX                                                    DETRND11
+      PRINT200,AVEX                                                     DETRND12
+ 200  FORMAT(16H0REMOVE MEAN OF 1PE15.7)                                DETRND13
+      RETURN                                                            DETRND14
+ 20   DO22I=1,N                                                         DETRND15
+      S1=S1+X(I)                                                        DETRND16
+ 22   S2=S2+S1                                                          DETRND17
+      AVEI=0.5*(AN+1.0)                                                 DETRND18
+      AVEX=S1/AN                                                        DETRND19
+      SLOPE=-12.0*(S2-AVEI*S1)/(AN*(AN**2-1.0))                         DETRND20
+      DO28I=1,N                                                         DETRND21
+      AI=I                                                              DETRND22
+ 28   Y(I)=X(I)-AVEX-SLOPE*(AI-AVEI)                                    DETRND23
+      PRINT300,AVEX,SLOPE                                               DETRND24
+ 300  FORMAT(16H0REMOVE MEAN OF 1PE15.7,32H AND LINEAR TREND WITH SLOPE DETRND25
+     1OF 1PE15.7)                                                       DETRND26
+      RETURN                                                            DETRND27
+      END                                                               DETRND28
+C     BE TAPER   COSINE TAPERING SUBROUTINE                             TAPER001
+      SUBROUTINETAPER(A,N,START,END,B)                                  TAPER002
+      DIMENSIONA(1),B(1)                                                TAPER003
+      AN=N                                                              TAPER004
+      M1=AN*START+0.5                                                   TAPER005
+      M2=M1+1                                                           TAPER006
+      IF(M1)10,10,11                                                    TAPER007
+ 11   ANG=3.14159265/FLOATF(M1)                                         TAPER008
+      DO12I=1,M1                                                        TAPER009
+ 12   B(I)=A(I)*(1.0-COSF(FLOATF(I)*ANG))/2.0                           TAPER010
+ 10   M3=AN*END+0.5                                                     TAPER011
+      M5=N-M3                                                           TAPER012
+      M4=M5+1                                                           TAPER013
+      IF(M3)13,13,14                                                    TAPER014
+ 14   ANG=3.14159265/FLOATF(M3)                                         TAPER015
+      DO15I=M4,N                                                        TAPER016
+ 15   B(I)=A(I)*(1.0-COSF(FLOATF(I-N-1)*ANG))/2.0                       TAPER017
+ 13   DO16I=M2,M5                                                       TAPER018
+ 16   B(I)=A(I)                                                         TAPER019
+      PRINT200,START,END                                                TAPER020
+ 200  FORMAT(6H0TAPERF5.2,21H OF RECORD AT START ,F5.2,7H AT END)       TAPER021
+      RETURN                                                            TAPER022
+      END                                                               TAPER023
+C     BE LOGTR   COMMON LOGARITHM TRANSFORMATION SUBROUTINE             LOGTR001
+      SUBROUTINELOGTR(X,N,Y,A,TH)                                       LOGTR002
+      DIMENSIONX(1),Y(1)                                                LOGTR003
+      FREQUENCY500(1,0,100)                                             LOGTR004
+      PRINT200                                                          LOGTR005
+ 200  FORMAT(16H0TAKE LOGARITHMS)                                       LOGTR006
+      Z=A                                                               LOGTR007
+      SH=1.0-TH                                                         LOGTR008
+      DO10I=1,N                                                         LOGTR009
+ 500  IF(X(I))5,8,2                                                     LOGTR010
+ 2    Z=LOG10F(X(I))                                                    LOGTR011
+      Y(I)=Z                                                            LOGTR012
+      GOTO10                                                            LOGTR013
+ 5    PRINT201,I,X(I),TH,SH                                             LOGTR014
+ 201  FORMAT(8H    ITEMI6,2H =1PE14.6,3H - 0PF4.2,48H OF THE LOG OF THE LOGTR015
+     1PREVIOUS POSITIVE VALUE PLUS 0PF4.2,28H OF THE ABSOLUTE VALUE TAKELOGTR016
+     2N)                                                                LOGTR017
+      Y(I)=TH*Z+SH*LOG10F(-X(I))                                        LOGTR018
+      GOTO10                                                            LOGTR019
+ 8    PRINT202,I,TH                                                     LOGTR020
+ 202  FORMAT(8H    ITEMI6,10H = ZERO - 0PF4.2,48H OF THE LOG OF THE PREVLOGTR021
+     1IOUS POSITIVE VALUE TAKEN)                                        LOGTR022
+      Y(I)=TH*Z                                                         LOGTR023
+ 10   CONTINUE                                                          LOGTR024
+      RETURN                                                            LOGTR025
+      END                                                               LOGTR026
+C     BE POLAR   POLAR COORDINATES SUBROUTINE                           POLAR001
+      SUBROUTINEPOLAR(X,Y,N,R,ANG)                                      POLAR002
+      DIMENSIONX(1),Y(1),R(1),ANG(1)                                    POLAR003
+      DO10I=1,N                                                         POLAR004
+      R(I)=SQRTF(X(I)**2+Y(I)**2)                                       POLAR005
+      IF(X(I))12,13,13                                                  POLAR006
+ 13   IF(Y(I))14,15,15                                                  POLAR007
+ 12   ADDN=0.5                                                          POLAR008
+      GOTO10                                                            POLAR009
+ 14   ADDN=1.0                                                          POLAR010
+      GOTO10                                                            POLAR011
+ 15   ADDN=0.0                                                          POLAR012
+ 10   ANG(I)=ATANF(Y(I)/X(I))/6.283185+ADDN                             POLAR013
+      PRINT100                                                          POLAR014
+ 100  FORMAT(28H0CHANGE TO POLAR COORDINATES)                           POLAR015
+      RETURN                                                            POLAR016
+      END                                                               POLAR017
+C     BE FILTER   TRAVERSAL FILTER SUBROUTINE                           FILTER01
+      SUBROUTINEFILTER(A,NA,F,NF,B,NB)                                  FILTER02
+      DIMENSIONA(1),F(1),B(1)                                           FILTER03
+      NB=NA-NF+1                                                        FILTER04
+      DO11I=1,NB                                                        FILTER05
+      SUM=0.0                                                           FILTER06
+      DO10K=1,NF                                                        FILTER07
+      L=I+NF-K                                                          FILTER08
+ 10   SUM=SUM+F(K)*A(L)                                                 FILTER09
+ 11   B(I)=SUM                                                          FILTER10
+      PRINT100,NF,(F(I),I=1,NF)                                         FILTER11
+ 100  FORMAT(12H0FILTER WITHI4,12HCOEFFICIENTS//(10F10.4))              FILTER12
+      RETURN                                                            FILTER13
+      END                                                               FILTER14
+C     BE AUTCOV   AUTOCOVARIANCE SUBROUTINE                             AUTCOV01
+      SUBROUTINEAUTCOV(X,N,Y,L)                                         AUTCOV02
+      DIMENSIONX(1),Y(1)                                                AUTCOV03
+      L1=L+1                                                            AUTCOV04
+      AN=N                                                              AUTCOV05
+      SUM=0.0                                                           AUTCOV06
+      DO11I=1,N                                                         AUTCOV07
+ 11   SUM=SUM+X(I)                                                      AUTCOV08
+      E=(SUM/AN)**2                                                     AUTCOV09
+      DO12I=1,L1                                                        AUTCOV10
+      Y(I)=0.0                                                          AUTCOV11
+      I1=N-I+1                                                          AUTCOV12
+      DO13J=1,I1                                                        AUTCOV13
+      J1=J+I-1                                                          AUTCOV14
+ 13   Y(I)=Y(I)+X(J)*X(J1)                                              AUTCOV15
+ 12   Y(I)=Y(I)/FLOATF(I1)-E                                            AUTCOV16
+      PRINT200,L                                                        AUTCOV17
+ 200  FORMAT(20H0AUTOCOVARIANCE WITHI4,5H LAGS)                         AUTCOV18
+      RETURN                                                            AUTCOV19
+      END                                                               AUTCOV20
+C     BE CRSCOV   AUTO- AND CROSSCOVARIANCE SUBROUTINE                  CRSCOV01
+      SUBROUTINECRSCOV(X,Y,N,ZXX,ZYY,ZXY,ZYX,L)                         CRSCOV02
+      DIMENSIONX(1),Y(1),ZXX(1),ZYY(1),ZXY(1),ZYX(1)                    CRSCOV03
+      L1=L+1                                                            CRSCOV04
+      AN=N                                                              CRSCOV05
+      SUMX=0.0                                                          CRSCOV06
+      SUMY=0.0                                                          CRSCOV07
+      DO10I=1,N                                                         CRSCOV08
+      SUMX=SUMX+X(I)                                                    CRSCOV09
+ 10   SUMY=SUMY+Y(I)                                                    CRSCOV10
+      EXX=(SUMX/AN)**2                                                  CRSCOV11
+      EYY=(SUMY/AN)**2                                                  CRSCOV12
+      EXY=(SUMX*SUMY)/AN**2                                             CRSCOV13
+      DO11I=1,L1                                                        CRSCOV14
+      ZXX(I)=0.                                                         CRSCOV15
+      ZYY(I)=0.                                                         CRSCOV16
+      ZXY(I)=0.                                                         CRSCOV17
+      ZYX(I)=0.                                                         CRSCOV18
+      I1=N-I+1                                                          CRSCOV19
+      AI1=I1                                                            CRSCOV20
+      DO12J=1,I1                                                        CRSCOV21
+      J1=J+I-1                                                          CRSCOV22
+      ZXX(I)=ZXX(I)+X(J)*X(J1)                                          CRSCOV23
+      ZYY(I)=ZYY(I)+Y(J)*Y(J1)                                          CRSCOV24
+      ZXY(I)=ZXY(I)+X(J)*Y(J1)                                          CRSCOV25
+ 12   ZYX(I)=ZYX(I)+Y(J)*X(J1)                                          CRSCOV26
+      ZXX(I)=ZXX(I)/AI1-EXX                                             CRSCOV27
+      ZYY(I)=ZYY(I)/AI1-EYY                                             CRSCOV28
+      ZXY(I)=ZXY(I)/AI1-EXY                                             CRSCOV29
+ 11   ZYX(I)=ZYX(I)/AI1-EXY                                             CRSCOV30
+      PRINT200,L                                                        CRSCOV31
+ 200  FORMAT(32H0AUT0- AND CROSS-COVARIANCE WITHI4,5H LAGS)             CRSCOV32
+      RETURN                                                            CRSCOV33
+      END                                                               CRSCOV34
+C     BE FOURTR   FOURIER TRANSFORM SUBROUTINE                          FOURTR01
+      SUBROUTINEFOURTR(X,N,Y,IND)                                       FOURTR02
+      DIMENSIONX(2),Y(2),TAB(3000)                                      FOURTR03
+      COMMONTAB                                                         FOURTR04
+      AN=N                                                              FOURTR05
+      N1=N+1                                                            FOURTR06
+      N2=N+N                                                            FOURTR07
+      ANG=3.14159265/AN                                                 FOURTR08
+      CS=COSF(ANG)                                                      FOURTR09
+      SN=SINF(ANG)                                                      FOURTR10
+      GOTO(10,11,10,11),IND                                             FOURTR11
+C     COSINE TABLE                                                      FOURTR12
+ 10   TAB(1)=1.0                                                        FOURTR13
+      W=0.0                                                             FOURTR14
+      DO12I=2,N2                                                        FOURTR15
+      TAB(I)=TAB(I-1)*CS-W*SN                                           FOURTR16
+ 12   W=W*CS+TAB(I-1)*SN                                                FOURTR17
+      ONE=1.0                                                           FOURTR18
+      U=X(1)                                                            FOURTR19
+      GOTO13                                                            FOURTR20
+C     SINE TABLE                                                        FOURTR21
+ 11   TAB(1)=0.0                                                        FOURTR22
+      W=1.0                                                             FOURTR23
+      DO14I=2,N2                                                        FOURTR24
+      TAB(I)=TAB(I-1)*CS+W*SN                                           FOURTR25
+ 14   W=W*CS-TAB(I-1)*SN                                                FOURTR26
+      ONE=0.0                                                           FOURTR27
+      U=0.0                                                             FOURTR28
+ 13   DO15I=1,N1                                                        FOURTR29
+      I1=I-1                                                            FOURTR30
+      W=0.0                                                             FOURTR31
+      DO16J=2,N                                                         FOURTR32
+      K=XMODF(I1*(J-1),N2)                                              FOURTR33
+ 16   W=W+X(J)*TAB(K+1)                                                 FOURTR34
+      Y(I)=(U+2.0*W+ONE*X(N+1))/AN                                      FOURTR35
+ 15   ONE=-ONE                                                          FOURTR36
+      GOTO(17,18,19,21),IND                                             FOURTR37
+ 17   PRINT200                                                          FOURTR38
+      GOTO20                                                            FOURTR39
+ 18   PRINT201                                                          FOURTR40
+      GOTO20                                                            FOURTR41
+ 19   W2=(Y(1)+Y(2))/2.0                                                FOURTR42
+      W3=(Y(N)+Y(N+1))/2.0                                              FOURTR43
+      PRINT202                                                          FOURTR44
+      GOTO22                                                            FOURTR45
+ 21   W2=0.0                                                            FOURTR46
+      W3=0.0                                                            FOURTR47
+      PRINT203                                                          FOURTR48
+ 22   DO23I=2,N                                                         FOURTR49
+      W=(Y(I-1)+Y(I+1))/4.0+Y(I)/2.0                                    FOURTR50
+      Y(I-1)=W2                                                         FOURTR51
+ 23   W2=W                                                              FOURTR52
+      Y(N)=W2                                                           FOURTR53
+      Y(N+1)=W3                                                         FOURTR54
+ 20   RETURN                                                            FOURTR55
+ 200  FORMAT(17H0COSINE TRANSFORM)                                      FOURTR56
+ 201  FORMAT(15H0SINE TRANSFORM)                                        FOURTR57
+ 202  FORMAT(26H0SMOOTHED COSINE TRANSFORM)                             FOURTR58
+ 203  FORMAT(24H0SMOOTHED SINE TRANSFORM)                               FOURTR59
+      END                                                               FOURTR60
+C     BE DEMOD   DEMODULATING SUBROUTINE                                DEMOD001
+      SUBROUTINEDEMOD(Z,N,FREQ,X,Y)                                     DEMOD002
+      DIMENSIONZ(1),X(1),Y(1)                                           DEMOD003
+      OMEGA=FREQ*3.14159265                                             DEMOD004
+      DO10I=1,N                                                         DEMOD005
+      ANGLE=MODF(FLOATF(I-1)*OMEGA,6.2831853)                           DEMOD006
+      X(I)=Z(I)*COSF(ANGLE)                                             DEMOD007
+ 10   Y(I)=Z(I)*SINF(ANGLE)                                             DEMOD008
+      PRINT100,FREQ                                                     DEMOD009
+ 100  FORMAT(14H0DEMODULATE ATF6.3,24H TIMES FOLDING FREQUENCY)         DEMOD010
+      RETURN                                                            DEMOD011
+      END                                                               DEMOD012
+C     BE REMOD   MODULATING SUBROUTINE                                  REMOD001
+      SUBROUTINEREMOD(X,Y,N,FREQ,Z)                                     REMOD002
+      DIMENSIONX(1),Y(1),Z(1)                                           REMOD003
+      OMEGA=FREQ*3.14159265                                             REMOD004
+      DO10I=1,N                                                         REMOD005
+      ANGLE=MODF(FLOATF(I-1)*OMEGA,6.2831853)                           REMOD006
+ 10   Z(I)=X(I)*COSF(ANGLE)+Y(I)*SINF(ANGLE)                            REMOD007
+      PRINT100,FREQ                                                     REMOD008
+ 100  FORMAT(14H0MODULATE ONTOF6.3,24H TIMES FOLDING FREQUENCY)         REMOD009
+      RETURN                                                            REMOD010
+      END                                                               REMOD011
+C     BE CENTRE   CENTERING SUBROUTINE                                  CENTRE01
+      SUBROUTINECENTRE(A,NA,B,NB)                                       CENTRE02
+      DIMENSIONA(1),B(1)                                                CENTRE03
+      L=(NB-NA)/2                                                       CENTRE04
+      DO10I=1,NB                                                        CENTRE05
+ 10   B(I)=0.0                                                          CENTRE06
+      DO11I=1,NA                                                        CENTRE07
+      J=I+L                                                             CENTRE08
+ 11   B(J)=A(I)                                                         CENTRE09
+      PRINT200,NB                                                       CENTRE10
+ 200  FORMAT(27H0CENTRE IN RECORD OF LENGTHI6)                          CENTRE11
+      RETURN                                                            CENTRE12
+      END                                                               CENTRE13
+C     BE NORMAL   NORMALIZING SUBROUTINE                                NORMAL01
+      SUBROUTINENORMAL(X,NX,Y)                                          NORMAL02
+      DIMENSIONX(1),Y(1)                                                NORMAL03
+      C1=0.0                                                            NORMAL04
+      DO10I=1,NX                                                        NORMAL05
+ 10   C1=C1+X(I)*X(I)                                                   NORMAL06
+      C2=1.0/SQRTF(C1)                                                  NORMAL07
+      DO11I=1,NX                                                        NORMAL08
+ 11   Y(I)=C2*X(I)                                                      NORMAL09
+      PRINT12                                                           NORMAL10
+ 12   FORMAT(10H0NORMALIZE)                                             NORMAL11
+      RETURN                                                            NORMAL12
+      END                                                               NORMAL13
+C     BE RANGE   RANGE SUBROUTINE                                       RANGE001
+      SUBROUTINERANGE(X,NX,BIG,SMALL)                                   RANGE002
+      DIMENSIONX(1)                                                     RANGE003
+      BIG=X(1)                                                          RANGE004
+      SMALL=X(1)                                                        RANGE005
+      DO10I=2,NX                                                        RANGE006
+      SMALL=MIN1F(X(I),SMALL)                                           RANGE007
+ 10   BIG=MAX1F(X(I),BIG)                                               RANGE008
+      PRINT12,BIG,SMALL                                                 RANGE009
+ 12   FORMAT(19H0RANGE   MAXIMUM = 1PE12.5,13H   MINIMUM = 1PE12.5)     RANGE010
+      RETURN                                                            RANGE011
+      END                                                               RANGE012
+C     BE SQUASH   SCALING SUBROUTINE                                    SQUASH01
+      SUBROUTINESQUASH(X,NX,Y,BIG,SMALL,AMP)                            SQUASH02
+      DIMENSIONX(1),Y(1)                                                SQUASH03
+      BIG=X(1)                                                          SQUASH04
+      SMALL=X(1)                                                        SQUASH05
+      DO10I=2,NX                                                        SQUASH06
+      SMALL=MIN1F(X(I),SMALL)                                           SQUASH07
+ 10   BIG=MAX1F(X(I),BIG)                                               SQUASH08
+      IF(AMP)101,100,101                                                SQUASH09
+ 100  AMP=1.0                                                           SQUASH10
+ 101  S=ABSF(AMP)/MAX1F(ABSF(BIG),ABSF(SMALL))                          SQUASH11
+      DO12I=1,NX                                                        SQUASH12
+ 12   Y(I)=S*X(I)                                                       SQUASH13
+      PRINT13,BIG,SMALL,AMP                                             SQUASH14
+ 13   FORMAT(22H0SQUASH   MAXIMUM WAS 1PE12.5,15H   MINIMUM WAS 1PE12.5,SQUASH15
+     133H   EXTREME ABSOLUTE VALUE IS NOW 1PE12.5)                      SQUASH16
+      RETURN                                                            SQUASH17
+      END                                                               SQUASH18

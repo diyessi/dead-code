@@ -1,0 +1,87 @@
+      DIMENSION  KX(25),KY(25),K(10),L(10),C(20,20),B(20)               3DLS001 
+      DIMENSION X(600),Y(600),W(600),Z(600)                             3DLS002 
+      FUNF(X,Y,I,J)=(X**I)*(Y**J)                                       3DLS003 
+      READ INPUT TAPE   2,97,NJOB                                       3DLS004 
+ 12   READ INPUT TAPE   2,97,NFIT                                       3DLS005 
+      READ INPUT TAPE   2,97,NP,                                        3DLS006 
+      READ INPUT TAPE 2,96,A1,A2,(X(I),Y(I),Z(I),W(I),I=1,NP)           3DLS007 
+ 13   READ INPUT TAPE   2,97,NK,NL,IWT                                  3DLS008 
+      IF(IWT)  1203,1203,1201                                           3DLS009 
+ 1201 DO  1202  N=1,NP                                                  3DLS010 
+ 1202 W(N)=1.                                                           3DLS011 
+ 1203  READ INPUT TAPE 2,97,(K(J),J=1,NK),(L(M),M=1,NL)                 3DLS012 
+C                                                                       3DLS013 
+C     INDEXING EXPONENTS                                                3DLS014 
+       NT=NK*NL                                                         3DLS015 
+      I=0                                                               3DLS016 
+      DO 15 J=1,NK                                                      3DLS017 
+      DO 14 M=1,NL                                                      3DLS018 
+      I=I+1                                                             3DLS019 
+      KX(I)=K(J)                                                        3DLS020 
+ 14   KY(I)=L(M)                                                        3DLS021 
+ 15   CONTINUE                                                          3DLS022 
+ 16   DO 27 I=1,NT                                                      3DLS023 
+      IXR=KX(I)                                                         3DLS024 
+      IYR=KY(I)                                                         3DLS025 
+      DO 25 J=I,NT                                                      3DLS026 
+      IX=KX(J)                                                          3DLS027 
+      IY=KY(J)                                                          3DLS028 
+      C(I,J)=0.                                                         3DLS029 
+      B(I)=0.                                                           3DLS030 
+      DO 23 N=1,NP                                                      3DLS031 
+      XX=X(N)                                                           3DLS032 
+      YY=Y(N)                                                           3DLS033 
+      IF (IXR) 18,17,18                                                 3DLS034 
+ 17   XX=1.                                                             3DLS035 
+ 18   IF (IYR) 20,19,20                                                 3DLS036 
+ 19   YY=1.                                                             3DLS037 
+ 20   FR=FUNF(XX,YY,IXR,IYR)                                            3DLS038 
+      XX=X(N)                                                           3DLS039 
+      YY=Y(N)                                                           3DLS040 
+      IF (IX) 22,21,22                                                  3DLS041 
+ 21   XX=1.                                                             3DLS042 
+ 22   IF (IY) 222,221,222                                               3DLS043 
+ 221  YY=1.                                                             3DLS044 
+ 222  C(I,J)=C(I,J)+W(N)*FR*FUNF(XX,YY,IX,IY)                           3DLS045 
+ 23   B(I)=B(I)+W(N)*FR*Z(N)                                            3DLS046 
+ 25   C(J,I)=C(I,J)                                                     3DLS047 
+ 27   CONTINUE                                                          3DLS048 
+      CALL MATINV (C,NT,B,1,DETERM)                                     3DLS049 
+      WRITE OUTPUT TAPE 3,94,(KX(I),KY(I),B(I),I=1,NT)                  3DLS050 
+      WRITE OUTPUT TAPE 3,93,A1,A2                                      3DLS051 
+      WRITE OUTPUT TAPE 3,95                                            3DLS052 
+      WT=0.                                                             3DLS053 
+      RMS2=0.                                                           3DLS054 
+      DO 35 N=1,NP                                                      3DLS055 
+       ZC=0.                                                            3DLS056 
+      DO 33 I=1,NT                                                      3DLS057 
+      XX=X(N)                                                           3DLS058 
+      YY=Y(N)                                                           3DLS059 
+      IF (KX(I)) 29,28,29                                               3DLS060 
+ 28   XX=1.                                                             3DLS061 
+ 29   IF (KY(I))  33,31,33                                              3DLS062 
+ 31   YY=1.                                                             3DLS063 
+ 33   ZC   =B(I)*XX**KX(I)*YY**KY(I)+ZC                                 3DLS064 
+      DIFR = Z(N)-ZC                                                    3DLS065 
+       WRITE OUTPUT TAPE 3,89,X(N),Y(N),Z(N),ZC,DIFR,W(N)               3DLS066 
+      WT=W(N)+WT                                                        3DLS067 
+ 35   RMS2=RMS2+W(N)*DIFR   **2                                         3DLS068 
+      RMS=SQRTF(RMS2 /WT  )                                             3DLS069 
+      WRITE OUTPUT TAPE 3,99, RMS                                       3DLS070 
+      IF (NFIT-1) 45,45,41                                              3DLS071 
+ 41   NFIT =NFIT-1                                                      3DLS072 
+      GO TO 13                                                          3DLS073 
+ 45   IF (NJOB-1)  51,51,46                                             3DLS074 
+ 46   NJOB=NJOB-1                                                       3DLS075 
+      GO TO 12                                                          3DLS076 
+ 51   CALL EXIT                                                         3DLS077 
+ 89   FORMAT (4F16.4,F18.5,F15.1)                                       3DLS078 
+ 91   FORMAT (1H 6E10.3/)                                               3DLS079 
+ 92   FORMAT (1H 3E20.5)                                                3DLS080 
+ 93   FORMAT (////40X2A6////)                                           3DLS081 
+ 94   FORMAT (1H114HEXPONENTS OF X10X1HY8X12HCOEFFICIENTS//(/13X,I2,I11 3DLS082 
+     1,E20.5))                                                          3DLS083 
+ 95   FORMAT (1H 12X1HX15X1HY15X1HZ15X2HZC15X4HDIFF15X1HW//)            3DLS084 
+ 96   FORMAT (2A6/(4F10.4))                                             3DLS085 
+ 97    FORMAT (I5)                                                      3DLS086 
+ 99   FORMAT(/25X10HRMS ERROR=E20.5 )                                   3DLS087 

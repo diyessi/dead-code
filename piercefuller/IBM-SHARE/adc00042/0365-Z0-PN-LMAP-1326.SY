@@ -1,0 +1,156 @@
+*      FAP                                                              LMAPB000
+       COUNT   25                                                       LMAPB010
+       LBL     LMAP2,X                                                  LMAPB020
+       ENTRY   READ                                                     LMAPB030
+X      TAPENO  B5B             CHANGE TO A1B IF LIBRARY ON A1.          LMAPB040
+       REM     THIS CHANGE IS THE ONLY ONE NEEDED TO MAKE THE WHOLE JOB LMAPB050
+       REM     WORK ON A1 INSTEAD OF B5.                                LMAPB060
+       REM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .LMAPB070
+READ   SXA     OUT,1           SAVE INDEX REGISTERS.                    LMAPB080
+       SXA     OUT+1,2                                                  LMAPB090
+TRIGG  TRA     *+1             SET TO TRA *+7 AFTER FIRST PASS          LMAPB100
+       REWX                    REWIND LIBRARY TAPE ON FIRST PASS        LMAPB110
+       TRA     *+1+4*Z         *+1 IF A1, *+5 IF ANY OTHER TAPE         LMAPB120
+       DUP     2,2                                                      LMAPB130
+       RTDX                    SKIP I FILES IF A1                       LMAPB140
+       RCHX    SKPFIL                                                   LMAPB150
+       STL     TRIGG           RESET ONE-TIME GATE                      LMAPB160
+       AXT     25,1            SET REDUNDANCY COUNTER                   LMAPB170
+       TCOX    *               MAKE SURE CHANNEL INDICATORS ARE OFF     LMAPB180
+       TEFX    *+1                                                      LMAPB190
+       TRCX    *+1                                                      LMAPB200
+SELECT RTDX                    START READING                            LMAPB210
+       RCHX    COMA            READ FIRST WORD                          LMAPB220
+       LCHX    COMB            READ SECOND WORD                         LMAPB230
+       CAL     =O400077000000  GET CONTROL WORD AND COMPUTE WORD COUNT  LMAPB240
+       ANA     BUF                                                      LMAPB250
+       PBT                                                              LMAPB260
+       ADD     =2B17                                                    LMAPB270
+       PDX     ,2                                                       LMAPB280
+       ADD     =2B17                                                    LMAPB290
+       STD     MAX                                                      LMAPB300
+       CAL     COMB            MODIFY COMMAND                           LMAPB310
+LOOP   SUB     =1                                                       LMAPB320
+       SLW     COM                                                      LMAPB330
+       LCHX    COM             READ REMAINING WORDS INTO DESCENDING     LMAPB340
+TIX    TIX     LOOP,2,1        LOCATIONS IN MEMORY.                     LMAPB350
+       TCOX    *               AFTER COMPLETION OF READ, TEST FOR       LMAPB360
+       TEFX    EOF             END-OF-FILE,                             LMAPB370
+       IOT                     I/O CHECK                                LMAPB380
+       TRA     RERR                                                     LMAPB390
+       TRCX    RERR            AND REDUNDANCY.                          LMAPB400
+OK     CLA     BUF             IF OK, DETERMINE TYPE OF CARD.           LMAPB410
+       TPL     INSTCD          TRANSFER IF RELOCATABLE INSTRUCTION CARD LMAPB420
+       ANA     =1B1                                                     LMAPB430
+       TNZ     SELECT-4        TRANSFER IF SYMBOL TABLE CARD            LMAPB440
+       ZET     ISIZE           PROGRAM CARD.                            LMAPB450
+       TRA     OUT             TRANSFER IF CONTINUATION PROGRAM CARD    LMAPB460
+       LXA     BUF-2,2         FIRST PROGRAM CARD. GET SIZE OF PROGRAM  LMAPB470
+       SXD     ISIZE,2                                                  LMAPB480
+       LXD     BUF-2,2         GET NUMBER OF LOCATIONS IN TRANSFER VECTOLMAPB490
+       PXD     ,2                                                       LMAPB500
+       STO     ITRCNT                                                   LMAPB510
+OUT    AXT     **,1            RESTORE INDEX REGISTERS                  LMAPB520
+       AXT     **,2                                                     LMAPB530
+       TRA     1,4             EXIT TO MAIN PROGRAM                     LMAPB540
+INSTCD STZ     ISIZE           INSTRUCTION CARD. INDICATE NOT PROGRAM CDLMAPB550
+       TRA     OUT                                                      LMAPB560
+EOF    REWX                    END-OF-FILE. REWIND LIBRARY TAPE.        LMAPB570
+       IOT                     TURN OF I/O CHECK INDICATOR, WHICH HAS   LMAPB580
+       TRA     IEOF            BEEN TURNED ON BY THE FIRST LCHX, AND    LMAPB590
+       TRA     IEOF            EXIT TO SECOND PART OF MAIN PROGRAM      LMAPB600
+RERR   BSRX                    REDUNDANCY OR I/O CHECK.                 LMAPB610
+       TIX     SELECT,1,1      TRY 25 TIMES                             LMAPB620
+       CAL     =6B17           THEN PRINT MESSAGE AND IGNORE ERROR.     LMAPB630
+       SXA     *+4,4                                                    LMAPB640
+       CALL    (SPH),TEXT                                               LMAPB650
+       CALL    (FIL)                                                    LMAPB660
+       AXT     **,4                                                     LMAPB670
+       RTDX                                                             LMAPB680
+       TCOX    *                                                        LMAPB690
+       IOT                                                              LMAPB700
+       TRA     *+1                                                      LMAPB710
+       TRCX    OK                                                       LMAPB720
+       TRA     OK                                                       LMAPB730
+TEXT   BCI     8,(43H0A REDUNDANCY OR I/O CHECK HAS BEEN IGNORED)       LMAPB740
+COMA   IOCT    BUF,,1                                                   LMAPB750
+COMB   IOCT    BUF-1,,1                                                 LMAPB760
+COM    PZE                     VARIABLE COMMAND                         LMAPB770
+SKPFIL IOCPN   **,,-1                                                   LMAPB780
+       TCH     *-1                                                      LMAPB790
+Y      TAPENO  A1B                                                      LMAPB800
+Z      MIN     X-Y,1                                                    LMAPB810
+       COMMON  25000                                                    LMAPB820
+BUF    COMMON  24                                                       LMAPB830
+MAX    COMMON  1                                                        LMAPB840
+ISIZE  COMMON  1                                                        LMAPB850
+ITRCNT COMMON  1                                                        LMAPB860
+IEOF   COMMON  1               MAIN PROGRAM ASSIGNS SOMETHING TO IEOF   LMAPB870
+       END                                                              LMAPB880
+*      FAP                                                              LMAPC000
+*MIN                                                                    LMAPC010
+       COUNT   20                                                       LMAPC020
+       LBL     LMAP3,X                                                  LMAPC030
+       ENTRY   MIN                                                      LMAPC040
+MIN    SXA     OUT,1           SAVE INDEX                               LMAPC050
+       LXD     IDICT,1                                                  LMAPC060
+       SXD     TXL,1                                                    LMAPC070
+       CAL     =O777777777777                                           LMAPC080
+       AXT     1,1                                                      LMAPC090
+LOOP   LAS     DICT+1,1        LOOK FOR THE LOGICALLY SMALLEST ENTRY    LMAPC100
+       SXD     J,1             IN THE TABLE DICT                        LMAPC110
+       CAL     DICT+1,1                                                 LMAPC120
+       TXI     *+1,1,2                                                  LMAPC130
+TXL    TXL     LOOP,1,**                                                LMAPC140
+OUT    AXT     **,1            RESTORE INDEX                            LMAPC150
+       TRA     1,4             EXIT TO CALLER                           LMAPC160
+DICT   COMMON  25000                                                    LMAPC170
+       COMMON  28                                                       LMAPC180
+J      COMMON  1                                                        LMAPC190
+IDICT  COMMON  1                                                        LMAPC200
+       END                                                              LMAPC210
+*      FAP                                                              LMAPD000
+       COUNT   50                                                       LMAPD010
+       LBL     LMAP4,X                                                  LMAPD020
+       ENTRY   EJECT1                                                   LMAPD030
+       ENTRY   EJECT                                                    LMAPD040
+EJECT1 STZ     PAGENO          EJECT1 IS CALLED FROM THE MAIN PROGRAM   LMAPD050
+       LDQ     DATEBX          BEFORE ANYTHING IS WRIRTEN.              LMAPD060
+       LGL     12              IT RESETS THE PAGE NUMBER, EDITS THE     LMAPD070
+       ALS     6               DATE AND WRITES THE PAGE HEADING OF THE  LMAPD080
+       ORA     =H00000/        FIRST PAGE.                              LMAPD090
+       LGL     12                                                       LMAPD100
+       ALS     6                                                        LMAPD110
+       ORA     =H00000/                                                 LMAPD120
+       SLW     DATE                                                     LMAPD130
+       STQ     DATE+1                                                   LMAPD140
+       TXI     HEAD,4,1                                                 LMAPD150
+EJECT  CLA*    1,4             EJECT IS CALLED WHEN A NEW PAGE CAN      LMAPD160
+       ADD     LINCNT          BE PERMITTED. IT WILL STEP LINCNT AND    LMAPD170
+       STO     LINCNT          EXIT TO CALLER UNLESS LINCNT BECOMES     LMAPD180
+       SUB     =50B17          GREATER THAN 50. IN THAT CASE THE        LMAPD190
+       TMI     2,4             PAGE IS EJECTED AND THE PAGE HEADING     LMAPD200
+HEAD   CAL     =6B17           OF THE NEXT PAGE IS WRITTEN.             LMAPD210
+       SXA     OUT,4                                                    LMAPD220
+       CALL    (STH),FMT                                                LMAPD230
+       LDQ     DATE                                                     LMAPD240
+       STR                                                              LMAPD250
+       LDQ     DATE+1                                                   LMAPD260
+       STR                                                              LMAPD270
+       CLA     PAGENO                                                   LMAPD280
+       ADD     =1B17                                                    LMAPD290
+       XCA                                                              LMAPD300
+       STQ     PAGENO                                                   LMAPD310
+       STR                                                              LMAPD320
+       CALL    (FIL)                                                    LMAPD330
+       STZ     LINCNT                                                   LMAPD340
+OUT    AXT     **,4            RESTORE INDEX                            LMAPD350
+       TRA     2,4             EXIT TO CALLER.                          LMAPD360
+FMT    BCI     4,(1H1A6,A2,55X4HPAGEI4)                                 LMAPD370
+PAGENO                                                                  LMAPD380
+DATE                                                                    LMAPD390
+                                                                        LMAPD400
+DATEBX BOOL    142                                                      LMAPD410
+       COMMON  25030                                                    LMAPD420
+LINCNT COMMON  1                                                        LMAPD430
+       END                                                              LMAPD440

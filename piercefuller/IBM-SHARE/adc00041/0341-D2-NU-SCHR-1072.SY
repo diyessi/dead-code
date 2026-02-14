@@ -1,0 +1,177 @@
+NUSCHR    REMARKS CARD     177CARDS  02080   SYMBOLIC DECK   COOLEY     NUSCHR01
+C     SCHR(NI,NS,RMAX,POT,NPTS,KVIB,EIGV,EPS,MAXIT,SOL)    COOLEY       SCHR0002
+      FUNCTION SCHR(NI,NS,RMAX,V,N,KV,E0,EPS,MAXIT,S)                   SCHR0003
+C     NI=0 PRINT ITER. ON-LINE                                          SCHR0004
+C     NI=1,..,9  PRINT OFF-LINE TAPE NI                                 SCHR0005
+C     NI=OTHERWISE, DONT PRINT                                          SCHR0006
+C     NS, SAME EXCEPT FOR SOLUTIONS                                     SCHR0007
+      DIMENSION S(500),V(500),P(500),Y(3)                               SCHR0008
+C                                                                       SCHR0009
+      IF(NI)6,2,1                                                       SCHR0010
+ 1    IF(NI-10)4,6,6                                                    SCHR0011
+ 2    PRINT 3                                                           SCHR0012
+      GO TO 6                                                           SCHR0013
+ 3    FORMAT(70H0 ITER         E              F(E)            DF(E)     SCHR0014
+     X      D(E)     )                                                  SCHR0015
+ 4    WRITE OUTPUT TAPE NI,3                                            SCHR0016
+ 6    CALL EFMT(K)                                                      SCHR0017
+      H=RMAX/FLOATF(N)                                                  SCHR0018
+      H2=H**2                                                           SCHR0019
+ 8    HV=H2/12.                                                         SCHR0020
+      E=E0                                                              SCHR0021
+      TEST = -1.                                                        SCHR0022
+      DE=0.                                                             SCHR0023
+C                                                                       SCHR0024
+C     START ITER LOOP                                                   SCHR0025
+C                                                                       SCHR0026
+ 12   DO 171 IT=1,MAXIT                                                 SCHR0027
+C     .....START INWARD INTEGRATION                                     SCHR0028
+ 30   P(N)=1.E-30                                                       SCHR0029
+ 32   GN=V(N)-E                                                         SCHR0030
+ 34   GI=V(N-1)-E                                                       SCHR0031
+C     .....TEST IF E TOO HIGH                                           SCHR0032
+      IF(GI) 35, 36, 36                                                 SCHR0033
+ 35   E= V(N-2)                                                         SCHR0034
+      GO TO 32                                                          SCHR0035
+ 36   P(N-1)=P(N)*EXPF(RMAX*SQRTF(GN)-(RMAX-H)*SQRTF(GI))               SCHR0036
+ 38   Y=(1.-HV*GN)*P(N)                                                 SCHR0037
+ 40   Y(2)=(1.-HV*GI)*P(N-1)                                            SCHR0038
+C     .....INTEGRATE                                                    SCHR0039
+      K=0                                                               SCHR0040
+ 44   M=N-2                                                             SCHR0041
+ 46   Y(3)=Y(2)+((Y(2)-Y)+H2*GI*P(M+1))                                 SCHR0042
+ 48   GI=V(M)-E                                                         SCHR0043
+ 50   P(M)=Y(3)/(1.-HV*GI)                                              SCHR0044
+C     .....TEST FOR OVERFLOW                                            SCHR0045
+ 52   IF(K)54,70,54                                                     SCHR0046
+C     .....OVERFLOW                                                     SCHR0047
+ 54   K=0                                                               SCHR0048
+      M1=M+1                                                            SCHR0049
+      PM=P(M1)                                                          SCHR0050
+ 55   DO 56 J=M1,N                                                      SCHR0051
+ 56   P(J)=P(J)/PM                                                      SCHR0052
+ 58   Y=Y/PM                                                            SCHR0053
+ 60   Y(2)=Y(2)/PM                                                      SCHR0054
+ 62   Y(3)=Y(3)/PM                                                      SCHR0055
+      GI= V(M+1) - E                                                    SCHR0056
+      GO TO 46                                                          SCHR0057
+C     .....TEST FOR CROSSING PT.                                        SCHR0058
+ 70   IF(ABSF(P(M))-ABSF(P(M+1))   ) 90, 90, 72                         SCHR0059
+ 72   IF(M-2)90,90,80                                                   SCHR0060
+ 80   IF( V(M) - V(M+1)  )  81,81,90                                    SCHR0061
+ 81   Y= Y(2)                                                           SCHR0062
+ 82   Y(2)=Y(3)                                                         SCHR0063
+ 84   M=M-1                                                             SCHR0064
+ 86   GO TO 46                                                          SCHR0065
+C                                                                       SCHR0066
+ 90   PM=P(M)                                                           SCHR0067
+ 92   YIN=Y(2)/PM                                                       SCHR0068
+ 94   DO 96 J=M,N                                                       SCHR0069
+ 96   P(J)=P(J)/PM                                                      SCHR0070
+C                                                                       SCHR0071
+C     .....START OUTWARD INTEGRATION                                    SCHR0072
+C                                                                       SCHR0073
+ 100  P(1)=1.E-20                                                       SCHR0074
+ 102  Y=0.                                                              SCHR0075
+ 104  GI=V-E                                                            SCHR0076
+ 106  Y(2)=(1.-HV*GI)*P                                                 SCHR0077
+      K = 0                                                             SCHR0078
+ 108  DO 132 I=2,M                                                      SCHR0079
+ 110  Y(3)=Y(2)+((Y(2)-Y)+H2*GI*P(I-1))                                 SCHR0080
+ 112  GI=V(I)-E                                                         SCHR0081
+ 114  P(I)=Y(3)/(1.-HV*GI)                                              SCHR0082
+C     .....TEST FOR OVERFLOW                                            SCHR0083
+ 116  IF(K)118,130,118                                                  SCHR0084
+ 118  K=0                                                               SCHR0085
+      I1=I-1                                                            SCHR0086
+      PM=P(I1)                                                          SCHR0087
+      DO 120 J=1,I1                                                     SCHR0088
+ 120  P(J)=P(J)/PM                                                      SCHR0089
+ 122  Y=Y/PM                                                            SCHR0090
+ 124  Y(2)=Y(2)/PM                                                      SCHR0091
+ 126  Y(3)=Y(3)/PM                                                      SCHR0092
+      GI=V(I1)-E                                                        SCHR0093
+      GO TO 110                                                         SCHR0094
+C                                                                       SCHR0095
+ 130  Y=Y(2)                                                            SCHR0096
+ 132  Y(2)=Y(3)                                                         SCHR0097
+C                                                                       SCHR0098
+C     .....FINISHED OUTWARD INTEGRATION                                 SCHR0099
+ 134  PM=P(M)                                                           SCHR0100
+      IF(PM)135,149,135                                                 SCHR0101
+ 135  YOUT=Y/PM                                                         SCHR0102
+ 136  YM=Y(3)/PM                                                        SCHR0103
+ 138  DO 140 J=1,M                                                      SCHR0104
+ 140  P(J)=P(J)/PM                                                      SCHR0105
+C                                                                       SCHR0106
+C     .....CORRECTION                                                   SCHR0107
+C                                                                       SCHR0108
+ 142  DF=0.                                                             SCHR0109
+ 144  DO 146 J=1,N                                                      SCHR0110
+ 146  DF=DF-P(J)**2                                                     SCHR0111
+ 148  F=(-YOUT-YIN+2.*YM)/H2+(V(M)-E)                                   SCHR0112
+      DOLD=DE                                                           SCHR0113
+      IF(K)149,150,149                                                  SCHR0114
+ 149  F=9.999999E+29                                                    SCHR0115
+      DF=-F                                                             SCHR0116
+      DE=ABSF(.0001*E)                                                  SCHR0117
+      GO TO 152                                                         SCHR0118
+ 150  DE=-F/DF                                                          SCHR0119
+ 152  IF(NI)164,158,154                                                 SCHR0120
+ 154  IF(NI-10)162,164,164                                              SCHR0121
+ 156  FORMAT( 1H0     I4, 2X,  1P4E16.7  )                              SCHR0122
+ 158  PRINT 156,IT,E,F,DF,DE                                            SCHR0123
+ 160  GO TO 164                                                         SCHR0124
+ 162  WRITE OUTPUT TAPE NI,156,IT,E,F,DF,DE                             SCHR0125
+ 164  EOLD = E                                                          SCHR0126
+      E=E+DE                                                            SCHR0127
+ 166  TEST=MAX1F(ABSF(DOLD)-ABSF(DE),TEST)                              SCHR0128
+ 168  IF(TEST)171,170,170                                               SCHR0129
+ 170  IF( ABSF( E-EOLD)     -  EPS )  172,172,171                       SCHR0130
+ 171  CONTINUE                                                          SCHR0131
+      SCHR=1.                                                           SCHR0132
+      GO TO 173                                                         SCHR0133
+C     .....CONVERGED-COUNT NODES                                        SCHR0134
+ 172  SCHR=0.                                                           SCHR0135
+ 173  KV=0                                                              SCHR0136
+      NL=N-2                                                            SCHR0137
+ 174  DO 192 J=3,NL                                                     SCHR0138
+ 176  IF(P(J))178,177,177                                               SCHR0139
+ 177  IF(P(J-1))180,192,192                                             SCHR0140
+ 178  IF(P(J-1))192,184,184                                             SCHR0141
+C     POS. NODE                                                         SCHR0142
+ 180  IF(P(J+1))192,182,182                                             SCHR0143
+ 182  IF(P(J-2))190,192,192                                             SCHR0144
+C     NEG. NODE                                                         SCHR0145
+ 184  IF(P(J+1))186,192,192                                             SCHR0146
+ 186  IF(P(J-2))192,190,190                                             SCHR0147
+ 190  KV=KV+1                                                           SCHR0148
+ 192  CONTINUE                                                          SCHR0149
+C     .....NORMALIZE                                                    SCHR0150
+ 200  SN=SQRTF(-H*DF)                                                   SCHR0151
+ 202  DO 204 J=1,N                                                      SCHR0152
+ 204  S(J)=P(J)/SN                                                      SCHR0153
+C     .....PRINT SOLUTION                                               SCHR0154
+ 206  IF(NS)236,210,208                                                 SCHR0155
+ 208  IF(NS-10)210,236,236                                              SCHR0156
+ 210  DO 234 JF=1,N,300                                                 SCHR0157
+ 212  IF(NS)236,216,218                                                 SCHR0158
+ 214  FORMAT(47H1SCHR- SOLUTION OF RADIAL SCHR. EQUATION FOR V= I3, 7H  SCHR0159
+     X   E= 1PE15.7 /20H0   I       S(I)    5(20H    I       S(I)     ))SCHR0160
+ 216  PRINT 214,KV,E                                                    SCHR0161
+      GO TO 220                                                         SCHR0162
+ 218  WRITE OUTPUT TAPE NS,214,KV,E                                     SCHR0163
+ 220  JL=XMIN0F(JF+49,N)                                                SCHR0164
+ 222  DO 234 J=JF,JL                                                    SCHR0165
+ 224  IL=XMIN0F(J+250,N)                                                SCHR0166
+ 226  IF(NS)236,230,232                                                 SCHR0167
+ 228  FORMAT(6(I5,1PE15.7))                                             SCHR0168
+ 230  PRINT 228,(I,S(I),I=J,IL,50)                                      SCHR0169
+      GO TO 234                                                         SCHR0170
+ 232  WRITE OUTPUT TAPE NS,228,(I,S(I),I=J,IL,50)                       SCHR0171
+ 234  CONTINUE                                                          SCHR0172
+ 236  E0=E                                                              SCHR0173
+ 250  RETURN                                                            SCHR0174
+      FREQUENCY 52(0,1,0),70(0,0,1),72(0,0,1),94(100),55(50),108(100),11SCHR0175
+     X6(0,1,0),138(100),144(200),152(1,0,0),154(0,1,1),202(200)         SCHR0176
+      END(0,1,0,0,0)                                                    SCHR0177

@@ -1,0 +1,947 @@
+PPTDAC REM 0947 04050                                                   TDAC0001
+* TDAC --- TAPE DUPLICATE AND COMPARE ROUTINE                           TDAC0002
+* APRIL 5, 1960 --- JIM J. JONES                                        TDAC0003
+*   P U R P O S E .                                                     TDAC0004
+*     1. TO MOVE RECORDS AND/OR FILES OF BINARY AND/OR BCD              TDAC0005
+*        INFORMATION FROM ANY TAPE OR TAPES ON CHANNEL A TO             TDAC0006
+*        ANY TAPE OR TAPES ON CHANNEL B.                                TDAC0007
+*     2. TO COMPARE ANY NUMBER OF RECORDS AND/OR FILES OF               TDAC0008
+*        BINARY AND/OR BCD INFORMATION FROM ANY TAPE OR TAPES           TDAC0009
+*        ON CHANNEL A WITH A TAPE OR TAPES ON CHANNEL B.                TDAC0010
+*                                                                       TDAC0011
+*   U S A G E .                                                         TDAC0012
+*     COMMUNICATION WITH THE ROUTINE MAY BE THROUGH TWO MEDIA,          TDAC0013
+*     CONTROL CARDS FROM THE ON-LINE CARD READER, AND INPUT             TDAC0014
+*     SWITCH SETTINGS FROM THE CONSOLE.                                 TDAC0015
+*     1. CONTROL CARDS                                                  TDAC0016
+*          MODE   (XXX)   DEFINES TAPE MODE. (XXX)= BIN OR BCD          TDAC0017
+*          ATAP   N       DEFINES CHANNEL A TAPE AS UNIT N              TDAC0018
+*          BTAP   N       DEFINES CHANNEL B TAPE AS UNIT N              TDAC0019
+*          DUPR   N       DUPLICATE N RECORDS                           TDAC0020
+*          DUPF   N       DUPLICATE N FILES                             TDAC0021
+*          COMR   N       COMPARE N RECORDS                             TDAC0022
+*          COMF   N       COMPARE N FILES                               TDAC0023
+*          SKRA   N       SKIP N RECORDS ON CHANNEL A TAPE              TDAC0024
+*          SKRB   N       SKIP N RECORDS ON CHANNEL B TAPE              TDAC0025
+*          SKFA   N       SKIP N FILES ON CHANNEL A TAPE                TDAC0026
+*          SKFB   N       SKIP N FILES ON CHANNEL B TAPE                TDAC0027
+*          BSRA   N       BACKSPACE TAPE A N RECORDS                    TDAC0028
+*          BSRB   N       BACKSPACE TAPE B N RECORDS                    TDAC0029
+*          BSFA   N       BACKSPACE TAPE A N FILES                      TDAC0030
+*          BSFB   N       BACKSPACE TAPE B N FILES                      TDAC0031
+*          WEFB           WRITE AN END OF FILE ON TAPE B                TDAC0032
+*          REWA           REWIND TAPE A                                 TDAC0033
+*          REWB           REWIND TAPE B                                 TDAC0034
+*          PAUSE          STOP OPERATION                                TDAC0035
+*          MESAGE         PRINT COLUMNS 16-72 OF THIS CARD              TDAC0036
+*          (BLANK)        TRANSFER CONTROL TO CONSOLE                   TDAC0037
+       EJECT                                                            TDAC0038
+       SPACE                                                            TDAC0039
+*   U S A G E . (CONT.)                                                 TDAC0040
+*     2. CONSOLE INPUT SWITCH SETTINGS.                                 TDAC0041
+*        S,1-5  CHANNEL A TAPE NUMBER                                   TDAC0042
+*        6-11   CHANNEL B TAPE NUMBER                                   TDAC0043
+*        12-17  OPERATION CODE (SEE BELOW)                              TDAC0044
+*        18-20  TAPE MODE, 1=BCD   2=BINARY                             TDAC0045
+*        21-35  COUNT FOR COMMANDS THAT REQUIRE ONE                     TDAC0046
+*                                                                       TDAC0047
+*       OPERATION CODES (SWITCHES 12-17)                                TDAC0048
+*        00 - REVERT CONTROL TO CARD READER                             TDAC0049
+*        01 - SAME AS DUPR                                              TDAC0050
+*        02 - SAME AS DUPF                                              TDAC0051
+*        03 - SAME AS COMR                                              TDAC0052
+*        04 - SAME AS COMF                                              TDAC0053
+*        05 - SAME AS SKRA                                              TDAC0054
+*        06 - SAME AS SKRB                                              TDAC0055
+*        07 - SAME AS SKFA                                              TDAC0056
+*        10 - SAME AS SKFB                                              TDAC0057
+*        11 - SAME AS BSRA                                              TDAC0058
+*        12 - SAME AS BSRB                                              TDAC0059
+*        13 - SAME AS BSFA                                              TDAC0060
+*        14 - SAME AS BSFB                                              TDAC0061
+*        15 - SAME AS WEFB                                              TDAC0062
+*        16 - SAME AS REWA                                              TDAC0063
+*        17 - SAME AS REWB                                              TDAC0064
+       EJECT                                                            TDAC0065
+       ORG     64                                                       TDAC0066
+ START TSX     IOFF,4            TURN OFF TAPE INDICATORS.              TDAC0067
+       SPACE   1                                                        TDAC0068
+       RCDA                      READ A CONTROL CARD.                   TDAC0069
+       RCHA    CW1               IOCD I,,24                             TDAC0070
+       TCOA    *                                                        TDAC0071
+       TEFA    BLANK             IF EOF CHANGE CONTROL TO CONSOLE.      TDAC0072
+       TSX     HCBCD,4           CONVERT CARD IMAGE TO BCD.             TDAC0073
+       PZE     I,,B                                                     TDAC0074
+       SPACE   1                                                        TDAC0075
+       CAL     B+1                                                      TDAC0076
+       LAS     MES               IS THIS A MESSAGE CARD.                TDAC0077
+       TRA     *+2                                                      TDAC0078
+       TRA     ST1               GO TO PRINT MESSAGE.                   TDAC0079
+       SPACE   1                                                        TDAC0080
+       TSX     PLINE,4           PRINT CONTROL CARD ON-LINE.            TDAC0081
+       PZE     B,,12                                                    TDAC0082
+       CAL     B+1                                                      TDAC0083
+       AXT     20,1                                                     TDAC0084
+       LAS     TB1+20,1                                                 TDAC0085
+       TRA     *+2                                                      TDAC0086
+       TRA     ST2                                                      TDAC0087
+       TIX     *-3,1,1                                                  TDAC0088
+       TSX     PLINE,4                                                  TDAC0089
+       PZE     MS1,,6                                                   TDAC0090
+       TRA     PAUSE                                                    TDAC0091
+       SPACE   1                                                        TDAC0092
+ ST1   LDI     B+2                                                      TDAC0093
+       RIL     770000                                                   TDAC0094
+       SIL     600000                                                   TDAC0095
+       STI     B+2                                                      TDAC0096
+       TSX     PLINE,4                                                  TDAC0097
+       PZE     B+2,,10                                                  TDAC0098
+       TRA     START                                                    TDAC0099
+       SPACE   1                                                        TDAC0100
+ ST2   CLA     TTB1+20,1                                                TDAC0101
+       TPL*    TTB1+20,1                                                TDAC0102
+       TSX     NCVT,4                                                   TDAC0103
+       TRA*    TTB1+20,1                                                TDAC0104
+       SPACE   1                                                        TDAC0105
+ TTB1  PZE     MODE                                                     TDAC0106
+       MZE     ATAP                                                     TDAC0107
+       MZE     BTAP                                                     TDAC0108
+       MZE     DUPR                                                     TDAC0109
+       MZE     DUPF                                                     TDAC0110
+       MZE     COMR                                                     TDAC0111
+       MZE     COMF                                                     TDAC0112
+       MZE     SKRA                                                     TDAC0113
+       MZE     SKRB                                                     TDAC0114
+       MZE     SKFA                                                     TDAC0115
+       MZE     SKFB                                                     TDAC0116
+       MZE     BSAR                                                     TDAC0117
+       MZE     BSBR                                                     TDAC0118
+       MZE     BSAF                                                     TDAC0119
+       MZE     BSBF                                                     TDAC0120
+       PZE     WEFBX                                                    TDAC0121
+       PZE     REWAX                                                    TDAC0122
+       PZE     REWBX                                                    TDAC0123
+       PZE     PAUSE                                                    TDAC0124
+       PZE     BLANK                                                    TDAC0125
+       SPACE   1                                                        TDAC0126
+* DEFINE TAPE MODE (BINARY OR BCD)                                      TDAC0127
+ MODE  LDI     B+2                  BIN OR   BCD                        TDAC0128
+       RNT     223145                                                   TDAC0129
+       TRA     *+3                                                      TDAC0130
+       TSX     BIN,4                                                    TDAC0131
+       TRA     RETURN                                                   TDAC0132
+       SPACE   1                                                        TDAC0133
+       TSX     BCD,4                                                    TDAC0134
+       TRA     RETURN                                                   TDAC0135
+       SPACE   1                                                        TDAC0136
+ BIN   CAL     OCT20                                                    TDAC0137
+       ORS     RTA                                                      TDAC0138
+       ORS     RTB                                                      TDAC0139
+       ORS     WTB                                                      TDAC0140
+       TRA     1,4                                                      TDAC0141
+       SPACE   1                                                        TDAC0142
+ BCD   CAL     MSK1                                                     TDAC0143
+       ANS     RTA                                                      TDAC0144
+       ANS     RTB                                                      TDAC0145
+       ANS     WTB                                                      TDAC0146
+       TRA     1,4                                                      TDAC0147
+       SPACE   2                                                        TDAC0148
+* DEFINE CHANNEL A TAPE UNIT                                            TDAC0149
+ ATAP  TSX     DEFA,4                                                   TDAC0150
+       TRA     RETURN                                                   TDAC0151
+       SPACE   1                                                        TDAC0152
+ DEFA  AXT     4,1                                                      TDAC0153
+       LDI     BSRA+4,1                                                 TDAC0154
+       RIR     000017                                                   TDAC0155
+       OAI                                                              TDAC0156
+       STI     BSRA+4,1                                                 TDAC0157
+       TIX     *-4,1,1                                                  TDAC0158
+       TRA     1,4                                                      TDAC0159
+       SPACE   2                                                        TDAC0160
+* DEFINE CHANNEL B TAPE UNIT                                            TDAC0161
+ BTAP  TSX     DEFB,4                                                   TDAC0162
+       TRA     RETURN                                                   TDAC0163
+       SPACE   1                                                        TDAC0164
+ DEFB  AXT     6,1                                                      TDAC0165
+       LDI     BSRB+6,1                                                 TDAC0166
+       RIR     000017                                                   TDAC0167
+       OAI                                                              TDAC0168
+       STI     BSRB+6,1                                                 TDAC0169
+       TIX     *-4,1,1                                                  TDAC0170
+       TRA     1,4                                                      TDAC0171
+       SPACE   2                                                        TDAC0172
+* DUPLICATE N RECORDS                                                   TDAC0173
+ DUPR  STZ     SWF                                                      TDAC0174
+       TRA     DUP                                                      TDAC0175
+       SPACE   2                                                        TDAC0176
+* DUPLICATE N FILES                                                     TDAC0177
+ DUPF  STL     SWF                                                      TDAC0178
+       TRA     DUP                                                      TDAC0179
+       SPACE   2                                                        TDAC0180
+* COMPARE N RECORDS                                                     TDAC0181
+ COMR  STZ     SWF                                                      TDAC0182
+       TRA     COMP                                                     TDAC0183
+       SPACE   2                                                        TDAC0184
+* COMPARE N FILES                                                       TDAC0185
+ COMF  STL     SWF                                                      TDAC0186
+       TRA     COMP                                                     TDAC0187
+       SPACE   2                                                        TDAC0188
+* SKIP N RECORDS ON CHANNEL A TAPE                                      TDAC0189
+ SKRA  XEC     RTA                                                      TDAC0190
+       RCHA    CW2                                                      TDAC0191
+       TSX     COUNT,4                                                  TDAC0192
+       TRA     *-3                                                      TDAC0193
+       SPACE   2                                                        TDAC0194
+* SKIP N RECORDS ON CHANNEL B TAPE                                      TDAC0195
+ SKRB  XEC     RTB                                                      TDAC0196
+       RCHB    CW2                                                      TDAC0197
+       TSX     COUNT,4                                                  TDAC0198
+       TRA     *-3                                                      TDAC0199
+       SPACE   2                                                        TDAC0200
+* SKIP N FILES ON CHANNEL A TAPE                                        TDAC0201
+ SKFA  XEC     RTA                                                      TDAC0202
+       RCHA    CW3                                                      TDAC0203
+       TSX     COUNT,4                                                  TDAC0204
+       TRA     *-3                                                      TDAC0205
+       SPACE   2                                                        TDAC0206
+* SKIP N FILES ON CHANNEL B TAPE                                        TDAC0207
+ SKFB  XEC     RTB                                                      TDAC0208
+       RCHB    CW3                                                      TDAC0209
+       TSX     COUNT,4                                                  TDAC0210
+       TRA     *-3                                                      TDAC0211
+       SPACE   2                                                        TDAC0212
+* BACKSPACE CHANNEL A TAPE N RECORDS                                    TDAC0213
+ BSAR  XEC     BSRA                                                     TDAC0214
+       TSX     COUNT,4                                                  TDAC0215
+       TRA     *-2                                                      TDAC0216
+       SPACE   2                                                        TDAC0217
+* BACKSPACE CHANNEL B TAPE N RECORDS                                    TDAC0218
+ BSBR  XEC     BSRB                                                     TDAC0219
+       TSX     COUNT,4                                                  TDAC0220
+       TRA     *-2                                                      TDAC0221
+       SPACE   2                                                        TDAC0222
+* BACKSPACE CHANNEL A TAPE N FILES                                      TDAC0223
+ BSAF  XEC     BSFA                                                     TDAC0224
+       TSX     COUNT,4                                                  TDAC0225
+       TRA     *-2                                                      TDAC0226
+       SPACE   2                                                        TDAC0227
+* BACKSPACE CHANNEL B TAPE N FILES                                      TDAC0228
+ BSBF  XEC     BSFB                                                     TDAC0229
+       TSX     COUNT,4                                                  TDAC0230
+       TRA     *-2                                                      TDAC0231
+       SPACE   2                                                        TDAC0232
+* WRITE AN END OF FILE ON CHANNEL B TAPE                                TDAC0233
+ WEFBX XEC     WEFB                                                     TDAC0234
+       TRA     RETURN                                                   TDAC0235
+       SPACE   2                                                        TDAC0236
+* REWIND CHANNEL A TAPE                                                 TDAC0237
+ REWAX XEC     REWA                                                     TDAC0238
+       TRA     RETURN                                                   TDAC0239
+       SPACE   2                                                        TDAC0240
+* REWIND CHANNEL B TAPE                                                 TDAC0241
+ REWBX XEC     REWB                                                     TDAC0242
+       TRA     RETURN                                                   TDAC0243
+       SPACE   2                                                        TDAC0244
+* PAUSE CARD                                                            TDAC0245
+ PAUSE HPR     511,7                                                    TDAC0246
+       TRA     RETURN                                                   TDAC0247
+       SPACE   2                                                        TDAC0248
+* BLANK CONTROL CARD OR END OF FILE                                     TDAC0249
+ BLANK STL     SW1                                                      TDAC0250
+       TRA     RETURN                                                   TDAC0251
+       SPACE   2                                                        TDAC0252
+* RETURN ROUTINE                                                        TDAC0253
+RETURN NZT     SW1                                                      TDAC0254
+       TRA     START             READ NEXT CONTROL CARD.                TDAC0255
+       HPR     511,7                                                    TDAC0256
+       TSX     IOFF,4            TURN OFF INDICATORS.                   TDAC0257
+       ENK                       BRING IN CONTROL WORD.                 TDAC0258
+       PXA     0,0                                                      TDAC0259
+       LGL     6                                                        TDAC0260
+       TZE     *+2                                                      TDAC0261
+       TSX     DEFA,4                                                   TDAC0262
+       PXA     0,0                                                      TDAC0263
+       LGL     6                                                        TDAC0264
+       TZE     *+2                                                      TDAC0265
+       TSX     DEFB,4                                                   TDAC0266
+       PXA     0,0                                                      TDAC0267
+       LGL     6                                                        TDAC0268
+       PAC     0,2                                                      TDAC0269
+       PXA     0,0                                                      TDAC0270
+       LGL     3                                                        TDAC0271
+       PAC     0,1                                                      TDAC0272
+       XEC     TMOD,1                                                   TDAC0273
+       PXA     0,0                                                      TDAC0274
+       LGL     15                                                       TDAC0275
+       STO     N                                                        TDAC0276
+       TRA*    TTB2,2                                                   TDAC0277
+       SPACE   1                                                        TDAC0278
+ TMOD  NOP                                                              TDAC0279
+       TSX     BCD,4                                                    TDAC0280
+       TSX     BIN,4                                                    TDAC0281
+       SPACE   2                                                        TDAC0282
+ C00   STZ     SW1                                                      TDAC0283
+       TRA     START                                                    TDAC0284
+       SPACE   2                                                        TDAC0285
+ TTB2  PZE     C00                                                      TDAC0286
+       PZE     DUPR                                                     TDAC0287
+       PZE     DUPF                                                     TDAC0288
+       PZE     COMR                                                     TDAC0289
+       PZE     COMF                                                     TDAC0290
+       PZE     SKRA                                                     TDAC0291
+       PZE     SKRB                                                     TDAC0292
+       PZE     SKFA                                                     TDAC0293
+       PZE     SKFB                                                     TDAC0294
+       PZE     BSAR                                                     TDAC0295
+       PZE     BSBR                                                     TDAC0296
+       PZE     BSAF                                                     TDAC0297
+       PZE     BSBF                                                     TDAC0298
+       PZE     WEFBX                                                    TDAC0299
+       PZE     REWAX                                                    TDAC0300
+       PZE     REWBX                                                    TDAC0301
+       SPACE   2                                                        TDAC0302
+* PRINT ONE LINE WITH SPACING                                           TDAC0303
+ PLINE SXA     PLEX,4                                                   TDAC0304
+       CLA     1,4                                                      TDAC0305
+       STO     *+5                                                      TDAC0306
+       WPDA                                                             TDAC0307
+       SPRA    4                                                        TDAC0308
+       SPRA    3                                                        TDAC0309
+       TSX     PRINT,4                                                  TDAC0310
+       PZE     **                                                       TDAC0311
+ PLEX  AXT     **,4                                                     TDAC0312
+       TRA     2,4                                                      TDAC0313
+       SPACE   2                                                        TDAC0314
+* TURN OFF ALL TAPE INDICATORS                                          TDAC0315
+ IOFF  TEFA    *+1                                                      TDAC0316
+       TEFB    *+1                                                      TDAC0317
+       TRCA    *+1                                                      TDAC0318
+       TRCB    *+1                                                      TDAC0319
+       TRA     1,4                                                      TDAC0320
+       SPACE   2                                                        TDAC0321
+* COUNT DOWN N AND BRANCH ON ZERO                                       TDAC0322
+ COUNT CLA     N                                                        TDAC0323
+       SUB     ONE                                                      TDAC0324
+       TZE     RETURN                                                   TDAC0325
+       STO     N                                                        TDAC0326
+       TRA     1,4                                                      TDAC0327
+       SPACE   2                                                        TDAC0328
+* TAPE DUPLICATE ROUTINE                                                TDAC0329
+ DUP   CLA     ONE                                                      TDAC0330
+       STO     F                                                        TDAC0331
+       STO     R                                                        TDAC0332
+       SXD     CW6                                                      TDAC0333
+ DP2   TSX     READA,4                                                  TDAC0334
+       TCOB    *                                                        TDAC0335
+       TRCB    DP5                                                      TDAC0336
+       TRA     DP8                                                      TDAC0337
+ DP5   XEC     BSRA                                                     TDAC0338
+       XEC     BSRA                                                     TDAC0339
+       TSX     READA,4                                                  TDAC0340
+       TSX     REWRT,4                                                  TDAC0341
+       TRA     DP2                                                      TDAC0342
+ DP8   TEFA    *+2                                                      TDAC0343
+       TRA     DP13                                                     TDAC0344
+       XEC     WEFB                                                     TDAC0345
+       TSX     COUNT,4                                                  TDAC0346
+       CLA     ONE                                                      TDAC0347
+       STO     R                                                        TDAC0348
+       ADD     F                                                        TDAC0349
+       STO     F                                                        TDAC0350
+       SXD     CW6                                                      TDAC0351
+       TRA     DP2                                                      TDAC0352
+ DP13  SCHA    CHA                                                      TDAC0353
+       CLA     CHA                                                      TDAC0354
+       PAX     0,1                                                      TDAC0355
+       TXL     DP25,1,-2                                                TDAC0356
+       TSX     STOFR,4                                                  TDAC0357
+       PZE     MS2,1                                                    TDAC0358
+       TSX     PLINE,4                                                  TDAC0359
+       PZE     MS2,,8                                                   TDAC0360
+       TRA     PAUSE                                                    TDAC0361
+ DP25  ETTB                                                             TDAC0362
+       TRA     DP26                                                     TDAC0363
+ DP16  TXI     *+1,1,-BUF-1                                             TDAC0364
+       LXD     CW6,2                                                    TDAC0365
+       SXD     DP20A,2                                                  TDAC0366
+       SXD     CW6,1                                                    TDAC0367
+       XEC     WTB                                                      TDAC0368
+       RCHB    CW6A                                                     TDAC0369
+       ZET     SWF                                                      TDAC0370
+       TRA     DP20                                                     TDAC0371
+       CLA     N                                                        TDAC0372
+       SUB     ONE                                                      TDAC0373
+       STO     N                                                        TDAC0374
+       TZE     DP21                                                     TDAC0375
+ DP20  CLA     R                                                        TDAC0376
+       ADD     ONE                                                      TDAC0377
+       STO     R                                                        TDAC0378
+ DP20A TXL     DP2,1,**                                                 TDAC0379
+       RCHB    CW8                                                      TDAC0380
+       LCHB    CW6                                                      TDAC0381
+       TRA     DP2                                                      TDAC0382
+ DP21  TCOB    *                                                        TDAC0383
+       TRCB    *+2                                                      TDAC0384
+       TRA     RETURN                                                   TDAC0385
+       TSX     REWRT,4                                                  TDAC0386
+       TRA     RETURN                                                   TDAC0387
+ DP26  TSX     PLINE,4                                                  TDAC0388
+       PZE     MS7,,11                                                  TDAC0389
+       XEC     WEFB                                                     TDAC0390
+       XEC     REWB                                                     TDAC0391
+       HPR     511,7                                                    TDAC0392
+       SXD     CW6                                                      TDAC0393
+       TRA     DP16                                                     TDAC0394
+ REWRT SXA     REWX,4                                                   TDAC0395
+       AXT     5,4                                                      TDAC0396
+ RW2   XEC     BSRB                                                     TDAC0397
+       XEC     WTB                                                      TDAC0398
+       TCOB    *                                                        TDAC0399
+       TRCB    REDB+1                                                   TDAC0400
+       XEC     WTB                                                      TDAC0401
+       RCHB    CW6A                                                     TDAC0402
+       TCOB    *                                                        TDAC0403
+       TRCB    REDB                                                     TDAC0404
+ REWX  AXT     **,4                                                     TDAC0405
+       SXD     CW6                                                      TDAC0406
+       TRA     1,4                                                      TDAC0407
+ REDB  TIX     RW2,4,1                                                  TDAC0408
+       CLA     TPB                                                      TDAC0409
+       STO     MS3+5                                                    TDAC0410
+       TSX     STOFR,4                                                  TDAC0411
+       PZE     MS3,1                                                    TDAC0412
+       TSX     PLINE,4                                                  TDAC0413
+       PZE     MS3,,8                                                   TDAC0414
+       TRA     PAUSE                                                    TDAC0415
+ READA SXA     RDEX,4                                                   TDAC0416
+       AXT     3,4                                                      TDAC0417
+ RD2   XEC     RTA                                                      TDAC0418
+       RCHA    CW7                                                      TDAC0419
+       TCOA    *                                                        TDAC0420
+       TRCA    REDA                                                     TDAC0421
+ RDEX  AXT     **,4                                                     TDAC0422
+       TRA     1,4                                                      TDAC0423
+ REDA  XEC     BSRA                                                     TDAC0424
+       SXD     CW6                                                      TDAC0425
+       TIX     RD2,4,1                                                  TDAC0426
+       CLA     TPA                                                      TDAC0427
+       TRA     REDB+2                                                   TDAC0428
+       SPACE   2                                                        TDAC0429
+* TAPE COMPARE SUBROUTINE                                               TDAC0430
+ COMP  CLA     ONE                                                      TDAC0431
+       STO     F                 FILE NUMBER                            TDAC0432
+       STO     R                 RECORD NUMBER                          TDAC0433
+       STZ     P                 PASS NUMBER                            TDAC0434
+ CP3   TSX     CREAD,4           INITIATE BOTH READ OPERATIONS          TDAC0435
+       SPACE   1                                                        TDAC0436
+ CP4A  AXT     3,3               DELAY AND CHECK FOR                    TDAC0437
+ CP4   TCOA    *                 REDUNDANCY.                            TDAC0438
+       TRCA    CP5                                                      TDAC0439
+       TCOB    *                                                        TDAC0440
+       TRCB    CP5A                                                     TDAC0441
+       TRA     CP6                                                      TDAC0442
+       SPACE   1                                                        TDAC0443
+ CP5   TIX     CP5C,1,1          GO TO RE-READ                          TDAC0444
+       CLA     TPA                                                      TDAC0445
+ CP5B  STO     MS3+5                                                    TDAC0446
+       TSX     STOFR,4                                                  TDAC0447
+       PZE     MS3,1                                                    TDAC0448
+       TSX     PLINE,4                                                  TDAC0449
+       PZE     MS3,,8                                                   TDAC0450
+       TRA     PAUSE                                                    TDAC0451
+       SPACE   1                                                        TDAC0452
+ CP5A  TIX     CP5C,2,1          GO TO RE-READ                          TDAC0453
+       CLA     TPB                                                      TDAC0454
+       TRA     CP5B                                                     TDAC0455
+       SPACE   1                                                        TDAC0456
+ CP5C  XEC     BSRA                                                     TDAC0457
+       XEC     BSRB                                                     TDAC0458
+       TSX     CREAD,4                                                  TDAC0459
+       TRA     CP4                                                      TDAC0460
+       SPACE   1                                                        TDAC0461
+ CP6   TEFA    CP7                                                      TDAC0462
+       TEFB    CP10                                                     TDAC0463
+       TRA     CP11                                                     TDAC0464
+       SPACE   1                                                        TDAC0465
+ CP7   TEFB    CP26                                                     TDAC0466
+       CLA     TPA                                                      TDAC0467
+       LDQ     TPB                                                      TDAC0468
+       TRA     CP10A                                                    TDAC0469
+ CP10  CLA     TPB                                                      TDAC0470
+       LDQ     TPA                                                      TDAC0471
+ CP10A STO     MS4+8                                                    TDAC0472
+       STQ     MS4+6                                                    TDAC0473
+       CLA     F                                                        TDAC0474
+       TSX     BINBC,4                                                  TDAC0475
+       SLW     MS4+1                                                    TDAC0476
+       TSX     PLINE,4                                                  TDAC0477
+       PZE     MS4,,9                                                   TDAC0478
+       TRA     PAUSE                                                    TDAC0479
+       SPACE   1                                                        TDAC0480
+ CP11  SCHA    CHA                                                      TDAC0481
+       SCHB    CHB                                                      TDAC0482
+       CLA     CHB                                                      TDAC0483
+       SUB     CHA                                                      TDAC0484
+       PAX     0,1                                                      TDAC0485
+       TXI     *+1,1,-CSIZ                                              TDAC0486
+       TXL     CP13,1,0                                                 TDAC0487
+       SPACE   1                                                        TDAC0488
+ CP12  TSX     STOFR,4                                                  TDAC0489
+       PZE     MS5,1                                                    TDAC0490
+       TSX     PLINE,4                                                  TDAC0491
+       PZE     MS5,,9                                                   TDAC0492
+       TRA     PAUSE                                                    TDAC0493
+       SPACE   1                                                        TDAC0494
+ CP13  LXA     CHB,1                                                    TDAC0495
+       TXL     CP16,1,2*CSIZ+BUF-1                                      TDAC0496
+       LXA     P,2                                                      TDAC0497
+       TXI     *+1,2,1                                                  TDAC0498
+       SXA     P,2                                                      TDAC0499
+       XEC     BSRA                                                     TDAC0500
+       XEC     BSRB                                                     TDAC0501
+       TRA     CP20                                                     TDAC0502
+       SPACE   1                                                        TDAC0503
+ CP16  NZT     P                                                        TDAC0504
+       STZ     PC                                                       TDAC0505
+       STZ     P                                                        TDAC0506
+       ZET     SWF                                                      TDAC0507
+       TRA     CP20                                                     TDAC0508
+       CLA     N                                                        TDAC0509
+       SUB     ONE                                                      TDAC0510
+       STO     N                                                        TDAC0511
+       TZE     CP22                                                     TDAC0512
+       SPACE   1                                                        TDAC0513
+ CP20  TSX     CREAD,4                                                  TDAC0514
+ CP22  TXL     *+2,1,2*CSIZ+BUF-1                                       TDAC0515
+       TXI     *+1,1,-1                                                 TDAC0516
+       SXA     CP22B,1                                                 9TDAC0517
+       TXI     *+1,1,-CSIZ                                              TDAC0518
+       SXA     CP22A,1                                                  TDAC0519
+       TXI     *+1,1,-BUF                                               TDAC0520
+ CP22C CLA     PC                                                       TDAC0521
+       ADD     ONE                                                      TDAC0522
+       STO     PC                                                       TDAC0523
+ CP22A CLA     **,1                                                     TDAC0524
+ CP22B CAS     **,1                                                     TDAC0525
+       TRA     CP22D                                                    TDAC0526
+       TRA     *+2                                                      TDAC0527
+       TRA     CP22D                                                    TDAC0528
+       TIX     CP22C,1,1                                                TDAC0529
+       TRA     CP23                                                     TDAC0530
+       SPACE   1                                                        TDAC0531
+ CP22D NZT     N                                                        TDAC0532
+       TRA     CP22E                                                    TDAC0533
+       ZET     P                                                        TDAC0534
+       TRA     CP22E                                                    TDAC0535
+       XEC     BSRA                                                     TDAC0536
+       XEC     BSRB                                                     TDAC0537
+ CP22E TSX     STOFR,4                                                  TDAC0538
+       PZE     MS6,1                                                    TDAC0539
+       CLA     PC                                                       TDAC0540
+       TSX     BINBC,4                                                  TDAC0541
+       SLW     MS6+5                                                    TDAC0542
+       TSX     PLINE,4                                                  TDAC0543
+       PZE     MS6,,9                                                   TDAC0544
+       TRA     PAUSE                                                    TDAC0545
+       SPACE   1                                                        TDAC0546
+ CP23  NZT     N                                                        TDAC0547
+       TRA     RETURN            END OF COMPARE                         TDAC0548
+       NZT     P                                                        TDAC0549
+       TRA     CP4A                                                     TDAC0550
+       CLA     R                                                        TDAC0551
+       ADD     ONE                                                      TDAC0552
+       STO     R                                                        TDAC0553
+       TRA     CP4A                                                     TDAC0554
+       SPACE   1                                                        TDAC0555
+ CP26  TSX     COUNT,4                                                  TDAC0556
+       CLA     ONE                                                      TDAC0557
+       STO     R                                                        TDAC0558
+       ADD     F                                                        TDAC0559
+       STO     F                                                        TDAC0560
+       TRA     CP3                                                      TDAC0561
+       SPACE   2                                                        TDAC0562
+ CREAD SXA     CRX,4                                                    TDAC0563
+       LXA     P,4                                                      TDAC0564
+       XEC     RTA                                                      TDAC0565
+       RCHA    CW4,4                                                    TDAC0566
+       XEC     RTB                                                      TDAC0567
+       RCHB    CW5,4                                                    TDAC0568
+ CRX   AXT     **,4                                                     TDAC0569
+       TRA     1,4                                                      TDAC0570
+       SPACE   2                                                        TDAC0571
+ STOFR SXA     STOX,4                                                   TDAC0572
+       SXA     STOX+1,1                                                 TDAC0573
+       CLA     R                                                        TDAC0574
+       TSX     BINBC,4                                                  TDAC0575
+       AXC     3,1                                                      TDAC0576
+       LXA     STOX,4                                                   TDAC0577
+       SLW*    1,4                                                      TDAC0578
+       CLA     F                                                        TDAC0579
+       TSX     BINBC,4                                                  TDAC0580
+       AXC     1,1                                                      TDAC0581
+       LXA     STOX,4                                                   TDAC0582
+       SLW*    1,4                                                      TDAC0583
+ STOX  AXT     **,4                                                     TDAC0584
+       AXT     **,1                                                     TDAC0585
+       TRA     2,4                                                      TDAC0586
+       SPACE   2                                                        TDAC0587
+* CONVERT N TO BINARY INTEGER                                           TDAC0588
+ NCVT  SXA     NCEX,4                                                   TDAC0589
+       STZ     N                                                        TDAC0590
+       CAL     B+2                                                      TDAC0591
+       LDQ     B+3                                                      TDAC0592
+       LGR     18                                                       TDAC0593
+       AXT     6,4                                                      TDAC0594
+ NC1   PXA     0,0                                                      TDAC0595
+       TQP     *+2                                                      TDAC0596
+       TRA     NC2                                                      TDAC0597
+       LGL     6                                                        TDAC0598
+       STO     R                                                        TDAC0599
+       CLA     N                                                        TDAC0600
+       ALS     2                                                        TDAC0601
+       ADD     N                                                        TDAC0602
+       ALS     1                                                        TDAC0603
+       ADD     R                                                        TDAC0604
+       STO     N                                                        TDAC0605
+       TIX     NC1,4,1                                                  TDAC0606
+ NC2   CLA     N                                                        TDAC0607
+ NCEX  AXT     **,4                                                     TDAC0608
+       TRA     1,4                                                      TDAC0609
+       SPACE   2                                                        TDAC0610
+* CONVERT BINARY TO BCD                                                 TDAC0611
+ BINBC SXA     BBEX,4                                                   TDAC0612
+       XCA                                                              TDAC0613
+       PXA     0,0                                                      TDAC0614
+       PAI                                                              TDAC0615
+       AXT     30,4                                                     TDAC0616
+       DVP     TEN                                                      TDAC0617
+       ALS     30,4                                                     TDAC0618
+       OAI                                                              TDAC0619
+       PXA     0,0                                                      TDAC0620
+       TIX     *-4,4,6                                                  TDAC0621
+       PIA                                                              TDAC0622
+       AXC     36,4                                                     TDAC0623
+       TZE     *+4                                                      TDAC0624
+       LGR     6                                                        TDAC0625
+       TXI     *+1,4,6                                                  TDAC0626
+       TXH     *-3,4,0                                                  TDAC0627
+       CAL     BLNK                                                     TDAC0628
+       LGR     0,4                                                      TDAC0629
+       XCL                                                              TDAC0630
+ BBEX  AXT     **,4                                                     TDAC0631
+       TRA     1,4                                                      TDAC0632
+       SPACE   2                                                        TDAC0633
+* TAPE READ AND WRITE INSTRUCTIONS                                      TDAC0634
+ BSRA  BSRA    6                                                        TDAC0635
+ BSFA  BSFA    6                                                        TDAC0636
+ REWA  REWA    6                                                        TDAC0637
+ RTA   RTDA    6                                                        TDAC0638
+       SPACE   1                                                        TDAC0639
+ BSRB  BSRB    6                                                        TDAC0640
+ BSFB  BSFB    6                                                        TDAC0641
+ REWB  REWB    6                                                        TDAC0642
+ WEFB  WEFB    6                                                        TDAC0643
+ WTB   WTDB    6                                                        TDAC0644
+ RTB   RTDB    6                                                        TDAC0645
+       SPACE   3                                                        TDAC0646
+* COMMON STORAGE AREA                                                   TDAC0647
+       SPACE   1                                                        TDAC0648
+ N     PZE     0                 CARD VARIABLE                          TDAC0649
+ R     PZE     0                 RECORD COUNTER                         TDAC0650
+ F     PZE     0                 FILE COUNTER                           TDAC0651
+ P     PZE     0                 PASS COUNTER FOR COMPARE               TDAC0652
+ PC    PZE     0                 RECORD WORD COUNTER                    TDAC0653
+ OCT20 PZE     16                                                       TDAC0654
+ MSK1  OCT     777777777717                                             TDAC0655
+ ONE   PZE     1                                                        TDAC0656
+ TEN   PZE     10                                                       TDAC0657
+ SW1   PZE     0                 CONTROL WORD SWITCH                    TDAC0658
+ CHA   PZE     0                                                        TDAC0659
+ CHB   PZE     0                                                        TDAC0660
+ SWF   PZE     0                 RECORD OR FILE SWITCH                  TDAC0661
+* DATA CHANNEL COMMANDS                                                 TDAC0662
+ CW1   IOCD    I,,24                                                    TDAC0663
+ CW2   IORTN   0,,-1                                                    TDAC0664
+ CW3   IOCPN   0,,-1                                                    TDAC0665
+       TCH     *-1                                                      TDAC0666
+       SPACE   1                                                        TDAC0667
+       IOCPN   0,,CSIZ-1                                                TDAC0668
+       IOCPN   0,,CSIZ-1                                                TDAC0669
+       IOCPN   0,,CSIZ-1                                                TDAC0670
+ CW4   IORT    BUF,,CSIZ                                                TDAC0671
+       SPACE   1                                                        TDAC0672
+       IOCPN   0,,CSIZ-1                                                TDAC0673
+       IOCPN   0,,CSIZ-1                                                TDAC0674
+       IOCPN   0,,CSIZ-1                                                TDAC0675
+ CW5   IORT    BUF+CSIZ,,CSIZ                                           TDAC0676
+       SPACE   1                                                        TDAC0677
+ CW6A  IOCP    BUF,,1                                                   TDAC0678
+ CW6   IORT    BUF+1,,**                                                TDAC0679
+ CW7   IORT    BUF,,SIZE                                                TDAC0680
+ CW8   IOCT    BUF,,1                                                   TDAC0681
+* MESSAGES AND BCD INFORMATION                                          TDAC0682
+       SPACE   1                                                        TDAC0683
+ MES   BCI     1, MESAG                                                 TDAC0684
+ TB1   BCI     1, MODE                                                  TDAC0685
+       BCI     1, ATAP                                                  TDAC0686
+       BCI     1, BTAP                                                  TDAC0687
+       BCI     1, DUPR                                                  TDAC0688
+       BCI     1, DUPF                                                  TDAC0689
+       BCI     1, COMR                                                  TDAC0690
+       BCI     1, COMF                                                  TDAC0691
+       BCI     1, SKRA                                                  TDAC0692
+       BCI     1, SKRB                                                  TDAC0693
+       BCI     1, SKFA                                                  TDAC0694
+       BCI     1, SKFB                                                  TDAC0695
+       BCI     1, BSRA                                                  TDAC0696
+       BCI     1, BSRB                                                  TDAC0697
+       BCI     1, BSFA                                                  TDAC0698
+       BCI     1, BSFB                                                  TDAC0699
+       BCI     1, WEFB                                                  TDAC0700
+       BCI     1, REWA                                                  TDAC0701
+       BCI     1, REWB                                                  TDAC0702
+       BCI     1, PAUSE                                                 TDAC0703
+ BLNK  BCI     1,                                                       TDAC0704
+       SPACE   1                                                        TDAC0705
+ MS1   BCI     6,ILLEGAL CONTROL WORD ENCOUNTERED.                      TDAC0706
+ MS2   BCI     8, FILE         REC         TOO LONG TO DUPLICATE.       TDAC0707
+ MS3   BCI     8, FILE         REC         ON  TAPE X  REDUNDANT.       TDAC0708
+ TPA   BCI     1,TAPE A                                                 TDAC0709
+ TPB   BCI     1,TAPE B                                                 TDAC0710
+ MS4   BCI     9, FILE         HAS  MORE  RECORDS ON        THAN        TDAC0711
+ MS5   BCI     9, FILE         REC         WORD COUNTS ARE UNEQUAL.     TDAC0712
+ MS6   BCI     9, FILE         REC         WORD        DOES NOT COMPARE.TDAC0713
+ MS7   BCI     6,END OF TAPE B ENCOUNTERED. REPLACE A                   TDAC0714
+       BCI     5,ND PRESS START TO CONTINUE.                            TDAC0715
+       SPACE   3                                                        TDAC0716
+ PRINT SXA     GS70,1            -----LINKAGE                           TDAC0717
+       SXA     GS70+1,2          TSX PRINT,4                            TDAC0718
+       SXA     GS70+2,4          PZE START,,N                           TDAC0719
+       CLA     1,4               NORMAL RETURN                          TDAC0720
+       ARS     18                N                                      TDAC0721
+       ADD     *-2               N+1 NOTE N=NO. OF WORDS                TDAC0722
+       STA     GQ85              (12 OR LESS)                           TDAC0723
+       ADD     1,4                                                      TDAC0724
+       STA     GQ85+1            FIRST+N+1                              TDAC0725
+       AXT     1,1               CHOOSE LEFT IMAGE                      TDAC0726
+       AXT     24,2              CLEAR BUFFER                           TDAC0727
+       STZ     BUF+24,2                                                 TDAC0728
+       TIX     *-1,2,1                                                  TDAC0729
+ GQ70  CAL     GS40              RESET COLUMN INDICATOR                 TDAC0730
+       SLW     GS45+1                                                   TDAC0731
+       AXT     6,2               BEGIN CARD IMAGE FORMATION             TDAC0732
+ GQ85  AXT     **,4                                                     TDAC0733
+       LDQ     **,4              PICK UP NEXT WORD                      TDAC0734
+       TNX     GS45+2,4,1                                               TDAC0735
+       SXA     GQ85,4            SAVE WORD COUNT                        TDAC0736
+       SXA     GS25,2            SAVE GROUP COUNT                       TDAC0737
+ GR10  PXD     0,0                                                      TDAC0738
+       LGL     2                 ZONE INDICATOR                         TDAC0739
+       ALS     1                 DOUBLED                                TDAC0740
+       PAX     0,2               TO INDEX B                             TDAC0741
+       CLM                                                              TDAC0742
+       LGL     4                 NUMERIC PART                           TDAC0743
+       ALS     1                 DOUBLED                                TDAC0744
+       PAX     0,4               TO INDEX C                             TDAC0745
+       CAL     GS45+1                                                   TDAC0746
+       TXL     *+2,2,4           SKIP IF NO ZERO ZONE                   TDAC0747
+       TXL     GS05,4,0          ZERO ZONE AND NO NUMBER=BLANK          TDAC0748
+       TXL     *+3,2,0           SKIP IF NO ZONE                        TDAC0749
+       ORS     BUF+25,3          FILL IN ZONE BIT                       TDAC0750
+       TXL     GS05,4,0          EXIT IF NO NUMBER                      TDAC0751
+       TXL     *+3,4,20          SKIP IF NO 8-3 OR 8-4                  TDAC0752
+       ORS     BUF+3,1           FILL IN 8 PUNCH BIT                    TDAC0753
+       ORS     BUF+35,5          FILL IN 3 OR 4 PUNCH BIT               TDAC0754
+       TXH     GS05,4,18         EXIT IF SPECIAL CHARACTER              TDAC0755
+       ORS     BUF+19,5          FILL IN NUMERIC BIT                    TDAC0756
+ GS05  ARS     1                 UPDATE COLUMN INDICATOR                TDAC0757
+       SLW     GS45+1                                                   TDAC0758
+       ANA     GS45              CLOSE LOOP IF NOT THROUGH              TDAC0759
+       TNZ     GR10              WITH WORD                              TDAC0760
+ GS25  AXT     **,2              RESTORE IMAGE WORD COUNT               TDAC0761
+       TIX     GQ85,2,1                                                 TDAC0762
+       TXI     GQ70,1,-1         GO BACK FOR RIGHT IMAGE                TDAC0763
+ GS40  MZE     0                                                        TDAC0764
+ GS45  OCT     -373737373737                                            TDAC0765
+       PZE     0                                                        TDAC0766
+       WPDA                                                             TDAC0767
+       RCHA    GS90                                                     TDAC0768
+       TCOA    *                                                        TDAC0769
+ GS70  AXT     **,1                                                     TDAC0770
+       AXT     **,2                                                     TDAC0771
+       AXT     **,4                                                     TDAC0772
+       TRA     2,4                                                      TDAC0773
+ GS90  IOCD    BUF,,24                                                  TDAC0774
+* HOLLERITH CARD TO BCD CONVERTER                                       TDAC0775
+* 24 WORD CARD IMAGE TO 12 WORD BCD                                     TDAC0776
+* CALLING SEQUENCE                                                      TDAC0777
+*      TSX     HCBCD,4                                                  TDAC0778
+*      PZE     A,0,B                                                    TDAC0779
+*      RETURN                                                           TDAC0780
+* A IS THE FIRST CELL OF THE 24 WORD CARD IMAGE                         TDAC0781
+* B IS THE FIRST CELL OF THE 12 WORD BCD OUTPUT                         TDAC0782
+       SPACE   2                                                        TDAC0783
+ HCBCD SXA     S1,1                                                     TDAC0784
+       SXA     S2,2                                                     TDAC0785
+       SXA     S4,4                                                     TDAC0786
+       CLA     1,4                                                      TDAC0787
+       PAC     0,1                                                      TDAC0788
+       AXT     24,2                                                     TDAC0789
+       CLA     0,1                                                      TDAC0790
+       STO     CI+24,2                                                  TDAC0791
+       TXI     *+1,1,-1                                                 TDAC0792
+       TIX     *-3,2,1                                                  TDAC0793
+       AXT     24,1                                                     TDAC0794
+       STZ     BCI+24,1                                                 TDAC0795
+       TIX     *-1,1,1                                                  TDAC0796
+       AXT     2,4                                                      TDAC0797
+ C     AXT     24,2                                                     TDAC0798
+       TXH     *+2,4,1                                                  TDAC0799
+       TXI     *+1,2,-1                                                 TDAC0800
+ A     LDQ     CI+24,2                                                  TDAC0801
+       AXT     6,1                                                      TDAC0802
+ HAFRO CLM                                                              TDAC0803
+       CAQ     VENT,0,1                                                 TDAC0804
+       TXH     BB,2,6                                                   TDAC0805
+       ALS     4                                                        TDAC0806
+       TXL     BB,2,4                                                   TDAC0807
+       STZ*    RTORL+4,4                                                TDAC0808
+ BB    ACL*    RTORL+4,4                                                TDAC0809
+       SLW*    RTORL+4,4                                                TDAC0810
+       ACL*    RTORL+2,4                                                TDAC0811
+       SLW*    RTORL+2,4                                                TDAC0812
+       TIX     HAFRO,1,1                                                TDAC0813
+       TIX     A,2,2                                                    TDAC0814
+       TIX     C,4,1                                                    TDAC0815
+       AXT     12,1                                                     TDAC0816
+ CTHK  CAL     M1717                                                    TDAC0817
+       ANA     BCI+12,1                                                 TDAC0818
+       ACL     M1717                                                    TDAC0819
+       COM                                                              TDAC0820
+       LDQ     M2020                                                    TDAC0821
+       STQ     TEMPA                                                    TDAC0822
+       ANS     TEMPA                                                    TDAC0823
+       CAL     M6060                                                    TDAC0824
+       ANA     BCI+12,1                                                 TDAC0825
+       ADD     TEMPA                                                    TDAC0826
+       ARS     1                                                        TDAC0827
+       LDQ     M4040                                                    TDAC0828
+       STQ     TEMPB                                                    TDAC0829
+       ANS     TEMPB                                                    TDAC0830
+       ADD     TEMPA                                                    TDAC0831
+       ARS     1                                                        TDAC0832
+       ADD     TEMPA                                                    TDAC0833
+       LDQ     M2020                                                    TDAC0834
+       STQ     TEMPC                                                    TDAC0835
+       ANS     TEMPC                                                    TDAC0836
+       CAL     TEMPB                                                    TDAC0837
+       ARS     1                                                        TDAC0838
+       ACL     TEMPB                                                    TDAC0839
+       COM                                                              TDAC0840
+       ANS     BCI+12,1                                                 TDAC0841
+       CAL     TEMPC                                                    TDAC0842
+       ALS     1                                                        TDAC0843
+       ACL     TEMPC                                                    TDAC0844
+       ACL     BCI+12,1                                                 TDAC0845
+       SLW     BCI+12,1                                                 TDAC0846
+       TIX     CTHK,1,1                                                 TDAC0847
+ S4    AXT     **,4                                                     TDAC0848
+       CLA     1,4                                                      TDAC0849
+       PDC     0,1                                                      TDAC0850
+       AXT     12,2                                                     TDAC0851
+       CLA     BCI+12,2                                                 TDAC0852
+       STO     0,1                                                      TDAC0853
+       TXI     *+1,1,-1                                                 TDAC0854
+       TIX     *-3,2,1                                                  TDAC0855
+ S2    AXT     **,2                                                     TDAC0856
+ S1    AXT     **,1                                                     TDAC0857
+ HCBX  TRA     2,4                                                      TDAC0858
+ TEMPA PZE                                                              TDAC0859
+ TEMPB PZE                                                              TDAC0860
+ TEMPC PZE                                                              TDAC0861
+ RTORL PZE     BCI+6,1                                                  TDAC0862
+       PZE     BCI+12,1                                                 TDAC0863
+       PZE     BCI+18,1                                                 TDAC0864
+       PZE     BCI+24,1                                                 TDAC0865
+ M1717 OCT     171717171717                                             TDAC0866
+ M2020 OCT     202020202020                                             TDAC0867
+ M4040 OCT     404040404040                                             TDAC0868
+ M6060 OCT     606060606060                                             TDAC0869
+ CI    BSS     24                                                       TDAC0870
+ BCI   BSS     24                                                       TDAC0871
+       SPACE   2                                                        TDAC0872
+       REM     CARD IMAGE SPREAD TABLE FOR CONVERTER                    TDAC0873
+ VENT  BCI     1,000000                                                 TDAC0874
+       BCI     1,000001                                                 TDAC0875
+       BCI     1,000010                                                 TDAC0876
+       BCI     1,000011                                                 TDAC0877
+       BCI     1,000100                                                 TDAC0878
+       BCI     1,000101                                                 TDAC0879
+       BCI     1,000110                                                 TDAC0880
+       BCI     1,000111                                                 TDAC0881
+       BCI     1,001000                                                 TDAC0882
+       BCI     1,001001                                                 TDAC0883
+       BCI     1,001010                                                 TDAC0884
+       BCI     1,001011                                                 TDAC0885
+       BCI     1,001100                                                 TDAC0886
+       BCI     1,001101                                                 TDAC0887
+       BCI     1,001110                                                 TDAC0888
+       BCI     1,001111                                                 TDAC0889
+       BCI     1,010000                                                 TDAC0890
+       BCI     1,010001                                                 TDAC0891
+       BCI     1,010010                                                 TDAC0892
+       BCI     1,010011                                                 TDAC0893
+       BCI     1,010100                                                 TDAC0894
+       BCI     1,010101                                                 TDAC0895
+       BCI     1,010110                                                 TDAC0896
+       BCI     1,010111                                                 TDAC0897
+       BCI     1,011000                                                 TDAC0898
+       BCI     1,011001                                                 TDAC0899
+       BCI     1,011010                                                 TDAC0900
+       BCI     1,011011                                                 TDAC0901
+       BCI     1,011100                                                 TDAC0902
+       BCI     1,011101                                                 TDAC0903
+       BCI     1,011110                                                 TDAC0904
+       BCI     1,011111                                                 TDAC0905
+       BCI     1,100000                                                 TDAC0906
+       BCI     1,100001                                                 TDAC0907
+       BCI     1,100010                                                 TDAC0908
+       BCI     1,100011                                                 TDAC0909
+       BCI     1,100100                                                 TDAC0910
+       BCI     1,100101                                                 TDAC0911
+       BCI     1,100110                                                 TDAC0912
+       BCI     1,100111                                                 TDAC0913
+       BCI     1,101000                                                 TDAC0914
+       BCI     1,101001                                                 TDAC0915
+       BCI     1,101010                                                 TDAC0916
+       BCI     1,101011                                                 TDAC0917
+       BCI     1,101100                                                 TDAC0918
+       BCI     1,101101                                                 TDAC0919
+       BCI     1,101110                                                 TDAC0920
+       BCI     1,101111                                                 TDAC0921
+       BCI     1,110000                                                 TDAC0922
+       BCI     1,110001                                                 TDAC0923
+       BCI     1,110010                                                 TDAC0924
+       BCI     1,110011                                                 TDAC0925
+       BCI     1,110100                                                 TDAC0926
+       BCI     1,110101                                                 TDAC0927
+       BCI     1,110110                                                 TDAC0928
+       BCI     1,110111                                                 TDAC0929
+       BCI     1,111000                                                 TDAC0930
+       BCI     1,111001                                                 TDAC0931
+       BCI     1,111010                                                 TDAC0932
+       BCI     1,111011                                                 TDAC0933
+       BCI     1T111100                                                 TDAC0934
+       BCI     1,111101                                                 TDAC0935
+       BCI     1,111110                                                 TDAC0936
+       BCI     1,111111                                                 TDAC0937
+       SPACE   4                                                        TDAC0938
+* BUFFER AREAS                                                          TDAC0939
+ BUF   PZE                                                              TDAC0940
+ I     EQU     BUF+24                                                   TDAC0941
+ B     EQU     BUF+48                                                   TDAC0942
+ MEM   EQU     8192                                                     TDAC0943
+ SIZE  EQU     MEM-1-BUF                                                TDAC0944
+ CSIZ  EQU     SIZE/2                                                   TDAC0945
+       SPACE   3                                                        TDAC0946
+       END     START                                                    TDAC0947

@@ -1,0 +1,639 @@
+NULUCY REM 0639 06010            EXTENDED FORTRAN 2 BSS LOADER          LUCY 001
+       REM PERFORM ALL FUNCTIONS OF THE FORTRAN BINARY SYMBOLIC SUBROU- LUCY 002
+       REM TINE LOADER, AND WILL IN ADDITION EXECUTE THE FOLLOWING -    LUCY 003
+       REM                                                              LUCY 004
+       REM   1. LUCY WILL LOAD ABSOLUTE BINARY CORRECTION CARDS (9-ROW  LUCY 005
+       REM      BLANK, THEN WORD IN RIGHT OF ROW IS LOADED INTO ADDRESS LUCY 006
+       REM      IN LEFT OF ROW).                                        LUCY 007
+       REM                                                              LUCY 008
+       REM   2. LUCY WILL WRITE A SELF-LOADING PROGRAM TAPE OF TWO      LUCY 009
+       REM      RECORDS ON TAPE 1 IF SENSE SWITCH 5 IS DOWN.  THE FIRST LUCY 010
+       REM      RECORD INITIALIZES THE MACHINE AND THE SECOND RECORD IS LUCY 011
+       REM      A COMPRESSION OF THE NON-ZERO LOCATIONS OF THE          LUCY 012
+       REM      PROGRAM.  IF SENSE SWITCH 2 IS DOWN, TAPE 1 IS NEVER    LUCY 013
+       REM      REWOUND, OTHERWISE IT IS REWOUND BEFORE AND AFTER THE   LUCY 014
+       REM      PROGRAM TAPE IS WRITTEN.                                LUCY 015
+       REM                                                              LUCY 016
+       REM   3. WHEN LOADING A TAPE WRITTEN BY LUCY, CONTROL MAY BE     LUCY 017
+       REM      TRANSFERRED BACK TO THE BINARY CARD LOADER BY           LUCY 018
+       REM      DEPRESSING SENSE SWITCH 6.  SINCE THE PROGRAM TAPE IS   LUCY 019
+       REM      WRITTEN AT THE END OF THE FIRST LOADER PASS, IT IS      LUCY 020
+       REM      POSSIBLE TO READ NEW SYMBOLIC SUBROUTINES AT THIS TIME  LUCY 021
+       REM      WHICH WILL BE USED IN THE CURRENT OPERATION. IF SENSE   LUCY 022
+       REM      SWITCH 2 IS DOWN, THE PROGRAM TAPE IS NOT REWOUND       LUCY 023
+       REM      AFTER BEING LOADED IN. IF SENSE SWITCH 5 IS ALSO DOWN   LUCY 024
+       REM      DURING TAPE READ-IN, A NEW PROGRAM TAPE WILL BE WRITTEN LUCY 025
+       REM      AFTER A FORTRAN TRANSFER CARD (9L ROW = -0) HAS BEEN    LUCY 026
+       REM      ENCOUNTERED IN THE CARD READER.                         LUCY 027
+       REM                                                              LUCY 028
+       REM   4. IF SENSE SWITCH 1, OR SENSE SWITCH 3, IS DOWN WHEN LOAD-LUCY 029
+       REM      ING FROM EITHER CARDS OR TAPE, A MAP OF THE SUBPROGRAM  LUCY 030
+       REM      ARRANGEMENT IN THE CORE IS WRITTEN ON TAPE OUTAP, OR ON LUCY 031
+       REM      THE ON-LINE PRINTER, RESPECTIVELY.                      LUCY 032
+       REM                                                              LUCY 033
+       REM   5. A CHECKSUM OR REDUNDANCY ERROR WHEN LOADING A PROGRAM   LUCY 034
+       REM      TAPE WRITTEN BY LUCY RESULTS IN AN ERROR HALT. PRESSING LUCY 035
+       REM      START RESULTS IN AN ATTEMPT TO RE-READ THE TAPE. TO     LUCY 036
+       REM      BYPASS THIS CHECK, PRESS RESET AND THEN PRESS START.    LUCY 037
+       REM                                                              LUCY 038
+       REM   6. AFTER THE ENTIRE BINARY PROGRAM DECK HAS BEEN LOADED,   LUCY 039
+       REM      THE NAMES OF ANY MISSING SUBROUTINES WILL BE PRINTED OUTLUCY 040
+       REM      ON THE ON-LINE PRINTER, FOLLOWED BY A STOP. PRESSING    LUCY 041
+       REM      START ON THE CONSOLE WILL CAUSE THE LOADER TO ASK       LUCY 042
+       REM      FOR THE MISSING SUBROUTINES.                            LUCY 043
+       REM                                                              LUCY 044
+       REM   7. IMMEDIATELY BEFORE THE LOADER IN UPPER MEMORY IS        LUCY 045
+       REM      DESTROYED AND CONTROL IS TRANSFERRED TO THE PROGRAM     LUCY 046
+       REM      LOADED, A TEST IS MADE OF SENSE SWITCH 4. IF SWITCH     LUCY 047
+       REM      4 IS DOWN, THE PROGRAM HALTS BEFORE TRANSFERRING        LUCY 048
+       REM      CONTROL.  THIS MAY BE USEFUL TO ADJUST SENSE SWITCH     LUCY 049
+       REM      SETTINGS, OBTAIN INITIAL MACHINE CONDITIONS, OR         LUCY 050
+       REM      EXECUTE OTHER CHECKING PROCEDURES.                      LUCY 051
+       REM                                                              LUCY 052
+       REM ALL OTHER OPERATIONS PERFORMED BY LUCY ARE ESSENTIALLY THE   LUCY 053
+       REM SAME AS THOSE PERFORMED BY THE FORTRAN 2 BSS LOADER.         LUCY 054
+       REM FOR MORE DETAILED INFORMATION ABOUT LUCY, INCLUDING A        LUCY 055
+       REM LIST OF ERROR STOPS AND REMEDIAL PROCEDURES, THE USER IS     LUCY 056
+       REM REFERRED TO AN ACCOMPANYING WRITE-UP.                        LUCY 057
+       REM                                                              LUCY 058
+       REM NEW YORK, NEW YORK                                           LUCY 059
+       REM APRIL, 1960                                                  LUCY 060
+       REM                                                              LUCY 061
+       FUL                                                              LUCY 062
+       ORG 0                                                            LUCY 063
+ VR    LXA 0,3                                                          LUCY 064
+ SM    CPY 2,1               COPY FIRST CARD                            LUCY 065
+ SUM   TXI SM,1,-1                                                      LUCY 066
+ TG    HTR 32767,7,63        PROGRAM AND COMMON OVERLAP STOP            LUCY 067
+NUMBER LTM                                                              LUCY 068
+ X     RCD                                                              LUCY 069
+ RB    CPY START,2           COPY REST OF LOADER                        LUCY 070
+ LB    TXI *-1,2,-1          INTO UPPER MEMORY                          LUCY 071
+ R     PZE                                                              LUCY 072
+       TXH X,2,-24*21        READ 21 MORE CARDS IN LOADER               LUCY 073
+       LXD M,1               DETERMINE CORE SIZE                        LUCY 074
+       SXD M,1                                                          LUCY 075
+       STZ LIST-20                                                      LUCY 076
+ SAVE  TXL READ,0,*-*                                                   LUCY 077
+ABSENT BCD 1ABSENT                                                      LUCY 078
+       BCD 1 RTNS                                                       LUCY 079
+       BCD 1******                                                      LUCY 080
+ END   STZ 0,2               ZERO UPPER MEMORY                          LUCY 081
+       TIX *-1,2,1                                                      LUCY 082
+       TOV PROG                                                         LUCY 083
+ PROG  TRA *-*               CONTROL TRANSFER                           LUCY 084
+ T     PZE                   PROGRAM BREAKPOINT                         LUCY 085
+ S     PZE 24                CURRENT INCREMENT                          LUCY 086
+ ADDRS PZE -1                                                           LUCY 087
+       SKP 1                                                            LUCY 088
+ OUTAP EQU 6                                                            LUCY 089
+ CARD  SYN -517                                                         LUCY 090
+ BIT   SYN CARD-7                                                       LUCY 091
+ LINE  SYN CARD-19                                                      LUCY 092
+ LIST  SYN CARD-39                                                      LUCY 093
+ TABL  SYN LIST-21                                                      LUCY 094
+ START SYN -504                                                         LUCY 095
+       REM                                                              LUCY 096
+       ORG START                                                        LUCY 097
+ PROBE WPR                   RESTORE PRINTER PAGE                       LUCY 098
+       SPR 1                                                            LUCY 099
+ MAP   TXH BGN,4,-NXTVC      TRANSFER FOR MAP                           LUCY 100
+       LXA L23,4                                                        LUCY 101
+       REM                                                              LUCY 102
+ LOOP3 CLA ABSENT+23,4       INSERT WORD OF TITLE                       LUCY 103
+       TXH *+3,4,20          OR                                         LUCY 104
+       CLA LIST,4            SUBROUTINE NAME IN LINE TO BE PRINTED      LUCY 105
+       TZE SPACE             TRANSFER AFTER LAST NAME IN LIST IS PRINTEDLUCY 106
+       STO LINE+8                                                       LUCY 107
+       SXD CSAVE,4                                                      LUCY 108
+ BGN   LXA REL,1                                                        LUCY 109
+       LXA L11,2                                                        LUCY 110
+       REM                                                              LUCY 111
+ LOOP2 LXA L15,4             ZERO HALF OF PRINT-IMAGE                   LUCY 112
+       STZ CARD+44,5                                                    LUCY 113
+       TIX *-1,4,1                                                      LUCY 114
+ L23   PXD 23,0                                                         LUCY 115
+ L3    SSM                   SET UP FRESH COLUMN INDICATOR              LUCY 116
+       REM                                                              LUCY 117
+ LOAD  LDQ LINE+11,2         LOAD WORD OF LINE TO BE PRINTED            LUCY 118
+       SXD SAVE,2                                                       LUCY 119
+       LXA L6,4                                                         LUCY 120
+       REM                                                              LUCY 121
+ LOOP1 STO BIT               SAVE COLUMN INDICATOR                      LUCY 122
+       SXD S6,4                                                         LUCY 123
+ L6    PXD 6,0                                                          LUCY 124
+       LGL 2                 CHECK EACH BCD CHARACTER                   LUCY 125
+ L15   PAX 15,2              ZONE PUNCH PUT IN INDEX B                  LUCY 126
+ REL   PXD 64,0                                                         LUCY 127
+       LGL 4                                                            LUCY 128
+ L11   PAX 11,4              DIGIT PUNCH PUT IN INDEX C                 LUCY 129
+       CAL BIT                                                          LUCY 130
+       TXH *+3,4,0                                                      LUCY 131
+       TXH SHIFT,2,2         TRANSFER IF BCD BLANK                      LUCY 132
+       TXH ZONE,2,0          TRANSFER IF ZONE ONLY TO BE INSERTED       LUCY 133
+       ORS CARD+41,5         INSERT DIGIT                               LUCY 134
+ ZONE  ORS CARD+44,3         INSERT ZONE                                LUCY 135
+       LXA L3,2                                                         LUCY 136
+       CAL CARD+32,3         BREAK UP 8-2 + 8-3 + 8-4 CHARACTER         LUCY 137
+       ORS CARD+33,1         INSERT IN 8 ROW                            LUCY 138
+       ORS CARD+40,3         AND IN 2,3, OR 4 ROW                       LUCY 139
+       TIX *-3,2,1                                                      LUCY 140
+       CAL BIT                                                          LUCY 141
+ SHIFT ARS 1                 SHIFT COLUMN INDICATOR TO NEXT COLUMN      LUCY 142
+       LXD S6,4                                                         LUCY 143
+       TIX LOOP1,4,1         RETURN TO CHECK NEXT BCD CHARACTER         LUCY 144
+       LXD SAVE,2                                                       LUCY 145
+       LXD CSAVE,4                                                      LUCY 146
+       TNZ *+3                                                          LUCY 147
+       TXI *+1,2,-1                                                     LUCY 148
+       TIX LOOP2,1,32        RETURN TO REFRESH COLUMN INDICATOR         LUCY 149
+       TIX LOAD,2,1          RETURN TO LOAD NEXT WORD IN LINE           LUCY 150
+       REM                                                              LUCY 151
+ WPR   WPR                                                              LUCY 152
+       LXA L12,2                                                        LUCY 153
+       CPY CARD-20,2         COPY COMPLETED LINE                        LUCY 154
+       CPY CARD+12,2                                                    LUCY 155
+       TIX *-2,2,1                                                      LUCY 156
+       REM                                                              LUCY 157
+       TXH SKIP,4,-NXTVC     RETURN TO MAPPING ROUTINE                  LUCY 158
+       TIX LOOP3,4,1         RETURN TO SET NEXT WORD FOR MISSING RTNS   LUCY 159
+ SPACE SPR 1                 RESTORE PRINTER PAGE                       LUCY 160
+ L12   HTR 12                MISSING SUBROUTINE STOP                    LUCY 161
+       REM                                                              LUCY 162
+ CHECK CAL 1                 TAPE LOADING ENTRY POINT                   LUCY 163
+       LXA *+1,1                                                        LUCY 164
+       CAD 13,1              COPY LOCATIONS (0,13) AT END OF TAPE       LUCY 165
+       TIX *-1,1,1                                                      LUCY 166
+       CAD 0                                                            LUCY 167
+       COM                                                              LUCY 168
+       ALS 1                 CHECKSUM CHECK                             LUCY 169
+       IOD                                                              LUCY 170
+       RTT                   REDUNDANCY CHECK                           LUCY 171
+       TRA *+2                                                          LUCY 172
+       TZE XTEST2                                                       LUCY 173
+       CLA TRA               SET UP ERROR CHECK BYPASS                  LUCY 174
+       STO 0                                                            LUCY 175
+       HPR 29183,7,7         TAPE ERROR PAUSE                           LUCY 176
+       BST 1                 BACKSPACE PROGRAM TAPE                     LUCY 177
+       BST 1                 AND                                        LUCY 178
+       TRA PLC               REREAD                                     LUCY 179
+XTEST2 SWT 2                                                            LUCY 180
+       REW 1                 SWITCH 2 IS UP, REWIND PROGRAM TAPE        LUCY 181
+ TEST6 SWT 6                 SWITCH 6 DOWN, READ BINARY CARDS           LUCY 182
+       TRA PEEK                                                         LUCY 183
+       REM                                                              LUCY 184
+ READ  RCD                   CARD LOADING ENTRY POINT                   LUCY 185
+       CPY VR                                                           LUCY 186
+       TRA TEST                                                         LUCY 187
+       HTR READ              EOF STOP                                   LUCY 188
+       REM                                                              LUCY 189
+ TEST  CLA VR                                                           LUCY 190
+       CPY SM                                                           LUCY 191
+       TMI PASS1             PROGRAM OR TRANSFER CARD                   LUCY 192
+       TZE CORR              IF ZERO, CORRECTION CARD                   LUCY 193
+       SXD PRTST,0           SIGNAL END SEQUENTIAL PROGRAM CARDS        LUCY 194
+       LXD VR,1                                                         LUCY 195
+       TXL REG,1,31          DATA CARD                                  LUCY 196
+       TXH 0,1,32            SELF-LOADING CARD                          LUCY 197
+       STA T                                                            LUCY 198
+       ADD S                 CONTROL OR COMMON                          LUCY 199
+       STA S                 RELOCATION CARD                            LUCY 200
+       CLA SM                                                           LUCY 201
+       STA U                                                            LUCY 202
+ PRTST TXL READ,0,*-*                                                   LUCY 203
+       REM                                                              LUCY 204
+ REG   STA R                                                            LUCY 205
+       ARS 15                                                           LUCY 206
+ U     PDX *-*,4             9L PREFIX IN I.R. 4                        LUCY 207
+       TXL NR,4,1            ABSOLUTE CARD, TRANSFER                    LUCY 208
+       TSX LT,2              RELOCATE 9L ADDRESS                        LUCY 209
+       STA R                                                            LUCY 210
+ NR    CAL VR                                                           LUCY 211
+       ARS 18                                                           LUCY 212
+       ADD R                 9L (A+D)                                   LUCY 213
+       STA TR                                                           LUCY 214
+       LXD VR,2              9L DECREMENT IN I.R. 2                     LUCY 215
+ TR    TXL *-*,2,0           WORD COUNT ZERO, TRANSFER                  LUCY 216
+       STA TA                                                           LUCY 217
+       STA SA                                                           LUCY 218
+       STA SD                9L (A+D)                                   LUCY 219
+       STA TD                                                           LUCY 220
+ B     STA CP                PROGRAM CARD COPY ROUTINE ENTERS HERE      LUCY 221
+       CAL VR                                                           LUCY 222
+       TXL CP,4,1            TRANSFER IF ABSOLUTE CARD                  LUCY 223
+       CAD LB                COPY RELOCATION BITS                       LUCY 224
+       CAD RB                                                           LUCY 225
+ CP    CAD *-*,2             COPY CARD                                  LUCY 226
+       TIX CP,2,1                                                       LUCY 227
+ CT    SLW CARD+12                                                      LUCY 228
+       PXD 0,0                                                          LUCY 229
+       LDQ VR                LOAD 9L WORD INTO MQ                       LUCY 230
+       RQL 2                                                            LUCY 231
+       TLQ RT                OMIT CHECKSUM TEST                         LUCY 232
+       CLA SM                                                           LUCY 233
+       TZE RT                9R ZERO, BYPASS CHECK                      LUCY 234
+       SUB CARD+12                                                      LUCY 235
+       TZE RT                                                           LUCY 236
+       PXD 0,0                                                          LUCY 237
+       COM                   PUT 1777777777777 IN AC TO IDENTIFY ERROR  LUCY 238
+       HTR RT                CHECKSUM ERROR STOP                        LUCY 239
+ RT    TXL READ,4,1          ABSOLUTE DATA, READ NEXT CARD              LUCY 240
+       TXH SR,4,3            PROGRAM CARD EXITS HERE                    LUCY 241
+       REM                                                              LUCY 242
+ RL    LDQ RB                RELOCATE DATA                              LUCY 243
+ DB    CLA LB                INITIALIZE 8-ROW IN MQ                     LUCY 244
+ A(1)  LGL 1                                                            LUCY 245
+       SLW LB                                                           LUCY 246
+       TPL AB                                                           LUCY 247
+ TD    CLA *-*,1             MINUS, RELOCATE DECREMENT                  LUCY 248
+       ARS 18                                                           LUCY 249
+       TSX CB,2                                                         LUCY 250
+       ALS 18                                                           LUCY 251
+ SD    STD *-*,1                                                        LUCY 252
+ AB    CLA LB                OBTAIN NEXT BIT                            LUCY 253
+       LGL 1                                                            LUCY 254
+       SLW LB                                                           LUCY 255
+       TPL TV                                                           LUCY 256
+ TA    CLA *-*,1             MINUS, RELOCATE ADDRESS                    LUCY 257
+       TSX CB,2                                                         LUCY 258
+ SA    STA *-*,1                                                        LUCY 259
+ TV    TIX DB,1,1                                                       LUCY 260
+       TRA READ              RELOCATION COMPLETE, READ NEXT CARD        LUCY 261
+       REM                                                              LUCY 262
+ CB    STA R                 ADDRESS TO BE RELOCATED                    LUCY 263
+       CLA LB                                                           LUCY 264
+       LGL 1                 OBTAIN BIT AND SHIFT                       LUCY 265
+       SLW LB                                                           LUCY 266
+       TMI LTA                                                          LUCY 267
+ LT    SLN 1                 LIGHT ON IF NORMAL RELOCATION              LUCY 268
+ LTA   CLS R                 ENTER, INVERSE RELOCATION                  LUCY 269
+       ADD T                                                            LUCY 270
+       TPL ADDS                                                         LUCY 271
+       SLT 1                                                            LUCY 272
+       TRA PROGRM                                                       LUCY 273
+ DATA  CLA R                 ADDRESS ABOVE PROGRAM BREAK                LUCY 274
+       ADM U                                                            LUCY 275
+       TRA 1,2                                                          LUCY 276
+ ADDS  SLT 1                 ADDRESS LESS THAN PROGRAM BREAK            LUCY 277
+       TRA DATA                                                         LUCY 278
+PROGRM SUB S                                                            LUCY 279
+       TRA 1,2                                                          LUCY 280
+       REM                                                              LUCY 281
+ CORR  CPY LB                CORRECTION CARD                            LUCY 282
+       CPY RB                                                           LUCY 283
+       TRA *+2                                                          LUCY 284
+       TRA READ              EOR SKIP                                   LUCY 285
+       CLA LB                                                           LUCY 286
+       TMI CORR              IF MINUS, IGNORE ROW                       LUCY 287
+       TNZ STORA                                                        LUCY 288
+       CAL RB                                                           LUCY 289
+       TZE READ              IF ROW BLANK, READ NEXT CARD               LUCY 290
+       CAL STORC                                                        LUCY 291
+       ADM A(1)              IF ADDRESS ZERO, INCREMENT                 LUCY 292
+ STORA STA STORC             PREVIOUS ADDRESS BY ONE                    LUCY 293
+       CLA RB                                                           LUCY 294
+ STORC STO *-*               STORE CORRECTION                           LUCY 295
+       TRA CORR                                                         LUCY 296
+       REM                                                              LUCY 297
+ PASS1 PDX ,2                - (W.C.) IN DECREMENT OF AC                LUCY 298
+       TXL PEEK,2,0          IF ZERO, FORTRAN TRANSFER                  LUCY 299
+       ADD TAG               - (W.C.+TABLE LENGTH) IN DECREMENT OF AC   LUCY 300
+       ADD DECTWO            - (W.C.+T.L.-2)                            LUCY 301
+       STD STOP                                                         LUCY 302
+       SUB M                 + (TABL-W.C.-T.L.+2)                       LUCY 303
+       STD OVLP                                                         LUCY 304
+       ACL VR                + (TABL-T.L.+2)                            LUCY 305
+       SUB DECTWO            + (TABL-T.L.-1) IN DECREMENT OF AC         LUCY 306
+       ARS 18                                                           LUCY 307
+DECTWO TIX TXB,2,2           W.C. - 2 IN I.R. 2                         LUCY 308
+ TXB   TSX B,4                                                          LUCY 309
+       REM                                                              LUCY 310
+ SR    LXD TAG,1             LENGTH OF LIST IN I.R. 1                   LUCY 311
+       LXD PRTST,4                                                      LUCY 312
+       TXL ONLY1,4,0                                                    LUCY 313
+       CLA LB                THIS PROGRAM CARD FOLLOWS                  LUCY 314
+       STO TABL-1,1          A PREVIOUS ONE                             LUCY 315
+       CLA RB                                                           LUCY 316
+       STO TABL,1                                                       LUCY 317
+       TIX NCARDS,1,2        SKIP, COMPARISONS DONE                     LUCY 318
+       REM                                                              LUCY 319
+ ONLY1 CLA S                                                            LUCY 320
+       STZ TABL-1,1                                                     LUCY 321
+       STO TABL,1            STORE INCREMENT IN ADDRESS                 LUCY 322
+       LXD LB,4              D(TR. VEC.) INTO I.R. 4                    LUCY 323
+       CAL LB                                                           LUCY 324
+       TXH CLAS,4,0          IF NO SUBROUTINES,                         LUCY 325
+       ORA BTMASK            FILL PREFIX                                LUCY 326
+ CLAS  SLW TABL-1,1                                                     LUCY 327
+       STA T                 STORE BREAKPOINT AND                       LUCY 328
+       ADD S                 INCREASE LOADER INCREMENT                  LUCY 329
+       STA S                                                            LUCY 330
+       ADD ONE                                                          LUCY 331
+       PAX ,2                                                           LUCY 332
+ OVLP  TXH TG,2,*-*          TRANSFER IF PROGRAM AND LIST OVERLAP       LUCY 333
+       CLA U                                                            LUCY 334
+       SUB RB                FIND LOWEST ADDRESS DATA                   LUCY 335
+       PAX ,4                WILL USE - NOTE COMMON RELOCATION          LUCY 336
+       PXD ,4                                                           LUCY 337
+       STD TABL,1            STORE FOR MAP IN LOCATION                  LUCY 338
+       ARS 18                WITH PROGRAM INITIAL LOCATION              LUCY 339
+       TZE ACLA                                                         LUCY 340
+       CAS ADDRS                                                        LUCY 341
+ ACLA  CLA ADDRS                                                        LUCY 342
+       NOP                                                              LUCY 343
+       STO ADDRS             STORE LOWEST COMMON LOCATION               LUCY 344
+       SUB S                                                            LUCY 345
+       TMI TG                IF TRANSFER, PROGRAM AND COMMON OVERLAP    LUCY 346
+NCARDS SXD PRTST,2           SIGNAL TO SEQUENTIAL PROGRAM CARDS         LUCY 347
+       STZ LB                ASSURE NORMAL RELOCATION                   LUCY 348
+       TXI LTT,1,2           INCREASE LENGTH FOR 8-ROW                  LUCY 349
+ LTT   CLA TABL,1                                                       LUCY 350
+       TSX CB,2              RELOCATE ENTRY POINTS IN TABLE             LUCY 351
+       STA TABL,1                                                       LUCY 352
+       TXI STOP,1,2          INCREASE LENGTH FOR EACH ENTRY POINT       LUCY 353
+ STOP  TXL LTT,1,*-*         LENGTH + W.C. - 2 IN DECREMENT             LUCY 354
+       SXD TAG,1             SAVE LENGTH OF TABLE                       LUCY 355
+ M     TNX READ,0,TABL       READ NEXT CARD (DEC. FOR COMPUTING)        LUCY 356
+       REM                                                              LUCY 357
+ PEEK  LXA M11,4             SET UP MAP TITLE                           LUCY 358
+       CLA TITLE+11,4                                                   LUCY 359
+       STO LINE+11,4                                                    LUCY 360
+       TIX *-2,4,1                                                      LUCY 361
+       TSX SWTEST,4          TEST TO COPY MAP TITLE                     LUCY 362
+       REM                                                              LUCY 363
+ EEE   CLA TAG                                                          LUCY 364
+       STD M5                LENGTH OF LIST                             LUCY 365
+       STP M3                INITIALIZE SWITCH                          LUCY 366
+       STZ NUMBER                                                       LUCY 367
+       LXA MA2,1                                                        LUCY 368
+ M4    CAL TABL+1,1                                                     LUCY 369
+ M11   PDX 11,4                                                         LUCY 370
+       ANA BTMASK                                                       LUCY 371
+       TZE M9                                                           LUCY 372
+ MDZ   TXH M6,4,0                                                       LUCY 373
+ M9    LXD NUMBER,2          NEW SUBPROGRAM, SET UP OLD VECTOR          LUCY 374
+       SXD NUMBER,4          STORE NEW VECTOR LENGTH                    LUCY 375
+ MA2   PXD 2,2                                                          LUCY 376
+       TZE M3                ZERO, NO VECTOR                            LUCY 377
+       ARS 18                                                           LUCY 378
+       ADD NUMBER            ADDRESS HAS START OF LAST PROGRAM          LUCY 379
+       STA M1                                                           LUCY 380
+ M1    CLA *-*,2                                                        LUCY 381
+       STO LINE+2                                                       LUCY 382
+       TSX SWTEST,4          TEST TO COPY NAME IN TRANSFER VECTOR       LUCY 383
+       TIX M1,2,1                                                       LUCY 384
+ M3    TXH M7,0,0            END SWITCH                                 LUCY 385
+       REM                                                              LUCY 386
+       TSX SWTEST,4          TEST TO SKIP A LINE                        LUCY 387
+       CLA TABL-1,1                                                     LUCY 388
+       STO LINE+1            BCD NAME OF SUB-PROGRAM                    LUCY 389
+       CLA TABL,1                                                       LUCY 390
+       TSX CONV,4                                                       LUCY 391
+       SLW LINE+4                                                       LUCY 392
+       CLA TABL+2,1                                                     LUCY 393
+       STA NUMBER            START OF SUB-PROGRAM                       LUCY 394
+       TSX CONV,4                                                       LUCY 395
+       SLW LINE+6                                                       LUCY 396
+       CLA TABL+1,1          START PLUS LENGTH                          LUCY 397
+       ANA MASK1             MINUS ONE EQUALS END                       LUCY 398
+       ADD NUMBER                                                       LUCY 399
+       SUB ONE                                                          LUCY 400
+       TSX CONV,4                                                       LUCY 401
+       SLW LINE+8                                                       LUCY 402
+       CLA TABL+2,1                                                     LUCY 403
+       ARS 18                LOWEST COMMON ADDRESS                      LUCY 404
+       TSX CONV,4                                                       LUCY 405
+       SLW LINE+10                                                      LUCY 406
+       REM                                                              LUCY 407
+       TSX SWTEST,4          TEST TO COPY A LINE                        LUCY 408
+       TXI M5,1,4                                                       LUCY 409
+       REM                                                              LUCY 410
+ M6    CAL TABL+1,1          HAVE ANOTHER ENTRY POINT                   LUCY 411
+       SLW LINE+1                                                       LUCY 412
+       CLA TABL+2,1                                                     LUCY 413
+       TSX CONV,4                                                       LUCY 414
+       SLW LINE+4                                                       LUCY 415
+       TSX SWTEST,4          TEST TO COPY ENTRY POINT                   LUCY 416
+       TXI M5,1,2                                                       LUCY 417
+ M5    TXL M4,1,*-*          LENGTH OF LIST IN DECREMENT                LUCY 418
+       REM                                                              LUCY 419
+       CLS M3                REVERSE END SWITCH AND                     LUCY 420
+       STO M3                PICK UP LAST TRANSFER VECTOR               LUCY 421
+ CSAVE TXL M9,0,*-*                                                     LUCY 422
+       REM                                                              LUCY 423
+SWTEST SXD ASAVE,1           SAVE INDEX REGISTERS                       LUCY 424
+       SXD BSAVE,2                                                      LUCY 425
+       SXD CSAVE,4                                                      LUCY 426
+       REM                                                              LUCY 427
+       SWT 3                 3 DOWN, PRINT MAP ON ON-LINE PRINTER       LUCY 428
+ ASAVE TXL *+6,0,*-*                                                    LUCY 429
+       REM                                                              LUCY 430
+       TXL *+2,4,-EEE                                                   LUCY 431
+       TSX PROBE,4           EXIT FOR MAP TITLE                         LUCY 432
+       TSX MAP,4             EXIT FOR REST OF MAP                       LUCY 433
+ SKIP  TXH *+2,4,-M7                                                    LUCY 434
+       SPR 1                 MAP FINISHED, RESTORE PAGE                 LUCY 435
+       LXA M11,3                                                        LUCY 436
+       REM                                                              LUCY 437
+       SWT 1                 1 DOWN, WRITE MAP ON TAPE OUTAP            LUCY 438
+ BSAVE TXL *+9,0,*-*                                                    LUCY 439
+       REM                                                              LUCY 440
+       TXL *+3,4,-EEE                                                   LUCY 441
+       WTD OUTAP             ENTER FOR MAP TITLE                        LUCY 442
+       CPY RSTOR                                                        LUCY 443
+       WTD OUTAP             ENTER FOR REST OF MAP                      LUCY 444
+       CPY LINE+11,2                                                    LUCY 445
+       TIX *-1,2,1                                                      LUCY 446
+       TXH *+2,4,-M7                                                    LUCY 447
+       WEF OUTAP             MAP FINISHED, END OF FILE TAPE OUTAP       LUCY 448
+       REM                                                              LUCY 449
+       CLA BLANK             REFRESH LINE WITH BLANKS                   LUCY 450
+       STO LINE+11,1                                                    LUCY 451
+       TIX *-1,1,1                                                      LUCY 452
+       REM                                                              LUCY 453
+       LXD ASAVE,1           RESTORE INDEX REGISTERS                    LUCY 454
+       LXD BSAVE,2                                                      LUCY 455
+       TRA 1,4                                                          LUCY 456
+       REM                                                              LUCY 457
+ M7    TSX SWTEST,4          TEST FOR END                               LUCY 458
+       REM                                                              LUCY 459
+ TEST5 SWT 5                 5 DOWN, WRITE PROGRAM TAPE                 LUCY 460
+ S6    TXL LOADX,0,*-*                                                  LUCY 461
+       SWT 2                 2 DOWN, SUPPRESS REWIND                    LUCY 462
+       REW 1                                                            LUCY 463
+       LXA N13,1             13 IS FIRST LOCATION TESTED                LUCY 464
+       LXA *+1,6                                                        LUCY 465
+ T2    CAL 0,1               LOOK FOR (I,J) NON-ZERO BLOCK              LUCY 466
+       TZE T1                                                           LUCY 467
+ N13   PXD -13,1             -I TO INDEX REGISTER 2                     LUCY 468
+       PDX ,2                                                           LUCY 469
+       CAL 0,1                                                          LUCY 470
+       TZE *+3               SCAN FOR END OF BLOCK                      LUCY 471
+       TIX *-2,1,1                                                      LUCY 472
+       TXI *+1,1,-1          IF C(-1) NON-ZERO, I.R. 1 = 0              LUCY 473
+ T7    PXD T4-T3+1,1                                                    LUCY 474
+       ARS 18                -(J+1) IN INDEX REGISTER 1                 LUCY 475
+       SUB XTG               XTG = 050000000000                         LUCY 476
+       STA 0,4               J+1 INTO ADDRESS                           LUCY 477
+       SXD *+1,1                                                        LUCY 478
+       TIX *+1,2,*-*         I.R. 2 = J-I+1                             LUCY 479
+ T8    PXD T6-T5+1,2                                                    LUCY 480
+       STD 0,4               STORE WORD COUNT IN DECREMENT              LUCY 481
+       LXD *-3,4                                                        LUCY 482
+ T1    TIX T2,1,1            END CORE SCANNING LOOP                     LUCY 483
+       REM                                                              LUCY 484
+       WTB 1                 SELECT TAPE                                LUCY 485
+       LXA T7,1                                                         LUCY 486
+       CPY T4+1,1            COPY FIRST RECORD                          LUCY 487
+       TIX *-1,1,1                                                      LUCY 488
+       WTB 1                 SELECT TAPE AGAIN                          LUCY 489
+       LXA T8,1                                                         LUCY 490
+       CPY T6+1,1            COPY LOADER, RECORD 2                      LUCY 491
+       TIX *-1,1,1                                                      LUCY 492
+       PXD ,0                                                           LUCY 493
+       CAD 0                 COPY FIRST KEY WORD                        LUCY 494
+       SLW SUM                                                          LUCY 495
+       STZ 0                                                            LUCY 496
+ T9    STA TA1                                                          LUCY 497
+       STA TA2                                                          LUCY 498
+       STA TA3                                                          LUCY 499
+       STA TA4                                                          LUCY 500
+       PDX ,1                                                           LUCY 501
+       CAL SUM                                                          LUCY 502
+ TA1   CAD *-*,1             COPY NON-ZERO BLOCK                        LUCY 503
+       TIX TA1,1,1                                                      LUCY 504
+ TA2   CAD *-*               COPY NEXT KEY WORD                         LUCY 505
+       SLW SUM                                                          LUCY 506
+ TA4   CLA *-*                                                          LUCY 507
+ TA3   STZ *-*                                                          LUCY 508
+       TNZ T9                IF KEY WORD IS ZERO,                       LUCY 509
+       CAL SUM               EXIT,                                      LUCY 510
+       LXA *+1,1                                                        LUCY 511
+       CAD 13,1              COPY LOCATIONS (0,13) AT END OF TAPE       LUCY 512
+       TIX *-1,1,1                                                      LUCY 513
+       COM                   COMPLEMENT CHECKSUM                        LUCY 514
+       SLW SUM               AND                                        LUCY 515
+       CPY SUM               COPY                                       LUCY 516
+       REM                                                              LUCY 517
+       SWT 2                 2 DOWN, SUPPRESS REWIND                    LUCY 518
+       REW 1                                                            LUCY 519
+ LOADX LXD MDZ,2                                                        LUCY 520
+       TRA PASS2                                                        LUCY 521
+       REM                                                              LUCY 522
+ VEC   CAL TABL+1,2          CHECK NAME FOR MAIN PROGRAM                LUCY 523
+       TNZ G3                AND CONTROL TRANSFER ADDRESS               LUCY 524
+       CLA TABL+2,2                                                     LUCY 525
+       STA PROG                                                         LUCY 526
+       TRA PASS2                                                        LUCY 527
+ G3    ANA BTMASK            TEST FIRST CHARACTER                       LUCY 528
+       TNZ PASS2             ALPHABETIC, SKIP                           LUCY 529
+       CLA TABL+1,2          NON-ALPHABETIC, TRANSFER VECTOR            LUCY 530
+ OLDU  PDX ,4                LENGTH IN I.R. 4                           LUCY 531
+       ARS 18                                                           LUCY 532
+       ADD TABL+2,2          ADD LOCATION OF VECTOR                     LUCY 533
+       STA A                                                            LUCY 534
+       STA AA                                                           LUCY 535
+       STA AAA                                                          LUCY 536
+       STA ABB                                                          LUCY 537
+ NXTVC LXD TAG,1             LENGTH OF SYMBOL TABLE                     LUCY 538
+ A     CAL *-*,4                                                        LUCY 539
+       ANA BTMASK                                                       LUCY 540
+       TZE TIXVEC            SKIP NON-ALPHABETIC STORAGES               LUCY 541
+ ABB   CLA *-*,4                                                        LUCY 542
+NXTNAM CAS TABL+1,1          COMPARE NAME WITH TABLE                    LUCY 543
+ TTR   TTR G4                                                           LUCY 544
+       TRA FIX               AGREEMENT                                  LUCY 545
+ G4    TIX NXTNAM,1,2        CONTINUE SEARCH                            LUCY 546
+SAVNAM STO RB                                                           LUCY 547
+       LXD TWTY,1                                                       LUCY 548
+ CMPR  CLA LIST,1                                                       LUCY 549
+       TZE STONAM            STORE IN FIRST EMPTY                       LUCY 550
+       CAS RB                CELL IF NEW NAME                           LUCY 551
+ TWTY  TNX G2,0,20                                                      LUCY 552
+       TRA TIXVEC            ALREADY IN TABLE, IGNORE                   LUCY 553
+ G2    TIX CMPR,1,1                                                     LUCY 554
+       HTR PASS2             MORE THAN 20 MISSING SUBROUTINES           LUCY 555
+STONAM CLA RB                ADD NAME TO LIST                           LUCY 556
+       STO LIST,1                                                       LUCY 557
+       STZ LIST+1,1                                                     LUCY 558
+       TRA TIXVEC                                                       LUCY 559
+ FIX   CLA TTR                                                          LUCY 560
+ AA    STO *-*,4             STORE TRAP TRANSFER                        LUCY 561
+       CLA TABL+2,1                                                     LUCY 562
+ AAA   STA *-*,4             AND PROPER ADDRESS                         LUCY 563
+TIXVEC TIX NXTVC,4,1         DO FOR NEXT NAME IN VECTOR                 LUCY 564
+ PASS2 TXI TAG,2,2                                                      LUCY 565
+ TAG   TXL VEC,2,*-*         DO FOR ALL VECTORS                         LUCY 566
+       REM                                                              LUCY 567
+       CLA LIST-20                                                      LUCY 568
+SEARCH TNZ PROBE             PRINT MISSING SUBROUTINE NAMES             LUCY 569
+       TXI TEST4,2,-LIST+18                                             LUCY 570
+       REM                                                              LUCY 571
+ TEST4 SWT 4                                                            LUCY 572
+       TRA END                                                          LUCY 573
+       HPR 21845,2,21        SWITCH 4 STOP                              LUCY 574
+       TRA END                                                          LUCY 575
+       REM                                                              LUCY 576
+ T3    CPY 2                 FIRST PROGRAM RECORD                       LUCY 577
+       CPY 3                                                            LUCY 578
+       CPY 4                                                            LUCY 579
+       LTM                                                              LUCY 580
+       TRA 0                                                            LUCY 581
+       TOV 3                 TURN OFF ALL INDICATORS                    LUCY 582
+       TQO 4                                                            LUCY 583
+       DCT                                                              LUCY 584
+       NOP                                                              LUCY 585
+       PXD ,0                                                           LUCY 586
+       PDX ,7                                                           LUCY 587
+       LFM                                                              LUCY 588
+       SLF                                                              LUCY 589
+       CPY 4,1                                                          LUCY 590
+       TXI 2,1,-1                                                       LUCY 591
+ ONE   HTR 1                 FALSE END OF FILE SKIP                     LUCY 592
+       STZ 4,1               ZERO REST OF CORE                          LUCY 593
+       TIX 5,1,1                                                        LUCY 594
+       RTT                                                              LUCY 595
+       NOP                                                              LUCY 596
+ PLC   RTB 1                 READ TAPE SEQUENCE                         LUCY 597
+       CPY 0                 (ALSO USED BY LOAD RECHECK)                LUCY 598
+       CPY 1                                                            LUCY 599
+ T4    TXL 0,0,0                                                        LUCY 600
+       REM                                                              LUCY 601
+BTMASK SYN T4                                                           LUCY 602
+       REM                                                              LUCY 603
+ T5    CPY 2,4               SECOND RECORD LOADER                       LUCY 604
+       TXI 2,4,-1                                                       LUCY 605
+       TXH 0,4,-11                                                      LUCY 606
+       CAD 0                 KEY WORD                                   LUCY 607
+       SLW 1                                                            LUCY 608
+ XTG   CLA 0                                                            LUCY 609
+       TZE CHECK             EXIT ON ZERO KEY WORD                      LUCY 610
+       STA 10                                                           LUCY 611
+       PDX ,1                                                           LUCY 612
+       CAL 1                                                            LUCY 613
+       CAD *-*,1             COPY PROGRAM BLOCK                         LUCY 614
+       TIX 10,1,1                                                       LUCY 615
+ T6    TRA 3                 GO TO COPY NEXT KEY                        LUCY 616
+       REM                                                              LUCY 617
+ CONV  SXD CON,4             OCTAL CONVERSION FOR                       LUCY 618
+       LXA CON,4             PRINTING OF MAP                            LUCY 619
+       LRS 15                                                           LUCY 620
+       CLA XYZ                                                          LUCY 621
+       ALS 3                                                            LUCY 622
+       LLS 3                                                            LUCY 623
+       TIX *-2,4,1                                                      LUCY 624
+       LXD CON,4                                                        LUCY 625
+       TRA 1,4                                                          LUCY 626
+ CON   PZE 5,0,*-*                                                      LUCY 627
+ XYZ   OCT 60                                                           LUCY 628
+       REM                                                              LUCY 629
+ TITLE BCD        NAME  VECTOR       ENTRY       START        END       LUCY 630
+       BCD 1COMMON                                                      LUCY 631
+ RSTOR BCD 11                                                           LUCY 632
+ MASK1 OCT 77777                                                        LUCY 633
+ TRA   TRA XTEST2                                                       LUCY 634
+       REM                                                              LUCY 635
+ BLANK SYN TITLE+3                                                      LUCY 636
+       REM                                                              LUCY 637
+       SKP 1                                                            LUCY 638
+       END 0                                                            LUCY 639

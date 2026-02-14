@@ -1,0 +1,252 @@
+*CALLING SEQUENCE FOR MADSM1 CURVE SMOOTHING ROUTINE                    DSM10001
+*      TSX     CURSM,4                                                  DSM10002
+*      PZE     CURVE,,PTS                                               DSM10003
+*      PZE     REPRO,,DELTA                                             DSM10004
+*              ERROR RETURN                                             DSM10005
+*              NORMAL RETURN                                            DSM10006
+ MAX   EQU     5000          MAXIMUM NUMBER OF POINTS TO REPRODUCE      DSM10007
+ CURSM SXA     1S,1          MUST BE PHYSICALLY FIRST WORD              DSM10008
+       SXA     2S,2          SAVE IR2                                   DSM10009
+       SXA     4S,4          SAVE IR4                                   DSM10010
+       CAL     1,4           GIVEN CURVE                                DSM10011
+       PDX     0,2           NUMBER OF POINTS IN GIVEN CURVE            DSM10012
+       TXL     ERRJ,2,8      TRANSFER IF CURVE IS TOO SMALL             DSM10013
+       PAC     0,1           LOCATE THE CURVE                           DSM10014
+       CLA     MINF                                                     DSM10015
+ LP1   CAS     0,1           INSPECT THE CURVE TO MAKE                  DSM10016
+       TRA     ERRJ          SURE THAT THE INDEPENDENT                  DSM10017
+       TRA     ERRJ          VALUES ARE IN ASCENDING                    DSM10018
+       TNX     OK1,2,1       ORDER                                      DSM10019
+       CLA     0,1                                                      DSM10020
+       TXI     LP1,1,-2                                                 DSM10021
+ OK1   SXA     LOCL,1        SAVE LOCATION OF LAST INDEPENDENT          DSM10022
+       CLA     0,1                                                      DSM10023
+       STO     LAST          SAVE VALUE OF LAST INDEPENDENT             DSM10024
+       SUB     PINF                                                     DSM10025
+       TZE     ERRJ          IT HAD BETTER NOT EQUAL THIS               DSM10026
+       CAL     2,4           LOCATION TO REPRODUCE                      DSM10027
+       PAC     0,2           LOCATE IT FOR EVENTUAL USE                 DSM10028
+       SXA     AXT,2                                                    DSM10029
+       PDC     0,2           REFERENCE TO DELTA TO USE                  DSM10030
+       TXH     NPTS,2,-1-MAX TRANSFER IF NUMBER OF POINTS GIVEN         DSM10031
+       CAL     0,2           THE DECREMENT INDICATED LOCATION OF DELTA  DSM10032
+       STO     DT            THIS IS THE DELTA TO USE                   DSM10033
+ J1    CLS     DT                                                       DSM10034
+       TZE     ERRJ          DELTA BETTER NOT BE ZERO                   DSM10035
+       ACL     HALF          DELTA DIVIDED BY TWO                       DSM10036
+       FAD     LAST          SUBTRACT FROM LAST                         DSM10037
+       STO     LAST          FOR ROUND OFF ERROR EFFECTS                DSM10038
+       AXT     LP4,1         SET FOR NORMAL LOOPING                     DSM10039
+       SXA     TXI,1                                                    DSM10040
+       CAL     1,4           GIVEN CURVE                                DSM10041
+       PAC     0,1           LOCATE IT                                  DSM10042
+       CAL     -2,1          SAVE SECOND WORD BEFORE BEGINNING          DSM10043
+       SLW     CLOB1         OF CURVE                                   DSM10044
+ LOCL  AXT     **,2          A)-LAST INDEPENDENT                        DSM10045
+       CAL     2,2           SAVE FIRST WORD AFTER END                  DSM10046
+       SLW     CLOB2         OF CURVE                                   DSM10047
+       CAL     MINF                                                     DSM10048
+       SLW     -2,1          DUMMY FIRST INDEPENDENT                    DSM10049
+       STO     2,2           DUMMY LAST INDEPENDENT                     DSM10050
+       TXI     *+1,1,6       LOCATE DUMMY STARTING PARABOLA             DSM10051
+       SXA     LOCP,1                                                   DSM10052
+       CLA     6,1           FIRST INDEPENDENT                          DSM10053
+       TXI     IN,1,-6       JUMP IN AND RESET CURVE LOCATION           DSM10054
+ LP4   FAD     DT            INCREASE INDEPENDENT                       DSM10055
+       SXA     AXT,4         SAVE LOCATION OF NEXT POINT                DSM10056
+       SUB     LAST          WILL THIS BE THE LAST POINT                DSM10057
+       TMI     ADDB          TRANSFER IF NOT                            DSM10058
+       AXT     FIN,1         THIS IS THE LAST POINT TO SMOOTH           DSM10059
+       SXA     TXI,1         SET FOR ROUTINE EXIT                       DSM10060
+ ADDB  ADD     LAST          RESTORE ORIGINAL VALUE OF INDEPENDENT      DSM10061
+ WHERE AXT     **,1          A) -LAST POINT IN CURVE                    DSM10062
+ IN    STO     TIME          NEXT INDEPENDENT                           DSM10063
+       CAS     0,1           COMPARE WITH POINT IN CURVE                DSM10064
+       TXI     *-1,1,-2      GO TO NEXT POINT IN CURVE                  DSM10065
+       TRA     *+1                                                      DSM10066
+       FSB     -2,1                                                     DSM10067
+       STO     M1            DISTANCE TO PREVIOUS POINT                 DSM10068
+       CLA     0,1                                                      DSM10069
+       FSB     TIME          DISTANCE TO NEXT POINT                     DSM10070
+       CAS     M1            WHICH ONE IS GREATER                       DSM10071
+       TXI     *+2,1,2       THE PREVIOUS POINT IS CLOSER               DSM10072
+       TRA     *+1                                                      DSM10073
+       SXA     WHERE,1       IR1 NOW INDICATE THE CLOSEST POINT         DSM10074
+       LXA     WHERE,6       LOCATE CLOSEST POINT                       DSM10075
+       CLA     TIME          PRESENT INDEPENDENT                        DSM10076
+       FSB     -2,4          PREVIOUS LOWER POINT                       DSM10077
+       STO     M1            DISTANCE TO PREVIOUS LOWER                 DSM10078
+       CLA     2,2           NEXT HIGHER POINT                          DSM10079
+       FSB     TIME                                                     DSM10080
+       STO     M2            DISTANCE TO NEXT HIGHER                    DSM10081
+       AXT     8,1           LOOP SETUP                                 DSM10082
+ AGAIN CLA     M2            DISTANCE TO NEXT HIGHER                    DSM10083
+       CAS     M1            DISTANCE TO PREVIOUS LOWER                 DSM10084
+       TXI     LOWIN,4,2     INCLUDE ANOTHER LOW POINT                  DSM10085
+       TRA     *+1                                                      DSM10086
+       CLA     4,2           INCLUDE ANOTHER HIGH POINT                 DSM10087
+       FSB     TIME          I TRIED SUB. IT DOESNT WORK                DSM10088
+       STO     M2            DISTANCE TO NEXT HIGHER                    DSM10089
+       TXI     JN2,2,-2      INCLUDE                                    DSM10090
+ LOWIN CLA     TIME                                                     DSM10091
+       FSB     -2,4                                                     DSM10092
+       STO     M1            DISTANCE TO PREVIOUS LOWER                 DSM10093
+ JN2   TIX     AGAIN,1,1     INCLUDE NINE POINTS ALTOGETHER             DSM10094
+ LOCP  AXC     **,2          LOCATION OF PRESENT PARABALA               DSM10095
+       SXA     LOCP,4        UPDATE                                     DSM10096
+       SXD     *+1,2                                                    DSM10097
+       TXI     *+1,4,**      SUBTRACT PRESENT FROM DESIRED              DSM10098
+       TXL     READ,4,0      TRANSFER IF THEY ARE THE SAME              DSM10099
+       LXA     LOCP,3        LOCATE DESIRED PARABALA                    DSM10100
+       TXI     *+1,2,-4                                                 DSM10101
+       SXD     TXL,2         PULL OUT AFTER 1 2 OR 3 PASSES             DSM10102
+       AXT     3,2           SETUP                                      DSM10103
+       TXH     S1,4,-3       TRANSFER IF ONE PARABALA NEEDED            DSM10104
+       TXH     S2,4,-5       TRANSFER IF TWO PARABALAS NEEDED           DSM10105
+       AXT     0,2           COMPUTE THREE SETS OF COEFFICIENTS         DSM10106
+ BACK  CLA     6,1           X2                                         DSM10107
+       FSB     0,1           X1                                         DSM10108
+       STO     M1            X2-X1                                      DSM10109
+       CLA     12,1          X3                                         DSM10110
+       FSB     0,1           X1                                         DSM10111
+       STO     M2            X3-X1                                      DSM10112
+       CLA     12,1          X3                                         DSM10113
+       FSB     6,1           X2                                         DSM10114
+       STO     M3            X3-X2                                      DSM10115
+       CLA     1,1           Y1                                         DSM10116
+       FDP     M1                                                       DSM10117
+       XCA                                                              DSM10118
+       FDP     M2                                                       DSM10119
+       STQ     M4            L=Y1/(X2-X1)(X3-X1)                        DSM10120
+       CLS     7,1           -Y2                                        DSM10121
+       FDP     M1                                                       DSM10122
+       XCA                                                              DSM10123
+       FDP     M3                                                       DSM10124
+       STQ     M1            M=-Y2/(X2-X1)(X3-X2)                       DSM10125
+       CLA     13,1          Y3                                         DSM10126
+       FDP     M2                                                       DSM10127
+       XCA                                                              DSM10128
+       FDP     M3                                                       DSM10129
+       STQ     M2            N=Y3/(X3-X1)(X3-X2)                        DSM10130
+       XCA                                                              DSM10131
+       FAD     M1                                                       DSM10132
+       STO     M3            M+N                                        DSM10133
+       FAD     M4                                                       DSM10134
+       STO     COEFA,2       COEFFICIENT OF SQUARED TERM                DSM10135
+       LDQ     M3            M+N                                        DSM10136
+       FMP     0,1                                                      DSM10137
+       STO     M3            X1(M+N)                                    DSM10138
+       LDQ     M1            M                                          DSM10139
+       FMP     12,1          X3                                         DSM10140
+       STO     M5            X3(M)                                      DSM10141
+       LDQ     M4            L                                          DSM10142
+       FMP     12,1          X3                                         DSM10143
+       STO     M1            X3(L)                                      DSM10144
+       CLA     M4            L                                          DSM10145
+       FAD     M2            L+N                                        DSM10146
+       XCA                                                              DSM10147
+       FMP     6,1           X2(L3N)                                    DSM10148
+       FAD     M3            X2(L+N)+X1(M+N)                            DSM10149
+       FAD     M5            X2(L+N)+X1(M+N)+X3(M)                      DSM10150
+       FAD     M1            X2(L+N)+X1(M+N)+X3(M)+X3(L)                DSM10151
+       STO     COEFB,2       -COEFFICIENT OF FIRST POWER                DSM10152
+       LDQ     6,1           X2                                         DSM10153
+       FMP     M1            X3(L)                                      DSM10154
+       STO     M1            X2(X3)(L)                                  DSM10155
+       LDQ     0,1           X1                                         DSM10156
+       FMP     M5            X3(M)                                      DSM10157
+       STO     M3            X1(X3)(M)                                  DSM10158
+       LDQ     0,1           X1                                         DSM10159
+       FMP     6,1           X2                                         DSM10160
+       XCA                                                              DSM10161
+       FMP     M2            X1(X2)(N)                                  DSM10162
+       FAD     M3            X1(X2)(N)+X1(X3)(M)                        DSM10163
+       FAD     M1            X1(X2)(N)+X1(X3)(M)+X2(X3)(L)              DSM10164
+       STO     COEFC,2       CONSTANT TERM                              DSM10165
+ TXL   TXL     AVG,1,**      TRANSFER IF NECESSARY PARABALAS COMPLETED  DSM10166
+       TXI     *+1,1,-2      SET FOR NEXT THREE POINTS                  DSM10167
+       TXI     BACK,2,-3     INCREMENT COEFFICIENT LOCATIONS            DSM10168
+ S1    CAL     COEFA+6,2     ROTATE TWO SETS OF                         DSM10169
+       SLW     COEFA+3,2     THREE COEFFICIENTS                         DSM10170
+       CAL     COEFA+9,2                                                DSM10171
+       SLW     COEFA+6,2                                                DSM10172
+       TIX     S1,2,1                                                   DSM10173
+       AXT     -6,2          SET LOCATION OF NEXT COEFFICIENTS          DSM10174
+       TXI     BACK,1,-4     THIS CAUSES ONE PASS TO BE MADE            DSM10175
+ S2    CAL     COEFA+9,2     ROTATE ONE SET OF                          DSM10176
+       SLW     COEFA+3,2     THREE COEFFICIENTS                         DSM10177
+       TIX     S2,2,1                                                   DSM10178
+       AXT     -3,2          SET LOCATION OF NEXT COEFFICIENTS          DSM10179
+       TXI     BACK,1,-2     THIS CAUSES TWO PASSES TO BE MADE          DSM10180
+ AVG   FAD     COEFC                                                    DSM10181
+       FAD     COEFC+3                                                  DSM10182
+       STO     CCC           SUM OF CONSTANT TERMS                      DSM10183
+       CLA     COEFB                                                    DSM10184
+       FAD     COEFB+3                                                  DSM10185
+       FAD     COEFB+6                                                  DSM10186
+       STO     CCB           -SUM OF FIRST POWER COEFFICIENTS           DSM10187
+       CLA     COEFA                                                    DSM10188
+       FAD     COEFA+3                                                  DSM10189
+       FAD     COEFA+6                                                  DSM10190
+       STO     CCA           SUM OF SQUARED COEFFICIENTS                DSM10191
+ READ  LDQ     CCA           A                                          DSM10192
+       FMP     TIME          AX                                         DSM10193
+       FSB     CCB           AX+B                                       DSM10194
+       XCA                                                              DSM10195
+       FMP     TIME          A(X)2+BX                                   DSM10196
+       FAD     CCC           A(X)2+BX+C                                 DSM10197
+       FDP     E3            DIVIDE BY THREE                            DSM10198
+ AXT   AXT     **,4          LOCATE NEXT POINT                          DSM10199
+       STQ     1,4           SMOOTHED DEPENDENT                         DSM10200
+       CLA     TIME                                                     DSM10201
+       STO     0,4           ASSOCIATED INDEPENDENT                     DSM10202
+ TXI   TXI     **,4,-2       A) LP4                                     DSM10203
+ NPTS  PDX     0,2           THE DECREMENT INDICATED NUMBER OF POINTS   DSM10204
+       TXL     ERRJ,1,1      TRANSFER IF REDICULOUS                     DSM10205
+       TXI     *+1,2,-1      SUBTRACT ONE                               DSM10206
+       PXA     0,2                                                      DSM10207
+       STT     1,4           ZERO THE TAG                               DSM10208
+       ACL     EXP           ATTACH EXPONENT                            DSM10209
+       FAD     ZERO          NORMALIZE                                  DSM10210
+       STO     M1            NUMBER OF POINTS - 1                       DSM10211
+       CLA     LAST          LAST INDEPENDENT                           DSM10212
+       FSB*    1,4           FIRST INDEPENDENT                          DSM10213
+       FDP     M1                                                       DSM10214
+       STQ     DT            THIS IS THE DELTA TO USE                   DSM10215
+       TRA     J1                                                       DSM10216
+ FIN   LXA     LOCL,2        LOCATION OF LAST POINT IN GIVEN CURVE      DSM10217
+       CAL     CLOB2         RESTORE FIRST WORD AFTER END OF CURVE      DSM10218
+       SLW     2,2                                                      DSM10219
+ 4S    AXT     **,4          RESTORE IR4                                DSM10220
+       CAL     1,4           GIVEN CURVE                                DSM10221
+       PAC     0,1           LOCATE GIVEN CURVE                         DSM10222
+       CAL     CLOB1         RESTORE SECOND WORD BEFORE                 DSM10223
+       SLW     -2,1          BEGINNING OF CURVE                         DSM10224
+ 2S    AXT     **,2          RESTORE IR2                                DSM10225
+ 1S    AXT     **,1          RESTORE IR1                                DSM10226
+       TRA     4,4           RETURN                                     DSM10227
+ LAST  EQU     COMMON+1      LAST INDEPENDENT IN GIVEN CURVE            DSM10228
+ DT    EQU     LAST+1        DELTA TO USE                               DSM10229
+ CLOB1 EQU     DT+1          SAVE SECOND WORD BEFORE BEGINNING OF CURVE DSM10230
+ CLOB2 EQU     CLOB1+1       SAVE FIRST WORD AFTER END OF CURVE         DSM10231
+ TIME  EQU     CLOB2+1       INDEPENDENT VALUE OF REPRODUCED CURVE      DSM10232
+ M1    EQU     TIME+1        TEMPORARY STORAGE                          DSM10233
+ M2    EQU     M1+1          TEMPORARY STORAGE                          DSM10234
+ M3    EQU     M2+1          TEMPORARY STORAGE                          DSM10235
+ M4    EQU     M3+1          TEMPORARY STORAGE                          DSM10236
+ M5    EQU     M4+1          TEMPORARY STORAGE                          DSM10237
+ COEFA EQU     M5+1          THIS STARTS A BLOCK OF NINE WORDS          DSM10238
+ COEFB EQU     COEFA+1       IN WHICH TO DEVELOP THREE SETS OF          DSM10239
+ COEFC EQU     COEFB+1       THREE COEFFICIENTS                         DSM10240
+ CCC   EQU     COEFA+9       SUMMATION OF COEFFICIENTS, ZEROETH POWER   DSM10241
+ CCB   EQU     CCC+1         SUMMATION OF COEFFICIENTS, FIRST POWER     DSM10242
+ CCA   EQU     CCB+1         SUMMATION OF COEFFICIENTS, SECOND POWER    DSM10243
+ WASTE EQU     CCA+2         TWO POSITIONS MUST BE WASTED               DSM10244
+ MINF  OCT     777777777777  MINUS INFINITY                             DSM10245
+ PINF  OCT     377777777777  PLUS INFINITY                              DSM10246
+ HALF  OCT     776777777777  TO FIND HALF A FLOATING POINT NUMBER       DSM10247
+ EXP   OCT     233000000000  EXPONENT FOR INTEGER CONVERSION            DSM10248
+ ZERO  OCT     0                                                        DSM10249
+ E3    DEC     3.                                                       DSM10250
+ ERRJ  LXA     4S,4          MUST BE PHYSICALLY NEXT TO LAST WORD       DSM10251
+       TXI     2S,4,1        SET FOR ERROR RETURN                       DSM10252

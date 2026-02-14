@@ -1,0 +1,420 @@
+*     CHEBYSHEV POLYNOMIAL APPROXIMATION                                CHEBY002
+*     XEQ                                                               CHEBY003
+*     CHEBYSHEV MAIN PROGRAM                                            CHEBY004
+*     LIST8                                                             CHEBY005
+*     LABEL                                                             CHEBY006
+C  184 CHEBYSHEV APPROXIMATION - MAIN PROGRAM                           CHEBY007
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY008
+     1),TAB3(1500),TAB4(1500),TAB5(1500),TAB6(1500),A(25),B(25,25),C(25,CHEBY009
+     225),IDENT(12),KNO(25)                                             CHEBY010
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY011
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY012
+   10 INTER=3                                                           CHEBY013
+      MARK=4                                                            CHEBY014
+      INPUT5=5                                                          CHEBY015
+      LIST=6                                                            CHEBY016
+      READ INPUT TAPE INPUT5,15,IDENT,N,NR,NC,XNAUT,YNAUT,DELTX,DELTY,INCHEBY017
+     1CR,INPUT,MSOOTH                                                   CHEBY018
+   15 FORMAT(12A6/I2,2I5,4F12.0,2I2,I1)                                 CHEBY019
+      WRITE OUTPUT TAPE LIST,30,IDENT                                   CHEBY020
+      CALL ROOTS                                                        CHEBY021
+      CALL VNORM                                                        CHEBY022
+      NN=N-1                                                            CHEBY023
+      WRITE OUTPUT TAPE LIST,35,NN                                      CHEBY024
+      WRITE OUTPUT TAPE LIST,40,(R(J),J=1,N)                            CHEBY025
+      DO 18K=1,N                                                        CHEBY026
+   18 KNO(K)=K-1                                                        CHEBY027
+      REWIND INTER                                                      CHEBY028
+      REWIND MARK                                                       CHEBY029
+      IF(INPUT-5) 145,25,20                                             CHEBY030
+   20 REWIND INPUT                                                      CHEBY031
+   25 NEXT=1                                                            CHEBY032
+      REWIND NEXT                                                       CHEBY033
+      IF(MSOOTH)50,50,60                                                CHEBY034
+   30 FORMAT(1H1,12A6)                                                  CHEBY035
+   35 FORMAT(1H0,15HROOTS WHEN N = ,I2)                                 CHEBY036
+   40 FORMAT(1H0,7(3X,F12.8))                                           CHEBY037
+   45 FORMAT(6F12.4)                                                    CHEBY038
+   50 DO 55 K=1,NR                                                      CHEBY039
+      READ INPUT TAPE INPUT,45,(TAB(J),J=1,NC)                          CHEBY040
+      WRITE TAPE INTER,(TAB(J),J=1,NC)                                  CHEBY041
+   55 CONTINUE                                                          CHEBY042
+      NEXT=INTER                                                        CHEBY043
+      GO TO 145                                                         CHEBY044
+   60 IF(NR-1)80,65,80                                                  CHEBY045
+   65 READ INPUT TAPE INPUT,45,(TAB(J),J=1,NC)                          CHEBY046
+      WRITE TAPE INTER,(TAB(J),J=1,NC)                                  CHEBY047
+      IF(NC-5)75,70,70                                                  CHEBY048
+   70 CALL SMOOTH                                                       CHEBY049
+   75 WRITE TAPE NEXT,(TAB(J),J=1,NC)                                   CHEBY050
+      REWIND INTER                                                      CHEBY051
+      GO TO 145                                                         CHEBY052
+   80 DO 85 J=1,NR                                                      CHEBY053
+      READ INPUT TAPE INPUT,45,(TAB(I),I=1,NC)                          CHEBY054
+      WRITE TAPE INTER,(TAB(I),I=1,NC)                                  CHEBY055
+      CALL SMOOTH                                                       CHEBY056
+      WRITE TAPE MARK,(TAB(I),I=1,NC)                                   CHEBY057
+   85 CONTINUE                                                          CHEBY058
+      END FILE MARK                                                     CHEBY059
+      REWIND MARK                                                       CHEBY060
+      REWIND INTER                                                      CHEBY061
+      IF(NR-5) 90,100,100                                               CHEBY062
+   90 DO 95 J=1,NR                                                      CHEBY063
+      READ TAPE MARK,(TAB(I),I=1,NC)                                    CHEBY064
+      WRITE TAPE NEXT,(TAB(I),I=1,NC)                                   CHEBY065
+   95 CONTINUE                                                          CHEBY066
+      GO TO 145                                                         CHEBY067
+  100 READ TAPE MARK,(TAB (J),J=1,NC)                                   CHEBY068
+      READ TAPE MARK,(TAB2(J),J=1,NC)                                   CHEBY069
+      READ TAPE MARK,(TAB3(J),J=1,NC)                                   CHEBY070
+      READ TAPE MARK,(TAB4(J),J=1,NC)                                   CHEBY071
+      READ TAPE MARK,(TAB5(J),J=1,NC)                                   CHEBY072
+      DO 105 K=1,NC                                                     CHEBY073
+      TAB6(K)=TAB(K)+(TAB4(K)-3.0*TAB3(K)+3.0*TAB2(K)-TAB(K))/5.0       CHEBY074
+     1+3.0*(TAB5(K)-4.0*TAB4(K)+6.0*TAB3(K)-4.0*TAB2(K)+TAB(K))/35.0    CHEBY075
+  105 CONTINUE                                                          CHEBY076
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY077
+      DO 110 K=1,NC                                                     CHEBY078
+      TAB6(K)=TAB2(K)-2.0*(TAB4(K)-3.0*TAB3(K)+3.0*TAB2(K)-TAB(K))/5.0  CHEBY079
+     1-(TAB5(K)-4.0*TAB4(K)+6.0*TAB3(K)-4.0*TAB2(K)+TAB(K))/7.0         CHEBY080
+  110 CONTINUE                                                          CHEBY081
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY082
+      L=NR-2                                                            CHEBY083
+      DO 130 M=3,L                                                      CHEBY084
+      DO 115 K=1,NC                                                     CHEBY085
+      TAB6(K)= TAB3(K)-3.0*(TAB5(K)-4.0*TAB4(K)+6.0*TAB3(K)-4.0*TAB2(K) CHEBY086
+     1+TAB(K))/35.0                                                     CHEBY087
+  115 CONTINUE                                                          CHEBY088
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY089
+      IF(M-L)120,130,130                                                CHEBY090
+  120 DO 125 K=1,NC                                                     CHEBY091
+      TAB (K)=TAB2(K)                                                   CHEBY092
+      TAB2(K)=TAB3(K)                                                   CHEBY093
+      TAB3(K)=TAB4(K)                                                   CHEBY094
+      TAB4(K)=TAB5(K)                                                   CHEBY095
+  125 CONTINUE                                                          CHEBY096
+      READ TAPE MARK,(TAB5(K),K=1,NC)                                   CHEBY097
+  130 CONTINUE                                                          CHEBY098
+      DO 135 K=1,NC                                                     CHEBY099
+      TAB6(K)= TAB4(K)+2.0*(TAB5(K)-3.0*TAB4(K)+3.0*TAB3(K)-TAB2(K))/5.0CHEBY100
+     1-(TAB5(K)-4.0*TAB4(K)+6.0*TAB3(K)-4.0*TAB2(K)+TAB(K))/7.0         CHEBY101
+  135 CONTINUE                                                          CHEBY102
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY103
+      DO 140 K=1,NC                                                     CHEBY104
+      TAB6(K)= TAB5(K)-(TAB5(K)-3.0*TAB4(K)+3.0*TAB3(K)-TAB2(K))/5.0    CHEBY105
+     1+3.0*(TAB5(K)-4.0*TAB4(K)+6.0*TAB3(K)-4.0*TAB2(K)+TAB(K))/35.0    CHEBY106
+  140 CONTINUE                                                          CHEBY107
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY108
+      WRITE TAPE NEXT,(TAB6(K),K=1,NC)                                  CHEBY109
+  145 REWIND NEXT                                                       CHEBY110
+  150 J=1                                                               CHEBY111
+      WRITE OUTPUT TAPE LIST,155                                        CHEBY112
+  155 FORMAT(1H0,17HTABLE OF F VALUES)                                  CHEBY113
+      IF(NR-1)165,160,165                                               CHEBY114
+  160 READ TAPE NEXT,(TAB(L),L=1,NC)                                    CHEBY115
+      CALL ABSTR(J)                                                     CHEBY116
+      GO TO 235                                                         CHEBY117
+  165 MC=0                                                              CHEBY118
+      READ TAPE NEXT,(TAB5(L),L=1,NC)                                   CHEBY119
+      DO 170 K=1,NR                                                     CHEBY120
+      MC=MC+1                                                           CHEBY121
+      IF(R(J)-W(K)) 175,175,170                                         CHEBY122
+  170 CONTINUE                                                          CHEBY123
+  175 DO 185 MM=1,MC                                                    CHEBY124
+      DO 180 L=1,NC                                                     CHEBY125
+      TAB2(L)=TAB3(L)                                                   CHEBY126
+      TAB3(L)=TAB4(L)                                                   CHEBY127
+      TAB4(L)=TAB5(L)                                                   CHEBY128
+  180 CONTINUE                                                          CHEBY129
+      READ TAPE NEXT,(TAB5(L),L=1,NC)                                   CHEBY130
+  185 CONTINUE                                                          CHEBY131
+  190 U=(R(J)-W(K-1))/(W(K)-W(K-1))                                     CHEBY132
+      MC=0                                                              CHEBY133
+  195 IF(K-2) 205,205,200                                               CHEBY134
+  200 IF(K-NR)215,205,205                                               CHEBY135
+  205 DO 210 L=1,NC                                                     CHEBY136
+      TAB(L)=U*(TAB4(L)-TAB3(L))+TAB3(L)                                CHEBY137
+  210 CONTINUE                                                          CHEBY138
+      GO TO 225                                                         CHEBY139
+  215 DO 220 L=1,NC                                                     CHEBY140
+      TAB(L)=-U*(U-1.0)*(U-2.0)*TAB2(L)/6.0+(U*U-1.0)*(U-2.0)*TAB3(L)/2.CHEBY141
+     10-(U+1.0)*U*(U-2.0)*TAB4(L)/2.0+U*(U*U-1.0)*TAB5(L)/6.0           CHEBY142
+  220 CONTINUE                                                          CHEBY143
+  225 CALL ABSTR(J)                                                     CHEBY144
+      J=J+1                                                             CHEBY145
+      IF(N+1-J) 235,235,230                                             CHEBY146
+  230 IF(R(J)-W(K)) 190,190,170                                         CHEBY147
+  235 REWIND NEXT                                                       CHEBY148
+  240 IF(NR-1)245,245,260                                               CHEBY149
+  245 K=1                                                               CHEBY150
+      DO 250 I=1,N                                                      CHEBY151
+      S(I)=F(I,K)                                                       CHEBY152
+  250 CONTINUE                                                          CHEBY153
+      DO 255 I=1,N                                                      CHEBY154
+      C(I,K)=(2.0/FLOATF(N))*CHSUM(I)                                   CHEBY155
+  255 CONTINUE                                                          CHEBY156
+      C(1,K)=C(1,K)/2.0                                                 CHEBY157
+      GO TO 305                                                         CHEBY158
+  260 DO 285 I=1,N                                                      CHEBY159
+      DO 280 K=1,N                                                      CHEBY160
+      DO 270 M=1,N                                                      CHEBY161
+      DO 265 L=1,N                                                      CHEBY162
+      S(L)=F(L,M)                                                       CHEBY163
+  265 CONTINUE                                                          CHEBY164
+      B(M)=CHSUM(I)                                                     CHEBY165
+  270 CONTINUE                                                          CHEBY166
+      DO 275 L=1,N                                                      CHEBY167
+      S(L)=B(L)                                                         CHEBY168
+  275 CONTINUE                                                          CHEBY169
+      C(I,K)=4.0/(FLOATF(N)*FLOATF(N))*CHSUM(K)                         CHEBY170
+  280 CONTINUE                                                          CHEBY171
+  285 CONTINUE                                                          CHEBY172
+      C(1,1)=C(1,1)/4.0                                                 CHEBY173
+      DO 290 L=2,N                                                      CHEBY174
+      C(1,L)=C(1,L)/2.0                                                 CHEBY175
+      C(L,1)=C(L,1)/2.0                                                 CHEBY176
+  290 CONTINUE                                                          CHEBY177
+      WRITE OUTPUT TAPE LIST,300                                        CHEBY178
+      WRITE OUTPUT TAPE LIST,295,((KNO(I),KNO(K),C(I,K),K=1,N),I=1,N)   CHEBY179
+  295 FORMAT(8H        ,4HJ = ,I3,2X,4HK = ,I3,2X,E16.9)                CHEBY180
+  300 FORMAT(1H0,20HCOEFFICIENTS, C(J,K))                               CHEBY181
+      GO TO 320                                                         CHEBY182
+  305 WRITE OUTPUT TAPE LIST,310                                        CHEBY183
+      WRITE OUTPUT TAPE LIST,315,(KNO(I),C(I,1),I=1,N)                  CHEBY184
+  310 FORMAT(1H0,18HCOEFFICIENTS, C(K))                                 CHEBY185
+  315 FORMAT(8H        ,4HK = ,I3,2X,E16.9)                             CHEBY186
+  320 WRITE OUTPUT TAPE LIST,30,IDENT                                   CHEBY187
+      CALL RECAL(C)                                                     CHEBY188
+      GO TO 10                                                          CHEBY189
+      END                                                               CHEBY190
+*     SUBROUTINE TO FOR T(J)(X)                                         CHEBY191
+*     LIST8                                                             CHEBY192
+*     LABEL                                                             CHEBY193
+      SUBROUTINE VECTOR(Z)                                              CHEBY194
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY195
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY196
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY197
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY198
+      R(1)=1.0                                                          CHEBY199
+      R(2)=Z                                                            CHEBY200
+      IF(N-2) 1100,1100,1101                                            CHEBY201
+ 1101 DO 1102 K=3,N                                                     CHEBY202
+      R(K)=2.0*Z*R(K-1)-R(K-2)                                          CHEBY203
+ 1102 CONTINUE                                                          CHEBY204
+ 1100 RETURN                                                            CHEBY205
+      END                                                               CHEBY206
+*     SUBROUTINE FOR RECALCULATION OF TABLE                             CHEBY207
+*     LIST8                                                             CHEBY208
+*     LABEL                                                             CHEBY209
+      SUBROUTINE RECAL(C)                                               CHEBY210
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY211
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25),C(25,25)                 CHEBY212
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY213
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY214
+  500 TAB(1)=XNAUT                                                      CHEBY215
+      INCRM=1                                                           CHEBY216
+      DO 505 K=2,NC                                                     CHEBY217
+      TAB(K)=TAB(K-1)+DELTX                                             CHEBY218
+  505 CONTINUE                                                          CHEBY219
+      WRITE OUTPUT TAPE LIST,510                                        CHEBY220
+  510 FORMAT(1H0,64H    X          Y          TABLE          RECAL      CHEBY221
+     1  DEVIATION  )                                                    CHEBY222
+      IY=1                                                              CHEBY223
+      DMAX=0.0                                                          CHEBY224
+      IF(NR-1) 515,525,515                                              CHEBY225
+  515 SS=W(IY)                                                          CHEBY226
+      CALL VECTOR(SS)                                                   CHEBY227
+C     THE T(K)(Y) REPLACE THE ROOTS IN R                                CHEBY228
+      DO 520 I=1,NC                                                     CHEBY229
+      TAB2(I)=YNAUT                                                     CHEBY230
+  520 CONTINUE                                                          CHEBY231
+      DO 522 K=1,N                                                      CHEBY232
+      S(K)=R(K)                                                         CHEBY233
+  522 CONTINUE                                                          CHEBY234
+  525 DO 550 IX=1,NC,INCR                                               CHEBY235
+      SUM=0.0                                                           CHEBY236
+      J=1                                                               CHEBY237
+      TAB4(IX)=0.0                                                      CHEBY238
+      T=V(IX)                                                           CHEBY239
+      CALL VECTOR(T)                                                    CHEBY240
+  530 DO 535 I=1,N                                                      CHEBY241
+      TAB4(IX)=TAB4(IX)+C(I,J)*R(I)                                     CHEBY242
+  535 CONTINUE                                                          CHEBY243
+      IF(NR-1) 540,550,540                                              CHEBY244
+  540 SUM=SUM+S(J)*TAB4(IX)                                             CHEBY245
+      TAB4(IX)=0.0                                                      CHEBY246
+      J=J+1                                                             CHEBY247
+      IF(N+1-J) 530,545,530                                             CHEBY248
+  545 TAB4(IX)=SUM                                                      CHEBY249
+  550 CONTINUE                                                          CHEBY250
+C     COMPUTATION HAS BEEN MADE FOR A ROW                               CHEBY251
+      DO 555 J=1,INCRM                                                  CHEBY252
+      READ TAPE INTER,(TAB3(I),I=1,NC)                                  CHEBY253
+  555 CONTINUE                                                          CHEBY254
+      DO 580 I=1,NC,INCR                                                CHEBY255
+      TAB5(I)=TAB3(I)-TAB4(I)                                           CHEBY256
+      WRITE OUTPUT TAPE LIST,560,TAB(I),TAB2(I),TAB3(I),TAB4(I),TAB5(I) CHEBY257
+  560 FORMAT(1H F8.3,3X,F8.3,3X,F12.4,3X,F12.4,3X,F12.4)                CHEBY258
+      IF(TAB5(I)) 565,570,570                                           CHEBY259
+  565 TAB5(I)=-TAB5(I)                                                  CHEBY260
+  570 IF(DMAX-TAB5(I)) 575,580,580                                      CHEBY261
+  575 DMAX=TAB5(I)                                                      CHEBY262
+      XMAX=TAB(I)                                                       CHEBY263
+      YMAX=TAB2(I)                                                      CHEBY264
+  580 CONTINUE                                                          CHEBY265
+      IY=IY+INCR                                                        CHEBY266
+      YNAUT=YNAUT+DELTY*FLOATF(INCR)                                    CHEBY267
+      INCRM=INCR                                                        CHEBY268
+      WRITE OUTPUT TAPE LIST,585                                        CHEBY269
+  585 FORMAT(1H0)                                                       CHEBY270
+      IF(NR+1-IY) 590,590,515                                           CHEBY271
+  590 WRITE OUTPUT TAPE LIST,595,DMAX,XMAX,YMAX                         CHEBY272
+  595 FORMAT(1H0,F8.3,27H IS THE GREATEST DEVIATION./ 20H IT OCCURS WHENCHEBY273
+     1 X = ,F8.3,9H AND Y = ,F8.3)                                      CHEBY274
+      RETURN                                                            CHEBY275
+      END                                                               CHEBY276
+*     SUBROUTINE TO FORM ROOTS                                          CHEBY277
+*     LIST8                                                             CHEBY278
+*     LABEL                                                             CHEBY279
+      SUBROUTINE ROOTS                                                  CHEBY280
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY281
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY282
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY283
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY284
+      DO 1000 I=1,N                                                     CHEBY285
+      X1 = I                                                            CHEBY286
+      X2 = N                                                            CHEBY287
+      ARG=1.5707963268*(2.0*X1-1.0)/X2                                  CHEBY288
+      NSUB = N+1-I                                                      CHEBY289
+      R(NSUB) = COSF(ARG)                                               CHEBY290
+ 1000 CONTINUE                                                          CHEBY291
+      RETURN                                                            CHEBY292
+      END                                                               CHEBY293
+*     SUBROUTINE TO FORM NORMALIZED VECTORS                             CHEBY294
+*     LIST8                                                             CHEBY295
+*     LABEL                                                             CHEBY296
+      SUBROUTINE VNORM                                                  CHEBY297
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY298
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY299
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY300
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY301
+ 1002 X1 = NC-1                                                         CHEBY302
+      DV=2.0/X1                                                         CHEBY303
+      V(1)= -1.0                                                        CHEBY304
+      L=NC-1                                                            CHEBY305
+      DO 1003 I=1,L                                                     CHEBY306
+      V(I+1) =V(I)+DV                                                   CHEBY307
+ 1003 CONTINUE                                                          CHEBY308
+      IF (NR-1) 1004,1005,1006                                          CHEBY309
+ 1004 CALL EXIT                                                         CHEBY310
+ 1005 RETURN                                                            CHEBY311
+ 1006 X1 = NR-1                                                         CHEBY312
+      DW=2.0/X1                                                         CHEBY313
+      W(1)= -1.0                                                        CHEBY314
+      L=NR-1                                                            CHEBY315
+      DO 1007 I=1,L                                                     CHEBY316
+      W(I+1) = W(I) +DW                                                 CHEBY317
+ 1007 CONTINUE                                                          CHEBY318
+      RETURN                                                            CHEBY319
+      END                                                               CHEBY320
+*      SUBROUTINE TO SMOOTH ROW OF DATA BY FOURTH DIFFERENCES           CHEBY321
+*     LIST8                                                             CHEBY322
+*     LABEL                                                             CHEBY323
+      SUBROUTINE SMOOTH                                                 CHEBY324
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY325
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY326
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY327
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY328
+      BARY1=TAB(1)+(TAB(4)-3.0*TAB(3)+3.0*TAB(2)-TAB(1))/5.0+3.0*(TAB(5)CHEBY329
+     1-4.0*TAB(4)+6.0*TAB(3)-4.0*TAB(2)+TAB(1))/35.0                    CHEBY330
+      BARY2=TAB(2)-2.0*(TAB(4)-3.0*TAB(3)+3.0*TAB(2)-TAB(1))/5.0        CHEBY331
+     1-(TAB(5)-4.0*TAB(4)+6.0*TAB(3)-4.0*TAB(2)+TAB(1))/7.0             CHEBY332
+      NBAR = NC-2                                                       CHEBY333
+      DO 130 I = 3, NBAR                                                CHEBY334
+      BARY3=TAB(I)-3.0*(TAB(I+2)-4.0*TAB(I+1)+6.0*TAB(I)-4.0*TAB(I-1)   CHEBY335
+     1+TAB(I-2))/35.0                                                   CHEBY336
+      IF(NC-2-I) 130,130,129                                            CHEBY337
+  129 TAB(I-2)=BARY1                                                    CHEBY338
+      BARY1=BARY2                                                       CHEBY339
+      BARY2=BARY3                                                       CHEBY340
+  130 CONTINUE                                                          CHEBY341
+      BARY4=TAB(NC-1)+2.0*(TAB(NC)-3.0*TAB(NC-1)+3.0*TAB(NC-2)          CHEBY342
+     1-TAB(NC-3))/5.0-(TAB(NC)-4.0*TAB(NC-1)+6.0*TAB(NC-2)-4.0          CHEBY343
+     2*TAB(NC-3)+TAB(NC-4))/7.0                                         CHEBY344
+      BARY5 =TAB(NC) -(TAB(NC)-3.0*TAB(NC-1)+3.0*TAB(NC-2)-TAB(NC-3))   CHEBY345
+     1/5.0+3.0*(TAB(NC)-4.0*TAB(NC-1)+6.0*TAB(NC-2)-4.0*TAB(NC-3)       CHEBY346
+     2+TAB(NC-4))/35.0                                                  CHEBY347
+      TAB(NC-4)=BARY1                                                   CHEBY348
+      TAB(NC-3)=BARY2                                                   CHEBY349
+      TAB(NC-2)=BARY3                                                   CHEBY350
+      TAB(NC-1)=BARY4                                                   CHEBY351
+      TAB(NC)=BARY5                                                     CHEBY352
+      RETURN                                                            CHEBY353
+      END                                                               CHEBY354
+*     SUBROUTINE FOR LAGRANGIAN INTERPOLATION                           CHEBY355
+*     LIST8                                                             CHEBY356
+*     LABEL                                                             CHEBY357
+      SUBROUTINE ABSTR(J)                                               CHEBY358
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY359
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY360
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY361
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY362
+      I=1                                                               CHEBY363
+      DO 150 L=1,NC                                                     CHEBY364
+      IF(R(I)-V(L)) 151,151,150                                         CHEBY365
+  151 U=(R(I)-V(L-1))/(V(L)-V(L-1))                                     CHEBY366
+      IF(L-2)154,154,155                                                CHEBY367
+  154 F(I,J)=U*(TAB(L)-TAB(L-1))+TAB(L-1)                               CHEBY368
+      GO TO 157                                                         CHEBY369
+  155 IF(L-NC)156,154,154                                               CHEBY370
+  156 F(I,J)=-U*(U-1.0)*(U-2.0)*TAB(L-2)/6.0+(U*U-1.0)*(U-2.0)*TAB(L-1)/CHEBY371
+     12.0-(U+1.0)*(U-2.0)*U*TAB(L)/2.0+U*(U*U-1.0)*TAB(L+1)/6.0         CHEBY372
+  157 I=I+1                                                             CHEBY373
+      IF(N+1-I)153,153,160                                              CHEBY374
+  160 IF(R(I)-V(L))151,151,150                                          CHEBY375
+  150 CONTINUE                                                          CHEBY376
+  153 WRITE OUTPUT TAPE LIST,300,(F(I,J),I=1,N)                         CHEBY377
+  300 FORMAT(1H ,7E16.9)                                                CHEBY378
+      RETURN                                                            CHEBY379
+      END                                                               CHEBY380
+*      SUBROUTINE  FOR FORMING CHEBYCHEV SUMS                           CHEBY381
+*     LIST8                                                             CHEBY382
+*     LABEL                                                             CHEBY383
+      FUNCTION CHSUM(K)                                                 CHEBY384
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY385
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY386
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY387
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY388
+      SUM=0.0                                                           CHEBY389
+      DO 120 J=1,N                                                      CHEBY390
+      Z=R(J)                                                            CHEBY391
+      A=CHEBY(K,Z)                                                      CHEBY392
+      SUM=SUM+S(J)*A                                                    CHEBY393
+  120 CONTINUE                                                          CHEBY394
+      CHSUM=SUM                                                         CHEBY395
+      RETURN                                                            CHEBY396
+      END                                                               CHEBY397
+*     SUBROUTIEN TO FORM CHEBYSHEV POLYNOMIALS                          CHEBY398
+*     LIST8                                                             CHEBY399
+*     LABEL                                                             CHEBY400
+      FUNCTION CHEBY(KBAR,X)                                            CHEBY401
+      DIMENSION R(25),S(25),F(25,25),V(1500),W(1500),TAB(1500),TAB2(1500CHEBY402
+     1),TAB3(1500),TAB4(1500),TAB5(1500),A(25)                          CHEBY403
+      COMMON N,R,NC,NR,V,W,TAB,F,LIST,S,A,TAB2,TAB3,TAB4,TAB5,INTER,INCRCHEBY404
+     1,XNAUT,YNAUT,DELTX,DELTY                                          CHEBY405
+      IF (KBAR-2)103,105,107                                            CHEBY406
+  103 TKBAR=1.0                                                         CHEBY407
+      GO TO 110                                                         CHEBY408
+  105 TKBAR=X                                                           CHEBY409
+      GO TO 110                                                         CHEBY410
+  107 T1=X                                                              CHEBY411
+      TO=1.0                                                            CHEBY412
+      DO 109 I=3,KBAR                                                   CHEBY413
+      TKBAR= 2.0*X* T1-TO                                               CHEBY414
+      TO=T1                                                             CHEBY415
+      T1=TKBAR                                                          CHEBY416
+  109 CONTINUE                                                          CHEBY417
+  110 CHEBY=TKBAR                                                       CHEBY418
+      RETURN                                                            CHEBY419
+      END                                                               CHEBY420
+*     DATA                                                              CHEBY421

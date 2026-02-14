@@ -1,0 +1,790 @@
+*      LABEL                                                            MSUB0001
+CMSUBJ       VERSION 1 OF  RS MSUB                                      MSUB0002
+      SUBROUTINE SIMPLX (INFIX,A,B,TOL,PRM,KOUT,ERR,JH,X,P,Y,KB,E)      MSUB0003
+C                                                                       MSUB0004
+      DIMENSION INFIX(8),A(1),B(1),TOL(4),KOUT(7),ERR(8),JH(1),X(1),    MSUB0005
+     1 P(1),Y(1),KB(1),E(1),ZZ(3), IOFIX(16) , TERR(8)                  MSUB0006
+C                                                                       MSUB0007
+      EQUIVALENCE  (INFLAG,IOFIX(1) ), (N , IOFIX(2) ) ,                MSUB0008
+     1            (ME,IOFIX(3) ),  (M,IOFIX(4)), (MF,IOFIX(5)),         MSUB0009
+     2  (MC, IOFIX(6) ),  ( NCUT, IOFIX(7) ) , ( NVER, IOFIX(8) ),      MSUB0010
+     3 ( K, IOFIX(9) ), (ITER, IOFIX(10) ), (INVC , IOFIX(11) ) ,       MSUB0011
+     4 (NUMVR, IOFIX(12) ), ( NUMPV, IOFIX(13) ) ,                      MSUB0012
+     5  (INFS, IOFIX(14)  ) , ( JT,  IOFIX(15) ) ,( LA  , IOFIX(16) ),  MSUB0013
+     6 (ZZ(1),TPIV), (ZZ(2),TZERO),(ZZ(3),TCOST)                        MSUB0014
+C                                                                       MSUB0015
+C                        MOVE INPUTS  ...  ZERO OUTPUTS                 MSUB0016
+      DO 1340  I= 1, 8                                                  MSUB0017
+       TERR(I) = 0.0                                                    MSUB0018
+      IOFIX(I+8)  =  0                                                  MSUB0019
+ 1340  IOFIX(I)  =  INFIX(I)                                            MSUB0020
+      LA   =   0                                                        MSUB0021
+      DO 1308  I = 1 , 3                                                MSUB0022
+ 1308 ZZ(I)  =  TOL(I)                                                  MSUB0023
+      TCOST  =  -  ABSF (TCOST)                                         MSUB0024
+      PMIX = PRM                                                        MSUB0025
+      M2 = M**2                                                         MSUB0026
+      INFS = 1                                                          MSUB0027
+C                   CHECK FOR ILLEGAL INPUT                             MSUB0028
+      IF (N)  1304, 1304, 1371                                          MSUB0029
+ 1371  IF (M - MF ) 1304, 1304, 1372                                    MSUB0030
+ 1372  IF (MF - MC)  1304, 1304, 1373                                   MSUB0031
+ 1373  IF ( MC ) 1304 , 1304,  1374                                     MSUB0032
+ 1374  IF (ME - M ) 1304, 1375, 1375                                    MSUB0033
+ 1375 IF( XMODF(INFLAG, 4 )  - 1 )  1400,  1320,  100                   MSUB0034
+C                                                                       MSUB0035
+C                                                                       MSUB0036
+C  NEW 1          STARTS PHASE ONE                                      MSUB0037
+C*****SUBROUTINE NEW (M,N, JH, KB, A, B, MF, ME )                       MSUB0038
+C                                                                       MSUB0039
+C                             INITIATE                                  MSUB0040
+ 1400   DO 1401 I = 1, M                                                MSUB0041
+ 1401 JH(I) = 0                                                         MSUB0042
+C                 INSTALL SINGLETONS                                    MSUB0043
+       KT  =  0                                                         MSUB0044
+        DO 1402  J = 1, N                                               MSUB0045
+      KB(J) = 0                                                         MSUB0046
+      MM  =  KT + MF                                                    MSUB0047
+      LL  =  KT + M                                                     MSUB0048
+C                             TALLY ENTRIES IN CONSTRAINTS              MSUB0049
+      KQ  = 0                                                           MSUB0050
+      DO  1403 L = MM , LL                                              MSUB0051
+      IF (A(L)) 1404, 1403, 1404                                        MSUB0052
+ 1404 KQ = KQ+1                                                         MSUB0053
+      LQ = L                                                            MSUB0054
+ 1403   CONTINUE                                                        MSUB0055
+C                             CHECK WHETHER J IS CANDIDATE              MSUB0056
+            IF (KQ - 1) 1402, 1405, 1402                                MSUB0057
+ 1405 IA = LQ- KT                                                       MSUB0058
+          IF ( JH(IA) ) 1402, 1406, 1402                                MSUB0059
+ 1406 IF (A(LQ)*B(IA)) 1402, 1407, 1407                                 MSUB0060
+C                             J IS CANDIDATE. INSTALL                   MSUB0061
+ 1407 JH(IA) = J                                                        MSUB0062
+      KB(J)  = IA                                                       MSUB0063
+ 1402 KT = KT + ME                                                      MSUB0064
+C                                                                       MSUB0065
+C**END OF NEW                                                           MSUB0066
+C                                                                       MSUB0067
+C                                                                       MSUB0068
+ 1320 CONTINUE                                                          MSUB0069
+C                                                                       MSUB0070
+C  VER 1          FORMS INVERSE FROM  KB                                MSUB0071
+C*****SUBROUTINE VER ( A, B, JH, X, E, KB, Y, IOFIX, TPIV, M2  )        MSUB0072
+C                                                                       MSUB0073
+C                 INITIATE                                              MSUB0074
+ 1100 ASSIGN  1102  TO KPIV                                             MSUB0075
+      ASSIGN  1114  TO KJMY                                             MSUB0076
+      IF (LA)  1121, 1121, 1122                                         MSUB0077
+ 1121 INVC = 0                                                          MSUB0078
+ 1122 NUMVR   =  NUMVR  +1                                              MSUB0079
+       DO 1101  I = 1, M2                                               MSUB0080
+ 1101 E(I)=0.                                                           MSUB0081
+      MM=1                                                              MSUB0082
+       DO 1113  I = 1, M                                                MSUB0083
+      E(MM) =1.0                                                        MSUB0084
+      X(I) = B(I)                                                       MSUB0085
+ 1113 MM = MM + M + 1                                                   MSUB0086
+        DO 1110  I = MF, M                                              MSUB0087
+      IF (JH(I)) 1111, 1110, 1111                                       MSUB0088
+ 1111 JH(I) = 12345                                                     MSUB0089
+ 1110 CONTINUE                                                          MSUB0090
+      INFS = 1                                                          MSUB0091
+C                 FORM INVERSE                                          MSUB0092
+        DO 1102  JT= 1, N                                               MSUB0093
+      IF ( KB(JT))  600 , 1102 , 600                                    MSUB0094
+C 600 CALL  JMY  (JT, A, E, M, Y )                                      MSUB0095
+C                       CHOOSE PIVOT                                    MSUB0096
+ 1114 TY = 0.                                                           MSUB0097
+        DO 1104  I = MF, M                                              MSUB0098
+      IF (JH(I)  - 12345 )  1104, 1105, 1104                            MSUB0099
+ 1105 IF ( ABSF( Y(I) ) -  TY )  1104, 1104, 1106                       MSUB0100
+ 1106 IR   = I                                                          MSUB0101
+      TY =  ABSF ( Y(I) )                                               MSUB0102
+ 1104   CONTINUE                                                        MSUB0103
+C                       TEST PIVOT                                      MSUB0104
+      IF  (TY - TPIV )    1107, 1108, 1108                              MSUB0105
+C        BAD  PIVOT,  ROW IR,  COLUMN JT                                MSUB0106
+ 1107 KB(JT)= 0                                                         MSUB0107
+      GO TO 1102                                                        MSUB0108
+C                       PIVOT                                           MSUB0109
+ 1108 JH(IR) = JT                                                       MSUB0110
+      KB(JT) = IR                                                       MSUB0111
+      GO TO 900                                                         MSUB0112
+C 900 CALL PIV    (IR, Y, M, E, Z, X)                                   MSUB0113
+ 1102     CONTINUE                                                      MSUB0114
+C                 RESET ARTIFICIALS                                     MSUB0115
+        DO 1109  I = 1, M                                               MSUB0116
+      IF ( JH(I) - 12345  )  1109, 1112, 1109                           MSUB0117
+ 1112 JH(I) = 0                                                         MSUB0118
+ 1109   CONTINUE                                                        MSUB0119
+C**END OF VER                                                           MSUB0120
+C                                                                       MSUB0121
+C                                                                       MSUB0122
+  100 ASSIGN   705  TO  NDEL                                            MSUB0123
+      ASSIGN  1000  TO  KJMY                                            MSUB0124
+      ASSIGN   221  TO  KPIV                                            MSUB0125
+C                                                                       MSUB0126
+C                             PERFORM ONE ITERATION                     MSUB0127
+C                                                                       MSUB0128
+C  XCK 1    X CHECKER                                                   MSUB0129
+C*****SUBROUTINE XCK ( M, MF, JH, X, TZERO, JIN )                       MSUB0130
+C                                                                       MSUB0131
+C           RESET X AND CHECK FOR INFEASIBILITIES                       MSUB0132
+ 1200   JIN  =  0                                                       MSUB0133
+      NEG = 0                                                           MSUB0134
+      DO 1201 I = MF, M                                                 MSUB0135
+      IF ( ABSF ( X(I) )  - TZERO)  1202, 1203, 1203                    MSUB0136
+ 1202 X(I) = 0.0                                                        MSUB0137
+      GO TO 1201                                                        MSUB0138
+ 1203 IF ( X(I) )  1208, 1201, 1205                                     MSUB0139
+ 1205 IF ( JH(I) )  1201, 1206, 1201                                    MSUB0140
+ 1208 NEG = 1                                                           MSUB0141
+ 1206   JIN = 1                                                         MSUB0142
+ 1201   CONTINUE                                                        MSUB0143
+C**END OF XCK                                                           MSUB0144
+C                                                                       MSUB0145
+C                                                                       MSUB0146
+C           CHECK CHANGE OF PHASE.. GO BACK TO INVERT IF GONE INFEAS.   MSUB0147
+      IF (INFS - JIN ) 1320,  500,  200                                 MSUB0148
+C                 BECOME FEASIBLE                                       MSUB0149
+  200 INFS = 0                                                          MSUB0150
+  201 PMIX  =  0.0                                                      MSUB0151
+C                                                                       MSUB0152
+C  GET 1    GET PRICES                                                  MSUB0153
+C*****SUBROUTINE GET ( M, MC, MF, JH, X, P, E, INFS, PMIX )             MSUB0154
+C                                                                       MSUB0155
+  500 MM  = MC                                                          MSUB0156
+C                       PRIMAL PRICES                                   MSUB0157
+  502 DO 503 J = 1, M                                                   MSUB0158
+      P(J) = E(MM )                                                     MSUB0159
+  503 MM  =MM  + M                                                      MSUB0160
+      IF ( INFS )  501, 599, 501                                        MSUB0161
+C                       COMPOSITE PRICES                                MSUB0162
+  501 DO 504  J = 1, M                                                  MSUB0163
+  504 P(J) = P(J)* PMIX                                                 MSUB0164
+      DO 505  I = MF, M                                                 MSUB0165
+      MM  =I                                                            MSUB0166
+      IF  ( X(I) )  506, 507, 507                                       MSUB0167
+  506 DO 508  J = 1, M                                                  MSUB0168
+      P(J) =  P(J) + E(MM )                                             MSUB0169
+  508 MM  = MM  + M                                                     MSUB0170
+      GO TO 505                                                         MSUB0171
+  507 IF (JH(I))  505, 509, 505                                         MSUB0172
+  509 DO 510  J = 1, M                                                  MSUB0173
+      P(J) = P(J) - E(MM )                                              MSUB0174
+  510 MM  =  MM  +M                                                     MSUB0175
+  505   CONTINUE                                                        MSUB0176
+C                                                                       MSUB0177
+  599 CONTINUE                                                          MSUB0178
+C**END OF GET                                                           MSUB0179
+C                                                                       MSUB0180
+C                                                                       MSUB0181
+C                                                                       MSUB0182
+C    MIN         MIN D-J.  SELECTS COLUMN TO ENTER BASIS                MSUB0183
+C*****SUBROUTINE MIN ( JT, N, M, A, P, KB, ME, TCOST )                  MSUB0184
+C                                                                       MSUB0185
+  700 JT = 0                                                            MSUB0186
+      BB = TCOST                                                        MSUB0187
+C                                                                       MSUB0188
+  701 DO  702  JM = 1, N                                                MSUB0189
+C                             SKIP COLUMNS IN BASIS                     MSUB0190
+  703 IF ( KB(JM) )  702, 300, 702                                      MSUB0191
+C 300 CALL DEL ( JM, DT, M, A, P)                                       MSUB0192
+  705 IF  ( DT - BB )  708, 702, 702                                    MSUB0193
+  708 BB = DT                                                           MSUB0194
+      JT = JM                                                           MSUB0195
+  702    CONTINUE                                                       MSUB0196
+C                                                                       MSUB0197
+C**END OF MIN                                                           MSUB0198
+C                                                                       MSUB0199
+        IF  (JT)    203, 203, 600                                       MSUB0200
+C           ALL COSTS NON-NEGATIVE...  K = 3 OR 4                       MSUB0201
+  203 K = 3 + INFS                                                      MSUB0202
+      GO TO 257                                                         MSUB0203
+C                             NORMAL CYCLE                              MSUB0204
+C                                                                       MSUB0205
+C  JMY 1         J MULTIPLY.  BASIS INVERSE * COLUMN JT                 MSUB0206
+C*****SUBROUTINE JMY (JT, A, E, M, Y, ME )                              MSUB0207
+C                                                                       MSUB0208
+  600 DO 610  I= 1,M                                                    MSUB0209
+  610 Y(I) =0.                                                          MSUB0210
+      LP  =  JT*ME - ME                                                 MSUB0211
+      LL = 0                                                            MSUB0212
+      DO 605   I= 1,M                                                   MSUB0213
+      LP = LP + 1                                                       MSUB0214
+      IF  (A(LP))   601, 602, 601                                       MSUB0215
+  601 DO 606  J  =  1,M                                                 MSUB0216
+      LL = LL + 1                                                       MSUB0217
+  606 Y(J) = Y(J) + A(LP) * E(LL)                                       MSUB0218
+      GO TO 605                                                         MSUB0219
+  602 LL = LL + M                                                       MSUB0220
+  605 CONTINUE                                                          MSUB0221
+C                                                                       MSUB0222
+  699 GO TO KJMY , ( 1000 , 1114 ,  1392  )                             MSUB0223
+C**END OF JMY                                                           MSUB0224
+C                                                                       MSUB0225
+C                                                                       MSUB0226
+C  ROW 1    ROW SELECTION--COMPOSITE                                    MSUB0227
+C*****SUBROUTINE  ROW  ( IR, M, MF, JH, X, Y, TPIV )                    MSUB0228
+C                                                                       MSUB0229
+C AMONG EQS. WITH X=0, FIND MAX ABS(Y) AMONG ARTIFICIALS, OR, IF NONE,  MSUB0230
+C  GET MAX POSITIVE Y(I) AMONG REALS.                                   MSUB0231
+ 1000 IR = 0                                                            MSUB0232
+      AA = 0.0                                                          MSUB0233
+      IA  =  0                                                          MSUB0234
+      DO 1050  I = MF,  M                                               MSUB0235
+      IF ( X(I) )  1050, 1041, 1050                                     MSUB0236
+ 1041 YI  =  ABSF ( Y(I) )                                              MSUB0237
+      IF  (  YI  -  TPIV   )   1050, 1050, 1042                         MSUB0238
+ 1042 IF  ( JH(I) )  1043, 1044, 1043                                   MSUB0239
+ 1043 IF  (IA)   1050, 1048, 1050                                       MSUB0240
+ 1048  IF  ( Y(I) )  1050, 1050, 1045                                   MSUB0241
+ 1044 IF   (IA)   1045, 1046, 1045                                      MSUB0242
+ 1045 IF   (  YI    -  AA   )   1050, 1050, 1047                        MSUB0243
+ 1046    IA = 1                                                         MSUB0244
+ 1047 AA  =  YI                                                         MSUB0245
+      IR  =  I                                                          MSUB0246
+ 1050 CONTINUE                                                          MSUB0247
+      IF (IR)1099,1001,1099                                             MSUB0248
+ 1001 AA = 1.0E+20                                                      MSUB0249
+C               FIND MIN. PIVOT AMONG POSITIVE EQUATIONS                MSUB0250
+      DO 1010 IT = MF , M                                               MSUB0251
+      IF  ( Y(IT)  -  TPIV )  1010, 1010, 1002                          MSUB0252
+ 1002 IF  ( X(IT) ) 1010, 1010, 1003                                    MSUB0253
+ 1003 XY = X(IT) / Y(IT)                                                MSUB0254
+      IF ( XY - AA )  1004, 1005, 1010                                  MSUB0255
+ 1005 IF ( JH(IT))  1010, 1004, 1010                                    MSUB0256
+ 1004 AA = XY                                                           MSUB0257
+      IR = IT                                                           MSUB0258
+ 1010 CONTINUE                                                          MSUB0259
+      IF (NEG)   1016, 1099, 1016                                       MSUB0260
+C  FIND PIVOT AMONG NEGATIVE EQUATIONS, IN WHICH X/Y IS LESS THAN THE   MSUB0261
+C MINIMUM X/Y IN THE POSITIVE EQUATIONS, THAT HAS THE LARGEST ABSF(Y)   MSUB0262
+ 1016 BB = - TPIV                                                       MSUB0263
+      DO 1030 I  = MF , M                                               MSUB0264
+      IF (X(I))   1012, 1030, 1030                                      MSUB0265
+ 1012  IF  ( Y(I)    -  BB  )   1022, 1030, 1030                        MSUB0266
+ 1022 IF  (  Y(I) * AA  -  X(I)   )   1024, 1024, 1030                  MSUB0267
+ 1024 BB  =  Y(I)                                                       MSUB0268
+      IR  =  I                                                          MSUB0269
+ 1030 CONTINUE                                                          MSUB0270
+ 1099 CONTINUE                                                          MSUB0271
+C**END OF ROW                                                           MSUB0272
+C                                                                       MSUB0273
+C                             TEST PIVOT                                MSUB0274
+  206   IF( IR )   207, 207, 210                                        MSUB0275
+C                             NO PIVOT                                  MSUB0276
+  207 K = 5                                                             MSUB0277
+  257 IF (PMIX)   201, 400, 201                                         MSUB0278
+C                       ITERATION LIMIT FOR CUT OFF                     MSUB0279
+  210 IF (ITER -NCUT )    900,  160,  160                               MSUB0280
+C                             PIVOT FOUND                               MSUB0281
+C                                                                       MSUB0282
+C  PIV 1         PIVOT.  PIVOTS ON GIVEN ROW                            MSUB0283
+C*****SUBROUTINE PIV  ( IR, Y, M, E, X, NUMPV, TECOL )                  MSUB0284
+C                       LEAVE TRANSFORMED COLUMN IN Y(I)                MSUB0285
+C                                                                       MSUB0286
+  900 NUMPV  =  NUMPV  +  1                                             MSUB0287
+      YI = -Y(IR)                                                       MSUB0288
+      Y(IR) = -1.                                                       MSUB0289
+      LL = 0                                                            MSUB0290
+C                             TRANSFORM INVERSE                         MSUB0291
+  903 DO 904  L =  IR, M2, M                                            MSUB0292
+      IF  ( E(L) )  905, 914, 905                                       MSUB0293
+  914 LL = LL + M                                                       MSUB0294
+      GO TO 904                                                         MSUB0295
+  905 XY =  E(L) / YI                                                   MSUB0296
+      E(L) =0.                                                          MSUB0297
+      DO 906  I  = 1, M                                                 MSUB0298
+      LL= LL +1                                                         MSUB0299
+  906 E(LL) = E(LL) +XY* Y(I)                                           MSUB0300
+  904 CONTINUE                                                          MSUB0301
+C                             TRANSFORM X                               MSUB0302
+       XY = X(IR) / YI                                                  MSUB0303
+      X(IR) = 0.                                                        MSUB0304
+      DO 908  I  = 1, M                                                 MSUB0305
+  908 X(I) = X(I) +XY* Y(I)                                             MSUB0306
+C                       RESTORE Y(IR)                                   MSUB0307
+      Y(IR) = -YI                                                       MSUB0308
+C                                                                       MSUB0309
+  999  GO TO KPIV , ( 221, 1102 )                                       MSUB0310
+C**END OF PIV                                                           MSUB0311
+C                                                                       MSUB0312
+  221  IA   = JH(IR)                                                    MSUB0313
+      IF ( IA ) 213, 213, 214                                           MSUB0314
+  214 KB( IA ) = 0                                                      MSUB0315
+  213 KB(JT)   = IR                                                     MSUB0316
+      JH(IR)   = JT                                                     MSUB0317
+      LA  =  0                                                          MSUB0318
+      ITER   = ITER   +1                                                MSUB0319
+      INVC   = INVC   +1                                                MSUB0320
+C                       INVERSION FREQUENCY                             MSUB0321
+      IF (INVC - NVER  ) 1200, 1320,1200                                MSUB0322
+C                                   CUT OFF ... TOO MANY ITERATIONS     MSUB0323
+  160 K = 6                                                             MSUB0324
+C                                                                       MSUB0325
+C                                                                       MSUB0326
+C  ERR 1         ERROR CHECK.  COMPARES AX WITH B, PA WITH ZERO         MSUB0327
+C*****SUBROUTINE ERR ( M, A, B, TERR, JH, X, P, Y, ME, LA )             MSUB0328
+C                                                                       MSUB0329
+C                             STORE AX-B AT Y                           MSUB0330
+  400  ASSIGN 410 TO NDEL                                               MSUB0331
+      DO 401 I = 1, M                                                   MSUB0332
+  401 Y(I) =-B(I)                                                       MSUB0333
+      DO 402 I = 1, M                                                   MSUB0334
+      JA = JH(I)                                                        MSUB0335
+      IF (JA) 403, 402, 403                                             MSUB0336
+  403 IA =ME* (JA-1)                                                    MSUB0337
+      DO 405 IT = 1, M                                                  MSUB0338
+      IA = IA + 1                                                       MSUB0339
+      IF(A(IA) )  415, 405, 415                                         MSUB0340
+  415 Y(IT) =Y(IT) +X(I) * A(IA)                                        MSUB0341
+  405 CONTINUE                                                          MSUB0342
+  402 CONTINUE                                                          MSUB0343
+C                             FIND SUM AND MAXIMUM OF ERRORS            MSUB0344
+      DO 481  I = 1, M                                                  MSUB0345
+      YI  = Y(I)                                                        MSUB0346
+      IF ( JH(I) )  472, 471, 472                                       MSUB0347
+  471  YI = YI + X(I)                                                   MSUB0348
+  472 TERR(LA+1) = TERR(LA+1) + ABSF(YI)                                MSUB0349
+      IF  ( ABSF (TERR(LA+2))- ABSF (  YI  )  )   482, 481, 481         MSUB0350
+  482 TERR(LA+2) = YI                                                   MSUB0351
+  481   CONTINUE                                                        MSUB0352
+C                             STORE P TIMES BASIS AT DT                 MSUB0353
+      DO 411  I = 1, M                                                  MSUB0354
+      JM = JH(I)                                                        MSUB0355
+      IF ( JM    )  300 , 411 , 300                                     MSUB0356
+C 300 CALL DEL ( JM, DT, M, A, P)                                       MSUB0357
+  410 TERR(LA+3)  =  TERR(LA +3)  +  ABSF(DT)                           MSUB0358
+      IF (ABSF(TERR(LA+4))   -   ABSF(DT)  )  413, 411, 411             MSUB0359
+  413  TERR(LA+4)  =  DT                                                MSUB0360
+  411 CONTINUE                                                          MSUB0361
+C**END OF ERR                                                           MSUB0362
+C                                                                       MSUB0363
+C                                                                       MSUB0364
+      IF (LA)   193, 191,  193                                          MSUB0365
+  191 LA  =  4                                                          MSUB0366
+      IF (INFLAG  -  4  )  1320,  193,  193                             MSUB0367
+  193 IF  (K-5)    1392,  194,  1392                                    MSUB0368
+  194 ASSIGN 1392 TO KJMY                                               MSUB0369
+      GO TO 600                                                         MSUB0370
+C 600 CALL JMY ( . . . . . )                                            MSUB0371
+C     GO TO 1392                                                        MSUB0372
+ 1304 K  =  7                                                           MSUB0373
+C                SET EXIT VALUES                                        MSUB0374
+ 1392   DO  1309  I=  1, 8                                              MSUB0375
+ 1309 ERR(I)         =   TERR(I)                                        MSUB0376
+       DO 1329  I = 1, 7                                                MSUB0377
+ 1329 KOUT(I)  =  IOFIX(I+8)                                            MSUB0378
+      RETURN                                                            MSUB0379
+C                                                                       MSUB0380
+C    DEL         DELTA-JAY.  PRICES OUT ONE MATRIX COLUMN               MSUB0381
+C*****SUBROUTINE DEL (  JM, DT, M, A, P, ME )                           MSUB0382
+C                                                                       MSUB0383
+C                                                                       MSUB0384
+  300 DT = 0.                                                           MSUB0385
+       LL  = (JM - 1) * ME                                              MSUB0386
+  301 DO  303   MM  = 1, M                                              MSUB0387
+      LL   =  LL  + 1                                                   MSUB0388
+      IF ( A( LL ))304, 303, 304                                        MSUB0389
+  304 DT = DT + P( MM ) * A ( LL )                                      MSUB0390
+  303 CONTINUE                                                          MSUB0391
+C                                                                       MSUB0392
+  399   GO TO NDEL , ( 410 , 705 )                                      MSUB0393
+C**END OF DEL                                                           MSUB0394
+C                                                                       MSUB0395
+       END                                                              MSUB0396
+*      LABEL                                                            MSUB2001
+CBOSS    MASTER SUBROUTINE OF  RS MSUB,  VERSION 2.                     MSUB2002
+      SUBROUTINE SIMPLX (INFIX,A,B,TOL,PRM,KOUT,ERS,JH,X,P,Y,KB,E)      MSUB2003
+C                                                                       MSUB2004
+      DIMENSION INFIX(8),A(1),B(1),TOL(4),KOUT(7),ERS(8),JH(1),X(1),    MSUB2005
+     1 P(1),Y(1),KB(1),E(1),ZZ(4), IOFIX(16) , TERR(8)                  MSUB2006
+C                                                                       MSUB2007
+      EQUIVALENCE  (INFLAG,IOFIX(1) ), (N , IOFIX(2) ) ,                MSUB2008
+     1            (ME,IOFIX(3) ),  (M,IOFIX(4)), (MF,IOFIX(5)),         MSUB2009
+     2  (MC, IOFIX(6) ),  ( NCUT, IOFIX(7) ) , ( NVER, IOFIX(8) ),      MSUB2010
+     3 ( K, IOFIX(9) ), (ITER, IOFIX(10) ), (INVC , IOFIX(11) ) ,       MSUB2011
+     4 (NUMVR, IOFIX(12) ), ( NUMPV, IOFIX(13) ) ,                      MSUB2012
+     4  (INFS, IOFIX(14)  ) , ( JT,  IOFIX(15) ) ,( LA  , IOFIX(16) ),  MSUB2013
+     5 (ZZ(1),TPIV), (ZZ(2),TZERO),(ZZ(3),TCOST),(ZZ(4),TECOL)          MSUB2014
+C                                                                       MSUB2015
+C                        MOVE INPUTS  ...  ZERO OUTPUTS                 MSUB2016
+      DO 1340  I= 1, 8                                                  MSUB2017
+       TERR(I) = 0.0                                                    MSUB2018
+      IOFIX(I+8)  =  0                                                  MSUB2019
+ 1340  IOFIX(I)  =  INFIX(I)                                            MSUB2020
+      DO 1308  I = 1 , 4                                                MSUB2021
+ 1308 ZZ(I)  =  TOL(I)                                                  MSUB2022
+      PMIX = PRM                                                        MSUB2023
+      TCOST  =  -  ABSF  (TCOST)                                        MSUB2024
+      M2 = M**2                                                         MSUB2025
+      INFS = 1                                                          MSUB2026
+      LA   =   0                                                        MSUB2027
+C                   CHECK FOR ILLEGAL INPUT                             MSUB2028
+      IF (N)  1304, 1304, 1371                                          MSUB2029
+ 1371  IF (M - MF ) 1304, 1304, 1372                                    MSUB2030
+ 1372  IF (MF - MC)  1304, 1304, 1373                                   MSUB2031
+ 1373  IF ( MC ) 1304 , 1304,  1374                                     MSUB2032
+ 1374  IF (ME - M ) 1304, 1375, 1375                                    MSUB2033
+ 1304 K  =  7                                                           MSUB2034
+      GO TO 1392                                                        MSUB2035
+ 1375 IF( XMODF(INFLAG, 4 )  - 1 )  1400,  1320,  100                   MSUB2036
+ 1400  CALL      NEW (M,N, JH, KB, A, B, MF, ME )                       MSUB2037
+ 1320  CALL      VER ( A, B, JH, X, E, KB, Y, N, ME, M, MF, INVC,       MSUB2038
+     1                 NUMVR, NUMPV, INFS, LA, TPIV, TECOL, M2 )        MSUB2039
+C                             PERFORM ONE ITERATION                     MSUB2040
+  100  CALL      XCK ( M, MF, JH, X, TZERO, JIN )                       MSUB2041
+C                                                                       MSUB2042
+C           CHECK CHANGE OF PHASE.. GO BACK TO INVERT IF GONE INFEAS.   MSUB2043
+      IF (INFS - JIN ) 1320,  500,  200                                 MSUB2044
+C                 BECOME FEASIBLE                                       MSUB2045
+  200 INFS = 0                                                          MSUB2046
+  201 PMIX  =  0.0                                                      MSUB2047
+  500  CALL      GET ( M, MC, MF, JH, X, P, E, INFS, PMIX )             MSUB2048
+       CALL      MIN ( JT, N, M, A, P, KB, ME, TCOST )                  MSUB2049
+      JM  =  JT                                                         MSUB2050
+      J = JM                                                            MSUB2051
+        IF  (JM)    203, 203, 222                                       MSUB2052
+C           ALL COSTS NON-NEGATIVE...  K = 3 OR 4                       MSUB2053
+  203 K = 3 + INFS                                                      MSUB2054
+      GO TO 257                                                         MSUB2055
+C                             NORMAL CYCLE                              MSUB2056
+  222  CALL      JMY ( J, A, E, M, Y, ME )                              MSUB2057
+       CALL       ROW  ( IR, M, MF, JH, X, Y, TPIV )                    MSUB2058
+C                             TEST PIVOT                                MSUB2059
+  206   IF( IR )   207, 207, 210                                        MSUB2060
+C                             NO PIVOT                                  MSUB2061
+  207 K = 5                                                             MSUB2062
+  257 IF (PMIX)   201, 400, 201                                         MSUB2063
+C                       ITERATION LIMIT FOR CUT OFF                     MSUB2064
+  210 IF (ITER -NCUT )    208,  160,  160                               MSUB2065
+C                             PIVOT FOUND                               MSUB2066
+  208  CALL      PIV  ( IR, Y, M, E, X, NUMPV, TECOL )                  MSUB2067
+  221 JOLD  = JH(IR)                                                    MSUB2068
+      IF (JOLD) 213, 213, 214                                           MSUB2069
+  214 KB(JOLD) = 0                                                      MSUB2070
+  213 KB(JM)   = IR                                                     MSUB2071
+      JH(IR)   = JM                                                     MSUB2072
+      LA  =  0                                                          MSUB2073
+      ITER   = ITER   +1                                                MSUB2074
+      INVC   = INVC   +1                                                MSUB2075
+C                       INVERSION FREQUENCY                             MSUB2076
+      IF (INVC - NVER  )  100, 1320, 100                                MSUB2077
+C                                   CUT OFF ... TOO MANY ITERATIONS     MSUB2078
+  160 K = 6                                                             MSUB2079
+  400  CALL      ERR ( M, A, B, TERR, JH, X, P, Y, ME, LA )             MSUB2080
+      IF (LA)   193, 191,  193                                          MSUB2081
+  191 LA  =  4                                                          MSUB2082
+      IF (INFLAG  -  4  )  1320,  193,  193                             MSUB2083
+  193 IF  (K-5)    1392,  194,  1392                                    MSUB2084
+  194  CALL      JMY ( J, A, E, M, Y, ME )                              MSUB2085
+C                SET EXIT VALUES                                        MSUB2086
+ 1392   DO  1309  I=  1, 8                                              MSUB2087
+ 1309 ERS(I)         =   TERR(I)                                        MSUB2088
+       DO 1329  I = 1, 7                                                MSUB2089
+ 1329 KOUT(I)  =  IOFIX(I+8)                                            MSUB2090
+      RETURN                                                            MSUB2091
+C                                                                       MSUB2092
+      END                                                               MSUB2093
+*      LABEL                                                            MSUB2094
+CDELS            DELTA-JAY.  PRICES OUT ONE MATRIX COLUMN               MSUB2095
+      SUBROUTINE DEL (  JM, DT, M, A, P, ME )                           MSUB2096
+      DIMENSION A(1), P(1)                                              MSUB2097
+C                                                                       MSUB2098
+  300 DT = 0.                                                           MSUB2099
+      KDEL = (JM - 1) * ME                                              MSUB2100
+C                                                                       MSUB2101
+  301 DO  303  IDEL = 1, M                                              MSUB2102
+      KDEL = KDEL + 1                                                   MSUB2103
+      IF ( A(KDEL))304, 303, 304                                        MSUB2104
+  304 IF ( P(IDEL) )  302, 303, 302                                     MSUB2105
+  302 DT = DT + P(IDEL) * A(KDEL)                                       MSUB2106
+  303 CONTINUE                                                          MSUB2107
+C                                                                       MSUB2108
+  399 RETURN                                                            MSUB2109
+      END                                                               MSUB2110
+*      LABEL                                                            MSUB2111
+CERRS            ERROR CHECK.  COMPARES AX WITH B, PA WITH ZERO         MSUB2112
+      SUBROUTINE ERR ( M, A, B, TERR, JH, X, P, Y, ME, LA )             MSUB2113
+      DIMENSION JH(1), A(1), B(1), X(1), P(1), Y(1), TERR(8)            MSUB2114
+C                             STORE AX-B AT Y                           MSUB2115
+      DO 401 I = 1, M                                                   MSUB2116
+  401 Y(I) =-B(I)                                                       MSUB2117
+      DO 402 I = 1, M                                                   MSUB2118
+      JA = JH(I)                                                        MSUB2119
+      IF (JA) 403, 402, 403                                             MSUB2120
+  403 IA =ME* (JA-1)                                                    MSUB2121
+      DO 405 IT = 1, M                                                  MSUB2122
+      IA = IA + 1                                                       MSUB2123
+      IF(A(IA) )  415, 405, 415                                         MSUB2124
+  415 Y(IT) =Y(IT) +X(I) * A(IA)                                        MSUB2125
+  405 CONTINUE                                                          MSUB2126
+  402 CONTINUE                                                          MSUB2127
+C                             FIND SUM AND MAXIMUM OF ERRORS            MSUB2128
+      DO 481  I = 1, M                                                  MSUB2129
+      YI  = Y(I)                                                        MSUB2130
+      IF ( JH(I) )  472, 471, 472                                       MSUB2131
+  471  YI = YI + X(I)                                                   MSUB2132
+  472 TERR(LA+1) = TERR(LA+1) + ABSF(YI)                                MSUB2133
+      IF  ( ABSF (TERR(LA+2))- ABSF (  YI  )  )   482, 481, 481         MSUB2134
+  482 TERR(LA+2) = YI                                                   MSUB2135
+  481   CONTINUE                                                        MSUB2136
+C                             STORE P TIMES BASIS AT DT                 MSUB2137
+      DO 411  I = 1, M                                                  MSUB2138
+      JM = JH(I)                                                        MSUB2139
+      IF ( JM    )  300 , 411 , 300                                     MSUB2140
+  300  CALL      DEL (  JM, DT, M, A, P, ME )                           MSUB2141
+  410 TERR(LA+3)  =  TERR(LA +3)  +  ABSF(DT)                           MSUB2142
+      IF (ABSF(TERR(LA+4))   -   ABSF(DT)  )  413, 411, 411             MSUB2143
+  413  TERR(LA+4)  =  DT                                                MSUB2144
+  411 CONTINUE                                                          MSUB2145
+      RETURN                                                            MSUB2146
+      END                                                               MSUB2147
+                                                                        MSUB2148
+*      LABEL                                                            MSUB2149
+CGETS       GET PRICES                                                  MSUB2150
+      SUBROUTINE GET ( M, MC, MF, JH, X, P, E, INFS, PMIX )             MSUB2151
+      DIMENSION JH(1), X(1), P(1), E(1)                                 MSUB2152
+C                                                                       MSUB2153
+  500 MMM = MC                                                          MSUB2154
+C                       PRIMAL PRICES                                   MSUB2155
+  502 DO 503 J = 1, M                                                   MSUB2156
+      P(J) = E(MMM)                                                     MSUB2157
+  503 MMM =MMM + M                                                      MSUB2158
+      IF ( INFS )  501, 599, 501                                        MSUB2159
+C                       COMPOSITE PRICES                                MSUB2160
+  501 DO 504  J = 1, M                                                  MSUB2161
+  504 P(J) = P(J)* PMIX                                                 MSUB2162
+      DO 505  I = MF, M                                                 MSUB2163
+      MMM =I                                                            MSUB2164
+      IF  ( X(I) )  506, 507, 507                                       MSUB2165
+  506 DO 508  J = 1, M                                                  MSUB2166
+      P(J) =  P(J) + E(MMM)                                             MSUB2167
+  508 MMM = MMM + M                                                     MSUB2168
+      GO TO 505                                                         MSUB2169
+  507 IF (JH(I))  505, 509, 505                                         MSUB2170
+  509 DO 510  J = 1, M                                                  MSUB2171
+      P(J) = P(J) - E(MMM)                                              MSUB2172
+  510 MMM =  MMM +M                                                     MSUB2173
+  505   CONTINUE                                                        MSUB2174
+C                                                                       MSUB2175
+  599 RETURN                                                            MSUB2176
+      END                                                               MSUB2177
+*      LABEL                                                            MSUB2178
+CJMYS            J MULTIPLY.  BASIS INVERSE * COLUMN J                  MSUB2179
+      SUBROUTINE JMY (JT, A, E, M, Y, ME )                              MSUB2180
+      DIMENSION A(1), E(1), Y(1)                                        MSUB2181
+C                                                                       MSUB2182
+  600 DO 610  I= 1,M                                                    MSUB2183
+  610 Y(I) =0.                                                          MSUB2184
+      LP  =  JT*ME - ME                                                 MSUB2185
+      LL = 0                                                            MSUB2186
+      DO 605   I= 1,M                                                   MSUB2187
+      LP = LP + 1                                                       MSUB2188
+      IF  (A(LP))   601, 602, 601                                       MSUB2189
+  601 DO 606  J  =  1,M                                                 MSUB2190
+      LL = LL + 1                                                       MSUB2191
+  606 Y(J) = Y(J) + A(LP) * E(LL)                                       MSUB2192
+      GO TO 605                                                         MSUB2193
+  602 LL = LL + M                                                       MSUB2194
+  605 CONTINUE                                                          MSUB2195
+  699 RETURN                                                            MSUB2196
+      END                                                               MSUB2197
+*      LABEL                                                            MSUB2198
+CMINS            MIN D-J.  SELECTS COLUMN TO ENTER BASIS                MSUB2199
+      SUBROUTINE MIN ( JT, N, M, A, P, KB, ME, TCOST )                  MSUB2200
+      DIMENSION A(1), P(1), KB(1)                                       MSUB2201
+C                                                                       MSUB2202
+  700 JT = 0                                                            MSUB2203
+      DA = TCOST                                                        MSUB2204
+C                                                                       MSUB2205
+  701 DO  702  JM = 1, N                                                MSUB2206
+C                             SKIP COLUMNS IN BASIS                     MSUB2207
+  703 IF ( KB(JM) )  702, 300, 702                                      MSUB2208
+  300  CALL      DEL (  JM, DT, M, A, P, ME )                           MSUB2209
+  705 IF  ( DT - DA )  708, 702, 702                                    MSUB2210
+  708 DA = DT                                                           MSUB2211
+      JT = JM                                                           MSUB2212
+  702    CONTINUE                                                       MSUB2213
+      RETURN                                                            MSUB2214
+      END                                                               MSUB2215
+*      LABEL                                                            MSUB2216
+CNEWS             STARTS PHASE ONE                                      MSUB2217
+      SUBROUTINE NEW (M,N, JH, KB, A, B, MF, ME )                       MSUB2218
+      DIMENSION JH(1), KB(1), A(1), B(1)                                MSUB2219
+C                             INITIATE                                  MSUB2220
+ 1400   DO 1401 I = 1, M                                                MSUB2221
+ 1401 JH(I) = 0                                                         MSUB2222
+C                 INSTALL SINGLETONS                                    MSUB2223
+       KT  =  0                                                         MSUB2224
+        DO 1402  J = 1, N                                               MSUB2225
+      KB(J) = 0                                                         MSUB2226
+      KTA =  KT + MF                                                    MSUB2227
+      KTB =  KT + M                                                     MSUB2228
+C                             TALLY ENTRIES IN CONSTRAINTS              MSUB2229
+      KQ  = 0                                                           MSUB2230
+      DO  1403 L = KTA,KTB                                              MSUB2231
+      IF (A(L)) 1404, 1403, 1404                                        MSUB2232
+ 1404 KQ = KQ+1                                                         MSUB2233
+      LQ = L                                                            MSUB2234
+ 1403   CONTINUE                                                        MSUB2235
+C                             CHECK WHETHER J IS CANDIDATE              MSUB2236
+            IF (KQ - 1) 1402, 1405, 1402                                MSUB2237
+ 1405 IQ = LQ- KT                                                       MSUB2238
+          IF ( JH(IQ) ) 1402, 1406, 1402                                MSUB2239
+ 1406 IF (A(LQ)*B(IQ)) 1402, 1407, 1407                                 MSUB2240
+C                             J IS CANDIDATE. INSTALL                   MSUB2241
+ 1407 JH(IQ) = J                                                        MSUB2242
+      KB(J)  = IQ                                                       MSUB2243
+ 1402 KT = KT + ME                                                      MSUB2244
+      RETURN                                                            MSUB2245
+      END                                                               MSUB2246
+*      LABEL                                                            MSUB2247
+CPIVS            PIVOT.  PIVOTS ON GIVEN ROW                            MSUB2248
+      SUBROUTINE PIV  ( IR, Y, M, E, X, NUMPV, TECOL )                  MSUB2249
+      DIMENSION Y(1), E(1), X(1)                                        MSUB2250
+C                       LEAVE TRANSFORMED COLUMN IN Y(I)                MSUB2251
+C                                                                       MSUB2252
+  900 NUMPV  =  NUMPV  +  1                                             MSUB2253
+C                                                                       MSUB2254
+      T2 = -Y(IR)                                                       MSUB2255
+      Y(IR) = -1.                                                       MSUB2256
+      LL = 0                                                            MSUB2257
+C                             TRANSFORM INVERSE                         MSUB2258
+  903 DO 904  JP= 1, M                                                  MSUB2259
+      L = LL + IR                                                       MSUB2260
+      IF ( ABSF( E(L) )  - TECOL)    914, 914, 905                      MSUB2261
+  914 LL = LL + M                                                       MSUB2262
+      GO TO 904                                                         MSUB2263
+  905 T3 =  E(L) / T2                                                   MSUB2264
+      E(L) =0.                                                          MSUB2265
+      DO 906  I  = 1, M                                                 MSUB2266
+      LL= LL +1                                                         MSUB2267
+  906 E(LL) = E(LL) +T3* Y(I)                                           MSUB2268
+  904 CONTINUE                                                          MSUB2269
+C                             TRANSFORM X                               MSUB2270
+       T3 = X(IR) / T2                                                  MSUB2271
+      X(IR) = 0.                                                        MSUB2272
+      DO 908  I  = 1, M                                                 MSUB2273
+  908 X(I) = X(I) +T3* Y(I)                                             MSUB2274
+C                       RESTORE Y(IR)                                   MSUB2275
+      Y(IR) = -T2                                                       MSUB2276
+C                                                                       MSUB2277
+  999 RETURN                                                            MSUB2278
+      END                                                               MSUB2279
+*      LABEL                                                            MSUB2280
+CROWS       ROW SELECTION--COMPOSITE                                    MSUB2281
+      SUBROUTINE  ROW  ( IR, M, MF, JH, X, Y, TPIV )                    MSUB2282
+      DIMENSION JH(1), X(1), Y(1)                                       MSUB2283
+C                                                                       MSUB2284
+C AMONG EQS. WITH X=0, FIND MAX ABS(Y) AMONG ARTIFICIALS, OR, IF NONE,  MSUB2285
+C  GET MAX POSITIVE Y(I) AMONG REALS.                                   MSUB2286
+ 1000 IR = 0                                                            MSUB2287
+      AA = 0.0                                                          MSUB2288
+      IA  =  0                                                          MSUB2289
+      DO 1050  I = MF,  M                                               MSUB2290
+      IF ( X(I) )  1050, 1041, 1050                                     MSUB2291
+ 1041 YI  =  ABSF ( Y(I) )                                              MSUB2292
+      IF  (  YI  -  TPIV   )   1050, 1050, 1042                         MSUB2293
+ 1042 IF  ( JH(I) )  1043, 1044, 1043                                   MSUB2294
+ 1043 IF  (IA)   1050, 1048, 1050                                       MSUB2295
+ 1048  IF  ( Y(I) )  1050, 1050, 1045                                   MSUB2296
+ 1044 IF   (IA)   1045, 1046, 1045                                      MSUB2297
+ 1045 IF   (  YI    -  AA   )   1050, 1050, 1047                        MSUB2298
+ 1046    IA = 1                                                         MSUB2299
+ 1047 AA  =  YI                                                         MSUB2300
+      IR  =  I                                                          MSUB2301
+ 1050 CONTINUE                                                          MSUB2302
+      IF (IR)1099,1001,1099                                             MSUB2303
+ 1001 AA = 1.0E+20                                                      MSUB2304
+C               FIND MIN. PIVOT AMONG POSITIVE EQUATIONS                MSUB2305
+      DO 1010 IT = MF , M                                               MSUB2306
+      IF  ( Y(IT)  -  TPIV )  1010, 1010, 1002                          MSUB2307
+ 1002 IF  ( X(IT) ) 1010, 1010, 1003                                    MSUB2308
+ 1003 XY = X(IT) / Y(IT)                                                MSUB2309
+      IF ( XY - AA )  1004, 1005, 1010                                  MSUB2310
+ 1005 IF ( JH(IT))  1010, 1004, 1010                                    MSUB2311
+ 1004 AA = XY                                                           MSUB2312
+      IR = IT                                                           MSUB2313
+ 1010 CONTINUE                                                          MSUB2314
+C  FIND PIVOT AMONG NEGATIVE EQUATIONS, IN WHICH X/Y IS LESS THAN THE   MSUB2315
+C MINIMUM X/Y IN THE POSITIVE EQUATIONS, THAT HAS THE LARGEST ABSF(Y)   MSUB2316
+ 1016 BB = - TPIV                                                       MSUB2317
+      DO 1030 I  = MF , M                                               MSUB2318
+      IF (X(I))   1012, 1030, 1030                                      MSUB2319
+ 1012  IF  ( Y(I)    -  BB  )   1022, 1030, 1030                        MSUB2320
+ 1022 IF  (  Y(I) * AA  -  X(I)   )   1024, 1024, 1030                  MSUB2321
+ 1024 BB  =  Y(I)                                                       MSUB2322
+      IR  =  I                                                          MSUB2323
+ 1030 CONTINUE                                                          MSUB2324
+ 1099 RETURN                                                            MSUB2325
+      END                                                               MSUB2326
+*      LABEL                                                            MSUB2327
+CVERS             FORMS INVERSE FROM  KB                                MSUB2328
+      SUBROUTINE VER ( A, B, JH, X, E, KB, Y, N, ME, M, MF, INVC,       MSUB2329
+     1                 NUMVR, NUMPV, INFS, LA, TPIV, TECOL, M2 )        MSUB2330
+      DIMENSION A(1), B(1), JH(1), X(1), E(1), KB(1), Y(1)              MSUB2331
+C                                                                       MSUB2332
+C                 INITIATE                                              MSUB2333
+      IF (LA)  1121, 1121, 1122                                         MSUB2334
+ 1121 INVC = 0                                                          MSUB2335
+ 1122 NUMVR   =  NUMVR  +1                                              MSUB2336
+       DO 1101  I = 1, M2                                               MSUB2337
+ 1101 E(I)=0.                                                           MSUB2338
+      MM=1                                                              MSUB2339
+       DO 1113  I = 1, M                                                MSUB2340
+      E(MM) =1.0                                                        MSUB2341
+      X(I) = B(I)                                                       MSUB2342
+ 1113 MM = MM + M + 1                                                   MSUB2343
+        DO 1110  I = MF, M                                              MSUB2344
+      IF (JH(I)) 1111, 1110, 1111                                       MSUB2345
+ 1111 JH(I) = 12345                                                     MSUB2346
+ 1110 CONTINUE                                                          MSUB2347
+      INFS = 1                                                          MSUB2348
+C                 FORM INVERSE                                          MSUB2349
+        DO 1102  J = 1, N                                               MSUB2350
+      IF ( KB(J) )  600 , 1102 , 600                                    MSUB2351
+  600  CALL      JMY ( J, A, E, M, Y, ME )                              MSUB2352
+C                       CHOOSE PIVOT                                    MSUB2353
+ 1114 TY = 0.                                                           MSUB2354
+        DO 1104  I = MF, M                                              MSUB2355
+      IF (JH(I)  - 12345 )  1104, 1105, 1104                            MSUB2356
+ 1105 IF ( ABSF( Y(I) ) -  TY )  1104, 1104, 1106                       MSUB2357
+ 1106 IR   = I                                                          MSUB2358
+      TY =  ABSF ( Y(I) )                                               MSUB2359
+ 1104   CONTINUE                                                        MSUB2360
+C                       TEST PIVOT                                      MSUB2361
+      IF  (TY - TPIV )    1107, 1108, 1108                              MSUB2362
+C        BAD  PIVOT,  ROW IR,  COLUMN J                                 MSUB2363
+ 1107 KB(J) = 0                                                         MSUB2364
+      GO TO 1102                                                        MSUB2365
+C                       PIVOT                                           MSUB2366
+ 1108 JH(IR) = J                                                        MSUB2367
+      KB(J)  = IR                                                       MSUB2368
+  900  CALL      PIV  ( IR, Y, M, E, X, NUMPV, TECOL )                  MSUB2369
+ 1102     CONTINUE                                                      MSUB2370
+C                 RESET ARTIFICIALS                                     MSUB2371
+        DO 1109  I = 1, M                                               MSUB2372
+      IF ( JH(I) - 12345  )  1109, 1112, 1109                           MSUB2373
+ 1112 JH(I) = 0                                                         MSUB2374
+ 1109   CONTINUE                                                        MSUB2375
+      RETURN                                                            MSUB2376
+      END                                                               MSUB2377
+*      LABEL                                                            MSUB2378
+CXCKS       X CHECKER                                                   MSUB2379
+      SUBROUTINE XCK ( M, MF, JH, X, TZERO, JIN )                       MSUB2380
+      DIMENSION JH(1), X(1)                                             MSUB2381
+C                                                                       MSUB2382
+C           RESET X AND CHECK FOR INFEASIBILITIES                       MSUB2383
+ 1212   JIN  =  0                                                       MSUB2384
+      DO 1201 I = MF, M                                                 MSUB2385
+      IF ( ABSF ( X(I) )  - TZERO)  1202, 1203, 1203                    MSUB2386
+ 1202 X(I) = 0.0                                                        MSUB2387
+      GO TO 1201                                                        MSUB2388
+ 1203 IF ( X(I) )  1206, 1201, 1205                                     MSUB2389
+ 1205 IF ( JH(I) )  1201, 1206, 1201                                    MSUB2390
+ 1206   JIN = 1                                                         MSUB2391
+ 1201   CONTINUE                                                        MSUB2392
+      RETURN                                                            MSUB2393
+      END                                                               MSUB2394

@@ -1,0 +1,161 @@
+* SCOP      161  8133 LINEAR SURFACE MINIMIZATION CONTINUE              SCOOP001
+CNUSCOP    LINEAR SURFACE MINIMIZATION ROUTINE    MELVIN SOBOL,  NYU    SCOOP002
+      SUBROUTINE SCOOP (N,XBEST,D,F,SC,NC,LIM,IW,FUN)                   SCOOP003
+C       FUN IS NAME OF FORTRAN FUNCTION.                                SCOOP004
+C       CALLING PROGRAM REQUIRES F-CARD.                                SCOOP005
+      DIMENSION XBEST(24),D(24),X(24),M(24)                             SCOOP006
+      WRITE OUTPUT TAPE 6,40,N,LIM,SC,NC                                SCOOP007
+ 40   FORMAT(1H135X50H- SCOOP -     LINEAR SURFACE MINIMIZATION ROUTINE SCOOP008
+     X  //43XI3,11H PARAMETERS 8X5HLIM =I5/44X4HSC =1PE12.4,8X4HNC = I3 SCOOP009
+     X ///////54X14HINITIAL VALUES )                                    SCOOP010
+C       FIRST CALL OF FUN WITH INITIAL VALUES OF X AND D.               SCOOP011
+      NTEST=0                                                           SCOOP012
+      L=0                                                               SCOOP013
+      NCOUNT=0                                                          SCOOP014
+      VI=FUN(XBEST)                                                     SCOOP015
+      F=VI                                                              SCOOP016
+      WRITE OUTPUT TAPE 6,41,L,F,(XBEST(I),I=1,N)                       SCOOP017
+ 41   FORMAT(1XI4,1H.3X2HF=E16.9,3X6F14.8/32X6F14.8/34X6F14.8/36X6F14.8)SCOOP018
+C       BEGINNING OF MINIMIZATION CYCLE.                                SCOOP019
+ 1    IF(L+N-LIM)8,60,60                                                SCOOP020
+ 8    DO 25 I=1,N                                                       SCOOP021
+ 25   X(I)=XBEST(I)                                                     SCOOP022
+C       XBEST(I) ARE LAST BEST VALUES OF PARAMETERS.                    SCOOP023
+C       TEST FUNCTION N TIMES BY INCREASING PARAMETERS SEPARATELY BY    SCOOP024
+C       AMOUNTS D(I).    THEN RESTORE ALL X(I) TO ORIGINAL VALUES.      SCOOP025
+C       SET INDICATORS M(I) = -1, 0, OR 1.                              SCOOP026
+ 18   DO 30 I=1,N                                                       SCOOP027
+      X(I)=XBEST(I)+D(I)                                                SCOOP028
+      M(I)=1                                                            SCOOP029
+      L=L+1                                                             SCOOP030
+      IF(FUN(X)-VI)20,2,30                                              SCOOP031
+ 2    M(I)=0                                                            SCOOP032
+      GO TO 30                                                          SCOOP033
+ 20   M(I)=-1                                                           SCOOP034
+ 30   X(I)=XBEST(I)                                                     SCOOP035
+C       M(I)=-1 IF FUNCTION DECREASED ...    D(I) REMAINS UNCHANGED.    SCOOP036
+C       M=0,+1 IF FUN. STATIONARY,INCREASED...    D BECOMES -2/3 D.     SCOOP037
+C       WRITE OUT D AND M VALUES IF DESIRED.                            SCOOP038
+      IF(IW-2)81,82,82                                                  SCOOP039
+ 82   WRITE OUTPUT TAPE 6,42,(D(I),I=1,N)                               SCOOP040
+ 42   FORMAT(13X14HINCREMENTS ...3X6F14.8/32X6F14.8/34X6F14.8/36X6F14.8)SCOOP041
+      IF(IW-2)81,81,83                                                  SCOOP042
+ 83   WRITE OUTPUT TAPE 6,43,(M(I),I=1,N)                               SCOOP043
+ 43   FORMAT(13X14HINDICATORS ...3X6(3XI2,1H.8X)/32X6(3XI2,1H.8X)/      SCOOP044
+     X 34X6(3XI2,1H.8X)/36X6(3XI2,1H.8X))                               SCOOP045
+ 81   WRITE OUTPUT TAPE 6,48                                            SCOOP046
+ 48   FORMAT( / )                                                       SCOOP047
+C       FIRST SIMULT. VAR. OF PARAMETERS ACCORDING TO TESTS ABOVE.      SCOOP048
+      DO 31 I=1,N                                                       SCOOP049
+      IF(M(I))31,3,3                                                    SCOOP050
+ 3    X(I)=X(I)+D(I)                                                    SCOOP051
+      D(I)=-2./3.*D(I)                                                  SCOOP052
+ 31   X(I)=X(I)+D(I)                                                    SCOOP053
+      L=L+1                                                             SCOOP054
+      VF=FUN(X)                                                         SCOOP055
+      IF(VF-VI)4,5,5                                                    SCOOP056
+ 4    VI=VF                                                             SCOOP057
+C       FUNCTION IN CONTINUALLY DECREASING PHASE.                       SCOOP058
+ 54   DO 32 I=1,N                                                       SCOOP059
+      XBEST(I)=X(I)                                                     SCOOP060
+      D(I)=1.2*D(I)                                                     SCOOP061
+C       ALL INCREMENTS GO UP BY FACTOR 1.2 EACH TIME FUNCTION GOES DOWN.SCOOP062
+ 32   X(I)=X(I)+D(I)                                                    SCOOP063
+      NTEST=0                                                           SCOOP064
+      IF (L-LIM)21,22,22                                                SCOOP065
+ 21   L=L+1                                                             SCOOP066
+      VF=FUN(X)                                                         SCOOP067
+      IF(VF-VI) 4,15,15                                                 SCOOP068
+C       FUNCTION CEASES TO DECREASE.  TEST FOR CONVERGENCE.             SCOOP069
+ 15   IF(ABSF(F-VI)-SC)19,16,16                                         SCOOP070
+ 19   NCOUNT=NCOUNT+1                                                   SCOOP071
+      IF(NCOUNT-NC)22,63,63                                             SCOOP072
+ 16   NCOUNT=0                                                          SCOOP073
+C       WRITE LAST BEST VALUES.  RECYCLE.                               SCOOP074
+ 22   F=VI                                                              SCOOP075
+      WRITE OUTPUT TAPE 6,41,L,F,(XBEST(I),I=1,N)                       SCOOP076
+      GO TO 1                                                           SCOOP077
+C       FUN. DOES NOT DECREASE UNDER FIRST SIMULT. VAR. OF PAR.         SCOOP078
+C       FIND MINIMUM AND MAXIMUM VALUES OF INDICATORS.                  SCOOP079
+ 5    MIN=1                                                             SCOOP080
+      DO 37 I=1,N                                                       SCOOP081
+ 37   MIN=XMIN0F(MIN,M(I))                                              SCOOP082
+      MAX=-1                                                            SCOOP083
+      DO 38 I=1,N                                                       SCOOP084
+ 38   MAX=XMAX0F(MAX,M(I))                                              SCOOP085
+      IF(MAX)6,6,10                                                     SCOOP086
+C       SOME M=+1,KEEP SLIDING DOWN LIN. SURF. WITH PAR.S CORRES.M=0,+1.SCOOP087
+ 10   DO 33 I=1,N                                                       SCOOP088
+      IF(M(I ))33,7,7                                                   SCOOP089
+ 7    X(I)=X(I)+D(I)                                                    SCOOP090
+ 33   CONTINUE                                                          SCOOP091
+      L=L+1                                                             SCOOP092
+      VS=FUN(X)                                                         SCOOP093
+      IF(VS-VI)14,11,11                                                 SCOOP094
+ 14   VI=VS                                                             SCOOP095
+      GO TO 54                                                          SCOOP096
+C       FUN. DOES NOT DECREASE UNDER SECOND SIMULT. VAR. OF. PAR.       SCOOP097
+ 11   IF(MIN)12,80,80                                                   SCOOP098
+C       SOME M=-1,TRY THIRD SIMULT. VAR. OF PAR. WITH M=-1 PAR.S ONLY.  SCOOP099
+C       FOR M=0,+1 PAR. RESTORE X TO ORIG.VAL. AND MAKE D=-1/3 ORIG.VAL.SCOOP100
+ 12   DO 35 I=1,N                                                       SCOOP101
+      IF(M(I))35,17,17                                                  SCOOP102
+ 17   X(I)=XBEST(I)                                                     SCOOP103
+      D(I)=.5*D(I)                                                      SCOOP104
+ 35   CONTINUE                                                          SCOOP105
+      L=L+1                                                             SCOOP106
+      VT=FUN(X)                                                         SCOOP107
+      IF(VT-VI)74,70,70                                                 SCOOP108
+ 74   VI=VT                                                             SCOOP109
+      GO TO 54                                                          SCOOP110
+C       ALL M=0,+1. MAKE ALL D=-1/3 ORIG. VALUE.                        SCOOP111
+ 80   DO 36 I=1,N                                                       SCOOP112
+ 36   D(I)=.5*D(I)                                                      SCOOP113
+C       ALL M=0,+1. LINEAR SURFACE OF FUN. DETERMINED TO BE CONCAVE UP  SCOOP114
+C       BUT NON-DECREASING WITH RESPECT TO CURRENT INCREMENTS.          SCOOP115
+ 86   NTEST=NTEST+1                                                     SCOOP116
+C       NTEST= NO. OF CONSECUTIVE NON-DECREASING/WARPED LINEAR SURFACES.SCOOP117
+      IF(NTEST-4)93,96,96                                               SCOOP118
+C       TRY TESTS AND SIMULT. VAR. OF PAR. AGAIN WITH NEW SMALLER D VAL.SCOOP119
+ 93   WRITE OUTPUT TAPE 6,46                                            SCOOP120
+ 46   FORMAT(41H CONCAVE LINEAR SURFACE IS NON-DECREASING             , SCOOP121
+     X 52H -     SCOOP WILL TRY AGAIN WITH SMALLER INCREMENTS  )        SCOOP122
+      GO TO 1                                                           SCOOP123
+ 96   WRITE OUTPUT TAPE 6,142                                           SCOOP124
+ 142  FORMAT(53H A NON-DECREASING LINEAR SURFACE HAS BEEN ENCOUNTERED  ,SCOOP125
+     X  22H 4 TIMES IN SUCCESSION )                                     SCOOP126
+      WRITE OUTPUT TAPE 6,144                                           SCOOP127
+ 144  FORMAT(78H0FUNCTION AT MINIMUM WITH RESPECT TO CURRENT INCREMENTS SCOOP128
+     X-     SCOOP TERMINATED ////)                                      SCOOP129
+      GO TO 50                                                          SCOOP130
+ 6    IF(MIN)70,95,95                                                   SCOOP131
+C       ALL M=0, INCREMENTS FULLY DECREASED IN APPROACH TO MINIMUM.     SCOOP132
+ 95   WRITE OUTPUT TAPE 6,143                                           SCOOP133
+ 143  FORMAT(42H0INCREMENTS TOO SMALL TO DECREASE FUNCTION/             SCOOP134
+     X59H MINIMUM PROBABLY CLOSELY APPROACHED -     SCOOP TERMINATED    SCOOP135
+     X//// )                                                            SCOOP136
+      GO TO 50                                                          SCOOP137
+C       NO M=+1. SOME M=-1. FIRST SIMULT. VAR. HAS FAILED.              SCOOP138
+C       -OR- SOME M=+1. SOME M=-1. THIRD SIMULT. VAR. HAS FAILED.       SCOOP139
+ 70   NTEST=NTEST+1                                                     SCOOP140
+      IF(NTEST-4)71,96,96                                               SCOOP141
+C       LINEAR SURFACE OF FUNCTION DETERMINED TO BE WARPED.             SCOOP142
+C       MULTIPLY D BY -1/2 FOR ALL PAR. CORRES.TO M=-1. RETEST FUNCTION.SCOOP143
+ 71   DO 73 I=1,N                                                       SCOOP144
+      IF(M(I))72,73,73                                                  SCOOP145
+ 72   D(I)=-.5*D(I)                                                     SCOOP146
+ 73   CONTINUE                                                          SCOOP147
+      WRITE OUTPUT TAPE 6,141                                           SCOOP148
+ 141  FORMAT(78H WARPED FUNCTIONAL SURFACE -     SCOOP WILL TRY AGAIN WISCOOP149
+     XTH SMALLER INCREMENTS  )                                          SCOOP150
+      GO TO 1                                                           SCOOP151
+ 60   WRITE OUTPUT TAPE 6,47                                            SCOOP152
+ 47   FORMAT(///37H LIMIT REACHED -     SCOOP TERMINATED ////)          SCOOP153
+      GO TO 50                                                          SCOOP154
+ 63   F=VI                                                              SCOOP155
+      WRITE OUTPUT TAPE 6,41,L,F,(XBEST(I),I=1,N)                       SCOOP156
+      WRITE OUTPUT TAPE 6,147                                           SCOOP157
+ 147  FORMAT(///55H CONVERGENCE CRITERION SATISFIED -     SCOOP TERMINATSCOOP158
+     XED //// )                                                         SCOOP159
+ 50   RETURN                                                            SCOOP160
+      END                                                               SCOOP161

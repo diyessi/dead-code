@@ -1,0 +1,355 @@
+*      FAP                                                              MITME001
+       COUNT   220                                                      MITME002
+*MITME         INTERVAL TIMER ROUTINE NOT CONNECTED TO SYSTEM.          MITME003
+       LBL     MITME,X                                                  MITME004
+       ENTRY   STARTC                                                   MITME005
+       ENTRY   JOBTM                                                    MITME006
+       ENTRY   TIMLFT                                                   MITME007
+       ENTRY   TIMER                                                    MITME008
+       ENTRY   RSCLCK                                                   MITME009
+       ENTRY   STOPCL                                                   MITME010
+       ENTRY   KILLTR                                                   MITME011
+       ENTRY   RSTRTN                                                   MITME012
+       ENTRY   (FRM7)                                                   MITME013
+*              SEPTEMBER 26, 1962                                       MITME014
+*                                                                       MITME015
+*              STARTC...START CLOCK AND INITIALIZE.                     MITME016
+*              JOBTME        GIVES BACK TIME SINCE STARTC CALLED        MITME017
+*              RSCLCK...RESET CLOCK TO TIME,,ZERO,,                     MITME018
+*              STOPCL        GIVES BACK TIME SINCE LAST RSCLCK.         MITME019
+*              TIMLFT        GIVES BACK TIME LEFT FOR JOB TO RUN        MITME020
+*              TIMER         SETS CLOCK TO ACT LIKE ALARM CLOCK.        MITME021
+*              KILLTR        RESETS ALARM CLOCK BEFORE IT GOES OFF.     MITME022
+*              RTNRST        RETURN TO INTERRUPTED PROGRAM              MITME023
+*                                 WITH MACHINE CONDITIONS RESTORED AS OFMITME024
+*                                 LAST INTERRUPT.                       MITME025
+*              CALLING SEQUENCE...CALL STARTC                           MITME026
+*              RESTRICTION... ARGUMENT OF STARTC CANNOT BE GREATER THAN MITME027
+*              36 MINUTES.                                              MITME028
+*              CALLING SEQUENCE...CALL JOBTM(I)                         MITME029
+*              CALLING SEQUENCE...CALL RSCLCK                           MITME030
+*              CALLING SEQUENCE...CALL STOPCL(I)                        MITME031
+*              CALLING SEQUENCE...CALL TIMLFT(I)                        MITME032
+*              CALLING SEQUENCE...CALL TIMER(I,STMT)                    MITME033
+*              CALLING SEQUENCE...CALL KILLTR                           MITME034
+*              CALLING SEQUENCE...CALLRSTRTN                            MITME035
+*                                                                       MITME036
+*                                                                       MITME037
+ N     EQU     10            TABLE SIZE FOR TIMER ROUTINE               MITME038
+*                                                                       MITME039
+ CLKRD SYN     5                                                        MITME040
+CLKLOC SYN     6                                                        MITME041
+CLKTRA SYN     7                                                        MITME042
+*                                                                       MITME043
+*                                                                       MITME044
+************************************************************************MITME045
+*              STARTC                                                   MITME046
+*              CALLING SEQUENCE... CALL STARTC                          MITME047
+*                                                                       MITME048
+STARTC SYN     *                                                        MITME049
+       SXA     TM1,1                                                    MITME050
+       STZ     CLKRD         CLEAR 5                                    MITME051
+       STZ     CLKLOC        CLEAR 6                                    MITME052
+       CAL     1,4                                                      MITME053
+       STP     PRFX          TEST FOR MAD OR FORTRAN                    MITME054
+       CAL*    1,4                                                      MITME055
+       NZT     PRFX                                                     MITME056
+       ARS     18                                                       MITME057
+       ALS     2             MULTIPLY BY 4                              MITME058
+       SLW     TMP1                                                     MITME059
+       ALS     4             MULTIPLY BY 64                             MITME060
+       SUB     TMP1          ARG.*60 FOR 60THS OF A SECOND              MITME061
+       STO     TMLEFT                                                   MITME062
+       STO     LSTSET                                                   MITME063
+       STO     JOBTIM                                                   MITME064
+       ANA     =O777777                                                 MITME065
+       ORA     STRT                                                     MITME066
+       LXA     NTBL,1                                                   MITME067
+       SLW     TMTBL,1                                                  MITME068
+       TXI     *+1,1,-1                                                 MITME069
+       SXA     NTBL,1                                                   MITME070
+       CAL     TRA7                                                     MITME071
+       SLW     CLKTRA        SET UP TRA FOR 7. TO FROM7                 MITME072
+       CAL     TMLEFT                                                   MITME073
+       COM                                                              MITME074
+       STO     CLKRD         SET CLOCK                                  MITME075
+ TM1   AXT     **,1                                                     MITME076
+       TTR     2,4           RETURN TO CALLER                           MITME077
+*                                                                       MITME078
+ TRA7  TTR     FROM7                                                    MITME079
+ STRT  PON     0,0,GOHOME                                               MITME080
+GOHOME TTR     $EXIT                                                    MITME081
+TMP1                                                                    MITME082
+*                                                                       MITME083
+************************************************************************MITME084
+*              JOBTM                                                    MITME085
+*              CALLING SEQUENCE... TSX JOBTM,4                          MITME086
+*                                  PZE TIMEX      RESULT IN DECR.       MITME087
+*                                (TXH)            RESULT IN ADDR.       MITME088
+*                                                                       MITME089
+ JOBTM SYN     *                                                        MITME090
+       CAL     CLKRD                                                    MITME091
+       COM                                                              MITME092
+       STO     TMET                                                     MITME093
+       CAL     1,4                                                      MITME094
+       STP     PRFX                                                     MITME095
+       CLA     JOBTIM                                                   MITME096
+       SUB     TMLEFT                                                   MITME097
+       ADD     LSTSET                                                   MITME098
+       SUB     TMET                                                     MITME099
+       NZT     PRFX                                                     MITME100
+       ALS     18                                                       MITME101
+       STO*    1,4                                                      MITME102
+       TTR     2,4                                                      MITME103
+ TMET                        TEMPORARY                                  MITME104
+*              TIMLFT                                                   MITME105
+*              CALLING SEQUENCE...TSX TIMLFT,4                          MITME106
+*                                 PZE LEFT       RESULT IN DECR.        MITME107
+*                                (TXH) LEFT      RESULT IN ADDR.        MITME108
+TIMLFT SYN     *                                                        MITME109
+       SXA     TML1,4                                                   MITME110
+       TSX     JOBTM,4                                                  MITME111
+       TXH     RUNR                                                     MITME112
+ TML1  AXT     **,4                                                     MITME113
+       CAL     1,4                                                      MITME114
+       STP     PRFX                                                     MITME115
+       CLA     JOBTIM                                                   MITME116
+       SUB     RUNR                                                     MITME117
+       NZT     PRFX                                                     MITME118
+       ALS     18                                                       MITME119
+       STO*    1,4                                                      MITME120
+       TTR     2,4                                                      MITME121
+ RUNR  PZE                                                              MITME122
+************************************************************************MITME123
+*                                                                       MITME124
+************************************************************************MITME125
+*              RSCLCK                                                   MITME126
+*              CALLING SEQUENCE...TSX RSCLCK,4                          MITME127
+RSCLCK SYN     *                                                        MITME128
+       SXA     RSC1,4                                                   MITME129
+       TSX     JOBTM,4                                                  MITME130
+       TXH     CNTRL                                                    MITME131
+ RSC1  AXT     **,4                                                     MITME132
+       TTR     1,4                                                      MITME133
+*              STOPCL                                                   MITME134
+*              CALLING SEQUENCE...CALL STOPCL(J)                        MITME135
+*                                                                       MITME136
+STOPCL SYN     *                                                        MITME137
+       SXA     STP1,4                                                   MITME138
+       TSX     JOBTM,4                                                  MITME139
+       TXH     NEWT                                                     MITME140
+ STP1  AXT     **,4                                                     MITME141
+       CAL     1,4                                                      MITME142
+       STP     PRFX                                                     MITME143
+       CLA     NEWT                                                     MITME144
+       SUB     CNTRL                                                    MITME145
+       NZT     PRFX                                                     MITME146
+       ALS     18            0=FORTRAN TYPE                             MITME147
+       STO*    1,4           NON-ZERO=MAD TYPE                          MITME148
+       TTR     2,4                                                      MITME149
+ CNTRL                       OLD TIME LEFT. BASE POINT                  MITME150
+ NEWT                                                                   MITME151
+************************************************************************MITME152
+*              TIMER                                                    MITME153
+*              CALLING SEQUENCE...CALL TIMER(I,N)                       MITME154
+*                            ...EXECUTE TIMER.(A,B)                     MITME155
+*              WHERE I GIVES TIME IN 60THS OF SECOND FOR CLOCK TO RUN   MITME156
+*              BEFORE ALARM. N CONTAINS LOCATION WHERE CONTROL IS SENT  MITME157
+*              AFTER ALARM CLOCK GOES OFF.                              MITME158
+ TIMER SYN     *                                                        MITME159
+       SXA     CLK10,1                                                  MITME160
+       CAL     1,4                                                      MITME161
+       STP     PRFX                                                     MITME162
+       CAL*    1,4           TIME INTERVAL IN SECONDS                   MITME163
+       NZT     PRFX                                                     MITME164
+       ARS     18            0=FORTRAN. NON-ZERO=MAD                    MITME165
+       SLW     NEWINT        TIME INTERVAL IN 60THS OF A SECOND         MITME166
+*              COMPUTE ELAPSED TIME FROM LAST READING                   MITME167
+       LXA     NTBL,1        NO. OF OPENINGS IN TABLE                   MITME168
+       TXL     CLK10,1,0     TABLE FULL                                 MITME169
+       SXD     CLK2,1                                                   MITME170
+       CAL     CLKRD                                                    MITME171
+       STZ     CLKRD                                                    MITME172
+       COM                                                              MITME173
+       XCL                                                              MITME174
+       XCA                   -TIME LEFT IN AC                           MITME175
+       ADD     LSTSET        LAST SETTING-TIME LEFT                     MITME176
+       STO     TMUSED        =TIME USED IN 60THS OF SECOND.             MITME177
+       AXT     N,1                                                      MITME178
+ CLK1  CLA     TMTBL,1       DECREASE TIME LIMITS                       MITME179
+       SUB     TMUSED        ON ALL ENTRIES                             MITME180
+       STO     TMTBL,1       IN THE TABLE                               MITME181
+       TXI     *+1,1,-1                                                 MITME182
+ CLK2  TXH     CLK1,1,**                                                MITME183
+       CAL     2,4           PICK UP LOCATION                           MITME184
+       ANA     =O77777                                                 AMITME185
+       ALS     18            TO TRANSFER TO WHEN CLOCK GOES OFF         MITME186
+       ORA     NEWINT                                                   MITME187
+       SLW     TEMP                                                     MITME188
+*              SEARCH FOR PROPER POSITION IN TABLE.                     MITME189
+       LXA     NTBL,1                                                   MITME190
+       SXD     CLK5,1                                                   MITME191
+       SXD     CLK8,1                                                   MITME192
+       AXT     N,1                                                      MITME193
+ CLK3  CAL     TMTBL,1                                                  MITME194
+       ANA     =O777777                                                 MITME195
+       LAS     NEWINT                                                   MITME196
+       TRA     CLK4                                                     MITME197
+       NOP                                                              MITME198
+       TRA     SMLR                                                     MITME199
+ CLK4  TXI     *+1,1,-1                                                 MITME200
+ CLK5  TXH     CLK3,1,**                                                MITME201
+       LDQ     TEMP          IF NEW INTERVAL IS LESS                    MITME202
+       STQ     TMTBL,1       THAN REST THAT ARE                         MITME203
+       TRA     CLK9          IN THE TABLE                               MITME204
+*                                                                       MITME205
+*              FOUND A LARGER VALUE. INSERT NEW VALUE                   MITME206
+*              IN TABLE AND PUSH DOWN THE REST.                         MITME207
+ SMLR  LDQ     TMTBL,1                                                  MITME208
+       CAL     TEMP                                                     MITME209
+       SLW     TMTBL,1                                                  MITME210
+       TRA     CLK7                                                     MITME211
+ CLK6  CAL     TMTBL,1                                                  MITME212
+       STQ     TMTBL,1                                                  MITME213
+       XCL                                                              MITME214
+ CLK7  TXI     *+1,1,-1                                                 MITME215
+ CLK8  TXH     CLK6,1,**                                                MITME216
+       STQ     TMTBL,1                                                  MITME217
+ CLK9  TXI     *+1,1,-1                                                 MITME218
+       SXA     NTBL,1                                                   MITME219
+*              SET CLOCK FOR NEW VALUE                                  MITME220
+       CLA     TMLEFT                                                   MITME221
+       SUB     TMUSED                                                   MITME222
+       SUB     CLKRD                                                    MITME223
+       STO     TMLEFT        ADJUST TOTAL TIME COUNT                    MITME224
+       XCL                   LOWEST INTERVAL IN MQ                      MITME225
+       ANA     =O777777                                                 MITME226
+       SLW     LSTSET                                                   MITME227
+       COM                                                              MITME228
+       STO     CLKRD         RESET C(5) TO NEW VALUE                    MITME229
+ CLK10 AXT     **,1                                                     MITME230
+       TRA     3,4           EXIT                                       MITME231
+TMUSED                                                                  MITME232
+NEWINT                                                                  MITME233
+ TEMP                                                                   MITME234
+ PRFX                                                                   MITME235
+LSTSET                                                                  MITME236
+ TMTBL BES     N                                                        MITME237
+ NTBL  PZE     N                                                        MITME238
+************************************************************************MITME239
+*              KILLTR                                                   MITME240
+*              CALLING SEQUENCE...CALL KILLTR                           MITME241
+*              KILLS LAST TIMER ALARM CLOCK SETTING                     MITME242
+*              EXCEPT IF LAST SET FOR JOB TIME SETTING.                 MITME243
+*                                                                       MITME244
+KILLTR SYN     *                                                        MITME245
+       SXA     CL1,1                                                    MITME246
+       LXA     NTBL,1                                                   MITME247
+       TXI     *+1,1,1                                                  MITME248
+       TXH     RTN,1,N                                                  MITME249
+       CAL     TMTBL,1                                                  MITME250
+       STP     PRFX                                                     MITME251
+       ZET     PRFX                                                     MITME252
+TRARTN TTR     RTN                                                      MITME253
+       STZ     KILLOV                                                   MITME254
+       TNO     *+2                                                      MITME255
+       STL     KILLOV                                                   MITME256
+       CAL     CLKRD                                                    MITME257
+       COM                                                              MITME258
+       XCL                                                              MITME259
+       XCA                                                              MITME260
+       ADD     LSTSET                                                   MITME261
+       STO     LSTSET                                                   MITME262
+       CAL     TRARTN                                                   MITME263
+       ALS     18                                                       MITME264
+       STD     TMTBL,1                                                  MITME265
+       NZT     KILLOV                                                   MITME266
+       TOV     *+1                                                      MITME267
+       LXA     CL1,1                                                    MITME268
+       TTR     FROM7         TREAT AS IF TRAP FROM 7.                   MITME269
+KILLOV                                                                  MITME270
+*                                                                       MITME271
+*              JOB TIME SETTING CANNOT BE KILLED.                       MITME272
+ RTN   LXA     CL1,1                                                    MITME273
+       TTR     1,4                                                      MITME274
+*                                                                       MITME275
+************************************************************************MITME276
+*              RSTRTN                                                   MITME277
+*              CALLING SEQUENCE...CALL RSTRTN                           MITME278
+RSTRTN SYN     *                                                        MITME279
+       CAL     *                                                        MITME280
+       ALS     2                                                        MITME281
+       CLA     SPQ                                                      MITME282
+       ALS     2                                                        MITME283
+       ORA     LOGAC                                                    MITME284
+       NZT     OVFL                                                     MITME285
+       TOV     *+1                                                      MITME286
+       LDQ     MQ                                                       MITME287
+       LXA     CL1,1                                                    MITME288
+       LXA     CL2,2                                                    MITME289
+       LXA     CL4,4                                                    MITME290
+       TTR*    6                                                        MITME291
+************************************************************************MITME292
+*              EXTERNAL REGISTERS REFERENCED                            MITME293
+*              CLKRD         5                                          MITME294
+*              ENTRY FROM 7 AFTER CLOCK HAS GONE OFF.                   MITME295
+*                                                                       MITME296
+(FRM7) SYN     *                                                        MITME297
+ FROM7 SYN     *                                                        MITME298
+       SXA     CL1,1                                                    MITME299
+       SXA     CL2,2                                                    MITME300
+       SXA     CL4,4                                                    MITME301
+       STZ     OVFL                                                     MITME302
+       STQ     MQ                                                       MITME303
+       SLW     LOGAC         SAVE LOGICAL ACCUMULATOR                   MITME304
+       ARS     2                                                        MITME305
+       STO     SPQ                                                      MITME306
+       TNO     *+2                                                      MITME307
+       STL     OVFL                                                     MITME308
+       LXA     NTBL,1                                                   MITME309
+       TXI     *+1,1,1                                                  MITME310
+       CAL     TMTBL,1                                                  MITME311
+       PDX     0,2           SET TRANSFER                               MITME312
+       SXA     TRAD,2        LOCATION.                                  MITME313
+       ALS     2                                                       AMITME314
+       PBT                                                             BMITME315
+       TTR     *+2                                                     CMITME316
+       TTR     CLKN          GO TO MONITOR SETTING. DONT RESET CLOCK   DMITME317
+       SXA     NTBL,1                                                   MITME318
+       SXD     CLKM,1                                                   MITME319
+       AXT     N,1                                                      MITME320
+CLKL   CLA     TMTBL,1       REVISE PREVIOUS                            MITME321
+       SUB     LSTSET        ENTRIES IN THE TABLE.                      MITME322
+       STO     TMTBL,1                                                  MITME323
+       TXI     *+1,1,-1                                                 MITME324
+CLKM   TXH     CLKL,1,**                                                MITME325
+       ANA     =O777777      USE LAST ENTRY IN TABLE                    MITME326
+       SLW     NEWINT        FOR NEW SETTING                            MITME327
+       CLA     TMLEFT        REVISE TOTAL TIME                          MITME328
+       SUB     LSTSET        LEFT FOR JOB.                              MITME329
+       STO     TMLEFT                                                   MITME330
+       CAL     NEWINT        UPDATE LSTSET AND                          MITME331
+       SLW     LSTSET        CHANGE SETTING OF                          MITME332
+       COM                   LOCATION 5 TO NEXT                         MITME333
+       STO     CLKRD         ENTRY IN THE TABLE.                        MITME334
+*              RESTORE MACHINE CONDITIONS                               MITME335
+ CLKN  SYN     *                                                       AMITME336
+       ALS     2   TURN ON OVERFLOW LIGHT                               MITME337
+       CLA     SPQ                                                      MITME338
+       ALS     2   RESTORE +, Q, AND S                                  MITME339
+       ORA     LOGAC                                                    MITME340
+       NZT     OVFL                                                     MITME341
+       TOV     *+1                                                      MITME342
+       LDQ     MQ                                                       MITME343
+ CL1   AXT     **,1          RESTORE INDEX REGISTERS                    MITME344
+ CL2   AXT     **,2                                                     MITME345
+ CL4   AXT     **,4                                                     MITME346
+ TRAD  TTR     **                                                       MITME347
+ OVFL                                                                   MITME348
+*                                                                       MITME349
+ SPQ                                                                    MITME350
+ LOGAC                                                                  MITME351
+ MQ                                                                     MITME352
+TMLEFT PZE                                                              MITME353
+JOBTIM                                                                  MITME354
+       END                                                              MITME355

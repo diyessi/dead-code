@@ -1,0 +1,815 @@
+       PMC                                                              INGE0000
+       LBL     INGE0000                                                 INGE0010
+       COUNT   900                                                      INGE0020
+       REM     SUBROUTINE INGE (X,P,I)                                  INGE0030
+       REM                                                              INGE0040
+       REM     15 MAR 63                                                INGE0050
+       REM     RUDOLF LOESER                                            INGE0060
+       REM                                                              INGE0070
+       REM     INGE COMPUTES THE INCOMPLETE GAMMA FUNCTION OF X,P FOR   INGE0080
+       REM     ALL POSITIVE VALUES OF X, AND FOR P=(2*N+1)*(1/2), FOR   INGE0090
+       REM     N A POSITIVE INTEGER.                                    INGE0100
+       REM                                                              INGE0110
+       REM     THE ARGUMENTS X AND P MUST BE DOUBLE PRECISION QUANTITIESINGE0120
+       REM     STORED IN THE FORTRAN II, V. 2, CONVENTION FOR DOUBLE    INGE0130
+       REM     PRECISION CONSTANTS, - I.E. MOST SIGNIFICANT PART IN X,  INGE0140
+       REM     LEAST SIGNIFICANT PART IN X-1. INGE RETURNS THE ANSWER   INGE0150
+       REM     AS A DOUBLE PRECISION NUMBER STORED SIMILARLY IN I, I-1. INGE0160
+       REM                                                              INGE0170
+       REM     THE ANSWER IS PRECISE TO 14 OR MORE DECIMAL DIGITS.      INGE0180
+       REM                                                              INGE0190
+       REM     THERE ARE NO ERROR RETURNS -                             INGE0200
+       REM     INGE WILL ALWAYS COMPUTE AN ANSWER, AND IF THE ARGUMENTS INGE0210
+       REM     ARE NOT ACCEPTABLE AS GIVEN, THEN THEY WILL BE CHANGED TOINGE0220
+       REM     BE ACCEPTABLE. SPECIFICALLY, THE SIGNS OF X AND P WILL   INGE0230
+       REM     ALWAYS BE SET +, AND, MOREOVER, P WILL ALWAYS BE ROUNDED INGE0240
+       REM     TO THE NEAREST ODD INTEGRAL MULTIPLE OF 1/2.             INGE0250
+       REM     THEREFORE -                                              INGE0260
+       REM     IF THIS SALVAGE PROCEDURE IS NOT WANTED, THE USER SHOULD INGE0270
+       REM     TEST HIS ARGUMENTS HIMSELF BEFORE TELLING INGE TO USE    INGE0280
+       REM     THEM.                                                    INGE0290
+       REM                                                              INGE0300
+       REM     INGE SAVES THE ARGUMENTS AND ANSWER FROM THE PREVIOUS    INGE0310
+       REM     CALL, IN ORDER TO SAVE TIME BY SKIPPING PART OR ALL      INGE0320
+       REM     OF THE COMPUTATION.                                      INGE0330
+       REM                                                              INGE0340
+       REM     INGE IS A COMPLETE ROUTINE, AND USES NO ADDITIONAL       INGE0350
+       REM     SUBPROGRAMS. THE FMS LIBRARY ROUTINES FOR DSQRT AND DEXP INGE0360
+       REM     HAVE BEEN BUILT DIRECTLY INTO THE PROGRAM.               INGE0370
+       REM                                                              INGE0380
+       REM     THE CALLING SEQUENCE IS    TSX   INGE,4                  INGE0390
+       REM                                PZE   X                       INGE0400
+       REM                                PZE   P                       INGE0410
+       REM                                PZE   I                       INGE0420
+       REM                                                              INGE0430
+       REM                                                              INGE0440
+       EJECT                                                            INGE0450
+DLD    MACRO   AM,AL          DOUBLE LOAD                               INGE0460
+       CLA     AM                                                       INGE0470
+       LDQ     AL                                                       INGE0480
+DLD    END                                                              INGE0490
+       REM                                                              INGE0500
+DST    MACRO   AM,AL          DOUBLE STORE                              INGE0510
+       STO     AM                                                       INGE0520
+       STQ     AL                                                       INGE0530
+DST    END                                                              INGE0540
+       REM                                                              INGE0550
+DTR    MACRO   AM,AL,BM,BL    DOUBLE TRANSMIT                           INGE0560
+       DLD     (AM),(AL)                                                INGE0570
+       DST     (BM),(BL)                                                INGE0580
+DTR    END                                                              INGE0590
+       REM                                                              INGE0600
+DAD    MACRO   AM,AL,BM,BL    DOUBLE FLOATING ADD                       INGE0610
+       CLA     AM                                                       INGE0620
+       FAD     BM                                                       INGE0630
+       STO     E1                                                       INGE0640
+       XCA                                                              INGE0650
+       FAD     AL                                                       INGE0660
+       FAD     BL                                                       INGE0670
+       FAD     E1                                                       INGE0680
+DAD    END                                                              INGE0690
+       REM                                                              INGE0700
+DSU    MACRO   AM,AL,BM,BL    DOUBLE FLOATING SUBTRACT                  INGE0710
+       CLA     AM                                                       INGE0720
+       FSB     BM                                                       INGE0730
+       STO     E1                                                       INGE0740
+       XCA                                                              INGE0750
+       FAD     AL                                                       INGE0760
+       FSB     BL                                                       INGE0770
+       FAD     E1                                                       INGE0780
+DSU    END                                                              INGE0790
+       REM                                                              INGE0800
+DMP    MACRO   AM,AL,BM,BL    DOUBLE FLOATING MULTIPLY                  INGE0810
+       LDQ     BM                                                       INGE0820
+       FMP     AM                                                       INGE0830
+       STO     E1                                                       INGE0840
+       STQ     E2                                                       INGE0850
+       LDQ     BM                                                       INGE0860
+       FMP     AL                                                       INGE0870
+       FAD     E2                                                       INGE0880
+       STO     E2                                                       INGE0890
+       LDQ     AM                                                       INGE0900
+       FMP     BL                                                       INGE0910
+       FAD     E2                                                       INGE0920
+       FAD     E1                                                       INGE0930
+DMP    END                                                              INGE0940
+       REM                                                              INGE0950
+DDV    MACRO   AM,AL,BM,BL    DOUBLE FLOATING DIVIDE                    INGE0960
+       CLA     AM                                                       INGE0970
+       FDP     BM                                                       INGE0980
+       STQ     E1                                                       INGE0990
+       FAD     AL                                                       INGE1000
+       FDP     BM                                                       INGE1010
+       STQ     E2                                                       INGE1020
+       CLS     BL                                                       INGE1030
+       FDP     BM                                                       INGE1040
+       FMP     E1                                                       INGE1050
+       FAD     E2                                                       INGE1060
+       FAD     E1                                                       INGE1070
+DDV    END                                                              INGE1080
+       REM                                                              INGE1090
+DCS    MACRO                  DOUBLE CHANGE SIGN                        INGE1100
+       CHS                                                              INGE1110
+       LRS     0                                                        INGE1120
+DCS    END                                                              INGE1130
+       REM                                                              INGE1140
+DSP    MACRO                  DOUBLE SET SIGN PLUS                      INGE1150
+       SSP                                                              INGE1160
+       LRS     0                                                        INGE1170
+DSP    END                                                              INGE1180
+       EJECT                                                            INGE1190
+       ENTRY   INGE                                                     INGE1200
+INGE   SXA     XRS,1                                                    INGE1210
+       SXA     XRS+1,2                                                  INGE1220
+       SXA     XRS+2,4                                                  INGE1230
+       CLA     1,4 SET UP ADDRESS TO BRING X                            INGE1240
+       STA     *+3                                                      INGE1250
+       SUB     =1                                                       INGE1260
+       STA     *+2                                                      INGE1270
+       DTR     **,**,XO,XO-1 BRING X AND STORE IN XO                    INGE1280
+       CLA     2,4 SET UP ADDRESS TO BRING P                            INGE1290
+       STA     *+3                                                      INGE1300
+       SUB     =1                                                       INGE1310
+       STA     *+2                                                      INGE1320
+       DTR     **,**,PO,PO-1 BRING P AND STORE IN PO                    INGE1330
+       CLA     3,4 SET UP ADDRESSES TO STORE ANSWER                     INGE1340
+       STA     *+4                                                      INGE1350
+       SUB     =1                                                       INGE1360
+       STA     *+3                                                      INGE1370
+       TRA     MORE                                                     INGE1380
+       REM                                                              INGE1390
+INRE   DST     **,** RETURN RESULT                                      INGE1400
+       DST     ILAST,ILAST-1 SAVE RESULT                                INGE1410
+       DTR     XO,XO-1,XLAST,XLAST-1 SAVE XO                            INGE1420
+       DTR     PO,PO-1,PLAST,PLAST-1 SAVE PO                            INGE1430
+XRS    AXT     ,1                                                       INGE1440
+       AXT     ,2                                                       INGE1450
+       AXT     ,4                                                       INGE1460
+       TRA     4,4                                                      INGE1470
+       REM                                                              INGE1480
+MORE   CLA     XO TEST XO                                               INGE1490
+       TNZ     *+4                                                      INGE1500
+       ZAC      SINCE XO=0, SET ANSWER =0                               INGE1510
+       LDQ     =0                                                       INGE1520
+       TRA     INRE AND GO                                              INGE1530
+       REM                                                              INGE1540
+       TPL     *+7                                                      INGE1550
+       DLD     XO,XO-1 SINCE XO IS NEGATIVE, MAKE IT POSITIVE           INGE1560
+       DSP                                                              INGE1570
+       DST     XO,XO-1                                                  INGE1580
+       REM                                                              INGE1590
+       CAL     PO ADJUST PO -                                           INGE1600
+       UFA     =O232000000000 ISOLATE ALL BITS GREATER THAN 1/4         INGE1610
+       LDQ     =0 ZERO MQ                                               INGE1620
+       ORA     =1 FORCE 1/2 BIT                                         INGE1630
+       FAD     =0 NORMALIZE                                             INGE1640
+       STO     PO (NOW SINGLE PRECISION ONLY)                           INGE1650
+       STZ     PO-1                                                     INGE1660
+       REM                                                              INGE1670
+       REM     CHECK IF PART OF ANSWER IS KNOWN                         INGE1680
+       DSU     XO,XO-1,XLAST,XLAST-1                                    INGE1690
+       TNZ     CHCA                                                     INGE1700
+       CLA     PO                                                       INGE1710
+       SUB     PLAST                                                    INGE1720
+       TNZ     RECU BASIC ANSWER KNOWN, COMPUTE RECURSION REL.          INGE1730
+       REM                                                              INGE1740
+       DLD     ILAST,ILAST-1 ENTIRE ANSWER KNOWN, BRING IT              INGE1750
+       TRA     INRE AND GO                                              INGE1760
+       REM                                                              INGE1770
+CHCA   CLA     XO TEST IF XO GREATER THAN 39.0                          INGE1780
+       SUB     =39.0                                                    INGE1790
+       TMI     NOSIR NO, COMPUTE FOR P=0.5                              INGE1800
+       REM                                                              INGE1810
+       REM     YES, COMPUTE RECURSION RELATION ONLY                     INGE1820
+       DLD     ((G)-51),((G)-102)                                       INGE1830
+       TRA     INHM                                                     INGE1840
+       REM                                                              INGE1850
+NOSIR  CLA     XO DECIDE HOW TO COMPUTE                                 INGE1860
+       SUB     =1.0                                                     INGE1870
+       TMI     SERI USE INFINITE SERIES                                 INGE1880
+       TPL     TAB USE TABLE                                            INGE1890
+       DLD     ((G)),((G)-51) USE KNOWN ANSWER                          INGE1900
+       REM                                                              INGE1910
+INHM   DST     IG,IG-1 SAVE RESULT FOR P=0.5                            INGE1920
+       REM                                                              INGE1930
+       TRA     RECU                                                     INGE1940
+       EJECT                                                            INGE1950
+SERI   DLD     XO,XO-1 BRING XO                                         INGE1960
+       TSX     DSQRT,4 FIND ITS SQUARE ROOT                             INGE1970
+       DST     S1,S2                                                    INGE1980
+       DMP     XO,XO-1,S1,S2 *XO                                        INGE1990
+       DST     S1,S2                                                    INGE2000
+       DMP     =2.,=0,S1,S2 *2.0                                        INGE2010
+       DST     S1,S2 AND SAVE THIS NUMBER                               INGE2020
+       REM                                                              INGE2030
+       DTR     THR,THR-1,SSUM,SSUM-1 INITIALIZE SSUM                    INGE2040
+       DTR     =1.,=0,XP,XP-1 INITIALIZE XP                             INGE2050
+       REM                                                              INGE2060
+       AXT     1,4 LOOP FOR SUCCESSIVE PARTIAL SUMS                     INGE2070
+SLOP   DMP     XP,XP-1,XO,XO-1 XP=XP*XO                                 INGE2080
+       DST     XP,XP-1                                                  INGE2090
+       DDV     XP,XP-1,((B),4),((B)-18,4) TERM=XP/((2*I+3)*I FACT.)     INGE2100
+       DST     TE,TE-1 SAVE TERM                                        INGE2110
+       SSP      TEST TERM                                               INGE2120
+       SUB     =1.E-18                                                  INGE2130
+       TMI     ALL                                                      INGE2140
+       DAD     TE,TE-1,SSUM,SSUM-1 TERM STILL SIGNIFICANT, ADD IT       INGE2150
+       DST     SSUM,SSUM-1                                              INGE2160
+       TXI     *+1,4,1 AND REPEAT LOOP                                  INGE2170
+       TXL     SLOP,4,18 (NOT MORE THAN 18 TERMS NEEDED)                INGE2180
+       REM                                                              INGE2190
+ALL    DMP     SSUM,SSUM-1,S1,S2 ANSWER=SSUM*2*XO*SQRT(XO)              INGE2200
+       TRA     INHM AND GO.                                             INGE2210
+       EJECT                                                            INGE2220
+TAB    CLA     XO FIND INDEX OF LARGEST ENTRY IN (X) TABLE              INGE2230
+       UFA     =O233000000000 NOT EXCEEDING XO                          INGE2240
+       RQL     9                                                        INGE2250
+       PAX     ,1                                                       INGE2260
+       TXL     *+2,1,4                                                  INGE2270
+       TXI     TGO,1,12                                                 INGE2280
+       LGL     1                                                        INGE2290
+       PAX     ,1                                                       INGE2300
+       TXL     *+2,1,5                                                  INGE2310
+       TXI     TGO,1,7                                                  INGE2320
+       LGL     1                                                        INGE2330
+       PAX     ,1                                                       INGE2340
+       TXL     *+2,1,7                                                  INGE2350
+       TXI     TGO,1,1                                                  INGE2360
+       LGL     1                                                        INGE2370
+       PAX     ,1                                                       INGE2380
+       TIX     *+1,1,7                                                  INGE2390
+TGO    DTR     ((M),1),((M)-51,1),Z,Z-1 SET UP Z                        INGE2400
+       DTR     ((X),1),((X)-51,1),LA,LA-1 SET UP LA FOR BRAK            INGE2410
+       DSU     XO,XO-1,LA,LA-1 DEL=XO-(X)                               INGE2420
+       TZE     OJOY IF DEL=0, ANSWER IS KNOWN                           INGE2430
+       DST     DEL,DEL-1                                                INGE2440
+       SXA     TSA,1                                                    INGE2450
+       TRA     BRAK COMPUTE BRACKET FOR THIS DEL                        INGE2460
+BRET   DST     T1,T2                                                    INGE2470
+       DMP     T1,T2,Z,Z-1 INGE(XO)=G((X))+Z*BRACKET                    INGE2480
+       DST     T1,T2                                                    INGE2490
+TSA    AXT     ,1                                                       INGE2500
+       DAD     T1,T2,((G),1),((G)-51,1)                                 INGE2510
+       TRA     INHM AND GO HOME                                         INGE2520
+       REM                                                              INGE2530
+OJOY   DLD     ((G),1),((G)-51,1) BRING KNOWN ANSWER                    INGE2540
+       TRA     INHM AND GO.                                             INGE2550
+       REM                                                              INGE2560
+BRAK   CLA     =1.E-18 COMPUTE CONVERGENCE CRITERION A                  INGE2570
+       FDP     Z                                                        INGE2580
+       STQ     A                                                        INGE2590
+       AXT     50,1 INITIALIZE DELP TABLE                               INGE2600
+       STZ     DELP,1                                                   INGE2610
+       TIX     *-1,1,1                                                  INGE2620
+       REM                                                              INGE2630
+       AXT     0,1 INITIALIZE N                                         INGE2640
+       TSX     BLIM,4 COMPUTE CONVERGENCE CRITERION B                   INGE2650
+       TSX     FCOM,4 GET F(0)                                          INGE2660
+       DST     B1,B2                                                    INGE2670
+       DMP     B1,B2,DEL,DEL-1 *DEL                                     INGE2680
+       DST     BSUM,BSUM-1 INITIALIZE BSUM                              INGE2690
+       CLS     LA SET UP LAM (=-LA)                                     INGE2700
+       STO     LAM                                                      INGE2710
+       CLS     LA-1                                                     INGE2720
+       STO     LAM-1                                                    INGE2730
+       CLA     =-1. INITIALIZE LAP (=SUCCESSIVE POWERS OF LA, ALT. SGN) INGE2740
+       STO     LAP                                                      INGE2750
+       STZ     LAP-1                                                    INGE2760
+       REM                                                              INGE2770
+BLOP   TXI     *+1,1,1 LOOP FOR SUCCESSIVE PARTIAL BRACKET SUMS         INGE2780
+       DMP     LAP,LAP-1,LAM,LAM-1 LAP*LAM=LAP                          INGE2790
+       DST     LAP,LAP-1                                                INGE2800
+       TSX     BLIM,4 RECOMPUTE CONVERGENCE CRITERION B                 INGE2810
+       TSX     FCOM,4 GET F(N)                                          INGE2820
+       DST     B1,B2 AND SAVE IT                                        INGE2830
+       TSX     GDEL,4 GET DEL**(N+1)                                    INGE2840
+       PZE     1 CASE 1                                                 INGE2850
+       DST     B3,B4 AND SAVE                                           INGE2860
+       DMP     B1,B2,B3,B4 NOW MULTIPLY                                 INGE2870
+       DST     B1,B2                                                    INGE2880
+       DMP     B1,B2,(C,1),(C-18,1) *C(N)                               INGE2890
+       DST     B1,B2                                                    INGE2900
+       DDV     B1,B2,LAP,LAP-1 /LAP                                     INGE2910
+       DST     B1,B2                                                    INGE2920
+       SSP      TEST MAGNITUDE OF CURRENT TERM                          INGE2930
+       SUB     A                                                        INGE2940
+       TMI     BHOM                                                     INGE2950
+       DAD     BSUM,BSUM-1,B1,B2 TERM STILL SIGNIFICANT, ADD IT         INGE2960
+       DST     BSUM,BSUM-1                                              INGE2970
+       TRA     BLOP                                                     INGE2980
+       REM                                                              INGE2990
+BHOM   DLD     BSUM,BSUM-1 BRING SUM AND RETURN                         INGE3000
+       TRA     BRET                                                     INGE3010
+       EJECT                                                            INGE3020
+FCOM   SXA     FHOM+2,4                                                 INGE3030
+       AXT     1,2 INITIALIZE M                                         INGE3040
+       SXA     *+4,1                                                    INGE3050
+       SXA     *+2,2                                                    INGE3060
+       TSX     GGEN,4 GET G(N,1)                                        INGE3070
+       OCT     233000000000 M                                           INGE3080
+       OCT     233000000000 N                                           INGE3090
+       DST     FSUM,FSUM-1                                              INGE3100
+       STZ     FSIGN INITIALIZE SIGN FLAG                               INGE3110
+FLOP   TXI     *+1,2,1                                                  INGE3120
+       SXA     *+4,1                                                    INGE3130
+       SXA     *+2,2                                                    INGE3140
+       TSX     GGEN,4 GET G(N,M)                                        INGE3150
+       OCT     233000000000 M                                           INGE3160
+       OCT     233000000000 N                                           INGE3170
+       DST     F1,F2                                                    INGE3180
+       TSX     GDEL,4 GET DEL**(M-1)                                    INGE3190
+       PZE     2 CASE 2                                                 INGE3200
+       DST     F3,F4                                                    INGE3210
+       DMP     F1,F2,F3,F4                                              INGE3220
+       DST     F1,F2                                                    INGE3230
+       DDV     F1,F2,(FACT,2),(FACT-18,2) / M FACTORIAL                 INGE3240
+       STO     F3 (SAVE M.S. FOR MAGNITUDE TEST LATER)                  INGE3250
+       ZET     FSIGN ADJUST SIGN OF TERM                                INGE3260
+       TRA     FPLUS                                                    INGE3270
+       DCS      RESET SIGN                                              INGE3280
+       AXT     1,4                                                      INGE3290
+       SXA     FSIGN,4 RESET SIGN FLAG                                  INGE3300
+       TRA     FSTORE                                                   INGE3310
+FPLUS  AXT     0,4 RESET SIGN FLAG ONLY                                 INGE3320
+       SXA     FSIGN,4                                                  INGE3330
+FSTORE DST     F1,F2                                                    INGE3340
+       REM                                                              INGE3350
+       CLA     F3 CHECK MAGNITUDE OF TERM                               INGE3360
+       SUB     B                                                        INGE3370
+       TMI     FHOM                                                     INGE3380
+       DAD     FSUM,FSUM-1,F1,F2 TERM STILL SIGNIFICANT, ADD IT         INGE3390
+       DST     FSUM,FSUM-1                                              INGE3400
+       TRA     FLOP                                                     INGE3410
+       REM                                                              INGE3420
+FHOM   DLD     FSUM,FSUM-1 BRING SUM AND RETURN                         INGE3430
+       AXT     ,4                                                       INGE3440
+       TRA     1,4                                                      INGE3450
+       REM                                                              INGE3460
+BLIM   SXA     BHYM,4 CONVERGENCE CRITERION B                           INGE3470
+       TSX     GDEL,4                                                   INGE3480
+       PZE     1 CASE 1                                                 INGE3490
+       STO     E1                                                       INGE3500
+       CLA     A                                                        INGE3510
+       FDP     E1                                                       INGE3520
+       STQ     B                                                        INGE3530
+BHYM   AXT     ,4                                                       INGE3540
+       TRA     1,4                                                      INGE3550
+       REM                                                              INGE3560
+GDEL   SXA     GHOM,4 COMPUTE DEL                                       INGE3570
+       CLA     1,4 GET CODE                                             INGE3580
+       AXT     0,4 CLEAR XR4                                            INGE3590
+       SUB     =1 TEST CODE                                             INGE3600
+       TZE     *+3                                                      INGE3610
+       PXD     ,6 CASE 2, XR4=(XR2)-1                                   INGE3620
+       TIX     *+3,4,1                                                  INGE3630
+       PXD     ,5 CASE 1, XR4=(XR1)+1                                   INGE3640
+       TXI     *+1,4,1                                                  INGE3650
+       NZT     DELP,4 IS REQUIRED VALUE OF DELP ALREADY THERE           INGE3660
+       TRA     GCOM NO, MUST COMPUTE IT                                 INGE3670
+       DLD     (DELP,4),(DELP-25,4) YES, GET IT AND GO                  INGE3680
+GHOM   AXT     ,4                                                       INGE3690
+       TRA     2,4                                                      INGE3700
+       REM                                                              INGE3710
+GCOM   TXH     GET,4,1 TEST IF XR4=1                                    INGE3720
+       DTR     DEL,DEL-1,(DELP,4),(DELP-25,4) YES, PUT DEL INTO DELP    INGE3730
+       TRA     GHOM AND GO.                                             INGE3740
+GET    DMP     DEL,DEL-1,(DELP+1,4),(DELP-24,4)                         INGE3750
+       DST     (DELP,4),(DELP-25,4)                                     INGE3760
+       TRA     GHOM                                                     INGE3770
+       REM                                                              INGE3780
+GGEN   ZAC      G GENERATOR                                             INGE3790
+       FAD     1,4 NORMALIZE M                                          INGE3800
+       STO     G1                                                       INGE3810
+       FAD     2,4 FORM N+M                                             INGE3820
+       STO     G2                                                       INGE3830
+       CLA     G1                                                       INGE3840
+       FDP     G2                                                       INGE3850
+       STQ     G1                                                       INGE3860
+       FDP     G2                                                       INGE3870
+       XCA                                                              INGE3880
+       FAD     G1                                                       INGE3890
+       TRA     3,4                                                      INGE3900
+       EJECT                                                            INGE3910
+       REM     RECURSION RELATION FOR P GREATER THAN 0.5                INGE3920
+       REM                                                              INGE3930
+RECU   CLA     PO                                                       INGE3940
+       SUB     =0.5                                                     INGE3950
+       TNZ     BLAH                                                     INGE3960
+       DLD     IG,IG-1 ANSWER ALREADY KNOWN, GET IT                     INGE3970
+       TRA     INRE AND LEAVE                                           INGE3980
+       REM                                                              INGE3990
+BLAH   DLD     XO,XO-1 FIRST, COMPUTE CONSTANT                          INGE4000
+       DCS                                                              INGE4010
+       TSX     DEXP,4                                                   INGE4020
+       DST     R1,R2                                                    INGE4030
+       DLD     XO,XO-1                                                  INGE4040
+       TSX     DSQRT,4                                                  INGE4050
+       DST     R3,R4                                                    INGE4060
+       DMP     R1,R2,R3,R4                                              INGE4070
+       DST     GA,GA-1                                                  INGE4080
+       REM                                                              INGE4090
+       DTR     =1.5,=0,PG,PG-1 INITIALIZE PG                            INGE4100
+       REM                                                              INGE4110
+       DTR     XO,XO-1,PX,PX-1 INITIALIZE PX                            INGE4120
+       REM                                                              INGE4130
+       DTR     IG,IG-1,FN,FN-1 INITIALIZE FN                            INGE4140
+       REM                                                              INGE4150
+       REM     RECURSION LOOP                                           INGE4160
+RELOOP DMP     PX,PX-1,GA,GA-1                                          INGE4170
+       DST     R1,R2                                                    INGE4180
+       DMP     FN,FN-1,PG,PG-1                                          INGE4190
+       DST     R3,R4                                                    INGE4200
+       DSU     R3,R4,R1,R2                                              INGE4210
+       DST     FN,FN-1                                                  INGE4220
+       CLA     PO CHECK IF FINISHED                                     INGE4230
+       SUB     PG                                                       INGE4240
+       TZE     YIPPEE YES                                               INGE4250
+       DAD     PG,PG-1,=1.,=0 UPDATE PG                                 INGE4260
+       DST     PG,PG-1                                                  INGE4270
+       DMP     PX,PX-1,XO,XO-1 UPDATE PX                                INGE4280
+       DST     PX,PX-1                                                  INGE4290
+       TRA     RELOOP                                                   INGE4300
+       REM                                                              INGE4310
+YIPPEE DLD     FN,FN-1                                                  INGE4320
+       TRA     INRE                                                     INGE4330
+       EJECT                                                            INGE4340
+       PZE                                                              INGE4350
+PO     PZE                                                              INGE4360
+       PZE                                                              INGE4370
+IG     PZE                                                              INGE4380
+       PZE                                                              INGE4390
+XLAST  PZE                                                              INGE4400
+       PZE                                                              INGE4410
+PLAST  PZE                                                              INGE4420
+       PZE                                                              INGE4430
+ILAST  PZE                                                              INGE4440
+S2     PZE                                                              INGE4450
+S1     PZE                                                              INGE4460
+       PZE                                                              INGE4470
+TE     PZE                                                              INGE4480
+       PZE                                                              INGE4490
+SSUM   PZE                                                              INGE4500
+       PZE                                                              INGE4510
+XP     PZE                                                              INGE4520
+       PZE                                                              INGE4530
+XO     PZE                                                              INGE4540
+       PZE                                                              INGE4550
+Z      PZE                                                              INGE4560
+T1     PZE                                                              INGE4570
+T2     PZE                                                              INGE4580
+       PZE                                                              INGE4590
+LA     PZE                                                              INGE4600
+A      PZE                                                              INGE4610
+B      PZE                                                              INGE4620
+       PZE                                                              INGE4630
+BSUM   PZE                                                              INGE4640
+E1     PZE                                                              INGE4650
+E2     PZE                                                              INGE4660
+       PZE                                                              INGE4670
+FSUM   PZE                                                              INGE4680
+FSIGN  PZE                                                              INGE4690
+       PZE                                                              INGE4700
+DEL    PZE                                                              INGE4710
+B1     PZE                                                              INGE4720
+B2     PZE                                                              INGE4730
+B3     PZE                                                              INGE4740
+B4     PZE                                                              INGE4750
+       PZE                                                              INGE4760
+LAP    PZE                                                              INGE4770
+       PZE                                                              INGE4780
+LAM    PZE                                                              INGE4790
+       PZE                                                              INGE4800
+FN     PZE                                                              INGE4810
+F1     PZE                                                              INGE4820
+F2     PZE                                                              INGE4830
+F3     PZE                                                              INGE4840
+F4     PZE                                                              INGE4850
+G1     PZE                                                              INGE4860
+G2     PZE                                                              INGE4870
+R1     PZE                                                              INGE4880
+R2     PZE                                                              INGE4890
+R3     PZE                                                              INGE4900
+R4     PZE                                                              INGE4910
+       PZE                                                              INGE4920
+PG     PZE                                                              INGE4930
+       PZE                                                              INGE4940
+PX     PZE                                                              INGE4950
+       PZE                                                              INGE4960
+GA     PZE                                                              INGE4970
+       OCT     144252525252                                             INGE4980
+THR    OCT     177525252525                                             INGE4990
+DELP   BES     25+25                                                    INGE5000
+       EJECT                                                            INGE5010
+       DUP     1,51                                                     INGE5020
+       OCT     0                                                        INGE5030
+       DEC     39.,38.,37.,36.,35.,34.,33.,32.,31.,30.,29.,28.,27.,26.  INGE5040
+       DEC     25.,24.,23.,22.,21.,20.,19.,18.,17.,16.,15.,14.,13.,12.  INGE5050
+       DEC     11.,10.,9.,8.,7.,6.,5.,4.5,4.,3.5,3.,2.75,2.5,2.25,2.    INGE5060
+       DEC     1.875,1.75,1.625,1.5,1.375,1.25,1.125,1.                 INGE5070
+(X)    SYN     *                                                        INGE5080
+       OCT     145332357263,145332357261,145332357254,145332357235      INGE5090
+       OCT     145332357163,145332357001,145332356317,145332354632      INGE5100
+       OCT     145332350405,145332335021,145332276263,145332154277      INGE5110
+       OCT     145331621374,145330511354,145325464170,145315377271      INGE5120
+       OCT     145267732725,145176435026,145746077711,145121437314      INGE5130
+       OCT     145041072540,145411757202,145670647133,145132066636      INGE5140
+       OCT     145213426610,145317500120,145764272641,145077451154      INGE5150
+       OCT     145266465600,145005640316,145360404720,145767675777      INGE5160
+       OCT     145122315032,145743025654,145427340022,145527704424      INGE5170
+       OCT     145232557506,145702466221,145236003644,145220013702      INGE5180
+       OCT     145713025223,145200735300,145215707560,145732223326      INGE5190
+       OCT     145431037066,145534016344,145673345173,145546605123      INGE5200
+       OCT     144350775212,144703752510,144062720174                   INGE5210
+       DUP     1,18                                                     INGE5220
+       OCT     200705577044                                             INGE5230
+       OCT     200705577043,200705577043,200705577041,200705577033      INGE5240
+       OCT     200705577014,200705576746,200705576600,200705576164      INGE5250
+       OCT     200705574665,200705571211,200705557725,200705527506      INGE5260
+       OCT     200705430705,200705167477,200704334114,200702313644      INGE5270
+       OCT     200675245633,200670352172,200660675531,200645077661      INGE5280
+       OCT     200623065706,200606656532,200567627242,200545327772      INGE5290
+       OCT     200517067757,200502213215,200464147723,200444644143      INGE5300
+       OCT     200424031045,200401644277,177734127615,177661503262      INGE5310
+       OCT     177604024117                                             INGE5320
+(G)    SYN     *                                                        INGE5330
+       REM                                                              INGE5340
+       REM                                                              INGE5350
+       REM                                                              INGE5360
+       OCT     135000000000,136000000000,136000000000,136000000000      INGE5370
+       OCT     136000000000,136000000000,136000000000,137000000000      INGE5380
+       OCT     137000000000,137000000000,137000000000,140000000000      INGE5390
+       OCT     140000000000,140000000000,141000000000,142000000000      INGE5400
+       OCT     143000000000,145000000000,170756434366,171415603714      INGE5410
+       OCT     171447671750,171506360400,171552575000,171626214000      INGE5420
+       OCT     171713210000,172406340000,172457700000,172545400000      INGE5430
+       OCT     172655000000,173410000000,173520000000,173700000000      INGE5440
+       OCT     174500000000,175400000000,176400000000,200400000000      INGE5450
+C      SYN     *                                                        INGE5460
+       OCT     232471400000,226154000000,222300000000,216300000000      INGE5470
+       OCT     212000000000,206000000000,202000000000,177000000000      INGE5480
+       OCT     173000000000,170000000000,165000000000,162000000000      INGE5490
+       OCT     157000000000,154000000000,152000000000,150000000000      INGE5500
+       OCT     147000000000,146000000000,265553735462,261503375673      INGE5510
+       OCT     255460356735,251460356735,245504607312,241563121460      INGE5520
+       OCT     235710637400,232460425000,226672760000,223542300000      INGE5530
+       OCT     220473000000,215473000000,212550000000,207740000000      INGE5540
+       OCT     205600000000,203600000000,202400000000,201400000000      INGE5550
+FACT   SYN     *                                                        INGE5560
+       REM                                                              INGE5570
+       REM                                                              INGE5580
+       REM                                                              INGE5590
+       OCT     060120706354,061540136332,063252117334,064746320432      INGE5600
+       OCT     066572162465,067162034226,070542131044,072770705760      INGE5610
+       OCT     073565442136,075775320436,076344035724,100131403312      INGE5620
+       OCT     101240762770,102706204444,104535731762,105356076034      INGE5630
+       OCT     107735333744,110337762332,111421744074,113005062404      INGE5640
+       OCT     114636637676,116762623634,117116240440,120567205616      INGE5650
+       OCT     122667624535,123121377510,125511336722,126561137202      INGE5660
+       OCT     127525303524,131715333115,132734576410,133455406102      INGE5670
+       OCT     135165623110,136237201220,137073257150,140076620534      INGE5680
+       OCT     141020474747,141250211444,142521341761,142612637206      INGE5690
+       OCT     143071530372,143561501761,143555237214,143620246670      INGE5700
+       OCT     143446162262,144304261312,144403212356,144443127667      INGE5710
+       OCT     144147760274,144720725305,144426357157,113514455242      INGE5720
+       OCT     114676147212,116453153032,117621104541,121414622410      INGE5730
+       OCT     122550037432,123742077421,125502505042,126657463247      INGE5740
+       OCT     130440421033,131601441651,133401354463,134527476262      INGE5750
+       OCT     135712231515,137461314261,140626543303,142416435622      INGE5760
+       OCT     143547511477,144735442714,146474560422,147643442307      INGE5770
+       OCT     151425412473,152556440026,153743253356,155476017334      INGE5780
+       OCT     156641456465,160421353266,161545055533,162720530233      INGE5790
+       OCT     164455052055,165604155315,166761354025,170474163554      INGE5800
+       OCT     171615723552,172755546032,173602063604,174454052556      INGE5810
+       OCT     174716631437,175541155174,175662164025,176411634263      INGE5820
+       OCT     176503622512,176607762062,176656036320,176726630021      INGE5830
+       OCT     177401023541,177427654077,177457461215,177510005021      INGE5840
+       OCT     177540470343,177570552615                                INGE5850
+(M)    SYN     *                                                        INGE5860
+       OCT     237536050000,633354700000,227102000000,623226000000      INGE5870
+       OCT     217540000000,613400000000,207000000000,603000000000      INGE5880
+       OCT     200000000000,574000000000,171000000000,566000000000      INGE5890
+       OCT     163000000000,560000000000,156000000000,553000000000      INGE5900
+       OCT     151000000000,550000000000,272673426045,666566025420      INGE5910
+       OCT     262515005252,656471766314,252472473123,646520271743      INGE5920
+       OCT     242601336450,636733660640,233476304400,627721074000      INGE5930
+       OCT     224566040000,621516540000,216521400000,613606000000      INGE5940
+       OCT     211410000000,606660000000,204700000000,603500000000      INGE5950
+(B)    SYN     *                                                        INGE5960
+       REM                                                              INGE5970
+       REM                                                              INGE5980
+       REM                                                              INGE5990
+       REM     THIS IS A MODIFIED VERSION OF THE DOUBLE PRECISION       INGE6000
+       REM     SQRT ROUTINE FROM THE FMS LIBRARY.                       INGE6010
+       REM     COMMUNICATES VIA THE DOUBLE LENGTH AC.                   INGE6020
+DSQRT  SYN     *                                                        INGE6030
+       HEAD    S                                                        INGE6040
+       STO     4)                                                       INGE6050
+       STQ     4)-1                                                     INGE6060
+       ANA     =O1777777777                                             INGE6070
+       ARS     3                                                        INGE6080
+       CAS     =O77777777                                               INGE6090
+       TRA     ODD                                                      INGE6100
+       TRA     L                                                        INGE6110
+       ADD     4)                                                       INGE6120
+       ACL     =.875                                                    INGE6130
+       TPL     IT                                                       INGE6140
+L      CLA     4)                                                       INGE6150
+       ACL     =O201000000000                                           INGE6160
+       TRA     F                                                        INGE6170
+ODD    SUB     4)                                                       INGE6180
+       ACL     =1.375                                                   INGE6190
+       TPL     L                                                        INGE6200
+IT     ARS     1                                                        INGE6210
+       SLW     4)-2                                                     INGE6220
+       CLA     4)                                                       INGE6230
+       FDP     4)-2                                                     INGE6240
+       XCA                                                              INGE6250
+       ACL     4)-2                                                     INGE6260
+       ARS     1                                                        INGE6270
+       STO     4)-2                                                     INGE6280
+       CLA     4)            SQR...1/2(B1+(A1+A2)/B1)                   INGE6290
+       FDP     4)-2                                                     INGE6300
+       XCA                                                              INGE6310
+       ACL     4)-2          B1                                         INGE6320
+F      LRS     1                                                        INGE6330
+       STO     4)-2                                                     INGE6340
+       CLA     4)            A1                                         INGE6350
+       FDP     4)-2          A1/B1 F                                    INGE6360
+       STQ     4)-3                                                     INGE6370
+       FAD     4)-1          A2+A1S                                     INGE6380
+       FDP     4)-2          A1/B1S+A2/B1 F                             INGE6390
+       CLA     4)-2                                                     INGE6400
+       STQ     4)-2          A1/B1S + A2/B1S                            INGE6410
+       FAD     4)-3          A1/B1F + B1                                INGE6420
+       SUB     =O001000000000 DIVIDE BY TWO                             INGE6430
+       STO     4)-3                                                     INGE6440
+       XCA                                                              INGE6450
+       FAD     4)-2          B1S+A1/B1S+A2/B1F                          INGE6460
+       TZE     *+2                                                      INGE6470
+       SUB     =O001000000000                                           INGE6480
+       FAD     4)-3                                                     INGE6490
+       TRA     1,4                                                      INGE6500
+       BSS     3                                                        INGE6510
+4)                                                                      INGE6520
+       HEAD    0                                                        INGE6530
+       REM                                                              INGE6540
+       REM                                                              INGE6550
+       REM                                                              INGE6560
+       REM     THIS IS A MODIFIED VERSION OF THE DOUBLE PRECISION       INGE6570
+       REM     EXP ROUTINE FROM THE FMS LIBRARY.                        INGE6580
+       REM     COMMUNICATES VIA THE DOUBLE LENGTH AC.                   INGE6590
+DEXP   SYN     *                                                        INGE6600
+       HEAD    E                                                        INGE6610
+       SXA     FINI-1,4                                                 INGE6620
+       STO     4)                                                       INGE6630
+       STQ     4)-1                                                     INGE6640
+BEGIN  LXA     A,4                                                      INGE6650
+       LDQ     4)-1                                                     INGE6660
+       RQL 8                                                            INGE6670
+       LRS 27                200+S, OCTAL                               INGE6680
+       SSM                                                              INGE6690
+       ADD CHAR                   34-S                                  INGE6700
+       STA SHM                                                          INGE6710
+       SUB THRF              -S                                         INGE6720
+       TPL *+2                                                          INGE6730
+       TXI *+1,4,2                                                      INGE6740
+       STA SHF+2,4                                                      INGE6750
+       STQ H                      FRACTION BO, HP                       INGE6760
+       MPY LOGE              LOGE B1,HP,POS                             INGE6770
+       STO H1                                                           INGE6780
+       STQ L1                                                           INGE6790
+       LDQ     4)-1                                                     INGE6800
+       VLM LOGE,0,19                                                    INGE6810
+       STO AH                                                           INGE6820
+       LDQ LOGE+1                                                       INGE6830
+       VLM H,0,20                                                       INGE6840
+       ADD AH                                                           INGE6850
+       ADD L1                L1+L2+L3, OVFL. POSS.                      INGE6860
+       LRS 35                                                           INGE6870
+       ADD H1                LOG2E X ARGUMENT READY FOR SCALING         INGE6880
+       STO     H1                                                       INGE6890
+       TXL PSHFT,4,0                                                    INGE6900
+SHF    LLS 0                 S, TO GET B1                               INGE6910
+THRTN  TXL *+2,0,13                                                     INGE6920
+PSHFT  LRS 0                 S, TO GET B1                               INGE6930
+       ANA MSK                                                          INGE6940
+       LLS 1                 B0                                         INGE6950
+       STO     4)                                                       INGE6960
+       STQ     4)-1                                                     INGE6970
+       LRS 15                                                           INGE6980
+       STO VLMF                                                         INGE6990
+       STQ VLMF+1                                                       INGE7000
+       CLA     H1                                                       INGE7010
+SHM    LRS     **                                                       INGE7020
+       ALS     27                                                       INGE7030
+       STO     M                                                        INGE7040
+       LXD THRTN,4           READY FOR LOOP                             INGE7050
+       CLA A+13,4                                                       INGE7060
+       LDQ B+13,4                                                       INGE7070
+LOOP   STO AH                                                           INGE7080
+       STQ AL                                                           INGE7090
+       LDQ     4)                                                       INGE7100
+       MPY AH                                                           INGE7110
+       STO H                                                            INGE7120
+       STQ L1                                                           INGE7130
+       LDQ VLMF                                                         INGE7140
+       VLM AL,0,20                                                      INGE7150
+       STO H1                ...L2                                      INGE7160
+       LDQ VLMF+1                                                       INGE7170
+       VLM AH,0,20                                                      INGE7180
+       ADD H1                L2+L3                                      INGE7190
+       ADD L1                     OVFL POSS                             INGE7200
+       LRS 35                                                           INGE7210
+       ADD H                      AXF                                   INGE7220
+       STO AH                                                           INGE7230
+       XCA                                                              INGE7240
+       ADD B+14,4                                                       INGE7250
+       LRS 35                                                           INGE7260
+       ADD AH                                                           INGE7270
+       ADM A+14,4                                                       INGE7280
+       TIX LOOP,4,1                                                     INGE7290
+EL     LLS 1                                                            INGE7300
+       TMI FINI+1            NOT COMPATIBLE                             INGE7310
+       PBT                                                              INGE7320
+       TXI *+1,4,1                                                      INGE7330
+       LRS 10,4                                                         INGE7340
+       ACL CH+2,4                                                       INGE7350
+       ADD M                 PROPER CHAR. FOR LP                        INGE7360
+       STO AH                                                           INGE7370
+       ARS 27                CLOSE UP TO LP                             INGE7380
+       LRS 8                 LP READY                                   INGE7390
+       TPL EM                                                           INGE7400
+       LDQ A+1               CLEAR MQ IF LP UNDERFLOW                   INGE7410
+EM     CLA TW7                                                          INGE7420
+       ADD AH                                                           INGE7430
+       AXT     **,4                                                     INGE7440
+FINI   TRA     1,4                                                      INGE7450
+       CAS CHM                                                          INGE7460
+       TRA *+2               2 TO F LARGER THAN 1/2                     INGE7470
+       LDQ A                 LESS THAN 1/2, SET TO 1/2                  INGE7480
+       LRS 1                                                            INGE7490
+       SLW AH                +                                          INGE7500
+       STQ AL                                                           INGE7510
+       CLS AL                +                                          INGE7520
+       TNZ *+3                                                          INGE7530
+       LRS 0                                                            INGE7540
+       TRA     *+5                                                      INGE7550
+       COM                                                              INGE7560
+       ADD ONE                                                          INGE7570
+       XCA                                                              INGE7580
+       CLS ONE                                                          INGE7590
+       ADD AH                                                           INGE7600
+       TRA EL                                                           INGE7610
+       REM                   CONSTANTS, B1 IN ACC                       INGE7620
+B      OCT 006045466274      A13 131604546627 076373672054              INGE7630
+       OCT 161767176366      A12 135707734771 102726002460              INGE7640
+       OCT 243056254345      A11 141750613453 106071130534              INGE7650
+       OCT 062305671636      A10 145744623056 112716354342              INGE7660
+       OCT 225010221042      A9  151665112404 116110420624              INGE7670
+       OCT 011425214560      A8  155542600230 122524313370              INGE7680
+       OCT 370525543336      A7  160777627761 125253306674              INGE7690
+       OCT 136552471460      A6  164503022113 131655247146              INGE7700
+       OCT 170517410400      A5  167535417771 134705174104              INGE7710
+       OCT 335153674000      A4  172473125333 137735153674              INGE7720
+       OCT 011202514000      A3  174706541065 141602240523              INGE7730
+       OCT 026126640000      A2  176753767577 143701305332              INGE7740
+       OCT 107173600000      A1  200542710277 145575071736              INGE7750
+A      OCT 0                 A13 .1380942553937516X10-11                INGE7760
+       OCT 0                 A12 .2591671190111412X10-10                INGE7770
+       OCT 000000000007      A11 .4445361131688115X10-9                 INGE7780
+       OCT 000000000171      A10 .7054583523083176X10-8                 INGE7790
+       OCT 000000003324      A9  .1017808736329201X10-6                 INGE7800
+       OCT 000000054260      A8  .1321548902877208X10-5                 INGE7810
+       OCT 000000777627      A7  .1525273379851831X10-4                 INGE7820
+       OCT 000012060442      A6  .1540353038554321X10-3                 INGE7830
+       OCT 000127303776      A5  .1333355814644007X10-2                 INGE7840
+       OCT 001166252667      A4  .9618129107641535X10-2                 INGE7850
+       OCT 007065410656      A3  .5550410866482143X10-1                 INGE7860
+       OCT 036577367774      A2  .2402265069590998                      INGE7870
+       OCT 130562057737      A1  .6931471805599453                      INGE7880
+CHM    OCT 600000000000                                                 INGE7890
+CH     OCT 145000000000                                                 INGE7900
+       OCT 146000000000                                                 INGE7910
+MSK    OCT 177777777777                                                 INGE7920
+LOGE   OCT 270524354512                                                 INGE7930
+       OCT 000003405771      LOGE, LP                                   INGE7940
+ONE    HTR 1                                                            INGE7950
+MAX    DEC 88.028                                                       INGE7960
+TW7    OCT 033000000000                                                 INGE7970
+THRF   HTR 34                                                           INGE7980
+CHAR   OCT 242                                                          INGE7990
+       BSS     1                                                        INGE8000
+VLMF   PZE                                                              INGE8010
+       BSS     1                                                        INGE8020
+4)     PZE                                                              INGE8030
+AH                                                                      INGE8040
+AL                                                                      INGE8050
+H                                                                       INGE8060
+M                                                                       INGE8070
+H1                                                                      INGE8080
+L1                                                                      INGE8090
+       HEAD    0                                                        INGE8100
+       REM                                                              INGE8110
+       REM                                                              INGE8120
+       REM                                                              INGE8130
+       END                                                              INGE8140

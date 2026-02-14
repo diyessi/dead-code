@@ -1,0 +1,1593 @@
+*00701      FEDAKO                                                      SOR00000
+*        PACK                                                           SOR00010
+*      LABEL                                                            SOR00020
+*      FAP                                                              SOR00030
+*GRSRT            SORT ROUTINE                                          SOR00040
+*                 GENERALIZED  SORT ROUTINE    JOHN E. FEDAKO   GR-DC   SOR00050
+*                 CALLING SEQUENCE                                      SOR00060
+*                 TSX  $SORT,4                                          SOR00070
+*                 TSX  IN           INPUT TAPE                          SOR00080
+*                 TSX  OUT          OUTPUT TAPE                         SOR00090
+*                 TSX  TYPE         TYPE OF OUTPUT DESIRED  = 0.OR 1.   SOR00100
+*                 TSX  SS          SORT SEQUENCE DESRIED                SOR00110
+*                 TSX  LS           LENGHT OD SORT KEY                  SOR00120
+*                 TSX  UT 1         UTILITY                             SOR00130
+*                 TSX  UT           TAPES                               SOR00140
+*                 TSX  UT N         FOR MERGING                         SOR00150
+       ENTRY   SORT                                                     SOR00160
+BUFSIZ EQU     256                                                      SOR00170
+SORT   SXA     RST+1,2        ALL                                       SOR00180
+       SXA     RST+2,1        REGISTERS                                 SOR00190
+       CLA*    5,4                                                      SOR00200
+       ARS     18                                                       SOR00210
+       STO     NAA                                                      SOR00220
+       STO     NA                                                       SOR00230
+       TZE     ERR4                                                     SOR00240
+       CAL*    4,4                                                      SOR00250
+       STP     SRT1                                                     SOR00260
+       STP     SRT2                                                     SOR00270
+       STP     SRT50+1                                                  SOR00280
+       STP     SRT50+2                                                  SOR00290
+       STP     MRG                                                      SOR00300
+       STP     MRG2                                                     SOR00310
+       STP     CHK1                                                     SOR00320
+       STP     CHK1-1                                                   SOR00330
+       STP     SV3                                                      SOR00340
+       STP     SV3+1                                                    SOR00350
+       CLA*    4,4                                                      SOR00351
+       TMI     *+3                                                      SOR00351
+       CAL     EQUAL+1                                                  SOR00352
+       TRA     *+2                                                      SOR00353
+       CAL     DONE+1                                                   SOR00354
+       STP     ALL75                                                    SOR00355
+       CLA*    1,4            GET  INPUT TAPE                           SOR00360
+       STO     TAPEI                                                    SOR00370
+       CLA*    2,4                                                      SOR00380
+       ARS     18                                                       SOR00390
+       ADD     $(IOU)                                                   SOR00400
+       STA     *+1                                                      SOR00410
+       CAL     **                                                       SOR00420
+       STO     LTAPE                                                    SOR00430
+       CAL*    3,4                                                      SOR00440
+       STO     TYPE                                                     SOR00450
+       STZ     FRST                                                     SOR00460
+       STZ     ROT                                                      SOR00461
+       STZ     FT                                                       SOR00462
+       STZ     ROT1                                                     SOR00463
+       STZ     NBLDS                                                    SOR00470
+       STZ     BCHA           RESET   NO. OF                            SOR00480
+       STZ     ACHA           CHANNEL  TAPE                             SOR00490
+       STZ     END                                                      SOR00500
+       STZ     COUNT                                                    SOR00510
+       STZ     NEWB                                                     SOR00520
+       STZ     NBLDS                                                    SOR00530
+       STZ     SS1                                                      SOR00540
+       STZ     ADD                                                      SOR00541
+       STZ     LAST                                                     SOR00550
+       STZ     NSS                                                      SOR00560
+       STZ     INT                                                      SOR00561
+       STZ     SS                                                       SOR00562
+       CLA     ND-15                                                    SOR00570
+       STO     FNAL-4                                                   SOR00580
+       AXT     0,1                                                      SOR00590
+       CAL     6,4                                                      SOR00600
+       ANA     MASK           FOR  UTILITY                              SOR00610
+       SBM     TSX4           TAPES                                     SOR00620
+       TNZ     DONE-1                                                   SOR00630
+       CAL*    6,4                                                      SOR00640
+       TXI     *+1,1,1                                                  SOR00650
+       STO     UT,1                                                     SOR00660
+       TXI     *-7,4,-1                                                 SOR00670
+       SXA     RST,4                                                    SOR00680
+DONE   AXT     1,6                                                      SOR00690
+       TXL     ERR1,1,2      ERROR IF NOT AT LEAST THREE                SOR00700
+       SXA     TTAPE,1                                                  SOR00710
+       CAL     UT,1           FIND CHANNEL OF UNITS                     SOR00720
+       ARS     18                                                       SOR00730
+       ADD     $(IOU)                                                   SOR00740
+       STA     *+1                                                      SOR00750
+       LDI     **                                                       SOR00760
+       RNT     1000           A CHANNEL                                 SOR00770
+       TRA     *+6                                                      SOR00780
+       CLA     ACHA           A CHANNEL                                 SOR00790
+       ADD     =1                                                       SOR00800
+       STO     ACHA                                                     SOR00810
+ZZ9    STI     UTA,2                                                    SOR00820
+       TXI     *+6,2,1                                                  SOR00830
+       CLA     BCHA                                                     SOR00840
+       ADD     =1                                                       SOR00850
+       STO     BCHA                                                     SOR00860
+ZZ5    STI     UTB,4                                                    SOR00870
+       TXI     *+1,4,1                                                  SOR00880
+       TIX     DONE+3,1,1                                               SOR00890
+       STZ     NOTA                                                     SOR00900
+       CLA     ACHA                                                     SOR00910
+       CAS     =2                                                       SOR00920
+       TRA     *+3            AT                                        SOR00930
+       TRA     *+2            LEAST  2  HERE                            SOR00940
+       STL     NOTA                                                     SOR00950
+       CLA     BCHA                                                     SOR00960
+       CAS     =2                                                       SOR00970
+       TRA     *+4                                                      SOR00980
+       TRA     *+3                                                      SOR00990
+       ZET     NOTA                                                     SOR01000
+       TRA     ERR1                                                     SOR01010
+       CLA     ACHA                                                     SOR01020
+       CAS     =2                                                       SOR01030
+       NOP                   THAN 5                                     SOR01040
+       CLA     =2                                                       SOR01050
+ ZZ6   STA     TUTA                                                     SOR01060
+ ZZ7   STA     TTUTA                                                    SOR01070
+       CLA     BCHA                                                     SOR01080
+       CAS     =2                                                       SOR01090
+       NOP                   THAN  5                                    SOR01100
+       CLA     =2                                                       SOR01110
+ ZZ    STA     TUTB                                                     SOR01120
+ ZZ8   STA     TTUTB                                                    SOR01130
+       CAL     TAPEI          ENOUGH TAPES                              SOR01140
+       ARS     18             FIND  INPUT UNITS                         SOR01150
+       ADD     $(IOU)                                                   SOR01160
+       STA     *+1                                                      SOR01170
+       LDI     **                                                       SOR01180
+       RNT     1000                                                     SOR01190
+       TRA     *+3            B                                         SOR01200
+       STL     FRSTCH         A                                         SOR01210
+       TRA     *+2                                                      SOR01220
+       STZ     FRSTCH         0 =  B CHANNEL                            SOR01230
+       CLA*    $NTOT                                                    SOR01240
+       STA     *+1                                                      SOR01250
+       AXT     **,1                                                     SOR01260
+       CLA*    $CC2           BUFFER SIZE                               SOR01270
+       STA     FSZE                                                     SOR01280
+       CLA*    $NTOT11                                                  SOR01290
+       STA     FNAME          NAME OF FILE                              SOR01300
+       CLA*    $RRSZ          RECORD  SIZE                              SOR01310
+       STA     RSZ                                                      SOR01320
+       CLA*    $NTOT1                                                   SOR01330
+       STA     FTPE           TAPE NUMBERS                              SOR01340
+       CLA     TAPEI                                                    SOR01350
+ FTPE  CAS     **,1                                                     SOR01360
+       TRA     *+2                                                      SOR01370
+       TRA     *+3                                                      SOR01380
+       TIX     *-3,1,1                                                  SOR01390
+       TRA     ERR3           NO  TAPE FILE                             SOR01400
+ FNAME CLA     **,1           GET  RELEVENT  DATA                       SOR01410
+       STO     FLENME                                                   SOR01420
+ FSZE  CLA     **,1           FOR THIS FILE                             SOR01430
+       STO     SIZE           BUFFER,,RECORD                            SOR01440
+RSZ    CLA     **,1                                                     SOR01450
+       ARS     18                                                       SOR01460
+       STO     RECSZ          RECORD SIZE                               SOR01470
+       LXA     ACHA,1                                                   SOR01480
+       CLA     UTA,1                                                    SOR01490
+       STA     *+2                                                      SOR01500
+       TSX     RWIND,4                                                  SOR01510
+       PZE                                                              SOR01520
+       TIX     *-4,1,1        UTILITY                                   SOR01530
+       LXA     BCHA,2                                                   SOR01540
+       CLA     UTB,2                                                    SOR01550
+       STA     *+2                                                      SOR01560
+       TSX     RWIND,4                                                  SOR01570
+       PZE                                                              SOR01580
+       TIX     *-4,2,1                                                  SOR01590
+       CLA     TAPEI                                                    SOR01600
+       ARS     18                                                       SOR01610
+       ADD     $(IOU)                                                   SOR01620
+       STA     *+1                                                      SOR01630
+       CLA     **                                                       SOR01640
+       STO     TPEIN                                                    SOR01650
+*              CARD    SOR01660   DELETED                               SOR01651
+       TSX     $EMPTY,4       DUMP BUFFER                               SOR01670
+       TSX     ALL75                                                    SOR01671
+       TSX     TAPEI                                                    SOR01672
+*              CARDS     SOR01680  TO  SOR01700    DELETED              SOR01673
+       CLA     =O144                                                    SOR01710
+       STA     IODMP                                                    SOR01720
+       AXT     DONE,4                                                   SOR01730
+       PXA     ,4                                                       SOR01740
+       SUB     =O144                                                    SOR01750
+       ALS     18                                                       SOR01760
+       STD     IODMP                                                    SOR01770
+       CLA     ENSRT                                                    SOR01780
+       STA     IODMP+1                                                  SOR01790
+       CLA     =O77777                                                  SOR01800
+       SUB     ENSRT                                                    SOR01810
+       ALS     18                                                       SOR01820
+       STD     IODMP+1                                                  SOR01830
+       AXT     50,1                                                     SOR01840
+NTRY   WTBB    4                                                        SOR01850
+       RCHB    IODMP                                                    SOR01860
+       TCOB    *                                                        SOR01870
+       TRCB    DMPERR                                                   SOR01880
+       BSRB    4                                                        SOR01890
+BUF    PXD     ,0                                                       SOR01900
+       LDQ     SIZE                                                     SOR01910
+       DVH     RECSZ                                                    SOR01920
+       STQ     NREC           NREC/ BUFFER                              SOR01930
+       CLA     RECSZ                                                    SOR01940
+       ADD     NREC                                                     SOR01941
+       ADD     SIZE                                                     SOR01950
+       STO     NSZE           ACTUAL BUFFER   = B+B/N                   SOR01960
+       CLA     NREC                                                     SOR01961
+       LBT                                                              SOR01962
+       TRA     *+3                                                      SOR01963
+       STZ     ODD                                                      SOR01964
+       TRA     *+2                                                      SOR01965
+       STL     ODD                                                      SOR01966
+       LDQ     NREC                                                     SOR01970
+       MPY     RECSZ                                                    SOR01980
+       XCA                                                              SOR01990
+       ALS     18                                                       SOR02000
+       STD     IOI                                                      SOR02010
+       STD     IOO                                                      SOR02020
+       LDC     IOO,4                                                    SOR02021
+       SXD     (STB)-3,4                                                SOR02022
+       AXT     DONE,4                                                   SOR02030
+       PXA     ,4                                                       SOR02040
+       SUB     =100                                                     SOR02050
+       ANA     MASK1                                                    SOR02060
+       XCA                                                              SOR02070
+       PXD     ,0                                                       SOR02080
+       DVH     NSZE                                                     SOR02090
+       STQ     NBFERL         NO. OF BUFFERS   IN  LOWER CORE           SOR02100
+       CLA     =O77777                                                  SOR02110
+       SUB     ENSRT                                                    SOR02120
+       ANA     MASK1                                                    SOR02130
+       XCA                                                              SOR02140
+       PXD     ,0                                                       SOR02150
+       DVH     NSZE                                                     SOR02160
+       STQ     NBFERH                                                   SOR02170
+       CLA     NBFERL         HOW                                       SOR02180
+       ADD     NBFERH         MANY                                      SOR02190
+       STO     TBFER          ARE                                       SOR02200
+       CAS     =4                                                       SOR02210
+       TRA     *+3                                                      SOR02220
+       TRA     *+2                                                      SOR02230
+       TRA     ERR7                                                     SOR02240
+*      CARDS   SOR02250  TO  SOR02280  HAVE BEEN DELETED                SOR02241
+       AXT     4,4                                                      SOR02290
+       AXT     1,2                                                      SOR02300
+       CLA     NBFERL                                                   SOR02310
+       TZE     NNC                                                      SOR02320
+       PAX     0,1                                                      SOR02321
+       AXT     2,2                                                      SOR02330
+       CLA     =100           MAKE                                      SOR02340
+       STO     BTABLE-1                                                 SOR02350
+       TIX     *+2,4,1                                                  SOR02351
+       TRA     NNB                                                      SOR02352
+       TXI     *+1,1,-1                                                 SOR02360
+       TXL     NNC,1,0                                                  SOR02370
+*              CARDS  SOR02380  TO  SOR02390    DELETED                 SOR02371
+       ADD     NSZE                                                     SOR02400
+       STO     BTABLE,2                                                 SOR02410
+       TXI     *+1,2,1                                                  SOR02420
+       TIX     *+2,4,1                                                  SOR02430
+       TRA     NNB                                                      SOR02440
+       TIX     *-5,1,1                                                  SOR02450
+NNC    CLA     ENSRT                                                    SOR02460
+       STO     BTABLE,2                                                 SOR02470
+       TIX     *+2,4,1                                                  SOR02471
+       TRA     NNB                                                      SOR02472
+       LXA     NBFERH,1                                                 SOR02480
+*      CARD    DOR02491   DELETED                                       SOR02481
+       TXI     *+1,2,1                                                  SOR02500
+       ADD     NSZE                                                     SOR02510
+       STO     BTABLE,2                                                 SOR02520
+       TIX     *+2,4,1                                                  SOR02530
+       TRA     *+2                                                      SOR02540
+       TIX     *-5,1,1                                                  SOR02550
+*       CARDS   SOR02560   TO   SOR02620    DELETED                     SOR02551
+NNB    LAC     NAA,1                                                    SOR02630
+       SXD     EQUAL+1,1                                                SOR02640
+       SXD     EQMRG+1,1                                                SOR02650
+       LAC     RECSZ,1                                                  SOR02651
+       SXD     R2,1                                                     SOR02652
+       SXD     R1,1                                                     SOR02653
+       SXD     R3,1                                                     SOR02654
+       SXD     RR4,1                                                    SOR02655
+       NZT     FRSTCH                                                   SOR02660
+       TRA     A1                                                       SOR02670
+       CLA     ZZ                                                       SOR02680
+       STA     ZZ1                                                      SOR02690
+       STA     ZZ3                                                      SOR02700
+       CLA     ZZ8                                                      SOR02710
+       STA     ZZ2                                                      SOR02720
+       STA     ZA2                                                      SOR02730
+       CLA     ZZ5                                                      SOR02740
+       STA     ZZ4                                                      SOR02750
+       STA     ZA1                                                      SOR02760
+       TRA     NEXT                                                     SOR02770
+ A1    CLA     ZZ6                                                      SOR02780
+       STA     ZZ1                                                      SOR02790
+       STA     ZZ3                                                      SOR02800
+       CLA     ZZ7                                                      SOR02810
+       STA     ZZ2                                                      SOR02820
+       STA     ZA2                                                      SOR02830
+       CLA     ZZ9                                                      SOR02840
+       STA     ZZ4                                                      SOR02850
+       STA     ZA1                                                      SOR02860
+NEXT   CLA     BTABLE-1                                                 SOR02870
+       STZ     RT                                                       SOR02880
+       STZ     ADD                                                      SOR02881
+       STA     IOI                                                      SOR02890
+       CLA     IOI                                                      SOR02900
+       STO     *+3                                                      SOR02910
+       TSX     INPUT,4                                                  SOR02920
+       PZE     TPEIN                                                    SOR02930
+       PZE                                                              SOR02940
+       PZE     **,,**        END OF FILE SIGNAL ON LAST OR CURRENT READ.SOR02950
+       ZET     *-1                                                      SOR02960
+       TRA     SETEND                                                   SOR02970
+       AXT     0,1                                                      SOR02980
+       LXA     NREC,6                                                   SOR02990
+       PXA     ,2                                                       SOR03000
+       ARS     1                                                        SOR03010
+       PAX     ,2                                                       SOR03020
+       SXA     NREC1,2                                                  SOR03030
+       SXA     NREC2,2                                                  SOR03040
+       TIX     *+1,4,1                                                  SOR03050
+       ZET     NEWB                                                     SOR03060
+       TRA     ANEW                                                     SOR03070
+       CLA     BTABLE-1                                                 SOR03080
+CNEW   ADD     SIZE                                                     SOR03090
+       STA     NUMBER                                                   SOR03100
+       STA     *+5                                                      SOR03110
+       ZET     NEWB                                                     SOR03120
+       TRA     BNEW                                                     SOR03130
+       CLA     BTABLE-1                                                 SOR03140
+DNEW   ORA     =O400000                                                 SOR03150
+       STO     **                                                       SOR03160
+       TXI     *+1,1,-1                                                 SOR03170
+       ZET     NEWB                                                     SOR03180
+       TRA     GNEW                                                     SOR03190
+       CLA     BTABLE-1                                                 SOR03200
+HNEW   ADD     RECSZ                                                    SOR03210
+       ORA     =O400000                                                 SOR03220
+NUMBER STO     **,1                                                     SOR03230
+       TXI     *+1,1,-1         SORT                                    SOR03240
+AA1    TIX     *-4,4,1                                                  SOR03250
+       ZET     NEWB                                                     SOR03260
+       TRA     ENEW                                                     SOR03270
+       CLA     BTABLE-1                                                 SOR03280
+FNEW   ADD     SIZE                                                     SOR03290
+       PAC     ,2                                                       SOR03300
+       STA     2SV                                                      SOR03310
+       ADD     =1                                                       SOR03320
+       PAC     ,1                                                       SOR03330
+       STA     1SV                                                      SOR03340
+       AXT     0,4                                                      SOR03350
+SRT1   CAL*    **,2                                                     SOR03360
+SRT2   LAS*    **,1                                                     SOR03370
+       TRA     CHANGE                                                   SOR03380
+       TRA     EQUAL                                                    SOR03390
+       STZ     INT                                                      SOR03400
+       TXI     *+1,1,-2                                                 SOR03410
+       TXI     *+1,2,-2                                                 SOR03420
+       AXT     0,4                                                      SOR03430
+       CLA     NREC1                                                    SOR03440
+       SUB     =1                                                       SOR03450
+       STO     NREC1                                                    SOR03460
+       TNZ     SRT1                                                     SOR03470
+       CLA     NREC2                                                    SOR03480
+       STO     NREC1                                                    SOR03490
+       ZET     INT                                                      SOR03500
+       TRA     CHANG2                                                   SOR03510
+CHNG   CLA     COUNT                                                    SOR03520
+       ADD     =1                                                       SOR03530
+       STO     COUNT                                                    SOR03540
+       SUB     =2                                                       SOR03550
+       TZE     DONE2                                                    SOR03560
+       TRA     CHANG2                                                   SOR03570
+INT1   LAC     1SV,2                                                    SOR03580
+       AXT     0,4                                                      SOR03590
+       LAC     2SV,1                                                    SOR03600
+       TXI     *+1,1,-2                                                 SOR03610
+       CLA     NREC1                                                    SOR03620
+       ZET     ODD                                                      SOR03621
+       SUB     =1                                                       SOR03630
+       STO     NREC1                                                    SOR03640
+       TRA     SRT1                                                     SOR03650
+       LAC     1SV,1                                                    SOR03660
+       LAC     2SV,2                                                    SOR03670
+       TRA     SRT1-1                                                   SOR03680
+CHANGE CLA     **,1                                                     SOR03690
+       LDQ     **,2                                                     SOR03700
+       STQ     **,1                                                     SOR03710
+       STO     **,2                                                     SOR03720
+       STZ     COUNT                                                    SOR03730
+       STL     INT                                                      SOR03740
+       TRA     SRT1+5                                                   SOR03750
+EQUAL  TXI     *+1,4,-1                                                 SOR03760
+       TXH     SRT1,4,**                                                SOR03770
+       TRA     SRT2+3                                                   SOR03780
+CHANG2 ZET     ADD                                                      SOR03790
+       TRA     *+3                                                      SOR03800
+       STL     ADD                                                      SOR03810
+       TRA     INT1                                                     SOR03820
+       STZ     ADD                                                      SOR03830
+       TRA     INT1+9                                                   SOR03840
+NXTB   CLA     BTABLE-2                                                 SOR03850
+       STL     NEWB                                                     SOR03860
+       TRA     NEXT+1                                                   SOR03870
+DONE2  CLA     NBLDS                                                    SOR03880
+       ADD     =1                                                       SOR03890
+       STO     NBLDS                                                    SOR03900
+       SUB     =2                                                       SOR03910
+       STZ     COUNT                                                    SOR03911
+       TMI     NXTB                                                     SOR03920
+       STZ     NBLDS                                                    SOR03930
+*                             MERGE SECTION. AT LEAST TWO   BLOCKS AVAILSOR03940
+*                        BEGIN MERGEING TWO BLOCK TOGETHER              SOR03950
+OOK    CLA     BTABLE-1                                                 SOR03960
+       ADD     SIZE                                                     SOR03970
+       STZ     2SVM                                                     SOR03980
+       PAC     ,1                                                       SOR03990
+       CLA     BTABLE-2                                                 SOR04000
+       ADD     SIZE                                                     SOR04010
+       PAC     ,2                                                       SOR04020
+       LXA     NREC,4                                                   SOR04030
+       SXA     N1,4                                                     SOR04040
+       SXA     N2,4                                                     SOR04050
+       SXA     NT1,4                                                    SOR04060
+       SXA     NT,4                                                     SOR04070
+       CLA     BTABLE-3                                                 SOR04080
+       STA     TWMRG+5                                                  SOR04090
+       STA     SRT50+9                                                  SOR04100
+       STA     IOO                                                      SOR04110
+*        CARDS   SOR04120  TO SOR04130    HAVE BEEN DELETED             SOR04111
+       STA     NEXT1+3                                                  SOR04140
+       STA     NEXT2+3                                                  SOR04150
+       NZT     END                                                      SOR04160
+       TRA     *+4                                                      SOR04170
+       NZT     NBLDS                                                    SOR04180
+       TRA     ORET+1                                                   SOR04190
+       TRA     NEXT1                                                    SOR04200
+SRT50  AXT     0,4                                                      SOR04210
+       CAL*    **,1                                                     SOR04220
+       LAS*    **,2                                                     SOR04230
+       TRA     TWMRG      2  SMALLER                                    SOR04240
+       TRA     EQMRG      EQUAL  LOOK FURTHER                           SOR04250
+       AXT     0,4                                                      SOR04260
+       SXA     *+14,2                                                   SOR04270
+       LXA     2SVM,2                                                   SOR04280
+       CAL*    **,1                                                     SOR04290
+       SLW     **,2                                                     SOR04291
+       TXI     *+1,2,-1                                                 SOR04300
+       TXI     *+1,4,-1                                                 SOR04301
+R1     TXH     *-4,4,**                                                 SOR04302
+N1     AXT     **,4                                                     SOR04310
+       TIX     *+3,4,1                                                  SOR04320
+       TSX     OUT2,4                                                   SOR04330
+       LXA     NREC,4                                                   SOR04340
+       SXA     N1,4                                                     SOR04350
+       SXA     N2,4                                                     SOR04360
+       SXA     2SVM,2                                                   SOR04370
+       AXT     **,2                                                     SOR04380
+       TXI     *+1,1,-1                                                 SOR04390
+       CLA     NT                                                       SOR04400
+       SUB     =1                                                       SOR04410
+       STO     NT                                                       SOR04420
+       TZE     NEXT2                                                    SOR04430
+       TRA     SRT50                                                    SOR04440
+TWMRG  AXT     0,4                                                      SOR04450
+       SXA     *+15,1                                                   SOR04451
+       SXA     *+15,2                                                   SOR04460
+       LXA     2SVM,1                                                   SOR04470
+       CAL*    **,2                                                     SOR04480
+       SLW     **,1                                                     SOR04490
+       TXI     *+1,1,-1                                                 SOR04491
+       TXI     *+1,4,-1                                                 SOR04492
+R2     TXH     *-4,4,**                                                 SOR04493
+N2     AXT     **,4                                                     SOR04500
+       SXA     2SVM,1                                                   SOR04501
+       TIX     *+3,4,1                                                  SOR04510
+       TSX     OUT2,4                                                   SOR04520
+       LXA     NREC,4                                                   SOR04530
+       SXA     N1,4                                                     SOR04540
+       SXA     N2,4                                                     SOR04550
+       AXT     **,1                                                     SOR04560
+       AXT     **,2                                                     SOR04570
+       TXI     *+1,2,-1                                                 SOR04580
+       CLA     NT1                                                      SOR04590
+       SUB     =1                                                       SOR04600
+       STO     NT1                                                      SOR04610
+       TZE     NEXT1                                                    SOR04620
+       TRA     SRT50                                                    SOR04630
+EQMRG  TXI     *+1,4,-1                                                 SOR04640
+       TXH     SRT50+1,4,**                                             SOR04650
+       TRA     TWMRG                                                    SOR04660
+NEXT2  LXA     2SVM,1                                                   SOR04670
+       AXT     0,4                                                      SOR04680
+       CAL*    **,2                                                     SOR04690
+       SLW     **,1                                                     SOR04700
+       TXI     *+1,1,-1                                                 SOR04710
+       TXI     *+1,4,-1                                                 SOR04720
+R3     TXH     *-4,4,**                                                 SOR04730
+       TXI     *+1,2,-1                                                 SOR04740
+       CLA     NT1                                                      SOR04750
+       SUB     =1                                                       SOR04760
+       STO     NT1                                                      SOR04770
+       TNZ     NEXT2+1                                                  SOR04780
+       TSX     OUT2,4                                                   SOR04790
+NEXT1  LXA     2SVM,2                                                   SOR04800
+       AXT     0,4                                                      SOR04810
+       CAL*    **,1                                                     SOR04820
+       SLW     **,2                                                     SOR04830
+       TXI     *+1,2,-1                                                 SOR04831
+       TXI     *+1,4,-1                                                 SOR04832
+RR4    TXH     *-4,4,**                                                 SOR04833
+       TXI     *+1,1,-1                                                 SOR04840
+       CLA    NT                                                        SOR04850
+       SUB     =1                                                       SOR04860
+       STO     NT                                                       SOR04870
+       TNZ     *-10                                                     SOR04880
+       TRA     NEXT1-1                                                  SOR04890
+*OUT2                        DUMP  BUFFER (MERGED) FROM FIRST PASS      SOR04900
+*                            CONTINUE UNTIL SEQUENCE BREAK              SOR04910
+ OUT2  SXA     ORET-1,4                                                 SOR04920
+       SXA     1MSV,1                                                   SOR04930
+       TRA     BK                                                       SOR04940
+*          CARDS  SOR04950    TO   SOR 05030       DELELTED             SOR04941
+ZZ1    LXA     TUTA,1                                                   SOR05040
+       ZET     SS            WASTHERE A SEQUENCE                        SOR05050
+       TRA     BRK                                                      SOR05060
+ZZ3    SXA     TUTA,1                                                   SOR05070
+ZZ4    CLA     UTB,1                                                    SOR05080
+       STA     TAPEOT                                                   SOR05090
+       CLA     IOO                                                      SOR05091
+       STO     *+3                                                      SOR05092
+       TSX     OUTPUT,4                                                 SOR05100
+       PZE     TAPEOT                                                   SOR05110
+       TCH     *                                                        SOR05120
+       NOP                                                              SOR05130
+       STZ     SS                                                       SOR05140
+       AXT     0,2                                                      SOR05150
+       SXA     2SVM,2                                                   SOR05160
+       ZET     END                                                      SOR05170
+       TRA     ORET+1                                                   SOR05180
+       ZET     RT                                                       SOR05190
+       TRA     NEXT                                                     SOR05200
+       CLA     BTABLE-4                                                 SOR05210
+       STA     IOO                                                      SOR05220
+       STA     TWMRG+5                                                  SOR05230
+       STA     SRT50+9                                                  SOR05240
+*        CARDS   SOR05250   TO   SOR  05260    HAVE BEEN DELETED        SOR05241
+       STA     NEXT1+3                                                  SOR05270
+       STA     NEXT2+3                                                  SOR05290
+       STZ     NEWB                                                     SOR05300
+       STL     RT                                                       SOR05310
+       LXA     1MSV,1                                                   SOR05320
+       AXT     **,4                                                     SOR05330
+ ORET  TRA     1,4                                                      SOR05340
+       TSX     OUTPUT,4                                                 SOR05341
+       MZE                                                              SOR05342
+       STZ     FT                                                       SOR05343
+*                            MERGE  PASS                                SOR05350
+       CLA     BTABLE-1                                                 SOR05360
+       STA     MRG2                                                     SOR05370
+       STA     MRG21                                                    SOR05380
+       STA     NDBUF2                                                   SOR05390
+       CLA     BTABLE-2                                                 SOR05400
+       STA     MRG                                                      SOR05410
+       STA     MRG01                                                    SOR05420
+       STA     NDBUF1                                                   SOR05430
+       CLA     BTABLE-3                                                 SOR05440
+       STA     MRG3                                                     SOR05450
+       STA     MRG31                                                    SOR05460
+       STA     NDBUF1+1                                                 SOR05470
+       STA     IOO                                                      SOR05480
+       STA     CPAS+11                                                  SOR05490
+       STA     MRG41                                                    SOR05500
+       LDQ     RECSZ                                                    SOR05510
+       MPY     NREC                                                     SOR05520
+       XCA                                                              SOR05530
+       SUB     RECSZ                                                    SOR05540
+       STA     BB                                                       SOR05560
+ZA2    LXA     TTUTA,2                                                  SOR05570
+ZA1    CLA     UTA,2                                                    SOR05580
+       STA     *+3                                                      SOR05590
+       STA     *+4                                                      SOR05600
+       TSX     ENDFLE,4                                                 SOR05610
+       PZE                                                              SOR05620
+       TSX     RWIND,4                                                  SOR05630
+       PZE                                                              SOR05640
+       TIX     *-7,2,1                                                  SOR05650
+       AXT     TOT,4                                                    SOR05660
+       SXA     ZA1,4                                                    SOR05670
+       AXT     TTO,4                                                    SOR05680
+       SXA     ZA2,4                                                    SOR05690
+TAR1   NZT     FRSTCH                                                   SOR05700
+       TRA     *+16                                                     SOR05710
+       CLA     BCHA          TO FROM TOTAL                              SOR05720
+       STO     FROM                                                     SOR05730
+       CLA     ACHA                                                     SOR05740
+       STO     TO                                                       SOR05750
+       STZ     FRSTCH                                                   SOR05760
+       LXA     FROM,1                                                   SOR05770
+       CLA     UTB,1                                                    SOR05780
+       STO     FRMT,1                                                   SOR05790
+       TIX     *-2,1,1                                                  SOR05800
+       LXA     TO,1                                                     SOR05810
+       SXA     TTO,1                                                    SOR05820
+       CLA     UTA,1                                                    SOR05830
+       STO     TOT,1                                                    SOR05840
+       TIX     *-2,1,1                                                  SOR05850
+       TRA     *+15                                                     SOR05860
+       CLA     ACHA                                                     SOR05870
+       STO     FROM                                                     SOR05880
+       CLA     BCHA                                                     SOR05890
+       STO     TO                                                       SOR05900
+       STL     FRSTCH                                                   SOR05910
+       LXA     FROM,1                                                   SOR05920
+       CLA     UTA,1                                                    SOR05930
+       STO     FRMT,1                                                   SOR05940
+       TIX     *-2,1,1                                                  SOR05950
+       LXA     TO,1                                                     SOR05960
+       SXA     TTO,1                                                    SOR05970
+       CLA     UTB,1                                                    SOR05980
+       STO     TOT,1                                                    SOR05990
+       TIX     *-2,1,1                                                  SOR06000
+       CLA     NSS                                                      SOR06010
+       TZE     FNAL                                                     SOR06020
+       SUB     FROM                                                     SOR06030
+       TMI     FNAL                                                     SOR06040
+N      STZ     NSS                                                      SOR06050
+       LXA     FROM,1                                                   SOR06060
+       STZ     NNA,1                                                    SOR06070
+       STZ     NND,1                                                    SOR06080
+       STZ     NND1,1                                                   SOR06090
+       TIX     *-3,1,1                                                  SOR06100
+       STZ     1M                                                       SOR06110
+       STZ     2M                                                       SOR06120
+       STZ     4M                                                       SOR06130
+       CLA     RECSZ                                                    SOR06140
+       STO     NT                                                       SOR06150
+       STO     NT1                                                      SOR06160
+       CLA     NREC                                                     SOR06170
+       STO     NB1                                                      SOR06180
+       STO     NB2                                                      SOR06190
+       STO     NT2                                                      SOR06200
+       STZ     FF                                                       SOR06210
+NN     LXA     FROM,1                                                   SOR06220
+       ZET     NNA,1                                                    SOR06230
+       TRA     NN1                                                      SOR06240
+       ZET     NND1,1                                                   SOR06250
+       TRA     NN1                                                      SOR06260
+       ZET     NND,1                                                    SOR06270
+       TRA     NN1                                                      SOR06280
+       CLA     BTABLE,1                                                 SOR06290
+       STA     IOI                                                      SOR06300
+       CLA     IOI                                                      SOR06310
+       STO     *+5                                                      SOR06320
+       CLA     FRMT,1                                                   SOR06330
+       STA     END                                                      SOR06340
+       TSX     INPUT,4                                                  SOR06350
+       PZE     END                                                      SOR06360
+       PZE     **                                                       SOR06370
+       PZE                                                              SOR06380
+       ZET     *-1                                                      SOR06390
+       TRA     EFILE         END FILE  ON                               SOR06400
+ NN1   TIX     NN+1,1,1                                                 SOR06410
+FF2    ZET     FF                                                       SOR06420
+       TRA     CKBRK                                                    SOR06430
+       STL     FF                                                       SOR06440
+       TXI     *+1,4,-1                                                 SOR06710
+       TXI     *+1,1,-1                                                 SOR06720
+       CLA     NT                                                       SOR06730
+       SUB     =1                                                       SOR06740
+       STO     NT                                                       SOR06750
+       TNZ     *-7                                                      SOR06760
+       CLA     NT2                                                      SOR06770
+       SUB     =1                                                       SOR06780
+       STO     NT2                                                      SOR06790
+       TNZ     *+3                                                      SOR06800
+       TSX     MRG5,4                                                   SOR06810
+       AXT     0,4                                                      SOR06820
+       SXA     4M,4                                                     SOR06830
+       CLA     RECSZ                                                    SOR06840
+       STO     NT                                                       SOR06850
+       CLA     NB1                                                      SOR06860
+       SUB     =1                                                       SOR06870
+       STO     NB1                                                      SOR06880
+       TNZ     MRG2-5                                                   SOR06890
+       CLA     NREC                                                     SOR06900
+       STO     NB1                                                      SOR06910
+       STZ     NNA-1                                                    SOR06920
+       STZ     1M                                                       SOR06930
+       SXA     2M,2                                                     SOR06940
+       SXA     4M,4                                                     SOR06950
+       TRA     NN                                                       SOR06960
+       LXA     1M,1                                                     SOR06970
+       LXA     2M,2                                                     SOR06980
+       LXA     4M,4                                                     SOR06990
+ MRG01 CAL     **,2                                                     SOR07000
+ MRG31 SLW     **,4                                                     SOR07010
+       TXI     *+1,4,-1                                                 SOR07020
+       TXI     *+1,2,-1                                                 SOR07030
+       CLA     NT1                                                      SOR07040
+       SUB     =1                                                       SOR07050
+       STO     NT1                                                      SOR07060
+       TNZ     *-7                                                      SOR07070
+       CLA     RECSZ                                                    SOR07080
+       STO     NT1                                                      SOR07090
+       CLA     NT2                                                      SOR07100
+       SUB     =1                                                       SOR07110
+       STO     NT2                                                      SOR07120
+       TNZ     *+3                                                      SOR07130
+       TSX     MRG5,4                                                   SOR07140
+       AXT     0,4                                                      SOR07150
+       SXA     4M,4                                                     SOR07160
+       CLA     NB2                                                      SOR07170
+       SUB     =1                                                       SOR07180
+       STO     NB2                                                      SOR07190
+       TZE     *+2                                                      SOR07200
+       TRA     MRG2-5                                                   SOR07210
+       CLA     NREC                                                     SOR07220
+       STO     NB2                                                      SOR07230
+       STZ     NNA-2                                                    SOR07240
+       STZ     2M                                                       SOR07250
+       SXA     1M,1                                                     SOR07260
+       SXA     4M,4                                                     SOR07270
+       TRA     NN                                                       SOR07280
+NDBUF1 CAL     **,2                                                     SOR07290
+       SLW     **,4                                                     SOR07300
+       TXI     *+1,4,-1                                                 SOR07310
+       TXI     *+1,2,-1                                                 SOR07320
+       CLA     NT1                                                      SOR07330
+       SUB     =1                                                       SOR07340
+       STO     NT1                                                      SOR07350
+       TNZ     *-7                                                      SOR07360
+       CLA     RECSZ                                                    SOR07370
+       STO     NT1                                                      SOR07380
+       CLA     NT2                                                      SOR07390
+       SUB     =1                                                       SOR07400
+       STO     NT2                                                      SOR07410
+       TNZ     *+3                                                      SOR07420
+       TSX     MRG5,4                                                   SOR07430
+       AXT     0,4                                                      SOR07440
+       SXA     4M,4                                                     SOR07450
+       CLA     NB2                                                      SOR07460
+       SUB     =1                                                       SOR07470
+       STO     NB2                                                      SOR07480
+       TNZ     NDBUF1                                                   SOR07490
+       CLA     NREC                                                     SOR07500
+       STO     NB2                                                      SOR07510
+       STZ     NNA-2                                                    SOR07520
+       STZ     2M                                                       SOR07530
+       SXA     4M,4                                                     SOR07540
+       SXA     1M,1                                                     SOR07550
+       TRA     NN                                                       SOR07560
+EFILE  STL     NND,1                                                    SOR07570
+       STL     NNA,1                                                    SOR07580
+       STL     NND1,1                                                   SOR07590
+       CLA     FRMT,1                                                   SOR07600
+       STA     *+2                                                      SOR07610
+       TSX     RWIND,4                                                  SOR07620
+       PZE                                                              SOR07630
+       TRA     NN1                                                      SOR07640
+EQUAL1 TXI     *+1,2,-1                                                 SOR07650
+       TXI     *+1,1,-1                                                 SOR07660
+       CLA     NA                                                       SOR07670
+       SUB     =1                                                       SOR07680
+       STO     NA                                                       SOR07690
+       TNZ     MRG2                                                     SOR07700
+       TRA     MRG+3                                                    SOR07710
+NDBUF2 CAL     **,1                                                     SOR07720
+ MRG41 SLW     **,4                                                     SOR07730
+       TXI     *+1,4,-1                                                 SOR07740
+       TXI     *+1,1,-1                                                 SOR07750
+       CLA     NT                                                       SOR07760
+       SUB     =1                                                       SOR07770
+       STO     NT                                                       SOR07780
+       TNZ     *-7                                                      SOR07790
+       CLA     RECSZ                                                    SOR07800
+       STO     NT                                                       SOR07810
+       CLA     NT2                                                      SOR07820
+       SUB     =1                                                       SOR07830
+       STO     NT2                                                      SOR07840
+       TNZ     *+3                                                      SOR07850
+       TSX     MRG5,4                                                   SOR07860
+       AXT     0,4                                                      SOR07870
+       SXA     4M,4                                                     SOR07880
+       CLA     NB1                                                      SOR07890
+       SUB     =1                                                       SOR07900
+       STO     NB1                                                      SOR07910
+       TNZ     NDBUF2                                                   SOR07920
+       CLA     NREC                                                     SOR07930
+       STO     NB1                                                      SOR07940
+       STZ     NNA-1                                                    SOR07950
+       STZ     1M                                                       SOR07960
+       SXA     2M,2                                                     SOR07970
+       SXA     4M,4                                                     SOR07980
+       TRA     NN                                                       SOR07990
+CKBRK  AXT     0,2                                                      SOR08000
+       ZET     4M                                                       SOR08001
+       TRA     *+9                                                      SOR08002
+       CLA     BB                                                       SOR08003
+*       CARD    SOR08004     DELETED                                    SOR08004
+       NZT     ROT                                                      SOR08005
+       TRA     *+3                                                      SOR08006
+       ADD     BTABLE-3                                                 SOR08007
+       TRA     *+2                                                      SOR08008
+       ADD     BTABLE-4                                                 SOR08009
+       STA     CHK1-1                                                   SOR0800A
+       TRA     *+10                                                     SOR0800B
+       LAC     4M,1                                                     SOR0800C
+       PXA     ,1                                                       SOR0800D
+       SUB     RECSZ                                                    SOR0800E
+       ZET     ROT                                                      SOR0800F
+       TRA     *+3                                                      SOR0800G
+       ADD     BTABLE-3                                                 SOR0800H
+       TRA     *+2                                                      SOR0800I
+       ADD     BTABLE-4                                                 SOR0800J
+       STA     CHK1-1                                                   SOR0800K
+       LXA     NAA,1                                                    SOR08010
+       NZT     NNA-1                                                    SOR08020
+       TRA     *+4                                                      SOR08030
+       NZT     NNA-2                                                    SOR08040
+       TRA     *+4                                                      SOR08050
+       TRA     ND                                                       SOR08060
+       CLA     BTABLE-1                                                 SOR08070
+       TRA     *+2                                                      SOR08080
+       CLA     BTABLE-2                                                 SOR08090
+       STA     CHK1                                                     SOR08100
+       CAL     **,2                                                     SOR08110
+CHK 1  LAS     **,2                                                     SOR08120
+       TRA     *+6                                                      SOR08130
+       TRA     *+2                                                      SOR08140
+       TRA     FF1-1                                                    SOR08150
+       TXI     *+1,2,-1                                                 SOR08160
+       TIX     CHK1-1,1,1                                               SOR08170
+       TRA     FF1-1                                                    SOR08180
+       ZET     NNA-1                                                    SOR08190
+       TRA     *+3                                                      SOR08200
+       STL     NND1-1                                                   SOR08210
+       TRA     FF1-1                                                    SOR08220
+       STL     NND1-2                                                   SOR08230
+       TRA     FF1-1                                                    SOR08240
+MRG5   SXA     *+17,4                                                   SOR08250
+       SXA     CPASS+13,4                                               SOR08260
+       CLA     NREC                                                     SOR08270
+       STO     NT2                                                      SOR08280
+       STL     NNA-1                                                    SOR08290
+       STL     NNA-2                                                    SOR08300
+       ZET     LAST                                                     SOR08310
+       TRA     FNMRGE                                                   SOR08320
+       LXA     TO,4                                                     SOR08330
+       CLA     TOT,4                                                    SOR08340
+       STA     END                                                      SOR08350
+       CLA     IOO                                                      SOR08351
+       STO     *+3                                                      SOR08352
+       TSX     OUTPUT,4                                                 SOR08360
+       PZE     END                                                      SOR08370
+       TCH     IOO                                                      SOR08380
+       NOP                                                              SOR08390
+       AXT     **,4                                                     SOR08400
+       ZET     ROT                                                      SOR08410
+       TRA     *+10                                                     SOR08411
+       STL     ROT                                                      SOR08412
+       CLA     BTABLE-4                                                 SOR08413
+       STA     MRG3                                                     SOR08414
+       STA     MRG31                                                    SOR08415
+       STA     NDBUF1+1                                                 SOR08416
+       STA     IOO                                                      SOR08417
+       STA     CPAS+11                                                  SOR08418
+       STA     MRG41                                                    SOR08419
+       TRA     1,4                                                      SOR0841A
+       STZ     ROT                                                      SOR0841B
+       CLA     BTABLE-3                                                 SOR0841C
+       TRA     *-9                                                      SOR0841D
+ND     LXA     FROM,3                                                   SOR08420
+       NZT     NND,2                                                    SOR08430
+       TRA     *+10                                                     SOR08440
+       TIX     *-2,2,1                                                  SOR08450
+       TSX     OUTPUT,4                                                 SOR08451
+       MZE                                                              SOR08452
+       STZ     FT                                                       SOR08453
+       NZT     LAST                                                     SOR08460
+       TRA     ZA2                                                      SOR08470
+       ZET     COPY                                                     SOR08480
+       TRA     AG                                                       SOR08490
+       TRA     CDMP                                                     SOR08500
+       NZT     NND1,1                                                   SOR08510
+       TRA     STT                                                      SOR08520
+ST     TIX     *-2,1,1                                                  SOR08530
+       CLA     NSS                                                      SOR08540
+       ADD     =1                                                       SOR08550
+       STO     NSS                                                      SOR08560
+       LXA     TO,4                                                     SOR08570
+       TIX     *+2,4,1                                                  SOR08580
+       LXA     TTO,4                                                    SOR08590
+       SXA     TO,4                                                     SOR08600
+       LXA     FROM,1                                                   SOR08610
+       STZ     NNA,1                                                    SOR08620
+       ZET     NND,1                                                    SOR08630
+       TRA     *+2                                                      SOR08640
+       STZ     NND1,1                                                   SOR08650
+       TIX     *-4,1,1                                                  SOR08660
+       STZ     1M                                                       SOR08670
+       STZ     2M                                                       SOR08680
+       STZ     4M                                                       SOR08690
+       TRA     FF1                                                      SOR08700
+STT    NZT     NND,1                                                    SOR08710
+       TRA     FF1                                                      SOR08720
+       TRA     ST                                                       SOR08730
+INPUT  SXA     IBK,4                                                    SOR08740
+       SXA     IBK+1,2                                                  SOR08750
+       SXA     IBK+2,1                                                  SOR08760
+       STZ     3,4                                                      SOR08770
+       CLA     2,4                                                      SOR08771
+       STO     COM                                                      SOR08772
+       STZ     INP                                                      SOR08780
+TYPE1  AXT     0,1                                                      SOR08790
+       LDQ     RDS                                                      SOR08800
+       SLQ     CSEL                                                     SOR08810
+       CLA*    1,4                                                      SOR08820
+       ADD     BINARY                                                   SOR08830
+SIMLAR STA     CSEL                                                     SOR08840
+       STA     BSF                                                      SOR08850
+       TSX     CHKRC,4                                                  SOR08860
+*         CARD    SOR08870       DELETED                                SOR08861
+       CLA     CSEL                                                     SOR08880
+       STO     RDS,1                                                    SOR08890
+       XEC     RDS,1                                                    SOR08900
+       AXT     10,2                                                     SOR08901
+       TSX     RCHA,4                                                   SOR08910
+       TRA     IBK                                                      SOR08911
+RCHA   RCHA    COM                                                      SOR08920
+       ZET     INP                                                      SOR08921
+       TRA     IBK                                                      SOR08922
+CHKRD  TCOA    *                                                        SOR08930
+TRCA   TRCA    EE                                                       SOR08940
+TEF    TEFA    EF                                                       SOR08950
+ETTA   ETTA                                                             SOR08960
+       TRA     ETT                                                      SOR08970
+       TRA     1,4                                                      SOR08971
+IBK    AXT     **,4                                                     SOR08980
+       AXT     **,2                                                     SOR08990
+       AXT     **,1                                                     SOR09000
+       TRA     4,4                                                      SOR09010
+CHKRA  PXD     ,0                                                       SOR09020
+       STP     ERSE+1                                                   SOR09030
+       STP     TRCA                                                     SOR09040
+       STP     RCHA                                                     SOR09050
+       STP     TEF                                                      SOR09060
+       LDQ     ERR6+11                                                  SOR09070
+       SLQ     ERSE                                                     SOR09080
+       SLQ     CHKRD                                                    SOR09090
+       CLA     =O1000                                                   SOR09100
+       STA     ETTA                                                     SOR09110
+       TRA     1,4                                                      SOR09120
+CHKRB  LDQ     =O006100000000                                           SOR09130
+       SLQ     CHKRD                                                    SOR09140
+       SLQ     ERSE                                                     SOR09150
+       CAL     *                                                        SOR09160
+       STP     ERSE+1                                                   SOR09170
+       STP     TRCA                                                     SOR09180
+       STP     TEF                                                      SOR09190
+       STP     RCHA                                                     SOR09200
+       CLA     =O2000                                                   SOR09210
+       STA     ETTA                                                     SOR09220
+       TRA     1,4                                                      SOR09230
+EE     XEC     BSF                                                      SOR09240
+       XEC     RDS,1                                                    SOR09241
+       XEC     RCHA                                                     SOR09242
+       TIX     CHKRD,2,1                                                SOR09250
+       ZET     INP                                                      SOR09260
+       TRA     *+2                                                      SOR09270
+       TRA     ERR6                 ALL DONE  TAPE ERROR                SOR09280
+       XEC     BSF                                                      SOR09281
+       XEC     RDS,1                                                    SOR09290
+ERSE   TCOA    *                                                        SOR09300
+       TRCA    WER                                                      SOR09310
+       AXT     10,2                                                     SOR09320
+       TRA     EE+1                                                     SOR09321
+EF     LXA     IBK,4                                                    SOR09330
+       STL     3,4                                                      SOR09340
+       TRA     IBK+1                                                    SOR09350
+RDS    RTBA    1                                                        SOR09360
+       WTBB    1                                                        SOR09370
+ BSF   BSRA    1                                                        SOR09380
+OUTPUT SXA     IBK,4                                                    SOR09390
+       SXA     IBK+1,2                                                  SOR09400
+       SXA     IBK+2,1                                                  SOR09410
+       STL     INP                                                      SOR09420
+       AXT     10,2                                                     SOR09421
+       AXT     -1,1                                                     SOR09430
+       NZT     FT                                                       SOR09431
+       TRA     FRS                                                      SOR09432
+       LDI     LSEL          SET UP  LAST                               SOR09433
+       TSX     CHKRC+1,4     SELECT CONDITION                           SOR09434
+       CLA     COM1                                                     SOR09435
+       STO     COM                                                      SOR09436
+       CLA     LSEL                                                     SOR09437
+       STA     RDS+1                                                    SOR09438
+       STA     BSF                                                      SOR09439
+       TSX     CHKRD,4                                                  SOR0943A
+       LXA     IBK,4                                                    SOR0943B
+FRS    CLA     1,4                                                      SOR0943C
+       TMI     2,4                                                      SOR0943D
+       CLA     2,4                                                      SOR0943E
+       STO     COM1                                                     SOR0943F
+       STO     COM                                                      SOR0943G
+       CLA*    1,4                                                      SOR0943H
+       ADD     BINARY                                                   SOR0943I
+       STO     LSEL                                                     SOR0943J
+       STL     FT                                                       SOR0943K
+       CLA     RDS+1                                                    SOR09440
+       STD     CSEL                                                     SOR09450
+       TRA     TYPE1+3                                                  SOR09460
+IOI    IORT    **,,**                                                   SOR09470
+IOO    IORT    **,,**                                                   SOR09480
+INP                                                                     SOR09490
+LSEL                                                                    SOR09491
+COM                                                                     SOR09492
+COM1                                                                    SOR09493
+FT                                                                      SOR09494
+ROT                                                                     SOR09495
+CSEL                                                                    SOR09500
+ENDFLE CLA     1,4                                                      SOR09510
+       STA     *+1                                                      SOR09520
+       WEFA    1                                                        SOR09530
+       TRA     2,4                                                      SOR09540
+RWIND  CLA     1,4                                                      SOR09550
+       STA     *+1                                                      SOR09560
+       REWA    1                                                        SOR09570
+       TRA     2,4                                                      SOR09580
+ WER   CAL     =O665131632560                                           SOR09590
+       SLW     IER+4                                                    SOR09600
+       TRA     ERR6                                                     SOR09610
+ETT    AXT     4,4                                                      SOR09620
+       LDQ     BSF                                                      SOR09630
+       PXD                                                              SOR09640
+       RQL     24                                                       SOR09650
+       ALS     3                                                        SOR09660
+       LGL     3                                                        SOR09670
+       TIX     *-2,4,1                                                  SOR09680
+       SLW     ET+6                                                     SOR09690
+       TCOA    *                                                        SOR09700
+       CLA     FLENME                                                   SOR09710
+       STO     ET+8                                                     SOR09720
+       WTDA    3                                                        SOR09730
+       RCHA    ETERR                                                    SOR09740
+       TCOA    *                                                        SOR09750
+       TRCA    *+1                                                      SOR09760
+       TRA     EXIT                                                     SOR09770
+ETERR  IOCD    ET,,9                                                    SOR09780
+ET     BCI     7,1TERMINATED-END OF TAPE ON TAPE      XXXXXX            SOR09790
+       BCI     2,FILE  XXXXXX                                           SOR09800
+ERR6   TCOA    *                                                        SOR09810
+       AXT     4,4                                                      SOR09820
+       LDQ     CSEL                                                     SOR09830
+       PXD                                                              SOR09840
+       RQL     24                                                       SOR09850
+       ALS     3                                                        SOR09860
+       LGL     3                                                        SOR09870
+       TRA     ND                                                       SOR06450
+FF1    LXA     1M,1                                                     SOR06460
+       LXA     2M,2                                                     SOR06470
+       LXA     4M,4                                                     SOR06480
+       CLA     FROM                                                     SOR06490
+       SUB     =1                                                       SOR06500
+       TZE     NDBUF2                                                   SOR06510
+       ZET     NND1-1                                                   SOR06520
+       TRA     NDBUF1                                                   SOR06530
+       ZET     NND1-2                                                   SOR06540
+       TRA     NDBUF2                                                   SOR06550
+       TRA     *+6                                                      SOR06560
+       CLA     NAA                                                      SOR06570
+       STO     NA                                                       SOR06580
+       SXA     4M,4                                                     SOR06590
+       SXA     1M,1                                                     SOR06600
+       SXA     2M,2                                                     SOR06610
+MRG2   CAL     **,1                                                     SOR06620
+MRG    LAS     **,2                                                     SOR06630
+       TRA     MRG01-3                                                  SOR06640
+       TRA     EQUAL1                                                   SOR06650
+       LXA     1M,1                                                     SOR06660
+       LXA     2M,2                                                     SOR06670
+       LXA     4M,4                                                     SOR06680
+ MRG21 CAL     **,1                                                     SOR06690
+ MRG3  SLW     **,4                                                     SOR06700
+       TIX     *-2,4,1                                                  SOR09880
+       SLW     IER+6                                                    SOR09890
+       WTDA    3                                                        SOR09900
+       RCHA    IIERR                                                    SOR09910
+       TCOA    *                                                        SOR09920
+       TRCA    *+1                                                      SOR09930
+       TRA     EXIT                                                     SOR09940
+IIERR  IOCD    IER,,7                                                   SOR09950
+IER    BCI     7,1PERMANENT REDUNDANCY   READNG  TAPE                   SOR09960
+TTAPE                                                                   SOR09970
+ODD                                                                     SOR09971
+FRSTCH                                                                  SOR09980
+NBLDS                                                                   SOR09990
+2SVM                                                                    SOR10000
+TUTA                                                                    SOR10010
+RECSZ                                                                   SOR10020
+NREC                                                                    SOR10030
+BTABLE BES     4                                                        SOR10040
+RT                                                                      SOR10050
+BB                                                                      SOR10060
+ERR1   TCOA    *                                                        SOR10070
+       WTDA    3                                                        SOR10080
+       RCHA    IERR1                                                    SOR10090
+       TCOA    *                                                        SOR10100
+       TRCA    *+1                                                      SOR10110
+       TRA     EXIT                                                     SOR10120
+IERR1  IOCD    IE1,,6                                                   SOR10130
+IE1    BCI     6,1NOT ENOUGH UTILITY TAPES ...KAPUT...                  SOR10140
+ERR3   TCOA    *                                                        SOR10150
+       WTDA    3                                                        SOR10160
+       RCHA    IERR3                                                    SOR10170
+       TCOA    *                                                        SOR10180
+       TRCA    *+1                                                      SOR10190
+       TRA     EXIT                                                     SOR10200
+NND1   BES     5                                                        SOR10210
+TPEIN                                                                   SOR10220
+TYPE                                                                    SOR10230
+IERR3  IOCD    IER3,,6                                                  SOR10240
+IER3   BCI     6,1NO FILE REFERENCE FOR THIS SORT TAPE                  SOR10250
+ERR5   TCOA    *                                                        SOR10260
+       WTDA    3                                                        SOR10270
+       RCHA    IERR5                                                    SOR10280
+       TCOA    *                                                        SOR10290
+       TRCA    *+1                                                      SOR10300
+       TRA     EXIT                                                     SOR10310
+IERR5  IOCD    IER5,,9                                                  SOR10320
+IER5   BCI     9,1PERMANENT REDUNDANCY ON CORE DUMP RECORD ..KAPUT......SOR10330
+NT2                                                                     SOR10340
+ UTB   BES     2                                                        SOR10350
+ UTA   BES     2                                                        SOR10360
+RST    AXT     **,4                                                     SOR10370
+       AXT     **,2                                                     SOR10380
+       AXT     **,1                                                     SOR10390
+       TRA     6,4                                                      SOR10400
+FRST                                                                    SOR10410
+ADD                                                                     SOR10420
+LTAPE                                                                   SOR10430
+1MSV                                                                    SOR10440
+BRK    CLA     NSS                                                      SOR10450
+       ADD     =1                                                       SOR10460
+       STO     NSS                                                      SOR10470
+       TIX     ZZ3,1,1                                                  SOR10480
+ZZ2    LXA     TTUTA,1                                                  SOR10490
+       TRA     ZZ3                                                      SOR10500
+NA                                                                      SOR10510
+NREC1                                                                   SOR10520
+NREC2                                                                   SOR10530
+NAA                                                                     SOR10540
+2SV                                                                     SOR10550
+1SV                                                                     SOR10560
+INT                                                                     SOR10570
+COUNT                                                                   SOR10580
+SS                                                                      SOR10590
+ERR7   TCOA    *                                                        SOR10600
+       CLA     FLENME                                                   SOR10610
+       SLW     IE7+5                                                    SOR10620
+       WTDA    3                                                        SOR10630
+       RCHA    IER7                                                     SOR10640
+       TCOA    *                                                        SOR10650
+       TRCA    *+1                                                      SOR10660
+       TRA     EXIT                                                     SOR10670
+IER7   IOCD    IE7,,6                                                   SOR10680
+IE7    BCI     6,1NOT ENOUGH BUFFERS FOR FILE  XXXXXX                   SOR10690
+DMPERR BSRB    4                                                        SOR10700
+       WTBB    4              XEC  ERASE PROCEDURE                      SOR10701
+       TCOB    *                                                        SOR10702
+       TRCB    ERR5                                                     SOR10703
+       TIX     NTRY,1,1                                                 SOR10710
+       TRA     ERR5           PERMANENT  REDUNDANCY ON TAPE             SOR10720
+MASK   OCT     777777700000                                             SOR10730
+MASK1  OCT     77777                                                    SOR10740
+UT     BES     10                                                       SOR10750
+TAPEI                                                                   SOR10760
+ACHA                                                                    SOR10770
+BCHA                                                                    SOR10780
+NOTA                                                                    SOR10790
+TAPEOT                                                                  SOR10800
+FLENME                                                                  SOR10810
+SIZE                                                                    SOR10820
+TSX4   TSX     0,0                                                      SOR10830
+IODMP  IOCP    **,,**                                                   SOR10840
+       IOCD    **,,**                                                   SOR10850
+NSZE                                                                    SOR10860
+NBFERL                                                                  SOR10870
+NBFERH                                                                  SOR10880
+TBFER                                                                   SOR10890
+FROM                                                                    SOR10900
+TO                                                                      SOR10910
+NND    BES     2                                                        SOR10920
+TOT    BES     2                                                        SOR10930
+FRMT   BES     2                                                        SOR10940
+4M                                                                      SOR10950
+1M                                                                      SOR10960
+TTO                                                                     SOR10970
+NT                                                                      SOR10980
+SETEND STL     END                                                      SOR10990
+       CLA     LTAPE                                                    SOR10991
+       STA     *+1                                                      SOR10992
+       REWA    1                                                        SOR10993
+       TRA     OOK                                                      SOR11000
+NAB                                                                     SOR11010
+NO1    CLA     LTAPE                                                    SOR11020
+       STO     TOT-1                                                    SOR11030
+*      CARDS SOR11040  TO  SOR11060   HAVE BEEN DELETED                 SOR11031
+       ZET     TYPE                                                     SOR11070
+       TRA     CPAS                                                     SOR11080
+       TRA     MRG5+8                                                   SOR11090
+END                                                                     SOR11100
+NT1                                                                     SOR11110
+2M                                                                      SOR11140
+NB1                                                                     SOR11150
+NB2                                                                     SOR11160
+BINARY PZE     16                                                       SOR11170
+BK     ZET     SS1                                                      SOR11180
+       TRA     *+3                                                      SOR11190
+       STL     SS1                                                      SOR11200
+       TRA     SVE                                                      SOR11210
+       LXA     NAA,1                                                    SOR11220
+       AXT     0,2                                                      SOR11230
+       CLA     NEXT1+3                                                  SOR11240
+       STA     *+4                                                      SOR11250
+       CLA     SV1                                                      SOR11260
+       STA     *+1                                                      SOR11270
+SV3    CAL     **,2                                                     SOR11280
+       LAS     **,2                                                     SOR11290
+       TRA     SV2+3                                                    SOR11300
+       TRA     SV2                                                      SOR11310
+SVE    CLA     NEXT1+3                                                  SOR11320
+       ADD     SIZE                                                     SOR11330
+       STA     SV1                                                      SOR11340
+       LXA     RECSZ,1                                                  SOR11350
+       AXT     0,2                                                      SOR11360
+       CLA     NEXT1+3                                                  SOR11370
+       ADD     SIZE                                                     SOR11380
+       SUB     RECSZ                                                    SOR11390
+*            CARDS    SOR11400   T/   11410    DELETED                  SOR11391
+       STA     *+1                                                      SOR11420
+       CLA     **,2                                                     SOR11430
+SV1    STO     **,2                                                     SOR11440
+       TXI     *+1,2,-1                                                 SOR11450
+       TIX     *-3,1,1                                                  SOR11460
+       TRA     OUT2+3                                                   SOR11470
+SV2    TXI     *+1,2,-1                                                 SOR11480
+       TIX     SV3,1,1                                                  SOR11490
+       TRA     SVE                                                      SOR11500
+       STL     SS                                                       SOR11510
+       TRA     SVE                                                      SOR11520
+FNMRGE AXT     1,4                                                      SOR11530
+       SXA     TO,4                                                     SOR11540
+       SXA     TTO,4                                                    SOR11550
+       STZ     COPY                                                     SOR11560
+       CLA     TOT-1                                                    SOR11570
+       ARS     9                                                        SOR11580
+       STO     BC                                                       SOR11590
+       CLA     LTAPE                                                    SOR11600
+       ARS     9                                                        SOR11610
+       SUB     BC                                                       SOR11620
+       TZE     NO1                                                      SOR11630
+       STL     COPY                                                     SOR11640
+       TRA     MRG5+8                                                   SOR11650
+*                            GET CORE DMP                               SOR11660
+CDMP   AXT     50,1                                                     SOR11670
+       RTBB    4                                                        SOR11680
+       RCHB    IODMP                                                    SOR11690
+       TCOB    *                                                        SOR11700
+       TRCB    *+2                                                      SOR11710
+       TRA     *+4                                                      SOR11720
+       BSRB    4                                                        SOR11730
+       TIX     CDMP+1,1,1                                               SOR11740
+       TRA     ERR                                                      SOR11750
+       CLA     LTAPE                                                    SOR11760
+       STA     *+1                                                      SOR11770
+       WEFA    1                                                        SOR11780
+       STA     *+1                                                      SOR11790
+       REWA    1                                                        SOR11800
+       BSRB    4                                                        SOR11810
+       TRA     RST           RETURN                                     SOR11820
+  AG   CLA     TOT-1                                                    SOR11830
+       STA     *+1                                                      SOR11840
+       WEFA    1                                                        SOR11850
+       STA     *+1                                                      SOR11860
+       REWA    1                                                        SOR11870
+       CLA     LTAPE                                                    SOR11880
+       STA     *+1                                                      SOR11890
+       REWA    1                                                        SOR11900
+       CLA     *+3                                                      SOR11910
+       STO     CPASS+13                                                 SOR11920
+       TRA     *+2                                                      SOR11930
+       TRA     *+6                                                      SOR11940
+       CLA     BTABLE-2                                                 SOR11950
+       STA     II                                                       SOR11960
+       NZT     TYPE                                                     SOR11970
+       TRA     CPAS1                                                    SOR11980
+       STA     CPAS+11                                                  SOR11990
+       TSX     GET,4         DO COPY PASS                               SOR12000
+CPAS   CLA     NREC                                                     SOR12010
+       SXA     FNAL-3,1                                                 SOR12011
+       SXA     FNAL-2,2                                                 SOR12012
+       ALS     18                                                       SOR12020
+       STD     CPASS+12                                                 SOR12030
+       AXT     0,1                                                      SOR12040
+       CLA     RECSZ                                                    SOR12050
+       STO     NAB                                                      SOR12060
+       AXT     1,2                                                      SOR12070
+       CLA     LTAPE                                                    SOR12080
+       TSX     (STB),4                                                  SOR12090
+       LDQ     BTABLE+1,1                                               SOR12100
+       STR                                                              SOR12110
+       TXI     *+1,1,-1                                                 SOR12120
+CPASS  CLA     NAB                                                      SOR12130
+       SUB     =1                                                       SOR12140
+       STO     NAB                                                      SOR12150
+       TNZ     *-6                                                      SOR12160
+       CLA     RECSZ                                                    SOR12170
+       STO     NAB                                                      SOR12180
+       TSX     (WLR),4                                                  SOR12190
+       CAL*    CPASS-3                                                  SOR12200
+       LAS     ALL75                                                    SOR12210
+       TRA     (STB)-3                                                  SOR12220
+       TRA     (STB)-3                                                  SOR12230
+       TXI     *+1,2,1                                                  SOR12240
+       TXL     *-17,2,**                                                SOR12250
+       AXT     **,4                                                     SOR12260
+       AXT     **,1                                                     SOR12261
+       AXT     **,2                                                     SOR12262
+       TRA     ND-14                                                    SOR12270
+FNAL   STL     LAST                                                     SOR12280
+       TRA     N                                                        SOR12290
+ COPY                                                                   SOR12300
+       TXL     CPASS+11,1,**                                            SOR12301
+       TSX     WER1,4                                                   SOR12310
+       TRA     CDMP                                                     SOR12320
+ (STB) SXA     IOBX1,4                                                  SOR12330
+       PAI                                                              SOR12340
+       ADD     BINARY                                                   SOR12350
+       STA     WRS                                                      SOR12360
+       STA     ER                                                       SOR12370
+       RNT     1000                                                     SOR12380
+       TRA     *+11                                                     SOR12390
+       PXD     ,0                                                       SOR12400
+       STP     ERS+1                                                    SOR12410
+       STP     TR                                                       SOR12420
+       STP     RCH                                                      SOR12430
+       LDQ     ERR6+11                                                  SOR12440
+       SLQ     ERS                                                      SOR12450
+       SLQ     WER1+2                                                   SOR12460
+       CLA     =O1000                                                   SOR12461
+       STA     WETTA                                                    SOR12462
+       TRA     *+10                                                     SOR12470
+       LDQ     =O006100000000                                           SOR12480
+       SLQ     ERS                                                      SOR12490
+       SLQ     WER1+2                                                   SOR12500
+       CLA     =O2000                                                   SOR12501
+       STA     WETTA                                                    SOR12502
+       CAL     *                                                        SOR12510
+       STP     ERS+1                                                    SOR12520
+       STP     TR                                                       SOR12530
+       STP     RCH                                                      SOR12540
+       TSX     WER1,4                                                   SOR12541
+       STZ     LABEL1                                                   SOR12550
+       STZ     LABEL2                                                   SOR12560
+       AXT     BU2,4                                                    SOR12570
+       SXA     (BUF),4                                                  SOR12580
+       AXT     BU1,4                                                    SOR12590
+       SXA     IOC,4                                                    SOR12600
+       AXT     BUFSIZ-1,4                                               SOR12610
+       SXD     LABEL1,4                                                 SOR12620
+       SXD     LABEL2,4                                                 SOR12630
+       SXA     (SET),4                                                  SOR12640
+       AXT     BUFSIZ,4                                                 SOR12650
+       SXA     COUT,4                                                   SOR12660
+       CAL     0                                                        SOR12670
+       SLW     C0                                                       SOR12680
+       CAL     2                                                        SOR12690
+       SLW     C2                                                       SOR12700
+       CAL     IOBIN                                                    SOR12710
+       SLW     2                                                        SOR12720
+ IOBX1 AXT     **,4                                                     SOR12730
+       TRA     1,4                                                      SOR12740
+ IOBIN TRA     *+1                                                      SOR12750
+       SXA     IOBX,4                                                   SOR12760
+COUT   AXT     **,4                                                     SOR12770
+       TIX     (BUF)-1,4,1                                              SOR12780
+       LXA     IOC,4                                                    SOR12790
+       SXA     (BUF),4                                                  SOR12800
+       TXH     *+2,4,BU1                                                SOR12810
+       TXI     *+2,4,BUFSIZ+1                                           SOR12820
+       AXT     BU1,4                                                    SOR12830
+       SXA     IOC,4                                                    SOR12840
+       TSX     STB,4                                                    SOR12850
+ IOC   AXC     **,4                                                     SOR12860
+ (SET) AXT     **,4                                                     SOR12870
+       SXA     COUT,4                                                   SOR12880
+ (BUF) STQ     **,4                                                     SOR12890
+ IOBX  AXT     **,4                                                     SOR12900
+       TRA*    0                                                        SOR12910
+ (EXB) CAL     C0                                                       SOR12920
+       SLW     0                                                        SOR12930
+       CAL     C2                                                       SOR12940
+       SLW     2                                                        SOR12950
+       TRA     1,4                                                      SOR12960
+LABEL1 PZE     0                                                        SOR12970
+BU1    BES     BUFSIZ-1                                                 SOR12980
+       IORT    LABEL1,,BUFSIZ                                           SOR12990
+LABEL2 PZE     0                                                        SOR13000
+BU2    BES     BUFSIZ-1                                                 SOR13010
+       IORT    LABEL2,,BUFSIZ                                           SOR13020
+ C0                                                                     SOR13030
+ C2                                                                     SOR13040
+ STB   SXA     WRITX,4                                                  SOR13050
+       STQ     DATUM                                                    SOR13060
+       TSX     WER1,4                                                   SOR13070
+       XEC     WRS                                                      SOR13080
+ PRC   AXT     1,4                                                      SOR13090
+       TXI     *+1,4,1                                                  SOR13100
+       SXA     PRC,4                                                    SOR13110
+       LXA     WRITX,4                                                  SOR13120
+       XEC     1,4                                                      SOR13130
+       PXA     ,4                                                       SOR13140
+       STA     WTC                                                      SOR13150
+       XEC     RCH                                                      SOR13160
+       LDQ     DATUM                                                    SOR13170
+ WRITX AXT     **,4                                                     SOR13180
+       TRA     2,4                                                      SOR13190
+ (WLR) SXA     WLRX,4                                                   SOR13200
+*              CARD  SOR13210    REMOVED                                SOR13201
+       XEC     WRS                                                      SOR13220
+       LAC     2,4                                                      SOR13230
+       CAL     13,4                                                     SOR13240
+       STA     *+1                                                      SOR13250
+       CAL     **                                                       SOR13260
+       STA     WRC                                                      SOR13270
+       CAL     1,4                                                      SOR13280
+       PAC     ,4                                                       SOR13290
+       TXI     *+1,4,BUFSIZ+1                                           SOR13300
+       SXD     WRC,4                                                    SOR13310
+       TXI     *+1,4,-1                                                 SOR13320
+       PXD     0,4                                                      SOR13330
+       STD*    WRC                                                      SOR13340
+       CLA     PRC                                                      SOR13350
+       STA*    WRC                                                      SOR13360
+       AXT     1,4                                                      SOR13370
+       SXA     PRC,4                                                    SOR13380
+       AXC     WRC,4                                                    SOR13390
+       XEC     RCH                                                      SOR13400
+       PXA     ,4                                                       SOR13410
+       STA     WTC                                                      SOR13420
+ WLRX  AXT     **,4                                                     SOR13430
+       TRA     (EXB)                                                    SOR13440
+ WRC   IORT    **,,**                                                   SOR13450
+ DATUM                                                                  SOR13460
+TTUTA                                                                   SOR13470
+TUTB                                                                    SOR13480
+TTUTB                                                                   SOR13490
+SS1                                                                     SOR13500
+ROT1                                                                    SOR13501
+CPAS1  CLA     TOT-1                                                    SOR13510
+       STA     END                                                      SOR13520
+       ZET     ROT1                                                     SOR13530
+       TRA     *+4                                                      SOR13531
+       STL     ROT1                                                     SOR13532
+       CLA     BTABLE-1                                                 SOR13533
+       TRA     *+3                                                      SOR13534
+       STZ     ROT1                                                     SOR13535
+       CLA     BTABLE-2                                                 SOR13536
+       STA     IOI                                                      SOR13540
+       CLA     IOI                                                      SOR13550
+       STO     *+3                                                      SOR13560
+       TSX     INPUT,4                                                  SOR13570
+       PZE     END                                                      SOR13580
+       PZE                                                              SOR13590
+       PZE                                                              SOR13600
+       ZET     *-1                                                      SOR13610
+       TRA     *+10                                                     SOR13620
+       CLA     LTAPE                                                    SOR13630
+       STA     END                                                      SOR13640
+       CLA     IOI                                                      SOR13641
+       STO     *+3                                                      SOR13642
+       TSX     OUTPUT,4                                                 SOR13650
+       PZE     END                                                      SOR13660
+       TCH     IOI                                                      SOR13670
+       PZE                                                              SOR13680
+       TRA     CPAS1                                                    SOR13690
+       TSX     OUTPUT,4                                                 SOR13691
+       MZE                                                              SOR13692
+       STZ     FT                                                       SOR13693
+       TRA     CDMP                                                     SOR13694
+ERR4   TCOA    *                                                        SOR13700
+       WTDA    3                                                        SOR13710
+       RCHA    ER4                                                      SOR13720
+       TCOA    *                                                        SOR13730
+       TRA     EXIT                                                     SOR13740
+ER4    IOCD    EA4,,6                                                   SOR13750
+EA4    BCI     6,1ERROR LENGTH OF SORT KEY NOT DEFINED                  SOR13760
+  GET  SXA     RR,4                                                     SOR13770
+       CLA     II                                                       SOR13780
+       STA     IOI                                                      SOR13790
+       CLA     IOI                                                      SOR13800
+       STO     *+5                                                      SOR13810
+       CLA     TOT-1                                                    SOR13820
+       STA     END                                                      SOR13830
+       TSX     INPUT,4                                                  SOR13840
+       PZE     END                                                      SOR13850
+       PZE                                                              SOR13860
+       PZE                                                              SOR13870
+       ZET     *-1                                                      SOR13880
+       TRA     CDMP                                                     SOR13890
+RR     AXT     **,4                                                     SOR13900
+       TRA     1,4                                                      SOR13910
+II                                                                      SOR13920
+BC                                                                      SOR13930
+LAST                                                                    SOR13940
+NSS                                                                     SOR13950
+ERR    TCOA    *                                                        SOR13960
+       WTDA    3                                                        SOR13970
+       RCHA    CERR                                                     SOR13980
+       TCOA    *                                                        SOR13990
+       TRA     EXIT                                                     SOR14000
+ CERR  IOCD    CERR1,,7                                                 SOR14010
+ANEW   CLA     BTABLE-2                                                 SOR14020
+       TRA     CNEW                                                     SOR14030
+BNEW   CLA     BTABLE-2                                                 SOR14040
+       TRA     DNEW                                                     SOR14050
+ENEW   CLA     BTABLE-2                                                 SOR14060
+       TRA     FNEW                                                     SOR14070
+WER1   SXA     R4,4                                                     SOR14080
+       AXT     100,4                                                    SOR14090
+       TCOA    *                                                        SOR14100
+   TR  TRCA    ER                                                       SOR14110
+WETTA  ETTA                                                             SOR14111
+       TRA     ETT1                                                     SOR14112
+R4     AXT     **,4                                                     SOR14120
+       TRA     1,4                                                      SOR14130
+ER     BSRA    1                                                        SOR14140
+       SXA     *+4,4                                                    SOR14150
+WTC    AXT     **,4                                                     SOR14160
+       XEC     WRS                                                      SOR14170
+       XEC     RCH                                                      SOR14180
+       AXT     **,4                                                     SOR14190
+       TIX     *-12,4,1                                                 SOR14200
+       XEC     ER                                                       SOR14210
+       XEC     WRS                                                      SOR14220
+ERS    TCOA    *                                                        SOR14230
+       TRCA    *+3                                                      SOR14240
+       AXT     100,4                                                    SOR14250
+       TRA     ER+1                                                     SOR14260
+       CLA     LTAPE                                                    SOR14270
+       STO     BSF                                                      SOR14280
+       TRA     WER                                                      SOR14290
+ETT1   CLA     LTAPE                                                    SOR14291
+       STO     BSF                                                      SOR14292
+       TRA     ETT                                                      SOR14293
+RCH    RCHA    **,4                                                     SOR14300
+WRS    WTBB    1                                                        SOR14310
+CERR1  BCI     7,1PERMANENT REDUNDANCY ON INPUT CORE DUMP               SOR14320
+ALL75  OCT     777777777777                                             SOR14330
+NEWB                                                                    SOR14340
+CHKRC  LDI     CSEL                                                     SOR14350
+       RNT     001000                                                   SOR14360
+       TRA     CHKRB                                                    SOR14370
+       TRA     CHKRA                                                    SOR14380
+GNEW   CLA     BTABLE-2                                                 SOR14390
+       TRA     HNEW                                                     SOR14400
+EXIT   TRCA    *+1                                                      SOR14410
+*        CARD    SOR14420   DELETED                                     SOR14411
+ EX1   AXT     5,1                                                      SOR14430
+EX2    REWA    1                                                        SOR14440
+       RTBA    1                                                        SOR14450
+       RCHA    LD1CS                                                    SOR14460
+       LCHA    0                                                        SOR14470
+       RTBA    1                                                        SOR14480
+       RTBA    1                                                        SOR14490
+       TCOA    *                                                        SOR14500
+       TRCA    ERROR                                                    SOR14510
+       TRA*    2                                                        SOR14520
+ERROR  TIX     EX2,1,1                                                  SOR14530
+       HTR     EX1                                                      SOR14540
+LD1CS  IOCT    0,,3                                                     SOR14550
+NNA    BES     2                                                        SOR14560
+FF                                                                      SOR14570
+ENSRT  PZE     *+11                                                     SOR14580
+       END                                                              SOR14590

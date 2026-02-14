@@ -1,0 +1,1134 @@
+*           IQ MOD LOADER     10 JULY 1961                              MDLD0001
+       ORG     3000                                                     MDLD0002
+       DETAIL                                                           MDLD0003
+START  LFTM                  LEAVE TRAPPING MODE TO COMMENCE PROGRAM    MDLD0004
+       STZ     EB2           INITIALIZE LOCATION FOR TESTING NUMBER OF  MDLD0005
+       CLA     NOP                FINAL CONTROL CARDS, AND LOGIC        MDLD0006
+       STO     M                  SWITCHES TO DETERMINE IF TAPE - A5 IS MDLD0007
+       STO     GG                 A PUNCH SQUOZE TAPE.                  MDLD0008
+       SWT     4             SENSE SWITCH 4 USED AS FOLLOWS -           MDLD0009
+       TTR     *+2                OFF - NORMAL, CONTINUE PROGRAM        MDLD0010
+       HPR                        ON - MULTIPLE JOBS, HALT PUT ON NEW A5MDLD0011
+       SWT     2             SENSE SWITCH 2 USED AS FOLLOWS -           MDLD0012
+       TTR     IN                 OFF - INPUT ON CARDS                  MDLD0013
+       CLA     D6                 ON - INPUT ON TAPE A6.                MDLD0014
+       STO     RDCARD+1      INITIALIZE CRDBCD SUBROUTINE TO OBTAIN     MDLD0015
+       STO     E                  INPUT FROM A6.                        MDLD0016
+       CLA     RUNA          INITIALIZE PROGRAM TO REWIND A6 AT END     MDLD0017
+       STO     EE                 OF JOB, THEN CONTINUE PROGRAM.        MDLD0018
+       TTR     RDCARD-1                                                 MDLD0019
+IN     STZ     RDCARD+1      INITIALIZE CRDBCD SUBROUTINE TO OBTAIN     MDLD0020
+       STZ     E                  INPUT FROM CARDS.                     MDLD0021
+       AXT     0,2                                                      MDLD0022
+RDCARD TSX     CRDBCD,4      TRANSFER TO SUBROUTINE WHICH WILL READ A   MDLD0023
+       HTR     0,0,0              BCD RECORD INTO BCDFST BLOCK.         MDLD0024
+       TTR     EOF           END OF FILE RETURN                         MDLD0025
+       TTR     RDERR         ERROR RETURN FROM CRDBCD SUBROUTINE.       MDLD0026
+A      AXT     6,1           TEST MADE TO DETERMINE INITIAL CONTROL     MDLD0027
+       CLA     BCDFST+1           CARDS - JOB, DATE, LG, PS, LS, PA.    MDLD0028
+       SUB     JOB+6,1            WHEN CONTROL CARD IS IDENTIFIED - GO  MDLD0029
+       TZE     BCD1               TO BCD1 AND WRITE IT ON TAPE A4.      MDLD0030
+       TIX     A+1,1,1                                                  MDLD0031
+       CLA     BCDFST+1      TEST FOR MOD CARD - GO TO MODLD TO STORE   MDLD0032
+       SUB     MOD                MODS UNTIL NEEDED TO WRITE ON A4.     MDLD0033
+       TZE     MODLD              WHEN ALL MODS ARE STORED, CONTINUE    MDLD0034
+C      AXT     2,1           TEST TO DETERMINE FINAL CONTROL CARDS - GO,MDLD0035
+       CLA     BCDFST+1           LIST, PAUSE, STOP. WHEN CONTROL CARD  MDLD0036
+       SUB     GO+2,1             IS IDENTIFIED, GO TO BCD2 OR BCD3 AND MDLD0037
+       TZE     BCD2               STORE UNTIL NEEDED TO WRITE ON A4.    MDLD0038
+       TIX     C+1,1,1            WHEN ALL CONTROL CARDS HAVE BEEN      MDLD0039
+       AXT     2,1                STORED, CONTINUE PROGRAM.             MDLD0040
+J      CLA     BCDFST+1                                                 MDLD0041
+       SUB     PAUSE+2,1                                                MDLD0042
+       TZE     BCD3                                                     MDLD0043
+       TIX     J,1,1                                                    MDLD0044
+       TSX     PRT5,4        ILLEGAL CONTROL CARD - PRINT ERROR MESSAGE MDLD0045
+       PTH     OUT3,,5030         AND RETURN TO SYSTEM FOR NEXT JOB.    MDLD0046
+       FVE     2                                                        MDLD0047
+       TSX     PRT5,4                                                   MDLD0048
+       PTH     OUT2,,5030                                               MDLD0049
+       FVE     2                                                        MDLD0050
+       TTR     EOF                                                      MDLD0051
+BCD1   TRCA    *+1           ROUTINE TO WRITE INITIAL CONTROL CARDS ON  MDLD0052
+       CLA     BLK                A4.                                   MDLD0053
+       STO     BCDFST+12                                                MDLD0054
+       STO     BCDFST+13                                                MDLD0055
+       WTDA    4                                                        MDLD0056
+       RCHA    Z                                                        MDLD0057
+       TCOA    *                                                        MDLD0058
+       TRCA    TPERR3+2                                                 MDLD0059
+K      TTR     RDCARD                                                   MDLD0060
+       TSX     PRT5,4        REDUNDANCY ERROR ON CARD READER OR TAPE A6 MDLD0061
+       PTH     OUT1,,13078        IF USED - PRINT ERROR MESSAGE AND     MDLD0062
+       FVE     2                  RETURN TO SYSTEM.                     MDLD0063
+       TSX     PRT5,4                                                   MDLD0064
+       PTH     OUT2,,5030                                               MDLD0065
+       FVE     2                                                        MDLD0066
+       TTR     EOF                                                      MDLD0067
+MODLD  AXT     0,2           ROUTINE TO STORE MODS UNTIL NEEDED TO      MDLD0068
+       AXT     14,1               WRITE ON A4.                          MDLD0069
+       CLA     BLK                                                      MDLD0070
+       STO     BCDFST+12                                                MDLD0071
+       STO     BCDFST+13                                                MDLD0072
+D      CLA     BCDFST+14,1                                              MDLD0073
+       STO     MODBLK,2                                                 MDLD0074
+       TXI     *+1,2,-1                                                 MDLD0075
+       TIX     D,1,1                                                    MDLD0076
+       CLA     BCDFST+1                                                 MDLD0077
+       SUB     ENDMOD                                                   MDLD0078
+       TZE     RDCARD                                                   MDLD0079
+       TSX     CRDBCD,4                                                 MDLD0080
+E      HTR     0,0,0                                                    MDLD0081
+       TTR     EOFERR                                                   MDLD0082
+       TTR     RDERR                                                    MDLD0083
+       TTR     MODLD+1                                                  MDLD0084
+STOBLK AXT     14,1                                                     MDLD0085
+       CLA     BLK                                                      MDLD0086
+       STO     MODBLK,2                                                 MDLD0087
+       TXI     *+1,2,-1                                                 MDLD0088
+       TIX     STOBLK+1,1,1                                             MDLD0089
+       CLA     FLAG                                                     MDLD0090
+       STO     MODBLK,2                                                 MDLD0091
+       TTR     RDA5                                                     MDLD0092
+BCD2   AXT     14,1          ROUTINE TO STORE CONTROL CARDS - GO, LIST  MDLD0093
+       CLA     BLK                - UNTIL NEEDED TO WRITE ON A4.        MDLD0094
+       STO     BCDFST+12                                                MDLD0095
+       STO     BCDFST+13                                                MDLD0096
+F      CLA     BCDFST+14,1                                              MDLD0097
+       STO     EB2+14,1                                                 MDLD0098
+       TIX     F,1,1                                                    MDLD0099
+       TTR     RDCARD                                                   MDLD0100
+BCD3   CLA     EB2           ROUTINE TO STORE CONTROL CARDS - PAUSE,    MDLD0101
+       TZE     H                  STOP - UNTIL NEEDED TO WRITE ON A4.   MDLD0102
+       AXT     14,1                                                     MDLD0103
+       CLA     BLK                                                      MDLD0104
+       STO     BCDFST+12                                                MDLD0105
+       STO     BCDFST+13                                                MDLD0106
+G      CLA     BCDFST+14,1                                              MDLD0107
+       STO     EB4+14,1                                                 MDLD0108
+       TIX     G,1,1                                                    MDLD0109
+       TTR     STOBLK                                                   MDLD0110
+H      AXT     14,1                                                     MDLD0111
+       CLA     BLK                                                      MDLD0112
+       STO     BCDFST+12                                                MDLD0113
+       STO     BCDFST+13                                                MDLD0114
+I      CLA     BCDFST+14,1                                              MDLD0115
+       STO     EB2+14,1                                                 MDLD0116
+       TIX     I,1,1                                                    MDLD0117
+       STZ     EB4                                                      MDLD0118
+       TTR     STOBLK                                                   MDLD0119
+RDERR  CLA     NOP           ROUTINE FOR READ ERRORS ON THE CARD READER MDLD0120
+       STO     K                  OR ON A6 IF USED.                     MDLD0121
+       TTR     BCD1                                                     MDLD0122
+EOFERR TSX     PRT5,4        ROUTINE FOR ILLEGAL END OF FILE - PRINT OUTMDLD0123
+       PTH     OUT4,,7042         ERROR MESSAGE AND RETURN TO SYSTEM FORMDLD0124
+       FVE     2                  NEXT JOB                              MDLD0125
+       TSX     PRT5,4                                                   MDLD0126
+       PTH     OUT2,,5030                                               MDLD0127
+       FVE     2                                                        MDLD0128
+       TTR     EOF                                                      MDLD0129
+RDA5   TRCA    *+1           READ A5 - PUNCH SQUOZE TAPE                MDLD0130
+       AXT     0,2                                                      MDLD0131
+       AXT     20,1                                                     MDLD0132
+       RTBA    5                                                        MDLD0133
+       RCHA    Y                                                        MDLD0134
+       TCOA    *                                                        MDLD0135
+       TRCA    TPERR1                                                   MDLD0136
+M      NOP                                                              MDLD0137
+       CLA     INP1          TEST FIRST WORD ON A5 TO VERIFY THAT A5 IS MDLD0138
+       SUB     JBSQZ              A PUNCH SQUOZE TAPE.                  MDLD0139
+       TZE     FF                                                       MDLD0140
+       TSX     PRT5,4        WRONG TAPE A5 - PRINT ERROR MESSAGE.       MDLD0141
+       PTH     OUT5,,12072                                              MDLD0142
+       FVE     2                                                        MDLD0143
+       HTR     RDA5                                                     MDLD0144
+FF     CLA     SWT                                                      MDLD0145
+       STO     M                                                        MDLD0146
+       CLA     SWT1                                                     MDLD0147
+       STO     GG                                                       MDLD0148
+       TTR     RDA5+2                                                   MDLD0149
+L      AXT     2,1           ROUTINE TO STORE SQUOZE PREFACE CARDS UNTILMDLD0150
+       CLA     INP1+2,1           NEEDED TO WRITE ON TAPE A4.           MDLD0151
+       TNZ     N                                                        MDLD0152
+       TIX     L+1,1,1                                                  MDLD0153
+       CLA     FLAG                                                     MDLD0154
+       STO     SQZBLK,2                                                 MDLD0155
+       TTR     WTSQZ1                                                   MDLD0156
+N      AXT     24,1                                                     MDLD0157
+       CLA     INP1+24,1                                                MDLD0158
+       STO     SQZBLK,2                                                 MDLD0159
+       TXI     *+1,2,-1                                                 MDLD0160
+       TIX     N+1,1,1                                                  MDLD0161
+P      AXT     4,1                                                      MDLD0162
+       STZ     SQZBLK,2                                                 MDLD0163
+       TXI     *+1,2,-1                                                 MDLD0164
+       TIX     P+1,1,1                                                  MDLD0165
+       TTR     RDA5+2                                                   MDLD0166
+WTSQZ1 AXT     0,2           ROUTINE TO WRITE ALL INITIAL SQUOZE CARDS  MDLD0167
+       CLA     SQZBLK,2           ON TAPE A4.                           MDLD0168
+       SUB     FLAG                                                     MDLD0169
+       TZE     WTMOD1                                                   MDLD0170
+       AXT     20,1                                                     MDLD0171
+       TRCA    *+1                                                      MDLD0172
+Q      WTBA    4                                                        MDLD0173
+       RCHA    W                                                        MDLD0174
+       TCOA    *                                                        MDLD0175
+       TRCA    TPERR3                                                   MDLD0176
+       CLA     N28                                                      MDLD0177
+       ADD     W                                                        MDLD0178
+       STO     W                                                        MDLD0179
+       TXI     WTSQZ1+1,2,-28                                           MDLD0180
+WTMOD1 CLA     W1            ROUTINE TO WRITE ALL MODS ON TAPE A4.      MDLD0181
+       STO     W                                                        MDLD0182
+       AXT     0,2                                                      MDLD0183
+       CLA     MODBLK,2                                                 MDLD0184
+       SUB     FLAG                                                     MDLD0185
+       TZE     WTSQZ2                                                   MDLD0186
+       AXT     20,1                                                     MDLD0187
+AA     TRCA    *+1                                                      MDLD0188
+       WTDA    4                                                        MDLD0189
+       RCHA    V                                                        MDLD0190
+       TCOA    *                                                        MDLD0191
+       TRCA    TPERR4                                                   MDLD0192
+       CLA     N14                                                      MDLD0193
+       ADD     V                                                        MDLD0194
+       STO     V                                                        MDLD0195
+       TXI     WTMOD1+3,2,-14                                           MDLD0196
+WTSQZ2 CLA     V1            ROUTINE TO READ A5 PUNCH SQUOZE TAPE AND   MDLD0197
+       STO     V                  WRITE ON A4.                          MDLD0198
+       TEFA    *+1                                                      MDLD0199
+       AXT     28,1                                                     MDLD0200
+       STZ     INP1+28,1                                                MDLD0201
+       TIX     *-1,1,1                                                  MDLD0202
+       AXT     20,4                                                     MDLD0203
+BB     TRCA    *+1                                                      MDLD0204
+       RTBA    5                                                        MDLD0205
+       RCHA    Y                                                        MDLD0206
+       TCOA    *                                                        MDLD0207
+       TRCA    TPERR2                                                   MDLD0208
+       TEFA    WTMOD2                                                   MDLD0209
+       AXT     20,4                                                     MDLD0210
+CC     TRCA    *+1                                                      MDLD0211
+       WTBA    4                                                        MDLD0212
+       RCHA    Y1                                                       MDLD0213
+       TCOA    *                                                        MDLD0214
+       TRCA    TPERR5                                                   MDLD0215
+       TTR     WTSQZ2+3                                                 MDLD0216
+WTMOD2 CLA     EB4           ROUTINE TO WRITE FINAL CONTROL CARDS ON    MDLD0217
+       TZE     U                  TAPE A4.                              MDLD0218
+       AXT     3,1                                                      MDLD0219
+       AXT     20,4                                                     MDLD0220
+U1     TRCA    *+1                                                      MDLD0221
+       WTDA    4                                                        MDLD0222
+       RCHA    Y2                                                       MDLD0223
+       TCOA    *                                                        MDLD0224
+       TRCA    TPERR6                                                   MDLD0225
+DD     CLA     EBNAME+3,1                                               MDLD0226
+       STA     Y2                                                       MDLD0227
+       TIX     U1,1,1                                                   MDLD0228
+       REWA    5                                                        MDLD0229
+       CLA     EBNAM3                                                   MDLD0230
+       STO     DD                                                       MDLD0231
+       TTR     START         PROCESSING COMPLETED - RESTART TO OBTAIN   MDLD0232
+U      AXT     2,1                NEXT CASE                             MDLD0233
+       CLA     EBNAM2                                                   MDLD0234
+       STO     DD                                                       MDLD0235
+       TTR     WTMOD2+3                                                 MDLD0236
+TPERR1 BSRA    5             READ ERROR ON TAPE A5 WHILE READING SQUOZE MDLD0237
+       TIX     RDA5+3,1,1         PREFACE INFORMATION.                  MDLD0238
+GG     NOP                                                              MDLD0239
+       RTBA    5                                                        MDLD0240
+       RCHA    Y                                                        MDLD0241
+       TRCA    *+1                                                      MDLD0242
+       TTR     FF                                                       MDLD0243
+HH     TSX     PRT5,4                                                   MDLD0244
+       PTH     OUT8,,15090                                              MDLD0245
+       FVE     2                                                        MDLD0246
+       TSX     PRT5,4                                                   MDLD0247
+       PTH     OUT9,,13078                                              MDLD0248
+       FVE     2                                                        MDLD0249
+       HTR     RESTRT                                                   MDLD0250
+TPERR2 BSRA    5             READ ERROR ON TAPE A5 WHILE READING SQUOZE MDLD0251
+       TIX     BB,4,1             INFORMATION                           MDLD0252
+       TTR     HH                                                       MDLD0253
+TPERR3 BSRA    4             REDUNDANCY TAPE ERROR ON A4 WHILE WRITING  MDLD0254
+       TIX     Q-1,1,1            SQUOZE PREFACE INFORMATION.           MDLD0255
+JJ     TSX     PRT5,4                                                   MDLD0256
+       PTH     OUT10,,10060                                             MDLD0257
+       FVE     2                                                        MDLD0258
+       HTR     RESTRT                                                   MDLD0259
+TPERR4 BSRA    4             REDUNDANCY TAPE ERROR ON A4 WHILE WRITING  MDLD0260
+       TIX     AA,1,1             MODS.                                 MDLD0261
+       TTR     JJ                                                       MDLD0262
+TPERR5 BSRA    4             REDUNDANCY TAPE ERROR ON A4 WHILE WRITING  MDLD0263
+       TIX     CC,4,1             SQUOZE INFORMATION.                   MDLD0264
+       TTR     JJ                                                       MDLD0265
+TPERR6 BSRA    4             REDUNDANCY TAPE ERROR ON A4 WHILE WRITING  MDLD0266
+       TIX     U1,4,1             FINAL CONTROL CARDS.                  MDLD0267
+       TTR     JJ                                                       MDLD0268
+RESTRT REWA    4             ROUTINE TO PREPARE FOR RESTART.            MDLD0269
+       REWA    5                                                        MDLD0270
+       SWT     2                                                        MDLD0271
+       TTR     CARDS                                                    MDLD0272
+       REWA    6                                                        MDLD0273
+       TSX     PRT5,4                                                   MDLD0274
+       PTH     OUT6,,10060                                              MDLD0275
+       FVE     2                                                        MDLD0276
+       HTR     START                                                    MDLD0277
+CARDS  TSX     PRT5,4                                                   MDLD0278
+       PTH     OUT7,,15090                                              MDLD0279
+       FVE     2                                                        MDLD0280
+       TTR     CARDS-1                                                  MDLD0281
+EOF    WEFA    4             END OF FILE - COMPLETE JOB - RETURN TO     MDLD0282
+       RUNA    5                  SYSTEM TO OBTAIN NEXT JOB.            MDLD0283
+       REWA    4                                                        MDLD0284
+EE     NOP                                                              MDLD0285
+       IOT                                                              MDLD0286
+       NOP                                                              MDLD0287
+       TTR     10                                                       MDLD0288
+Z      IOCD    BCDFST,0,14                                              MDLD0289
+Y2     IOCD    ENDBLK,0,14                                              MDLD0290
+Y1     IOCD    INP1,0,28                                                MDLD0291
+Y      IORP    INP1,0,24                                                MDLD0292
+X      IOCD    0,0,0                                                    MDLD0293
+W      IOCD    SQZBLK,,28                                               MDLD0294
+V      IOCD    MODBLK,,14                                               MDLD0295
+W1     IOCD    SQZBLK,,28                                               MDLD0296
+V1     IOCD    MODBLK,,14                                               MDLD0297
+SWT    TTR     L                                                        MDLD0298
+SWT1   TTR     HH                                                       MDLD0299
+EBNAME HTR     EB2                                                      MDLD0300
+       HTR     EB4                                                      MDLD0301
+       HTR     ENDBLK                                                   MDLD0302
+EBNAM1 HTR     EB2                                                      MDLD0303
+       HTR     ENDBLK                                                   MDLD0304
+EBNAM2 CLA     EBNAM1+2,1                                               MDLD0305
+EBNAM3 CLA     EBNAME+3,1                                               MDLD0306
+RUNA   RUNA    6                                                        MDLD0307
+NOP    NOP                                                              MDLD0308
+D6     OCT     001206000000                                             MDLD0309
+N14    PZE     14                                                       MDLD0310
+N28    PZE     28                                                       MDLD0311
+OUT1   BCI     7,REDUNDANCY ERROR ON CARD READER OR TAPE RE             MDLD0312
+       BCI     6,DUNDANCY ERROR ON TAPE A6 IF USED.                     MDLD0313
+OUT2   BCI     5,RETURN TO SYSTEM FOR NEXT JOB.                         MDLD0314
+OUT3   BCI     5,ILLEGAL CONTROL CARD.                                  MDLD0315
+OUT4   BCI     7,ILLEGAL END OF FILE IN MOD LOADER PROGRAM.             MDLD0316
+OUT5   BCI     6,TAPE A5 IS NOT A PUNCH SQUOZE TAPE -                   MDLD0317
+       BCI     6, PUT ON CORRECT TAPE, PRESS START.                     MDLD0318
+OUT6   BCI     7,PROGRAM READY TO RESTART - PRESS START IF              MDLD0319
+       BCI     3,RESTART DESIRED.                                       MDLD0320
+OUT7   BCI     7,PROGRAM TRYING TO RESTART - IF RESTART DES             MDLD0321
+       BCI     8,IRED, REPLACE CARDS IN HOPPER, PRESS START.            MDLD0322
+OUT8   BCI     7,TAPE REDUNDANCY ERROR ON A5 - CHECK DENSIT             MDLD0323
+       BCI     8,Y....IF DENSITY IS CORRECT, CHANGE TAPE DRIVES,        MDLD0324
+OUT9   BCI     7,PRESS START. IF ERROR RECURS, BAD TAPE A5,             MDLD0325
+       BCI     6, TRANSFER TO SYSTEM FOR NEXT JOB.                      MDLD0326
+OUT10  BCI     7,TAPE REDUNDANCY ERROR ON A4 - CHANGE TAPE              MDLD0327
+       BCI     3,A4, PRESS START.                                       MDLD0328
+BLK    BCI     1,                                                       MDLD0329
+JOB    OCT     604146226060                                             MDLD0330
+DATE   OCT     602421632560                                             MDLD0331
+LG     OCT     604327606060                                             MDLD0332
+PS     OCT     604762606060                                             MDLD0333
+LS     OCT     604362606060                                             MDLD0334
+PA     OCT     604721606060                                             MDLD0335
+GO     OCT     602746606060                                             MDLD0336
+LIST   OCT     604331626360                                             MDLD0337
+PAUSE  OCT     604721646225                                             MDLD0338
+STOP   OCT     606263464760                                             MDLD0339
+MOD    OCT     604446246060                                             MDLD0340
+ENDMOD OCT     602545244446                                             MDLD0341
+FLAG   OCT     555555555555                                             MDLD0342
+JBSQZ  OCT     040000000000                                             MDLD0343
+ENDBLK BCI     7,                                                       MDLD0344
+EB1    BCI     7,                                                       MDLD0345
+EB2    PZE     0                                                        MDLD0346
+EB3    BSS     13                                                       MDLD0347
+EB4    BSS     14                                                       MDLD0348
+SQZBLK BSS     280                                                      MDLD0349
+MODBLK BSS     28043                                                    MDLD0350
+INP1   BSS     28                                                       MDLD0351
+COMMON BSS     54                                                       MDLD0352
+*ROUTINE TO READ CARDS OR TAPE INTO A BCD RECORD.                       MDLD0353
+*CALLING SEQUENCE-                                                      MDLD0354
+*      TSX     CRDBCD,4                                                 MDLD0355
+*      HTR     BLOCK,,TAPE                                              MDLD0356
+*      HTR     (END OF FILE)                                            MDLD0357
+*      HTR     (ERROR)                                                  MDLD0358
+*      (NORMAL RETURN)                                                  MDLD0359
+*BLOCK IS ADDRESS OF BLOCK WHERE BCD RECORED IS TO BE STORED            MDLD0360
+*IF BLOCK IS ZERO RECORD WILL BE STORED IN BCDFST.                      MDLD0361
+*TAPE IS ADDRESS TAPE TO BE READ FROM - MUST BE ON CHANNEL A.           MDLD0362
+*IF TAPE IS ZERO CARDS WILL BE READ.                                    MDLD0363
+*END OF FILE MAY OCCUR FROM CARDS OR TAPE.                              MDLD0364
+*ERROR RETURN OCCURS WHEN A NON HOLLERITH CHARACTER IS READ             MDLD0365
+*FROM CARDS, BITS 24-35 OF AC SHOW PATTERN OF REJECTED COLUMN.          MDLD0366
+CRDBCD SXA     RESTA,1                                                  MDLD0367
+       LTM                                                              MDLD0368
+       SXA     RESTB,2                                                  MDLD0369
+       SXA     RESTC,4                                                  MDLD0370
+       CLA     1,4                                                      MDLD0371
+       PAX     0,1                                                      MDLD0372
+       TXH     *+2,1,0                                                  MDLD0373
+       AXT     BCDFST,1                                                 MDLD0374
+       SXA     RTA,1                                                    MDLD0375
+       TXI     *+1,1,12                                                 MDLD0376
+       SXA     STZ,1                                                    MDLD0377
+       PDX     0,1                                                      MDLD0378
+       TXH     TAPE,1,0                                                 MDLD0379
+       TEFA    *+1                                                      MDLD0380
+       AXT     9L,1                                                     MDLD0381
+       AXT     11,2                                                     MDLD0382
+       SXA     RD,1                                                     MDLD0383
+       TXI     *+1,1,12                                                 MDLD0384
+       SXA     RD+1,1                                                   MDLD0385
+       RCDA                                                             MDLD0386
+       RCHA    RD                                                       MDLD0387
+ SIM   TXI     *+1,1,-11                                                MDLD0388
+       SXA     RD,1                                                     MDLD0389
+       TXI     *+1,1,12                                                 MDLD0390
+       TEFA    ENFL                                                     MDLD0391
+       LCHA    RD                                                       MDLD0392
+       SXA     RD+1,1                                                   MDLD0393
+       TIX     SIM,2,1                                                  MDLD0394
+       TCOA    *                                                        MDLD0395
+       AXT     12,4                                                     MDLD0396
+       AXT     9L+12,2                                                  MDLD0397
+ STA   SXA     LDQ,2                                                    MDLD0398
+       SXA     STQ,2                                                    MDLD0399
+STZ    STZ     0,4                                                      MDLD0400
+       AXT     6,2                                                      MDLD0401
+ ILOOP AXT     12,1                                                     MDLD0402
+ IMAGE PXD     0,0                                                      MDLD0403
+ LDQ   LDQ     0,1                                                      MDLD0404
+       LGL     1                                                        MDLD0405
+ STQ   STQ     0,1                                                      MDLD0406
+       TIX     LDQ,1,1                                                  MDLD0407
+       STA     IMAGE                                                    MDLD0408
+       LRS     3                                                        MDLD0409
+       STO     ROOT                                                     MDLD0410
+ CAL   CAL     TABLE+13,1                                               MDLD0411
+       ARS     24                                                       MDLD0412
+       SUB     ROOT                                                     MDLD0413
+       TZE     FOUND                                                    MDLD0414
+       TXH     ERRER,1,12                                               MDLD0415
+       TXI     CAL,1,1                                                  MDLD0416
+ FOUND LLS     3                                                        MDLD0417
+       LDQ     TABLE+13,1                                               MDLD0418
+       PAX     0,1                                                      MDLD0419
+       TXH     ERRER,1,4                                                MDLD0420
+       TTR     ZONE+4,1                                                 MDLD0421
+ ZONE  TTR     ZONE+5                                                   MDLD0422
+       TTR     ERRER                                                    MDLD0423
+       LGL     6                                                        MDLD0424
+       LGL     6                                                        MDLD0425
+       LGL     6                                                        MDLD0426
+       LGL     18                                                       MDLD0427
+       ANA     MASK                                                     MDLD0428
+       ACL*    STZ                                                      MDLD0429
+       TNX     SLOW,2,1                                                 MDLD0430
+       ALS     6                                                        MDLD0431
+       SLW*    STZ                                                      MDLD0432
+       TTR     ILOOP                                                    MDLD0433
+SLOW   SLW*    STZ                                                      MDLD0434
+       AXT     9R+12,2                                                  MDLD0435
+       TNX     RESTC,4,1                                                MDLD0436
+       TXL     STA,4,6                                                  MDLD0437
+       TTR     STZ                                                      MDLD0438
+TAPE   SXA     TRC,1                                                    MDLD0439
+       SXA     RCA,1                                                    MDLD0440
+       TCOA    *                                                        MDLD0441
+       TEFA    *+1                                                      MDLD0442
+       TRCA    *+1                                                      MDLD0443
+       AXT     3,2                                                      MDLD0444
+TRC    RTDA                                                             MDLD0445
+       RCHA    RTA                                                      MDLD0446
+       TCOA    *                                                        MDLD0447
+       TEFA    ENFL                                                     MDLD0448
+       TRCA    RCA                                                      MDLD0449
+ RESTC AXT     0,4                                                      MDLD0450
+ RESTB AXT     0,2                                                      MDLD0451
+ RESTA AXT     0,1                                                      MDLD0452
+       TTR     4,4                                                      MDLD0453
+RTA    IOCD    0,0,14                                                   MDLD0454
+RCA    BSRA                                                             MDLD0455
+       TIX     TRC,2,1                                                  MDLD0456
+       PXD     0,0                                                      MDLD0457
+       TTR     ERRER+1                                                  MDLD0458
+ERRER  CLA     IMAGE                                                    MDLD0459
+       LXA     RESTC,4                                                  MDLD0460
+       TXI     RESTB,4,1                                                MDLD0461
+ENFL   LXA     RESTC,4                                                  MDLD0462
+       IOT                                                              MDLD0463
+       NOP                                                              MDLD0464
+       TXI     RESTB,4,2                                                MDLD0465
+ TABLE OCT     040071113151,021074143454,020473133353                   MDLD0466
+       OCT     020272323252,020070103050,010067072747                   MDLD0467
+       OCT     004066062646,002065052545,001064042444                   MDLD0468
+       OCT     000463032343,000262022242,000161012141                   MDLD0469
+       OCT     000000602040                                             MDLD0470
+ MASK  OCT     000000000077                                             MDLD0471
+ ROOT  HTR     0                                                        MDLD0472
+ RD    IOCP    0,,1                                                     MDLD0473
+       IOCT    0,,1                                                     MDLD0474
+BCDFST BSS     6,C                                                      MDLD0475
+ 9L    BSS     12                                                       MDLD0476
+ 9R    BSS     12                                                       MDLD0477
+*THIS IS PRT5 704 OR 7090 OUTPUT ROUTINE.                               MDLD0478
+PRT5   TXH 0,0,0                                                        MDLD0479
+       SXD PRT5+0000,4                                                  MDLD0480
+       SXD PRT5+0030,1                                                  MDLD0481
+       SXD PRT5+0029,2                                                  MDLD0482
+       CAL 1,4                                                          MDLD0483
+       SXD PRT5+0033,4                                                  MDLD0484
+       STA PRT5+0024                                                    MDLD0485
+       LRS 18                                                           MDLD0486
+       STA PRT5+0622                                                    MDLD0487
+       SUB PRT5+0622                                                    MDLD0488
+       LLS 3                                                            MDLD0489
+       PDX 0,2                                                          MDLD0490
+       PAX 0,1                                                          MDLD0491
+       TXL PRT5+0034,2,0                                                MDLD0492
+       CAL PRT5+0031,1                                                  MDLD0493
+       PDX 0,1                                                          MDLD0494
+       LDQ PRT5+0622                                                    MDLD0495
+       PXD 0,0                                                          MDLD0496
+       DVP PRT5+0453                                                    MDLD0497
+       STQ COMMON+000                                                   MDLD0498
+       CAS PRT5+0612                                                    MDLD0499
+       ADD PRT5+0582                                                    MDLD0500
+       ADD PRT5+0623                                                    MDLD0501
+       STA PRT5+0623                                                    MDLD0502
+       LDQ 0,1                                                          MDLD0503
+       STQ COMMON+002                                                   MDLD0504
+       TRA PRT5+0034,2                                                  MDLD0505
+       TXL PRT5+0307,0,0                                                MDLD0506
+       TXL PRT5+0204,0,0                                                MDLD0507
+       TXL PRT5+0160,0,0                                                MDLD0508
+       TXL PRT5+0148,0,0                                                MDLD0509
+       TXL PRT5+0117,0,0                                                MDLD0510
+       TXL PRT5+0084,0,0                                                MDLD0511
+       TXL PRT5+0041,0,0                                                MDLD0512
+       CAL 1,4                                                          MDLD0513
+       TZE PRT5+0560                                                    MDLD0514
+       LDQ PRT5+0605                                                    MDLD0515
+       TLQ PRT5+0560                                                    MDLD0516
+       COM 0                                                            MDLD0517
+       PAX 0,4                                                          MDLD0518
+       TXI PRT5+0004,4,2                                                MDLD0519
+       TSX PRT5+0390,4                                                  MDLD0520
+       TTR     *+2                                                      MDLD0521
+       TXI     PRT5+166,0,0                                             MDLD0522
+       LXD PRT5+0079,1                                                  MDLD0523
+       TSX PRT5+0458,4                                                  MDLD0524
+       TRA PRT5+0079,0,48                                               MDLD0525
+       TSX PRT5+0404,4                                                  MDLD0526
+       LXA PRT5+0620,4                                                  MDLD0527
+       PZE PRT5+0620,4,26368                                            MDLD0528
+       LXA PRT5+0024,2                                                  MDLD0529
+       TXH PRT5+0076,2,3                                                MDLD0530
+       CLA PRT5+0573,2                                                  MDLD0531
+       PDX 0,2                                                          MDLD0532
+       LXD PRT5+0043,4                                                  MDLD0533
+       WRS 753                                                          MDLD0534
+       TXL PRT5+0058,2,0                                                MDLD0535
+       PSE 512,2                                                        MDLD0536
+       PZE PRT5+0620,0,22528                                            MDLD0537
+       TXL PRT5+0066,4,12                                               MDLD0538
+       PSE 760                                                          MDLD0539
+       TSX PRT5+0458,4                                                  MDLD0540
+       TSX PRT5+0404,4                                                  MDLD0541
+       WRS 753                                                          MDLD0542
+       PSE 761                                                          MDLD0543
+       PZE PRT5+0620,0,22528                                            MDLD0544
+       LXD PRT5+0043,1                                                  MDLD0545
+       CAL PRT5+0603                                                    MDLD0546
+       SLW PRT5+0644,1                                                  MDLD0547
+       TIX PRT5+0068,1,1                                                MDLD0548
+       STZ PRT5+0623                                                    MDLD0549
+       LXD PRT5+0030,1                                                  MDLD0550
+       LXD PRT5+0029,2                                                  MDLD0551
+       LXD PRT5+0033,4                                                  MDLD0552
+       TOV PRT5+0075                                                    MDLD0553
+       TRA 2,4                                                          MDLD0554
+       WRS 737                                                          MDLD0555
+       PZE PRT5+0620,0,22528                                            MDLD0556
+       TRA PRT5+0066                                                    MDLD0557
+       TXH PRT5+0047,0,0                                                MDLD0558
+       LXA PRT5+0024,4                                                  MDLD0559
+       TXL PRT5+0658,4,3                                                MDLD0560
+       WRS 225                                                          MDLD0561
+       TRA PRT5+0669                                                    MDLD0562
+       CAL 2,4                                                          MDLD0563
+       STA PRT5+0100                                                    MDLD0564
+       PDX 0,2                                                          MDLD0565
+       ADD PRT5+0585                                                    MDLD0566
+       TPL PRT5+0560                                                    MDLD0567
+       TXI PRT5+0090,4,-1                                               MDLD0568
+       SXD PRT5+0033,4                                                  MDLD0569
+       TXL PRT5+0098,2,0                                                MDLD0570
+       TXH PRT5+0102,2,13                                               MDLD0571
+       PAX 0,4                                                          MDLD0572
+       PXD 102,0                                                        MDLD0573
+       LGL 1,4                                                          MDLD0574
+       LXA PRT5+0365,1                                                  MDLD0575
+       TRA PRT5+0574,2                                                  MDLD0576
+       TSX PRT5+0357,4                                                  MDLD0577
+       PXD 129,0                                                        MDLD0578
+       LLS 0                                                            MDLD0579
+       TRA PRT5+0322                                                    MDLD0580
+       TXH PRT5+0560,2,14                                               MDLD0581
+       TSX PRT5+0357,4                                                  MDLD0582
+       CAL PRT5+0100                                                    MDLD0583
+       ACL PRT5+0099                                                    MDLD0584
+       LGL 27                                                           MDLD0585
+       STO COMMON+002                                                   MDLD0586
+       CAL PRT5+0100                                                    MDLD0587
+       ACL PRT5+0094                                                    MDLD0588
+       LGL 27                                                           MDLD0589
+       STO COMMON+001                                                   MDLD0590
+       CLA COMMON+001                                                   MDLD0591
+       FAD COMMON+002                                                   MDLD0592
+       STO COMMON+001                                                   MDLD0593
+       LDQ COMMON+001                                                   MDLD0594
+       TRA PRT5+0205                                                    MDLD0595
+       LXA COMMON+000,4                                                 MDLD0596
+       TNX PRT5+0124,4,20                                               MDLD0597
+       PXD 0,4                                                          MDLD0598
+       ARS 18                                                           MDLD0599
+       STO COMMON+000                                                   MDLD0600
+       STQ COMMON+001                                                   MDLD0601
+       TXI PRT5+0511,2,3                                                MDLD0602
+       SXD PRT5+0131,4                                                  MDLD0603
+       TSX PRT5+0378,2                                                  MDLD0604
+       STA PRT5+0142                                                    MDLD0605
+       ADD PRT5+0580                                                    MDLD0606
+       STA PRT5+0139                                                    MDLD0607
+       CAL PRT5+0024                                                    MDLD0608
+       STA PRT5+0136                                                    MDLD0609
+       TIX PRT5+0133,4,0                                                MDLD0610
+       LXA PRT5+0119,4                                                  MDLD0611
+       LXA COMMON+000,2                                                 MDLD0612
+       LDQ PRT5+0643,4                                                  MDLD0613
+       TXI PRT5+0142,2,1                                                MDLD0614
+       LDQ 0,1                                                          MDLD0615
+       TXI PRT5+0139,1,-1                                               MDLD0616
+       TXH PRT5+0559,2,99                                               MDLD0617
+       LGL 0                                                            MDLD0618
+       SLW PRT5+0644,4                                                  MDLD0619
+       CAL PRT5+0643,4                                                  MDLD0620
+       LGL 0                                                            MDLD0621
+       TXI PRT5+0144,4,1                                                MDLD0622
+       TIX PRT5+0136,2,1                                                MDLD0623
+       SLW COMMON+002                                                   MDLD0624
+       LDQ COMMON+002                                                   MDLD0625
+       TXI PRT5+0138,2,-1                                               MDLD0626
+       TSX PRT5+0357,4                                                  MDLD0627
+       TXL PRT5+0151,2,0                                                MDLD0628
+       TXL PRT5+0501,2,13                                               MDLD0629
+       CLA COMMON+001                                                   MDLD0630
+       TSX PRT5+0415,4                                                  MDLD0631
+       LXA COMMON+000,2                                                 MDLD0632
+       TXL PRT5+0536,2,9                                                MDLD0633
+       CAL COMMON+039                                                   MDLD0634
+       SLW COMMON+039,1                                                 MDLD0635
+       CAL PRT5+0609                                                    MDLD0636
+       SLW COMMON+039                                                   MDLD0637
+       TXI PRT5+0536,1,1                                                MDLD0638
+       TSX PRT5+0390,4                                                  MDLD0639
+       TXL PRT5+0044,1,0                                                MDLD0640
+       TTR     *+2                                                      MDLD0641
+       TRA PRT5+0166                                                    MDLD0642
+       CLA PRT5+0161                                                    MDLD0643
+       TRA PRT5+0167                                                    MDLD0644
+       CLA PRT5+0059                                                    MDLD0645
+       STA PRT5+0194                                                    MDLD0646
+       LXD PRT5+0176,4                                                  MDLD0647
+       LXD PRT5+0043,1                                                  MDLD0648
+       TXH PRT5+0195,2,3                                                MDLD0649
+       CLA PRT5+0643                                                    MDLD0650
+       ANA PRT5+0588                                                    MDLD0651
+       ORA PRT5+0610,2                                                  MDLD0652
+       LXA PRT5+0622,2                                                  MDLD0653
+       TRA PRT5+0644,0,48                                               MDLD0654
+       TXH PRT5+0180,2,0                                                MDLD0655
+       PZE 6,2,32512                                                    MDLD0656
+       TXH PRT5+0180,2,0                                                MDLD0657
+       AXT     6,2                                                      MDLD0658
+       TXI PRT5+0181,2,640                                              MDLD0659
+       PZE PRT5+0192,2,26368                                            MDLD0660
+       SXD PRT5+0621,1                                                  MDLD0661
+       LXA PRT5+0621,2                                                  MDLD0662
+       PZE PRT5+0621,2,26368                                            MDLD0663
+       LXD PRT5+0176,2                                                  MDLD0664
+       PZE PRT5+0186,0,3072                                             MDLD0665
+       SLW PRT5+0647,4                                                  MDLD0666
+       TXI PRT5+0191,2,1                                                MDLD0667
+       CAL PRT5+0643,2                                                  MDLD0668
+       TXI PRT5+0187,4,-1                                               MDLD0669
+       TIX PRT5+0189,1,1                                                MDLD0670
+       WRS 0                                                            MDLD0671
+       PZE PRT5+0621,0,22528                                            MDLD0672
+       TRA 0                                                            MDLD0673
+       LXA PRT5+0622,2                                                  MDLD0674
+       CAL PRT5+0643                                                    MDLD0675
+       TXL PRT5+0199,1,12                                               MDLD0676
+       LXD PRT5+0197,1                                                  MDLD0677
+       TRA PRT5+0200,0,48                                               MDLD0678
+       TXH PRT5+0176,0,0                                                MDLD0679
+       TXH PRT5+0647,2,0                                                MDLD0680
+       WRS 133                                                          MDLD0681
+       TRA PRT5+0651                                                    MDLD0682
+       TSX PRT5+0357,4                                                  MDLD0683
+       CLA PRT5+0575                                                    MDLD0684
+       SLW COMMON+039,1                                                 MDLD0685
+       CLA COMMON+001                                                   MDLD0686
+       TNX PRT5+0211,2,19                                               MDLD0687
+       TZE PRT5+0559                                                    MDLD0688
+       TXI PRT5+0211,2,-1                                               MDLD0689
+       TXH PRT5+0218,2,0                                                MDLD0690
+       CAS PRT5+0614                                                    MDLD0691
+       CAS PRT5+0618                                                    MDLD0692
+       TXI PRT5+0218,2,8                                                MDLD0693
+       TXI PRT5+0218,2,8                                                MDLD0694
+       PXD 11,0                                                         MDLD0695
+       TXI PRT5+0308,2,9                                                MDLD0696
+       LXD PRT5+0211,4                                                  MDLD0697
+       TZE PRT5+0278                                                    MDLD0698
+       ANA PRT5+0619                                                    MDLD0699
+       TNZ PRT5+0224                                                    MDLD0700
+       LXA PRT5+0598,2                                                  MD-D0701
+       TRA PRT5+0501                                                    MDLD0702
+       CLA COMMON+001                                                   MDLD0703
+       CAS PRT5+0615                                                    MDLD0704
+       TXI PRT5+0235,1,1                                                MDLD0705
+       TXI PRT5+0238,1,1                                                MDLD0706
+       CAS PRT5+0616                                                    MDLD0707
+       TXI PRT5+0240,1,1                                                MDLD0708
+       TXI PRT5+0240,1,1                                                MDLD0709
+       FDP PRT5+0616                                                    MDLD0710
+       STQ COMMON+002                                                   MDLD0711
+       CLA COMMON+002                                                   MDLD0712
+       TXI PRT5+0228,4,8                                                MDLD0713
+       CAS PRT5+0617                                                    MDLD0714
+       TRA PRT5+0274                                                    MDLD0715
+       TRA PRT5+0274                                                    MDLD0716
+       CAL PRT5+0609                                                    MDLD0717
+       TRA PRT5+0241                                                    MDLD0718
+       CAL PRT5+0593                                                    MDLD0719
+       SLW COMMON+037,2                                                 MDLD0720
+       PXD 0,4                                                          MDLD0721
+       ALS 9                                                            MDLD0722
+       SLW COMMON+036,2                                                 MDLD0723
+       LGL 8                                                            MDLD0724
+       PAX 0,4                                                          MDLD0725
+       PXD 15,0                                                         MDLD0726
+       LLS 31                                                           MDLD0727
+       TPL PRT5+0252                                                    MDLD0728
+       ALS 1                                                            MDLD0729
+       SSP 0                                                            MDLD0730
+       LDQ PRT5+0651,4                                                  MDLD0731
+       TQP PRT5+0256                                                    MDLD0732
+       ALS 2                                                            MDLD0733
+       TXI PRT5+0252,4,-1                                               MDLD0734
+       TLQ PRT5+0259                                                    MDLD0735
+       ALS 2                                                            MDLD0736
+       TXI PRT5+0252,4,-1                                               MDLD0737
+       LRS 5                                                            MDLD0738
+       DVP PRT5+0651,4                                                  MDLD0739
+       CLA PRT5+0651,4                                                  MDLD0740
+       ANA PRT5+0247                                                    MDLD0741
+       ALS 30                                                           MDLD0742
+       SLW COMMON+035,2                                                 MDLD0743
+       STQ COMMON+002                                                   MDLD0744
+       CLA PRT5+0357,2                                                  MDLD0745
+       ARS 5                                                            MDLD0746
+       ADD COMMON+002                                                   MDLD0747
+       CAS PRT5+0613                                                    MDLD0748
+       TRA PRT5+0286                                                    MDLD0749
+       TRA PRT5+0286                                                    MDLD0750
+       TSX PRT5+0366,4                                                  MDLD0751
+       TXI PRT5+0536,1,3                                                MDLD0752
+       FDP PRT5+0618                                                    MDLD0753
+       STQ COMMON+002                                                   MDLD0754
+       CLA COMMON+002                                                   MDLD0755
+       TXI PRT5+0235,4,8                                                MDLD0756
+       CAL PRT5+0609                                                    MDLD0757
+       SLW COMMON+037,2                                                 MDLD0758
+       STZ COMMON+036,2                                                 MDLD0759
+       STZ COMMON+035,2                                                 MDLD0760
+       STZ COMMON+038,1                                                 MDLD0761
+       TXI PRT5+0284,1,1                                                MDLD0762
+       TIX PRT5+0282,2,1                                                MDLD0763
+       TXI PRT5+0536,1,4                                                MDLD0764
+       CLA COMMON+036,2                                                 MDLD0765
+       ALS 2                                                            MDLD0766
+       ADD COMMON+036,2                                                 MDLD0767
+       ALS 1                                                            MDLD0768
+       ADD COMMON+035,2                                                 MDLD0769
+       TXL PRT5+0301,4,60                                               MDLD0770
+       ADD PRT5+0607                                                    MDLD0771
+       LRS 35                                                           MDLD0772
+       DVP PRT5+0613                                                    MDLD0773
+       RQL 30                                                           MDLD0774
+       STQ COMMON+036,2                                                 MDLD0775
+       STO COMMON+035,2                                                 MDLD0776
+       CAL PRT5+0607                                                    MDLD0777
+       SLW COMMON+039,1                                                 MDLD0778
+       TRA PRT5+0284                                                    MDLD0779
+       SUB PRT5+0607                                                    MDLD0780
+       TNZ PRT5+0293                                                    MDLD0781
+       LDQ PRT5+0609                                                    MDLD0782
+       STQ COMMON+037,2                                                 MDLD0783
+       STZ COMMON+036,2                                                 MDLD0784
+       TRA PRT5+0297                                                    MDLD0785
+       TSX PRT5+0357,4                                                  MDLD0786
+       LGL 9                                                            MDLD0787
+       ADD PRT5+0577                                                    MDLD0788
+       TMI PRT5+0314                                                    MDLD0789
+       LDQ COMMON+001                                                   MDLD0790
+       LXD PRT5+0211,2                                                  MDLD0791
+       TRA PRT5+0205                                                    MDLD0792
+       STA PRT5+0321                                                    MDLD0793
+       STQ COMMON+002                                                   MDLD0794
+       CAL COMMON+002                                                   MDLD0795
+       LDQ PRT5+0608                                                    MDLD0796
+       TNX PRT5+0321,2,19                                               MDLD0797
+       TZE PRT5+0559                                                    MDLD0798
+       TXI PRT5+0321,2,-1                                               MDLD0799
+       LRS 0                                                            MDLD0800
+       STO COMMON+001                                                   MDLD0801
+       STQ COMMON+002                                                   MDLD0802
+       CLA COMMON+002                                                   MDLD0803
+       TNX PRT5+0327,2,9                                                MDLD0804
+       TXI PRT5+0327,2,-1                                               MDLD0805
+       ADD PRT5+0356,2                                                  MDLD0806
+       LRS 35                                                           MDLD0807
+       ADD COMMON+001                                                   MDLD0808
+       STQ COMMON+001                                                   MDLD0809
+       SXD PRT5+0346,2                                                  MDLD0810
+       TSX PRT5+0415,4                                                  MDLD0811
+       LXD PRT5+0346,2                                                  MDLD0812
+       TXL PRT5+0153,2,0                                                MDLD0813
+       CLA PRT5+0575                                                    MDLD0814
+       SLW COMMON+039,1                                                 MDLD0815
+       TXL PRT5+0342,2,8                                                MDLD0816
+       SXD PRT5+0340,1                                                  MDLD0817
+       LXA PRT5+0216,2                                                  MDLD0818
+       TIX PRT5+0342,2,0                                                MDLD0819
+       TXI PRT5+0536,1,1                                                MDLD0820
+       LDQ PRT5+0613                                                    MDLD0821
+       MPY COMMON+001                                                   MDLD0822
+       TXI PRT5+0345,1,1                                                MDLD0823
+       TSX PRT5+0366,4                                                  MDLD0824
+       TXI PRT5+0153,0,0                                                MDLD0825
+       DEC .5E-10B0                                                     MDLD0826
+       DEC .5E-8B0                                                      MDLD0827
+       DEC .5E-7B0                                                      MDLD0828
+       DEC .5E-6B0                                                      MDLD0829
+       DEC .5E-5B0                                                      MDLD0830
+       DEC .5E-4B0                                                      MDLD0831
+       DEC .0005B0                                                      MDLD0832
+       DEC .005B0                                                       MDLD0833
+       DEC .05B0                                                        MDLD0834
+       DEC .5B0                                                         MDLD0835
+       CAL PRT5+0609                                                    MDLD0836
+       TQP PRT5+0360                                                    MDLD0837
+       CAL PRT5+0593                                                    MDLD0838
+       SLW COMMON+039                                                   MDLD0839
+       LRS 0                                                            MDLD0840
+       STQ COMMON+001                                                   MDLD0841
+       LXA COMMON+000,2                                                 MDLD0842
+       LXA PRT5+0365,1                                                  MDLD0843
+       TRA 1,4                                                          MDLD0844
+       LDQ PRT5+0590                                                    MDLD0845
+       TXI PRT5+0374,1,1                                                MDLD0846
+       SUB COMMON+040,1                                                 MDLD0847
+       STO COMMON+002                                                   MDLD0848
+       ALS 2                                                            MDLD0849
+       ADD COMMON+002                                                   MDLD0850
+       ALS 1                                                            MDLD0851
+       TXI PRT5+0374,1,1                                                MDLD0852
+       STQ COMMON+040,1                                                 MDLD0853
+       ANS COMMON+040,1                                                 MDLD0854
+       TIX PRT5+0368,2,1                                                MDLD0855
+       TRA 1,4                                                          MDLD0856
+       CLA PRT5+0623                                                    MDLD0857
+       CAS PRT5+0611                                                    MDLD0858
+       CLA PRT5+0611                                                    MDLD0859
+       STO PRT5+0623                                                    MDLD0860
+       LDQ PRT5+0384                                                    MDLD0861
+       LRS 1                                                            MDLD0862
+       ADD PRT5+0623                                                    MDLD0863
+       LRS 33                                                           MDLD0864
+       DVP PRT5+0580                                                    MDLD0865
+       STQ COMMON+002                                                   MDLD0866
+       LXA COMMON+002,4                                                 MDLD0867
+       TRA 1,2                                                          MDLD0868
+       LXA PRT5+0024,2                                                  MDLD0869
+       TXH PRT5+0071,2,4                                                MDLD0870
+       LXD PRT5+0395,1                                                  MDLD0871
+       CLA PRT5+0603                                                    MDLD0872
+       CAS PRT5+0644,1                                                  MDLD0873
+       TXI PRT5+0397,0,20                                               MDLD0874
+       TIX PRT5+0394,1,1                                                MDLD0875
+       SXD PRT5+0043,1                                                  MDLD0876
+       LXA PRT5+0622,1                                                  MDLD0877
+       TRA 1,4                                                          MDLD0878
+       CPY COMMON+019,2                                                 MDLD0879
+       CPY COMMON+035,2                                                 MDLD0880
+       TIX PRT5+0400,2,1                                                MDLD0881
+       TRA 1,4                                                          MDLD0882
+       SXD PRT5+0476,4                                                  MDLD0883
+       LXA PRT5+0608,4                                                  MDLD0884
+       PZE PRT5+0406,0,3072                                             MDLD0885
+       LDQ COMMON+019,2                                                 MDLD0886
+       STQ PRT5+0647,4                                                  MDLD0887
+       LDQ COMMON+035,2                                                 MDLD0888
+       STQ PRT5+0648,4                                                  MDLD0889
+       TXI PRT5+0412,4,-2                                               MDLD0890
+       TIX PRT5+0407,2,1                                                MDLD0891
+       LXD PRT5+0476,4                                                  MDLD0892
+       TRA 1,4                                                          MDLD0893
+       LXA PRT5+0416,2                                                  MDLD0894
+       TZE 1,4                                                          MDLD0895
+       CAS PRT5+0448                                                    MDLD0896
+       TXI PRT5+0435,2,8                                                MDLD0897
+       TXI PRT5+0429,2,8                                                MDLD0898
+       CAS PRT5+0453,2                                                  MDLD0899
+       TXI PRT5+0420,2,4                                                MDLD0900
+       TXI PRT5+0429,2,4                                                MDLD0901
+       CAS PRT5+0455,2                                                  MDLD0902
+       TXI PRT5+0426,2,2                                                MDLD0903
+       TXI PRT5+0429,2,2                                                MDLD0904
+       CAS PRT5+0456,2                                                  MDLD0905
+       TXI PRT5+0429,2,1                                                MDLD0906
+       TXI PRT5+0429,2,1                                                MDLD0907
+       LDQ PRT5+0573                                                    MDLD0908
+       LRS 5                                                            MDLD0909
+       DVP PRT5+0457,2                                                  MDLD0910
+       STQ COMMON+002                                                   MDLD0911
+       CLA COMMON+002                                                   MDLD0912
+       TRA PRT5+0366                                                    MDLD0913
+       CAS PRT5+0457                                                    MDLD0914
+       TXI PRT5+0442,2,1                                                MDLD0915
+       TXI PRT5+0442,2,1                                                MDLD0916
+       CAS PRT5+0447                                                    MDLD0917
+       TXI PRT5+0429,2,1                                                MDLD0918
+       TXI PRT5+0429,2,1                                                MDLD0919
+       TRA PRT5+0429                                                    MDLD0920
+       LRS 35                                                           MDLD0921
+       DVP PRT5+0457                                                    MDLD0922
+       RQL 30                                                           MDLD0923
+       STQ COMMON+039,1                                                 MDLD0924
+       TXI PRT5+0429,1,1                                                MDLD0925
+       DEC 1E9B35                                                       MDLD0926
+       DEC 1E8B35                                                       MDLD0927
+       DEC 1E7B35                                                       MDLD0928
+       DEC 1E6B35                                                       MDLD0929
+       DEC 1E5B35                                                       MDLD0930
+       DEC 1E4B35                                                       MDLD0931
+       DEC 1E3B35                                                       MDLD0932
+       DEC 1E2B35                                                       MDLD0933
+       DEC 1E1B35                                                       MDLD0934
+       DEC 1                                                            MDLD0935
+       DEC 1E10B35                                                      MDLD0936
+       SXD PRT5+0476,4                                                  MDLD0937
+       LXA PRT5+0468,2+4                                                MDLD0938
+       STZ COMMON+036,4                                                 MDLD0939
+       TIX PRT5+0460,4,1                                                MDLD0940
+       CAL PRT5+0593                                                    MDLD0941
+       LDQ PRT5+0643,1                                                  MDLD0942
+       TXI PRT5+0465,1,101                                              MDLD0943
+       SLW COMMON+019                                                   MDLD0944
+       PXD 0,0                                                          MDLD0945
+       LGL 2                                                            MDLD0946
+       PAX 32,4                                                         MDLD0947
+       PXD 0,0                                                          MDLD0948
+       LGL 4                                                            MDLD0949
+       TNZ PRT5+0477                                                    MDLD0950
+       CAL COMMON+019                                                   MDLD0951
+       TXH PRT5+0483,4,2                                                MDLD0952
+       TXL PRT5+0481,4,0                                                MDLD0953
+       ORS COMMON+051,2+4                                               MDLD0954
+       TXI PRT5+0483,0,0                                                MDLD0955
+       STA PRT5+0469                                                    MDLD0956
+       CAL COMMON+019                                                   MDLD0957
+       ORS COMMON+051,2+4                                               MDLD0958
+       LXA PRT5+0469,4                                                  MDLD0959
+       TXH PRT5+0483,4,12                                               MDLD0960
+       ORS COMMON+048,2+4                                               MDLD0961
+       ARS 1                                                            MDLD0962
+       TIX PRT5+0465,1,20                                               MDLD0963
+       TXH PRT5+0487,1,19                                               MDLD0964
+       TNZ PRT5+0463                                                    MDLD0965
+       LXD PRT5+0473,4                                                  MDLD0966
+       CAL COMMON+038,2+4                                               MDLD0967
+       ORS COMMON+046,2+4                                               MDLD0968
+       ORS COMMON+040,2                                                 MDLD0969
+       TIX PRT5+0488,4,1                                                MDLD0970
+       TIX PRT5+0462,2,16                                               MDLD0971
+       LXD PRT5+0476,4                                                  MDLD0972
+       LXD PRT5+0481,2                                                  MDLD0973
+       TRA 1,4                                                          MDLD0974
+       CAL PRT5+0031,2                                                  MDLD0975
+       ARS 18                                                           MDLD0976
+       ANA PRT5+0606                                                    MDLD0977
+       TSX PRT5+0415,4                                                  MDLD0978
+       TXI PRT5+0157,1,-1                                               MDLD0979
+       STZ COMMON+000                                                   MDLD0980
+       CAL COMMON+002                                                   MDLD0981
+       TRA PRT5+0574,2                                                  MDLD0982
+       CAL PRT5+0031,2                                                  MDLD0983
+       LXA PRT5+0598,2                                                  MDLD0984
+       ARS 18                                                           MDLD0985
+       LDQ PRT5+0516                                                    MDLD0986
+       STQ COMMON+000                                                   MDLD0987
+       SLW COMMON+001                                                   MDLD0988
+       LXA COMMON+000,4                                                 MDLD0989
+       CAL PRT5+0601,2                                                  MDLD0990
+       STA PRT5+0532                                                    MDLD0991
+       TXH PRT5+0517,4,0                                                MDLD0992
+       ARS 18                                                           MDLD0993
+       STO COMMON+000                                                   MDLD0994
+       PAX 5,4                                                          MDLD0995
+       LXD PRT5+0513,1                                                  MDLD0996
+       LDQ PRT5+0590                                                    MDLD0997
+       STQ COMMON+039,1                                                 MDLD0998
+       TXI PRT5+0521,1,1                                                MDLD0999
+       TIX PRT5+0519,4,1                                                MDLD1000
+       LXD PRT5+0513,1                                                  MDLD1001
+       LXA COMMON+000,4                                                 MDLD1002
+       LDQ PRT5+0601,2                                                  MDLD1003
+       MPY COMMON+000                                                   MDLD1004
+       STQ COMMON+002                                                   MDLD1005
+       LXA COMMON+002,2                                                 MDLD1006
+       CAL COMMON+001                                                   MDLD1007
+       LRS 6                                                            MDLD1008
+       LLS 36,2                                                         MDLD1009
+       ANA PRT5+0588                                                    MDLD1010
+       LLS 0                                                            MDLD1011
+       ANS COMMON+039,1                                                 MDLD1012
+       TXI PRT5+0535,1,1                                                MDLD1013
+       TIX PRT5+0531,4,1                                                MDLD1014
+       TSX PRT5+0378,2                                                  MDLD1015
+       PAX 0,2                                                          MDLD1016
+       TXH PRT5+0540,2,0                                                MDLD1017
+       TXI PRT5+0550,2,6                                                MDLD1018
+       STA PRT5+0542                                                    MDLD1019
+       LDQ PRT5+0643,4                                                  MDLD1020
+       RQL 0                                                            MDLD1021
+       STQ COMMON+002                                                   MDLD1022
+       CAL COMMON+002                                                   MDLD1023
+       ARS 6                                                            MDLD1024
+       ORA COMMON+040,1                                                 MDLD1025
+       TNX PRT5+0554,1,1                                                MDLD1026
+       TIX PRT5+0545,2,6                                                MDLD1027
+       SLW PRT5+0643,4                                                  MDLD1028
+       TIX PRT5+0552,4,1                                                MDLD1029
+       LXA PRT5+0608,4                                                  MDLD1030
+       CAL PRT5+0643,4                                                  MDLD1031
+       TXI PRT5+0545,2,30                                               MDLD1032
+       SLW PRT5+0643,4                                                  MDLD1033
+       TXL PRT5+0559,2,6                                                MDLD1034
+       LDQ PRT5+0643,4                                                  MDLD1035
+       RQL 42,2                                                         MDLD1036
+       STQ PRT5+0643,4                                                  MDLD1037
+       LXD PRT5+0033,4                                                  MDLD1038
+       TXI PRT5+0004,4,-1                                               MDLD1039
+       TXI PRT5+0504,2,-9                                               MDLD1040
+       TXI PRT5+0504,2,-10                                              MDLD1041
+       TXI PRT5+0504,2,-10                                              MDLD1042
+       TXI PRT5+0496,2,-6                                               MDLD1043
+       TXI PRT5+0496,2,-7                                               MDLD1044
+       TXI PRT5+0496,2,-7                                               MDLD1045
+       TXI PRT5+0507,2,-4                                               MDLD1046
+       TRA PRT5+0509                                                    MDLD1047
+       TXI PRT5+0506,2,-2                                               MDLD1048
+       TXI PRT5+0498,0,-241                                             MDLD1049
+       TXI PRT5+0509,0,-244                                             MDLD1050
+       TXL PRT5+0497,0,0                                                MDLD1051
+       TXL PRT5+0509,0,-245                                             MDLD1052
+       OCT 027657020011                                                 MDLD1053
+       OCT 730000000000                                                 MDLD1054
+       OCT 046113200010                                                 MDLD1055
+       DEC -164                                                         MDLD1056
+       OCT 075022000007                                                 MDLD1057
+       OCT 030324000006                                                 MDLD1058
+       DEC -36                                                          MDLD1059
+       OCT 047040000005                                                 MDLD1060
+       DEC -200                                                         MDLD1061
+       OCT 076400000004                                                 MDLD1062
+       OCT 031000000003                                                 MDLD1063
+       DEC -1B2                                                         MDLD1064
+       OCT 050000000002                                                 MDLD1065
+       OCT 020000000001                                                 MDLD1066
+       OCT 407777777777                                                 MDLD1067
+       OCT 031463146320                                                 MDLD1068
+       OCT 770000000000                                                 MDLD1069
+       OCT 050753412201                                                 MDLD1070
+       OCT 020304467242                                                 MDLD1071
+       OCT 400000000000                                                 MDLD1072
+       OCT 032155613523                                                 MDLD1073
+       MZE 6,0,6                                                        MDLD1074
+       OCT 051742654224                                                 MDLD1075
+       OCT 020615736405                                                 MDLD1076
+       MZE 3,0,12                                                       MDLD1077
+       OCT 032657712326                                                 MDLD1078
+       MZE 1,0,36                                                       MDLD1079
+       OCT 052746167047                                                 MDLD1080
+       OCT 021134057510                                                 MDLD1081
+       OCT 606060606060                                                 MDLD1082
+       OCT 033371577271                                                 MDLD1083
+       OCT 777777                                                       MDLD1084
+       OCT 77777                                                        MDLD1085
+       DEC 1B5                                                          MDLD1086
+       DEC 0                                                            MDLD1087
+       OCT 600000000000                                                 MDLD1088
+       OCT 200000000000                                                 MDLD1089
+       DEC 120                                                          MDLD1090
+       DEC 128                                                          MDLD1091
+       DEC 10B5                                                         MDLD1092
+       DEC 1.E-3                                                        MDLD1093
+       DEC 1.E-1                                                        MDLD1094
+       DEC 1.E-10                                                       MDLD1095
+       DEC 1.E9                                                         MDLD1096
+       DEC 1.E10                                                        MDLD1097
+       OCT 000400000000                                                 MDLD1098
+       PZE PRT5+0647,0,24                                               MDLD1099
+       PZE PRT5+0647,0,0                                                MDLD1100
+       PZE 0                                                            MDLD1101
+       PZE 0                                                            MDLD1102
+       BCD 5                                                            MDLD1103
+       BCD 5                                                            MDLD1104
+       BCD 9                                                            MDLD1105
+       BCD 1                                                            MDLD1106
+       TXH PRT5+0178,0,-1                                               MDLD1107
+       TXH PRT5+0647,2,0                                                MDLD1108
+       LXA PRT5+0595,2                                                  MDLD1109
+       SXD PRT5+0649,2                                                  MDLD1110
+       LXD PRT5+0644,2                                                  MDLD1111
+       TIX PRT5+0650,2,0                                                MDLD1112
+       WRS 127,2                                                        MDLD1113
+       SLW COMMON+004                                                   MDLD1114
+       CPY COMMON+004                                                   MDLD1115
+       TXI PRT5+0654,4,1                                                MDLD1116
+       CAL PRT5+0643,4                                                  MDLD1117
+       TIX PRT5+0651,1,1                                                MDLD1118
+       WRS 219                                                          MDLD1119
+       TRA PRT5+0194                                                    MDLD1120
+       WRS 241                                                          MDLD1121
+       CLA PRT5+0573,4                                                  MDLD1122
+       PDX 0,4                                                          MDLD1123
+       PSE 0,4                                                          MDLD1124
+       LXD PRT5+0043,4                                                  MDLD1125
+       TXL PRT5+0669,4,12                                               MDLD1126
+       PSE 248                                                          MDLD1127
+       TSX PRT5+0400,4                                                  MDLD1128
+       WRS 241                                                          MDLD1129
+       PSE 249                                                          MDLD1130
+       TSX PRT5+0458,4                                                  MDLD1131
+       TSX PRT5+0400,4                                                  MDLD1132
+       TRA PRT5+0066                                                    MDLD1133
+       END     START                                                    MDLD1134

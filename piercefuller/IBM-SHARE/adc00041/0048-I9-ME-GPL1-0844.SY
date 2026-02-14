@@ -1,0 +1,153 @@
+MEGPL1 REM  153 02080                                                   GPL10001
+       REM GENERAL PROGRAM LOADER                                       GPL10002
+       REM CORNELLI,R                                                   GPL10003
+       REM                                                              GPL10004
+       REM RELOCATE LOADER AT ASSEMBLY TIME BY CHANGING FIRST EQU       GPL10005
+       REM   CARD (X EQU   ) SO THAT THE DESIRED STARTING ADDRESS       GPL10006
+       REM    OF THE LOADER IS IN THE ADDRESS FIELD OF THE EQU CARD.    GPL10007
+       SKP 0                                                            GPL10008
+       REM SELF LOADING ROUTINE.                                        GPL10009
+       FUL                                                              GPL10010
+ X     EQU 21000                                                        GPL10011
+       ORG X+13                                                         GPL10012
+       CPY *+2                                                          GPL10013
+       TSX *+1,4                                                        GPL10014
+       CPY *,4                                                          GPL10015
+       TXI *-1,4,-1                                                     GPL10016
+ NINST     W                 W IS NO. OF INST. IN LOADER - 48.          GPL10017
+       LXA NINST,2                                                      GPL10018
+ BACK  RCD                   READ MIDDLE 3 CARDS                        GPL10019
+ COPY  CAD X+15,4                                                       GPL10020
+       TNX LXA,2,1                                                      GPL10021
+       TXI COPY,4,-1                                                    GPL10022
+ LCN   TXL BACK,,24                                                     GPL10023
+       SKP 0                                                            GPL10024
+       REM MAIN PROGRAM RESUMES AT THIS POINT.                          GPL10025
+       STO DELTA             SAVE ADDRESS RELOCATION AMOUNT.            GPL10026
+       ALS 18                                                           GPL10027
+       STO DELTD             SAVE DECREMENT RELOCATION AMOUNT.          GPL10028
+ LC36  TXI READ,,36          READ NEXT CARD                             GPL10029
+ ACARD STZ L8                CLEAR RELOCATION BITS TO PROCESS           GPL10030
+       STZ R8                   ABSOLUTE BINARY CARD.                   GPL10031
+       TXL OCARD,1,0         X-FER IF EITHER OCTAL OR ORIGIN TABLE.     GPL10032
+ CAD   CAD 0,1               READ IN BINARY CARD.                       GPL10033
+       SLW PCKSM             SAVE CHECKSUM.                             GPL10034
+       TIX CAD,1,1                                                      GPL10035
+       LXD LC36,4            SET TO DECODE RELOCATION BITS.             GPL10036
+       LDQ L8                8 LEFT ROW.                                GPL10037
+ CAL   CAL 0,2                                                          GPL10038
+       LXD CD2,1                                                        GPL10039
+ REPET SSP                                                              GPL10040
+       TQP NOMOD             0 IS DONT MODIFY.                          GPL10041
+       RQL 1                 NEXT RELOCATION BIT.                       GPL10042
+       TIX SKIP1,4,1                                                    GPL10043
+       LDQ R8                8 RIGHT ROW.                               GPL10044
+       LXD LC36,4                                                       GPL10045
+ SKIP1 TQP MODFY             REL BITS ARE 10, MODIFY BY ADDING (X-FER)  GPL10046
+       SSM                   BITS ARE 11, MODIFY BY SUBTRACTING.        GPL10047
+ MODFY ADD DELTD+2,1         RELOCATION AMOUNT.                         GPL10048
+ NOMOD RQL 1                                                            GPL10049
+       TIX SKIP3,4,1                                                    GPL10050
+       LDQ R8                8 RIGHT ROW.                               GPL10051
+       LXD LC36,4                                                       GPL10052
+ SKIP3 TIX REPET,1,1         RETURN TO RELOCATE ADDRESS.                GPL10053
+ SLW   SLW 0,2                                                          GPL10054
+       TIX CAL,2,1           RETURN TO RELOCATE NEXT WORD.              GPL10055
+       CAL L9                VERIFY CHECKSUM.                           GPL10056
+       ANA LC36              PICK OUT IGNORE CHECKSUM BIT (9L3).        GPL10057
+       STP CKSM              IF IGNORE BIT SET, CHANGES CKSM TO TXI.    GPL10058
+       CLA R9                TEST CHECKSUM (9 RIGHT ROW) FOR BLANK.     GPL10059
+       TZE READ              IGNORE CHECKSUM IF 9 RIGHT BLANK.          GPL10060
+       SUB PCKSM                                                        GPL10061
+       TZE READ              X-FER IF CHECKSUM CHECKS.                  GPL10062
+ CKSM  HTR READ              IS TXI IF IGNORE BIT (9L3) IS SET.         GPL10063
+       SKP 0                                                            GPL10064
+       REM OCTAL CORRECTION DECODER.                                    GPL10065
+ OCT   CLA L9                                                           GPL10066
+ XFR   TNZ **                X-FER IF X-FER CARD TO X-FER ADDRESS.      GPL10067
+       TXI *+1,1,8           SET IR1 TO 8.  ORIGINALLY ZERO.            GPL10068
+ B8    LXD CD2,6                                                        GPL10069
+ B4    CAL WORD+2,4          PARTIAL SUM OF ORIGINAL OCTALS.            GPL10070
+       CAD WORD+2,4          ADD IN NEW ROW.                            GPL10071
+       SLW WORD+2,4                                                     GPL10072
+       TIX B4,4,1                                                       GPL10073
+ B5    LDQ WORD+2,2          READY 2 OCTALS IN MQ.                      GPL10074
+       TXI B7,2,58           SET IR2 TO DECODE LOC OF 1ST OR 3RD OCTAL. GPL10075
+ B6    TIX B7,2,4            IF INDEXABLE, DECODE RELOCATION BITS.      GPL10076
+ CD2   TNX B3,2,2            TRANSFER IF HALF-ROW COMPLETE.             GPL10077
+       TXI *+1,2,56          SET TO DECODE LOC OF 2ND OR 4TH OCTAL.     GPL10078
+ B7    PXD ,0                                                           GPL10079
+ B2    ALS 2                 A 1 BIT FROM THE MQ BECOMES 001,           GPL10080
+       LGL 1                    A 0 BIT BECOMES 000.                    GPL10081
+       TIX B2,2,12           AT DROPOUT, IR2 IS BETWEEN 1 AND 12.       GPL10082
+       TXH *+2,1,7           SKIP ACL ON 8-ROW, CLEARS LOC--LOC+12.     GPL10083
+       ACL LOC+12,2          IR2=1,2,3,4  REL. BITS, 5,6,7,8 DECR.,     GPL10084
+       SLW LOC+12,2             9,10,11,12 ADDRESS DECODED.             GPL10085
+       TNX B6,2,8            IF INDEXABLE, LOCATION WAS JUST DECODED.   GPL10086
+       TXI B2,2,136          SET INDEX TO DECODE INSTRUCTION.           GPL10087
+ B3    TIX B5,2,1            TRANSFER IF HALF-ROW, DROP IF FULL ROW.    GPL10088
+       TIX B8,1,1            TRANSFER FOR NEXT ROW READIN.              GPL10089
+       LXD B6,2              SET TO STORE OCTALS.                       GPL10090
+ B9    LDQ LOC+12,2          PICK UP RELOCATION BITS.                   GPL10091
+       RQL 33                POSITION IN HIGH ORDER MQ.                 GPL10092
+       CLA LOC+4,2           PICK UP LOCATION.                          GPL10093
+       TQP *+2               X-FER IF NOT RELOCATABLE.                  GPL10094
+       ADD DELTA             RELOCATE ADDRESS.                          GPL10095
+       TZE B10               DO NOT STORE OCTAL IN LOCATION ZERO.       GPL10096
+       STA A1                                                           GPL10097
+       LXD CD2,1             LOOP TWICE, TO RELOC. DECR. + ADDR.        GPL10098
+       CAL LOC+8,2           OCTAL INSTRUCTION.                         GPL10099
+       RQL 1                 POSITION RELOCATION BIT.                   GPL10100
+       TQP *+2               X-FER IF NOT RELOCATABLE.                  GPL10101
+       ADD DELTD+2,1         IF IR1=2, REL. DECR., IF IR1=1, REL. ADDR. GPL10102
+       TIX *-3,1,1                                                      GPL10103
+ A1    SLW **                STORE OCTAL.                               GPL10104
+ B10   TIX B9,2,1                                                       GPL10105
+       TRA READ              OCTAL ROUTINE COMPLETE.                    GPL10106
+ LXA   RCD                   READ LAST LOADER CARD INTO 0-27 OCTAL.     GPL10107
+       LXD LCN,1             LCN CONTAINS 24 DECIMAL.                   GPL10108
+ CAD1  CAD X+24,1                                                       GPL10109
+       TIX CAD1,1,1                                                     GPL10110
+       TRA READ              X-FER TO BEGIN LOADING.                    GPL10111
+ T1    BES 11                                                           GPL10112
+ DELTD EQU LXA               RELOCATION AMOUNT FOR DECREMENT.           GPL10113
+ DELTA EQU LXA+1             RELOCATION AMOUNT FOR ADDRESS.             GPL10114
+ L9    EQU LXA+2             9 LEFT ROW.                                GPL10115
+ R9    EQU LXA+3             9 RIGHT ROW.                               GPL10116
+ PCKSM EQU LXA+4             CHECKSUM.                                  GPL10117
+ L8    EQU LXA+5             8 LEFT ROW.                                GPL10118
+ R8    EQU LXA+6             8 RIGHT ROW.                               GPL10119
+ LOC   EQU LXA+4                                                        GPL10120
+       REM    LOC THROUGH LOC+3  OCTAL LOCATION.                        GPL10121
+       REM    LOC+4 THROUGH LOC+7 OCTAL INSTRUCTION.                    GPL10122
+       REM    LOC+8 THROUGH LOC+11 OCTAL RELOCATION BITS.               GPL10123
+ WORD  EQU L9                OCTAL READIN AREA, 2 LOCATIONS.            GPL10124
+       SKP 0                                                            GPL10125
+       REM MAIN PROGRAM STARTS HERE.                                    GPL10126
+       ORG X                                                            GPL10127
+ READ  RCD                                                              GPL10128
+       CPY L9                9-ROW LEFT READ IN.                        GPL10129
+       TRA *+2                                                          GPL10130
+       HTR READ              END OF FILE STOP.                          GPL10131
+       LLS 17                POSITION WORD COUNT IN ADDR. OF ACC.       GPL10132
+       PAX 0,3                                                          GPL10133
+       ADD L9                                                           GPL10134
+       CPY R9                READIN CHECKSUM (9-ROW RIGHT).             GPL10135
+       LDQ L9                                                           GPL10136
+       RQL 1                 IF MQ MINUS, THIS IS RELOCATABLE CARD.     GPL10137
+       TQP *+2               IF MQ PLUS, DO NOT RELOCATE LOCATION.      GPL10138
+       ADD DELTA             ADD IN RELOCATION AMOUNT.                  GPL10139
+       STA CAD               USED TO READ IN REST OF CARD.              GPL10140
+       STA CAL               USED TO RELOCATE INSTRUCTIONS.             GPL10141
+       STA SLW               USED TO RELOCATE INSTRUCTIONS.             GPL10142
+       STA XFR               X-FER ADDRESS.  USED ONLY IF X-FER CARD.   GPL10143
+       CAL L9                9-ROW LEFT IS 1ST VALUE IN CHECKSUM.       GPL10144
+       TQP ACARD                                                        GPL10145
+       CAD L8                REL. CARD,  READ IN RELOCATION BITS.       GPL10146
+       CAD R8                                                           GPL10147
+       TXH CAD,1,0           X-FER IF WORD COUNT NON-ZERO.              GPL10148
+ OCARD CAL R9                CHECK WHETHER ORIGIN TABLE CARD.           GPL10149
+       TZE OCT               X-FER IF NOT ORIGIN TABLE CARD.            GPL10150
+       SUB L9                SET UP RELOCATION AMOUNT.                  GPL10151
+ W     EQU T1-X-48           T1 IS HIGHEST ADDRESS, X LOWEST IN LOADER. GPL10152
+       END 0                                                            GPL10153

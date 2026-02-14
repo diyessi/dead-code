@@ -1,0 +1,197 @@
+C     EIGENVALUES AND EIGENVECTORS OF A REAL SYMMETRIC MATRIX           ANF20201
+C                                                                       F2020002
+      SUBROUTINE EIGEN(A,VALU,NSUB,M)                                   F2020003
+C                                                                       F2020004
+      DIMENSION A(20,20), B(20,20), VALU(20), DIAG(20), SUPERD(19),     F2020005
+     X          Q(19), VALL(20), S(19), C(19), D(20), IND(20), U(20),   F2020006
+     X          DUMMY(478)                                              F2020007
+      COMMON DIAG, SUPERD, VALL, D, Q, S, B, DUMMY, IND, U, C           F2020008
+      EQUIVALENCE (DIAG,DUMMY), (SUPERD,DUMMY(21)), (VALL,D,DUMMY(40)), F2020009
+     X            (Q,S,DUMMY( 60)), (B,DUMMY( 79)), (IND,U), (II,MATCH),F2020010
+     X            (TAU,BETA), (P,PRODS), (T,SMALLD), (ANORM,ANORM2)     F2020011
+    2 N=NSUB                                                            F2020012
+C                                                                       F2020013
+C     CALCULATE NORM OF MATRIX                                          F2020014
+C                                                                       F2020015
+    3 ANORM2=0.0                                                        F2020016
+    4 DO 6 I=1,N                                                        F2020017
+    5 DO 6 J=1,N                                                        F2020018
+    6 ANORM2=ANORM2+A(I,J)**2                                           F2020019
+    7 ANORM=SQRTF(ANORM2)                                               F2020020
+C                                                                       F2020021
+C     GENERATE IDENTITY MATRIX                                          F2020022
+C                                                                       F2020023
+    9 IF (M) 10, 45, 10                                                 F2020024
+   10 DO 40 I=1,N                                                       F2020025
+   12 DO 40 J=1,N                                                       F2020026
+   20 IF(I-J) 35, 25, 35                                                F2020027
+   25 B(I,J)=1.0                                                        F2020028
+   30 GO TO 40                                                          F2020029
+   35 B(I,J)=0.0                                                        F2020030
+   40 CONTINUE                                                          F2020031
+C                                                                       F2020032
+C     PERFORM ROTATIONS TO REDUCE MATRIX TO JACOBI FORM                 F2020033
+C                                                                       F2020034
+      DIMENSION WVEC(20), PVEC(20), QVEC(20)                            F2020035
+      EQUIVALENCE (WVEC(2),SUPERD), (QVEC,VALL), (PVEC(2),Q),           F2020036
+     X            (DIV,SCALAR,COS), (SUM,SIN)                           F2020037
+   45 CONTINUE                                                          F2020038
+   50 NN=N-2                                                            F2020039
+   52 IF (NN) 890, 170, 55                                              F2020040
+   55 DO 160 I=1,NN                                                     F2020041
+   58 I1=I+1                                                            F2020042
+   60 I2=I+2                                                            F2020043
+   65 SUM=0.0                                                           F2020044
+   68 DO 70 J=I2,N                                                      F2020045
+   70 SUM=SUM+A(I,J)**2                                                 F2020046
+   72 IF (SUM) 75,160, 75                                               F2020047
+   75 SUM=SQRTF(SUM+A(I,I1)**2)                                         F2020048
+   80 WVEC(I1)=SQRTF(     1.0+ABSF(A(I,I1))/SUM)                        F2020049
+   82 DIV=SIGNF(    SUM*WVEC(I1),A(I,I1))                               F2020050
+   83 DO 85 J=I2,N                                                      F2020051
+   85 WVEC(J)=A(I,J)/DIV                                                F2020052
+   88 NI=N-I                                                            F2020053
+   90 CALL MATMPY (NI,NI,WVEC(I1),A(I1,I1),PVEC(I1))                    F2020054
+   95 CALL MATMPY (1,NI,WVEC(I1),PVEC(I1),SCALAR)                       F2020055
+   98 SCALAR=0.5*SCALAR                                                 F2020056
+  100 DO 105 J=I1,N                                                     F2020057
+  105 QVEC(J)=PVEC(J)-SCALAR*WVEC(J)                                    F2020058
+  112 A(I,I1)=-SIGNF(SUM,A(I,I1))                                       F2020059
+  114 DO 120 K=I1,N                                                     F2020060
+  116 DO 120 L=I1,K                                                     F2020061
+  118 A(K,L)=A(K,L)-(WVEC(K)*QVEC(L)+WVEC(L)*QVEC(K))                   F2020062
+  120 A(L,K)=A(K,L)                                                     F2020063
+  125 IF (M) 130, 160, 130                                              F2020064
+  130 CALL MATMPY (N,NI,WVEC(I1),B(I1,1),QVEC)                          F2020065
+  140 DO 150 K=I1,N                                                     F2020066
+  145 DO 150 L= 1,N                                                     F2020067
+  150 B(K,L)=B(K,L)-WVEC(K)*QVEC(L)                                     F2020068
+  160 CONTINUE                                                          F2020069
+C                                                                       F2020070
+C     MOVE JACOBI FORM ELEMENTS AND INITIALIZE EIGENVALUE BOUNDS        F2020071
+C                                                                       F2020072
+  170 DO 200 I=1,N                                                      F2020073
+  180 DIAG(I)=A(I,I)                                                    F2020074
+  190 VALU(I)=ANORM                                                     F2020075
+  200 VALL(I)=-ANORM                                                    F2020076
+  210 DO 230 I=2,N                                                      F2020077
+  220 SUPERD(I-1)=A(I-1,I)                                              F2020078
+  230 Q(I-1)=(SUPERD(I-1))**2                                           F2020079
+C                                                                       F2020080
+C     DETERMINE SIGNS OF PRINCIPAL MINORS                               F2020081
+C                                                                       F2020082
+  235 TAU=0.0                                                           F2020083
+  240 I=1                                                               F2020084
+  260 MATCH=0                                                           F2020085
+  270 T2=0.0                                                            F2020086
+  275 T1=1.0                                                            F2020087
+  277 DO 450 J=1,N                                                      F2020088
+  280 P=DIAG(J)-TAU                                                     F2020089
+  290 IF(T2) 300, 330, 300                                              F2020090
+  300 IF(T1) 310, 370, 310                                              F2020091
+  310 T=P*T1-Q(J-1)*T2                                                  F2020092
+  320 GO TO 410                                                         F2020093
+  330 IF(T1) 335, 350, 350                                              F2020094
+  335 T1=-1.0                                                           F2020095
+  340 T=-P                                                              F2020096
+  345 GO TO 410                                                         F2020097
+  350 T1=1.0                                                            F2020098
+  355 T=P                                                               F2020099
+  360 GO TO 410                                                         F2020100
+  370 IF(Q(J-1)) 380, 350, 380                                          F2020101
+  380 IF(T2) 400, 390, 390                                              F2020102
+  390 T=-1.0                                                            F2020103
+  395 GO TO 410                                                         F2020104
+  400 T=1.0                                                             F2020105
+C                                                                       F2020106
+C     COUNT AGREEMENTS IN SIGN                                          F2020107
+C                                                                       F2020108
+  410 IF(T1) 425, 420, 420                                              F2020109
+  420 IF(T) 440, 430, 430                                               F2020110
+  425 IF(T) 430, 440, 440                                               F2020111
+  430 MATCH=MATCH+1                                                     F2020112
+  440 IF (ABSF(T)-1.0E20) 445,445,442                                   F2020113
+  442 T1=T1/T                                                           F2020114
+  443 T=1.0                                                             F2020115
+  445 T2=T1                                                             F2020116
+  450 T1=T                                                              F2020117
+C                                                                       F2020118
+C     ESTABLISH TIGHTER BOUNDS ON EIGENVALUES                           F2020119
+C                                                                       F2020120
+  460 DO 530 K=1,N                                                      F2020121
+  465 IF (K-MATCH) 470, 470, 520                                        F2020122
+  470 IF(TAU-VALL(K)) 530, 530, 480                                     F2020123
+  480 VALL(K)=TAU                                                       F2020124
+  490 GO TO 530                                                         F2020125
+  520 IF(TAU-VALU(K)) 525, 530, 530                                     F2020126
+  525 VALU(K)=TAU                                                       F2020127
+  530 CONTINUE                                                          F2020128
+  540 IF(VALU(I)-VALL(I)-5.0E-8) 570, 570, 550                          F2020129
+  550 IF(VALU(I)) 560, 580, 560                                         F2020130
+  560 IF(ABSF(VALL(I)/VALU(I)-1.0)-5.0E-8) 570, 570, 580                F2020131
+  570 I=I+1                                                             F2020132
+  575 IF(I-N) 540, 540, 590                                             F2020133
+  580 TAU=(VALL(I)+VALU(I))/2.0                                         F2020134
+  585 GO TO 260                                                         F2020135
+C                                                                       F2020136
+C     JACOBI EIGENVECTORS BY ROTATIONAL TRIANGULARIZATION               F2020137
+C                                                                       F2020138
+  590 IF (M) 593, 890, 593                                              F2020139
+  593 CONTINUE                                                          F2020140
+  595 DO 610 I=1,N                                                      F2020141
+  600 DO 610 J=1,N                                                      F2020142
+  610 A(I,J)=0.0                                                        F2020143
+  615 DO 850 I=1,N                                                      F2020144
+  620 IF (I-1) 625, 625, 621                                            F2020145
+  621 IF (VALU(I-1)-VALU(I)-5.0E-7) 730, 730, 622                       F2020146
+  622 IF (VALU(I-1)) 623, 625, 623                                      F2020147
+  623 IF (ABSF(VALU(I)/VALU(I-1)-1.0)-5.0E-7) 730, 730, 625             F2020148
+  625 COS=1.0                                                           F2020149
+  628 SIN=0.0                                                           F2020150
+  630 DO 700 J=1,N                                                      F2020151
+  635 IF(J-1) 680, 680, 640                                             F2020152
+  640 T=SQRTF(T1**2+T2**2)                                              F2020153
+  645 COS=T1/T                                                          F2020154
+  648 SIN=T2/T                                                          F2020155
+  650 S(J-1)=SIN                                                        F2020156
+  660 C(J-1)=COS                                                        F2020157
+  670 D(J-1)=T1*COS+T2*SIN                                              F2020158
+  680 T1=(DIAG(J)-VALU(I))*COS-BETA*SIN                                 F2020159
+  690 T2=SUPERD(J)                                                      F2020160
+  700 BETA=SUPERD(J)*COS                                                F2020161
+  710 D(N)=T1                                                           F2020162
+  720 DO 725 J=1,N                                                      F2020163
+  725 IND(J)=0                                                          F2020164
+  730 SMALLD=ANORM                                                      F2020165
+  735 DO 780 J=1,N                                                      F2020166
+  740 IF (IND(J)-1) 750, 780, 780                                       F2020167
+  750 IF (ABSF(SMALLD)-ABSF(D(J)))780, 780, 760                         F2020168
+  760 SMALLD=D(J)                                                       F2020169
+  770 NN=J                                                              F2020170
+  780 CONTINUE                                                          F2020171
+  790 IND(NN)=1                                                         F2020172
+  800 PRODS=1.0                                                         F2020173
+  805 IF (NN-1) 810, 850, 810                                           F2020174
+  810 DO 840 K=2,NN                                                     F2020175
+  820 II=NN+1-K                                                         F2020176
+  830 A(II+1,I)=C(II)*PRODS                                             F2020177
+  840 PRODS=-PRODS*S(II)                                                F2020178
+  850 A(1,I)=PRODS                                                      F2020179
+C                                                                       F2020180
+C     FORM MATRIX PRODUCT OF ROTATION MATRIX WITH JACOBI VECTOR MATRIX  F2020181
+C                                                                       F2020182
+  855 DO 885 J=1,N                                                      F2020183
+  860 DO 865 K=1,N                                                      F2020184
+  865 U(K)=A(K,J)                                                       F2020185
+  885 CALL MATMPY (N,N,U,B,A(1,J))                                      F2020186
+  890 RETURN                                                            F2020187
+  900 END (0,1,0,0,1)                                                   F2020188
+C     ROW VECTOR COLUMN MATRIX MULTIPLICATION                           F2020189
+      SUBROUTINE MATMPY (M,N,X,A,Y)                                     F2020190
+      DIMENSION A(20,20),X(20),Y(20)                                    F2020191
+   10 DO 40 I=1,M                                                       F2020192
+   20 Y(I)=0.0                                                          F2020193
+   30 DO 40 J=1,N                                                       F2020194
+   40 Y(I)=Y(I)+X(J)*A(J,I)                                             F2020195
+   50 RETURN                                                            F2020196
+   60 END (0,1,0,0,0)                                                   F2020197

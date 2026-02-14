@@ -1,0 +1,379 @@
+C EMBED GAUSS                                                           NONL 001
+       DIMENSION  B(24), Z(100,9)                                       NONL 002
+                                                                        NONL 003
+    1  READ 2, JJ, N PTS, LIGHT 1, LIGHT 2, LIGHT 3                     NONL 004
+    2  FORMAT (10I4)                                                    NONL 005
+       IF (JJ) 99,99,3                                                  NONL 006
+    3  PRINT 4                                                          NONL 007
+    4  FORMAT (42H1 INPUT DATA FOR NON-LINEAR REGRESSION       /1H0)    NONL 008
+      PRINT 2, JJ, N PTS, LIGHT 1, LIGHT 2, LIGHT 3                     NONL 009
+                                                                        NONL 010
+    5  READ 7, (B(J), J=1,23)                                           NONL 011
+       B(24) = 0.0                                                      NONL 012
+    7  FORMAT (9F8.2)                                                   NONL 013
+       PRINT 8, (B(J), J=1,24)                                          NONL 014
+    8  FORMAT ( 36H0 THE PARAMETERS, B(1),..,B(24)      /(5E15.5))      NONL 015
+       PRINT 9                                                          NONL 016
+    9  FORMAT (12H0 THE Z(J,K)           )                              NONL 017
+                                                                        NONL 018
+                                                                        NONL 019
+       IF (N PTS) 200,99,100                                            NONL 020
+  100  CONTINUE                                                         NONL 021
+       DO 10  M=1,N PTS                                                 NONL 022
+       READ 7, (Z(M,L), L=1,9)                                          NONL 023
+       PRINT 17,   (Z(M,L), L=1,9)                                      NONL 024
+   10  CONTINUE                                                         NONL 025
+       GO TO 201                                                        NONL 026
+                                                                        NONL 027
+  200  N PTS = - N PTS                                                  NONL 028
+  201  CONTINUE                                                         NONL 029
+       IF (LIGHT 1) 11,12,11                                            NONL 030
+   11  SENSE LIGHT 1                                                    NONL 031
+       GO TO 20                                                         NONL 032
+   12  IF (LIGHT 2) 14,20,14                                            NONL 033
+   14  SENSE LIGHT 2                                                    NONL 034
+   17  FORMAT (9E13.5)                                                  NONL 035
+                                                                        NONL 036
+                                                                        NONL 037
+   20  IF (LIGHT 3) 21,30,21                                            NONL 038
+   21  SENSE LIGHT 3                                                    NONL 039
+                                                                        NONL 040
+   30  CALL GAUSS (JJ,NPTS,B,Z)                                         NONL 041
+       PRINT35,  (B(J), J=1,JJ)                                         NONL 042
+   35  FORMAT (46H0 THE MINIMIZING VALUES OF THE PARAMETERS ARE //      NONL 043
+     1  (5E15.7))                                                       NONL 044
+       PRINT 37, B(24)                                                  NONL 045
+   37  FORMAT (42H0 THE MINIMAL VALUE OF THE SUM OF SQUARES     E15.6)  NONL 046
+       GO TO 1                                                          NONL 047
+   99  CALL EXIT                                                        NONL 048
+       END                                                              NONL 049
+       SUBROUTINE GAUSS (N1,N2,B,Z)                                     NONL 050
+       DIMENSION  A(20,20),B(24),BMIN(20),BSTART(20),C(20,1),           NONL 051
+     X            X(20),Z(100,9),DEL(20),E(20)                          NONL 052
+       EQUIVALENCE  (A,X)                                               NONL 053
+                                                                        NONL 054
+       JJ = N1                                                          NONL 055
+       NUMBER = N2                                                      NONL 056
+       LIMIT = 20 + 5 * JJ                                              NONL 057
+       IDNTFC = IDNTFC + 1                                              NONL 058
+       SQ MIN = 1.0E20                                                  NONL 059
+       Y1 = SQ MIN                                                      NONL 060
+       DUMP 1 = 0.0                                                     NONL 061
+       DUMP N = 0.0                                                     NONL 062
+       MM 10 = 0                                                        NONL 063
+       B NORM = 0.0                                                     NONL 064
+       NN = 0                                                           NONL 065
+       MARK L = 0                                                       NONL 066
+       WORD = 7H      X                                                 NONL 067
+       B MAX = 0.0                                                      NONL 068
+       GO TO 60                                                         NONL 069
+                                                                        NONL 070
+    1  DO 4 J=1,JJ                                                      NONL 071
+       BMIN(J) = B(J)                                                   NONL 072
+       BSTART(J) = B(J)                                                 NONL 073
+       B NORM = B NORM + ABSF(B(J))                                     NONL 074
+       IF (B MAX - ABSF(B(J))) 3,4,4                                    NONL 075
+    3  B MAX = ABSF(B(J))                                               NONL 076
+    4  CONTINUE                                                         NONL 077
+       TOL  = B MAX * 1.0E-5                                            NONL 078
+                                                                        NONL 079
+    5  FORMAT (91H0    NON-LINEAR REGRESSION (SUBROUTINE GAUSS) FOR Z(9,NONL 080
+     X100) AND  B(24)                  RUN        I3 /)                 NONL 081
+       IF (DUMPS) 8,8,6                                                 NONL 082
+    6  PRINT 5, IDNTFC                                                  NONL 083
+       DUMMY = Y COMP(1,B,Z)                                            NONL 084
+       PRINT 7                                                          NONL 085
+    7  FORMAT (114H0CYCLE    SUM OF SQUARES      ***********************NONL 086
+     X**************** PARAMETERS *********************************/ )  NONL 087
+                                                                        NONL 088
+    8  DO 9  J=1,JJ                                                     NONL 089
+    9  BSTART(J) = B(J)                                                 NONL 090
+                                                                        NONL 091
+   10  IF (NN - LIMIT) 11,11,950                                        NONL 092
+   11  SUM SQ = 0.0                                                     NONL 093
+       DO 12  N=1,NUMBER                                                NONL 094
+       YC = YCOMP(N,B,Z)                                                NONL 095
+       DEL Y = Z(N,1) - YC                                              NONL 096
+   12  SUM SQ = SUM SQ + DEL Y**2                                       NONL 097
+                                                                        NONL 098
+       Y2 = Y1                                                          NONL 099
+       Y1 = SUMSQ                                                       NONL 100
+                                                                        NONL 101
+       IF (DUMPS) 15,15,40                                              NONL 102
+                                                                        NONL 103
+   15  NN = NN + 1                                                      NONL 104
+       IF (SUM SQ - SQ MIN) 16,20,20                                    NONL 105
+   16  DO 17  J=1,JJ                                                    NONL 106
+   17  B MIN(J) = B(J)                                                  NONL 107
+       SQ MIN = SUM SQ                                                  NONL 108
+       GO TO 300                                                        NONL 109
+                                                                        NONL 110
+   20  T = T * 0.5                                                      NONL 111
+       IF (T - 1.0E-15)  950,950,30                                     NONL 112
+                                                                        NONL 113
+                                                                        NONL 114
+COMPUTE CORRECTED VALUES OF PARAMETERS  ********************************NONL 115
+                                                                        NONL 116
+   30  DO 31  J=1,JJ                                                    NONL 117
+   31  B(J) = B START(J) + T * X(J)                                     NONL 118
+       DUMPS = DUMP N                                                   NONL 119
+       GO TO 10                                                         NONL 120
+                                                                        NONL 121
+   40  IF (JJ - 5) 41,41,42                                             NONL 122
+   41  PRINT 45, NN, WORD, SUM SQ, (B(J), J=1,JJ)                       NONL 123
+       GO TO 15                                                         NONL 124
+   42  PRINT 45, NN, WORD, SUM SQ, (B(J), J=1,5)                        NONL 125
+       PRINT 46, (B(K), K=6,JJ)                                         NONL 126
+       GO TO 15                                                         NONL 127
+   45  FORMAT (1H0 I2, A6,E15.7, E20.7,4E15.7)                          NONL 128
+   46  FORMAT (E44.7, 4E15.7)                                           NONL 129
+                                                                        NONL 130
+C  50  WRITE OUTPUT TAPE 6,51                                           NONL 131
+   50  PRINT               51                                           NONL 132
+   51  FORMAT (46H0 UNDERFLOW-OVERFLOW IN SOLUTION OF NORMAL EQS //)    NONL 133
+   52  MM 8 = -1                                                        NONL 134
+       MM 10 = -1                                                       NONL 135
+       GO TO 300                                                        NONL 136
+                                                                        NONL 137
+C  56  WRITE OUTPUT TAPE 6,57                                           NONL 138
+   56  PRINT               57                                           NONL 139
+   57  FORMAT (46H0 SINGULARITY PREVENTS  SOLUTION OF NORMAL EQS //)    NONL 140
+   58  FORMAT (1H0 I2,A6, E15.7, E20.7,4E15.7/(E44.7,4E15.7))           NONL 141
+       GO TO 52                                                         NONL 142
+                                                                        NONL 143
+CONTROLS FOR PRINTING ITERATIONS ARE DEFINED  **************************NONL 144
+                                                                        NONL 145
+   60  IF (SENSE LIGHT 1) 61,62                                         NONL 146
+   61  DUMP 1 = 1.0                                                     NONL 147
+       MM 10 = 1                                                        NONL 148
+   62  IF (SENSE LIGHT 2) 63,64                                         NONL 149
+   63  DUMP N = 1.0                                                     NONL 150
+       MM 10 = 1                                                        NONL 151
+   64  DUMPS = DUMP 1 + DUMP N                                          NONL 152
+       GO TO 1                                                          NONL 153
+                                                                        NONL 154
+                                                                        NONL 155
+COMPUTE FINALE IF AND ONLY IF SENSE LIGHT 3 IS ON UPON ENTRY            NONL 156
+                                                                        NONL 157
+   80  IF (SENSE LIGHT 3) 81,999                                        NONL 158
+   81  SENSE LIGHT 3                                                    NONL 159
+       DO 82  J=1,JJ                                                    NONL 160
+   82  B(J) = B MIN(J)                                                  NONL 161
+       CALL FINALE (B,Z,JJ,NUMBER)                                      NONL 162
+  111  FORMAT (1H A6)                                                   NONL 163
+       GO TO 999                                                        NONL 164
+                                                                        NONL 165
+                                                                        NONL 166
+COMPUTATION OF MATRICES  ***********************************************NONL 167
+                                                                        NONL 168
+  300  T = 1.0                                                          NONL 169
+       M PATH = 0                                                       NONL 170
+       IF (DUMPS) 302,303,302                                           NONL 171
+  302  WORD = 6HMATRIX                                                  NONL 172
+       PRINT 111, WORD                                                  NONL 173
+                                                                        NONL 174
+  303  DO 305  J=1,JJ                                                   NONL 175
+       B(J) = BMIN(J)                                                   NONL 176
+       B START(J) = B MIN(J)                                            NONL 177
+       C(J,1) = 0.0                                                     NONL 178
+       DO 305 N=1,JJ                                                    NONL 179
+  305  A(J,N) = 0.0                                                     NONL 180
+                                                                        NONL 181
+       DO 316 N=1,NUMBER                                                NONL 182
+       DO 314 K=1,JJ                                                    NONL 183
+       DEL(K) = DERIV(K,N,B,Z)                                          NONL 184
+  314  C(K,1) = C(K,1) + DEL(K) * (Z(N,1) - Y COMP(N,B,Z))              NONL 185
+       DO 316 I=1,JJ                                                    NONL 186
+       DO 316 J=I,JJ                                                    NONL 187
+  316  A(I,J) = A(I,J) + DEL(I) * DEL(J)                                NONL 188
+                                                                        NONL 189
+       DO 318  K=2,JJ                                                   NONL 190
+       L = K - 1                                                        NONL 191
+       DO 318  J=1,L                                                    NONL 192
+  318  A(K,J) = A(J,K)                                                  NONL 193
+                                                                        NONL 194
+       IF (MM 10) 319,330,319                                           NONL 195
+                                                                        NONL 196
+C 319  WRITE OUTPUT TAPE 6,320, NN                                      NONL 197
+  319  PRINT               320, NN                                      NONL 198
+  320  FORMAT (15H0 AT ITERATION  I3,                                   NONL 199
+     1 98H, IN THE MATRIX EQUATION  A X = C, THE ROWS OF C AND A ARE (FINONL 200
+     2RST UN-NORMALIZED, THEN NORMALIZED)  /                            NONL 201
+     3115H  J        C(J)            ********************  A(J,K)  *****NONL 202
+     4*****************************************************  )          NONL 203
+       MMPATH = 0                                                       NONL 204
+  321  IF (JJ - 5) 322,322,324                                          NONL 205
+  322  DO 323  I=1,JJ                                                   NONL 206
+  323  PRINT 325, I, C(I,1), (A(I,K), K=1,JJ)                           NONL 207
+       GO TO 329                                                        NONL 208
+  324  DO 326  I=1,JJ                                                   NONL 209
+       PRINT 325, I, C(I,1), (A(I,K), K=1,5)                            NONL 210
+       PRINT 327, (A(I,M), M=6,JJ)                                      NONL 211
+  325  FORMAT (1H I2, E15.5, E20.5,4E15.5)                              NONL 212
+  326  CONTINUE                                                         NONL 213
+  327  FORMAT (E38.5, 4E15.5)                                           NONL 214
+  328  FORMAT (/)                                                       NONL 215
+  329  PRINT 328                                                        NONL 216
+                                                                        NONL 217
+       IF (MMPATH) 350,330,350                                          NONL 218
+                                                                        NONL 219
+  330  DO 340  I=1,JJ                                                   NONL 220
+       DENOM = ABSF(A(I,1))                                             NONL 221
+       DO 336  J=2,JJ                                                   NONL 222
+       IF (DENOM-ABSF(A(I,J))) 335,336,336                              NONL 223
+  335  DENOM = ABSF(A(I,J))                                             NONL 224
+  336  CONTINUE                                                         NONL 225
+       DO 338  K=1,JJ                                                   NONL 226
+  338  A(I,K) = A(I,K)/DENOM                                            NONL 227
+  340  C(I,1) = C(I,1)/DENOM                                            NONL 228
+                                                                        NONL 229
+       MMPATH = 1                                                       NONL 230
+       IF (MM 10) 321,350,321                                           NONL 231
+                                                                        NONL 232
+  350  DD = 1.0                                                         NONL 233
+       IF (DUMPS) 351,352,351                                           NONL 234
+  351  WORD = 6HENTRY                                                   NONL 235
+       PRINT 111, WORD                                                  NONL 236
+  352  MM 10 = 0                                                        NONL 237
+       IF (MM 8) 80,354,354                                             NONL 238
+  354  M = ISIMEQ (20,JJ,1,A,C,DD,E)                                    NONL 239
+       DD = 1.0                                                         NONL 240
+       GO TO (360,50,56), M                                             NONL 241
+                                                                        NONL 242
+                                                                        NONL 243
+CHECK ACCEPTIBILITY OF CORRECTIONS FROM MATRIX INVERSION  **************NONL 244
+                                                                        NONL 245
+  360  X NORM = 0.0                                                     NONL 246
+       IF (DUMPS) 361,362,361                                           NONL 247
+  361  IF (MARK L) 362,367,362                                          NONL 248
+  362  DO 364  J=1,JJ                                                   NONL 249
+  364  X NORM = X NORM + ABSF(X(J))                                     NONL 250
+       WORD = 7H      X                                                 NONL 251
+                                                                        NONL 252
+       IF (X NORM - 0.5 * B NORM) 370,365,365                           NONL 253
+  365  DO 366  J=1,JJ                                                   NONL 254
+  366  X(J) = X(J) * 0.2 * B NORM / X NORM                              NONL 255
+       GO TO 30                                                         NONL 256
+                                                                        NONL 257
+  367  MARK L = 1                                                       NONL 258
+       PRINT 7                                                          NONL 259
+       GO TO 362                                                        NONL 260
+                                                                        NONL 261
+CHECK WHETHER CORRECTIONS ARE WITHIN TOLERANCE, IF SO THEN  *********** NONL 262
+CHANGE SENSE LIGHT 1 FROM OFF TO ON                         *********** NONL 263
+                                                                        NONL 264
+  370  DO 376  J=1,JJ                                                   NONL 265
+       IF (ABSF(X(J)) - TOL)   376,376,30                               NONL 266
+  376  CONTINUE                                                         NONL 267
+       MM 8 = 2                                                         NONL 268
+       SENSE LIGHT 1                                                    NONL 269
+       GO TO 80                                                         NONL 270
+                                                                        NONL 271
+  950  SENSE LIGHT 2                                                    NONL 272
+       GO TO 80                                                         NONL 273
+                                                                        NONL 274
+  999  DO 1000  J=1,JJ                                                  NONL 275
+ 1000  B(J) = B MIN(J)                                                  NONL 276
+       B(24) = SQ MIN                                                   NONL 277
+       MM 8 = 2                                                         NONL 278
+       RETURN                                                           NONL 279
+       END                                                              NONL 280
+       SUBROUTINE FINALE (B,Z,JJ,NUMBER)                                NONL 281
+       DIMENSION B(24), Z(100,9)                                        NONL 282
+                                                                        NONL 283
+       AV = 0.0                                                         NONL 284
+       AV1 = 0.0                                                        NONL 285
+       AV2 = 0.0                                                        NONL 286
+       YMAX = 0.0                                                       NONL 287
+       ZMAX = 0.0                                                       NONL 288
+       ZZMAX = 0.0                                                      NONL 289
+       SUM SQ = 0.0                                                     NONL 290
+       N = 1                                                            NONL 291
+       PRINT 91, (B(J), J=1,JJ)                                         NONL 292
+   91  FORMAT (45H0 THE MINIMIZING VALUES OF THE PARAMETERS ARE //      NONL 293
+     X (5E15.7))                                                        NONL 294
+       PRINT 100                                                        NONL 295
+                                                                        NONL 296
+       PRINT 93                                                         NONL 297
+   93  FORMAT (82H0NUMBER           Y OBSERVED     Y CALCULATED         NONL 298
+     X  DELTA Y      PCT DEVIATION ///)                                 NONL 299
+                                                                        NONL 300
+   94  YC = YCOMP(N,B,Z)                                                NONL 301
+       DEL Y = Z(N,1) - YC                                              NONL 302
+       SUM SQ = SUM SQ + DEL Y**2                                       NONL 303
+       RATIO = 100.0 * DEL Y / YC                                       NONL 304
+       ABSRAT = ABSF(RATIO)                                             NONL 305
+       AV = AV + DELY                                                   NONL 306
+       AV1 = AV1 + RATIO                                                NONL 307
+       AV2 = AV2 + ABSRAT                                               NONL 308
+       PRINT               95,N,   Z(N,1),YC,DELY,RATIO                 NONL 309
+   95  FORMAT (I5,E23.5,E17.5,2E19.5)                                   NONL 310
+       ABSVAL = ABSF(DELY)                                              NONL 311
+       IF (YMAX - ABSVAL) 96,96,97                                      NONL 312
+   96  YMAX = ABSVAL                                                    NONL 313
+       YYMAX = DELY                                                     NONL 314
+       MARK = N                                                         NONL 315
+   97  IF (ZMAX-ABSRAT) 971,971,972                                     NONL 316
+  971  ZMAX = ABSRAT                                                    NONL 317
+       ZZMAX = RATIO                                                    NONL 318
+       MARK1 = N                                                        NONL 319
+  972  N = N+1                                                          NONL 320
+       IF (N - NUMBER) 94,94,99                                         NONL 321
+                                                                        NONL 322
+   99  D = NUMBER                                                       NONL 323
+       AV = AV/D                                                        NONL 324
+       AV1 = AV1/D                                                      NONL 325
+       AV2 = AV2/D                                                      NONL 326
+       RTMNSQ = SQRTF(SUMSQ/D)                                          NONL 327
+       PRINT 100                                                        NONL 328
+  100  FORMAT(118H0*****************************************************NONL 329
+     X****************************************************************//NONL 330
+     X/)                                                                NONL 331
+C      WRITE OUTPUT TAPE 6,101,AV,AV1,AV2                               NONL 332
+       PRINT               101,AV,AV1,AV2                               NONL 333
+  101  FORMAT (30H0  AVERAGE DEVIATION          E14.5,                  NONL 334
+     X         20H     AVERAGE PCT DEV          E14.5,                  NONL 335
+     X         20H     AVE ABS PCT DEV          E14.5)                  NONL 336
+C      WRITE OUTPUT TAPE 6,103,YYMAX,MARK                               NONL 337
+       PRINT               103,YYMAX,MARK                               NONL 338
+  103  FORMAT (30H0  MAXIMUM DEVIATION          E14.5,I6)               NONL 339
+C      WRITE OUTPUT TAPE 6, 104, ZMAX,MARK1                             NONL 340
+       PRINT                104, ZMAX,MARK1                             NONL 341
+  104  FORMAT (30H0  MAXIMUM   PCT DEV          E14.5,I6)               NONL 342
+C      WRITE OUTPUT TAPE 6,105,RTMNSQ                                   NONL 343
+       PRINT               105,RTMNSQ                                   NONL 344
+  105  FORMAT (30H0  ROOT MEAN SQUARE DEVIATION E14.5)                  NONL 345
+                                                                        NONL 346
+  108  FORMAT (5F20.5)                                                  NONL 347
+  109  FORMAT (//)                                                      NONL 348
+  110  FORMAT (I20, F20.8)                                              NONL 349
+                                                                        NONL 350
+       RETURN                                                           NONL 351
+       END                                                              NONL 352
+       FUNCTION DERIV (K,N,B,Z)                                         NONL 353
+                                                                        NONL 354
+       DIMENSION  B(24), Z(100,9), H(20)                                NONL 355
+                                                                        NONL 356
+       IF (MARK) 20,1,20                                                NONL 357
+                                                                        NONL 358
+    1  MARK = 1                                                         NONL 359
+       DO 7  J=1,20                                                     NONL 360
+       TEST = ABSF(B(J))                                                NONL 361
+       IF (TEST - 0.001) 5,6,6                                          NONL 362
+    5  H(J) = 0.001                                                     NONL 363
+       GO TO 7                                                          NONL 364
+    6  H(J) = 0.0001*TEST                                               NONL 365
+    7  CONTINUE                                                         NONL 366
+                                                                        NONL 367
+                                                                        NONL 368
+   20  J = K                                                            NONL 369
+       REMARK = B(J)                                                    NONL 370
+       B(J) = REMARK + H(J)                                             NONL 371
+       Y2 = YCOMP(N,B,Z)                                                NONL 372
+       B(J) = REMARK - H(J)                                             NONL 373
+       Y1 = YCOMP(N,B,Z)                                                NONL 374
+       B(J) = REMARK                                                    NONL 375
+       DERIV = (Y2 - Y1)/(2.0*H(J))                                     NONL 376
+       RETURN                                                           NONL 377
+                                                                        NONL 378
+       END                                                              NONL 379

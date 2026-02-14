@@ -1,0 +1,644 @@
+*      FAP                                                              SERI0001
+*CALLING PROGRAM FOR WD SERI                                            SERI0002
+       COUNT   2                                                        SERI0003
+       CALL    SERIAL                                                   SERI0004
+       END                                                              SERI0005
+*      FAP                                                              SERI0006
+*      PAUSE, THEN CALL SERIAL                                          SERI0007
+       COUNT   5                                                        SERI0008
+       ENTRY   SERIPS                                                   SERI0009
+A      BOOL    52525                                                    SERI0010
+SERIPS HPR     A,2                                                      SERI0011
+       CALL    SERIAL                                                   SERI0012
+       END                                                              SERI0013
+*      FAP                                                              SERI0014
+       COUNT   65                                                       SERI0015
+*      PACK SUBROUTINE     SQUEEZES OUT BLANKS                          SERI0016
+       ENTRY   (PACK)                                                   SERI0017
+*                                                                       SERI0018
+*CALLING SEQUENCE                                                       SERI0019
+*      CALL    (PACK),UNPACKED,PACKED,COUNT                             SERI0020
+*                                                                       SERI0021
+*SUBROUTINE TAKES DATA FROM UNPACKED,STORES PACKED DATA IN              SERI0022
+*PACKED. RETURNS WHEN COUNT WORDS HAVE BEEN TREATED.                    SERI0023
+*PACKED AND UNPACKED MUST BOTH BE OF LENGTH AT LEAST EQUAL TO COUNT     SERI0024
+*                                                                       SERI0025
+(PACK) SXA     XA,1                                                     SERI0026
+       SXA     XB,2                                                     SERI0027
+       SXA     XC,4                                                     SERI0028
+       STI     SI                                                       SERI0029
+       CLA     3,4           INITIALIZE                                 SERI0030
+       STA     COUNT                                                    SERI0031
+       CLA     1,4                                                      SERI0032
+       ADM     COUNT                                                    SERI0033
+       STA     UNPKD                                                    SERI0034
+       CLA     2,4                                                      SERI0035
+       ADM     COUNT                                                    SERI0036
+       STA     PACKED                                                   SERI0037
+COUNT  AXT     *-*,6                                                    SERI0038
+       CLA     =1                                                       SERI0039
+       TOV     *+1                                                      SERI0040
+       TRA     UNPKD         JUMP INTO SCAN                             SERI0041
+NEXTCH TIX     CHA,1,1       PICK UP NEXT CHARACTER                     SERI0042
+       TNX     DONE,2,1      IS THERE ANOTHER WORD                      SERI0043
+UNPKD  LDI     *-*,2         YES, CHECK IT FOR ALL BLANKS               SERI0044
+       IIS     =H                                                       SERI0045
+       OFT     INFTY                                                    SERI0046
+       TRA     *+2                                                      SERI0047
+       TRA     NEXTCH+1                                                 SERI0048
+       LDQ*    UNPKD                                                    SERI0049
+       AXT     6,1                                                      SERI0050
+CHA    LGL     6             SHIFT IN ONE CHARACTER                     SERI0051
+       PAI                                                              SERI0052
+       IIR     60                                                       SERI0053
+       RFT     77            IS IT A BLANK                              SERI0054
+       TRA     NOTBL         NO                                         SERI0055
+       ARS     6             YES, IGNORE IT                             SERI0056
+       TRA     NEXTCH                                                   SERI0057
+NOTBL  TNO     NEXTCH        NOT A BLANK, ARE THERE SIX                 SERI0058
+PACKED SLW     *-*,4         YES, STORE PACKED WORD                     SERI0059
+       CLA     =1            CLEAR AC EXCEPT FOR OVERFLOWER,            SERI0060
+       TIX     NEXTCH,4,1    HIT XR4, AND RETURN TO THE FRAY            SERI0061
+       TRA     LV            THERE WERE NO BLANKS, QUIT                 SERI0062
+*                                                                       SERI0063
+DONE   LDQ     =H            FILL OUT LAST WORD                         SERI0064
+       LGL     6                                                        SERI0065
+       TNO     *-1                                                      SERI0066
+       SLW*    PACKED                                                   SERI0067
+       TNX     LV,4,1                                                   SERI0068
+       LDQ     =H                                                       SERI0069
+       STQ*    PACKED        CLEAR REMAINING PACKED, IF ANY             SERI0070
+       TIX     *-1,4,1                                                  SERI0071
+LV     LDI     SI                                                       SERI0072
+XA     AXT     *-*,1                                                    SERI0073
+XB     AXT     *-*,2                                                    SERI0074
+XC     AXT     *-*,4                                                    SERI0075
+       TRA     4,4                                                      SERI0076
+SI                                                                      SERI0077
+INFTY  VFD     36/-1                                                    SERI0078
+       END                                                              SERI0079
+*      FAP                                                              SERI0080
+*      RD AND WR SUBROUTINES FOR SERIAL ROUTINE                         SERI0081
+       COUNT   90                                                       SERI0082
+       ENTRY   (RD)                                                     SERI0083
+       ENTRY   (WR)                                                     SERI0084
+*                                                                       SERI0085
+*SUBROUTINE TO READ ONE RECORD FROM SPECIFIED TAPE                      SERI0086
+*AND CONVERT 73-80 TO PROVIDE BETTER COLLATING SEQUENCE                 SERI0087
+*                                                                       SERI0088
+*CALLING SEQUENCE                                                       SERI0089
+*      IFEOF   END-OF-FILE ROUTINE                                      SERI0090
+*      CLA     LOGICAL TAPE NUMBER                                      SERI0091
+*      CALL    (RD),BUFFER ADDRESS,STORAGE FOR CONVERTED SERIAL         SERI0092
+*                                                                       SERI0093
+(RD)   SXA     RDXC,4                                                   SERI0094
+       STA     RDCALL+1      SET UP CALL                                SERI0095
+       CLA     1,4                                                      SERI0096
+       STA     RDCALL+2                                                 SERI0097
+       ADD     =14                                                      SERI0098
+       STA     RDDATA                                                   SERI0099
+       CLA     2,4                                                      SERI0100
+       ADD     =2                                                       SERI0101
+       STA     SERL                                                     SERI0102
+RDCALL CALL    READ,*-*,*-*,14                                          SERI0103
+       AXT     2,4                                                      SERI0104
+RDDATA CAL     *-*,4         CONVERT 73-80 FROM BCD                     SERI0105
+       XEC*    $RDTBL)                                                  SERI0106
+SERL   SLW     *-*,4                                                    SERI0107
+       TIX     *+1,4,1                                                  SERI0108
+       CAL*    RDDATA                                                   SERI0109
+       ANA     =O777700000000                                           SERI0110
+       ORA     =H00          BLANK OUT 80-84                            SERI0111
+       SLW*    RDDATA                                                   SERI0112
+       XEC*    $RDTBL)                                                  SERI0113
+       SLW*    SERL                                                     SERI0114
+RDXC   AXT     *-*,4                                                    SERI0115
+       TRA     3,4                                                      SERI0116
+*                                                                       SERI0117
+*SUBROUTINE TO REPLACE 73-80 WITH NEW SERIAL NUMBER IF                  SERI0118
+*SO SPECIFIED, TO WRITE THE RECORD ON THE SPECIFIED TAPE                SERI0119
+*(BUT IF 73-78 OF THE REOCRD CONTAIN ALL ONES, TO                       SERI0120
+*WRITE AN END-OF-FILE MARK ON THE SPECIFIED TAPE), AND                  SERI0121
+*TO BUMP THE NEW SERIAL NUMBER (IF ANY).                                SERI0122
+*IF THE SPECIFIED TAPE IS LOGICAL ZERO, NOTHING WILL BE WRITTEN.        SERI0123
+*                                                                       SERI0124
+*CALLING SEQUENCE                                                       SERI0125
+*      CLA     LOGICAL TAPE NUMBER                                      SERI0126
+*      CALL    (WR),BUFFER ADDRESS                                      SERI0127
+*                                                                       SERI0128
+(WR)   SXA     WRXA,1                                                   SERI0129
+       SXA     WRXC,4                                                   SERI0130
+       TZE     WRXA          IF LOGICAL TAPE ZERO, RETURN               SERI0131
+       STA     WRCALL+1      OTHERWISE SET UP WRITE AND ENDFIL          SERI0132
+       STA     WRWEF+1                                                  SERI0133
+       CLA     1,4           SET UP WRITE AND PICKUP                    SERI0134
+       STA     WRCALL+2                                                 SERI0135
+       ADD     =14                                                      SERI0136
+       STA     WRDATA                                                   SERI0137
+       AXT     2,4           PICK UP 73-78                              SERI0138
+WRDATA CAL     *-*,4                                                    SERI0139
+       ERA     INFTY         IF ALL ONES, WRITE END OF FILE             SERI0140
+       TZE     WRWEF                                                    SERI0141
+       NZT     SERSW         IS SERIAL SWITCH ON                        SERI0142
+       TRA     WRCALL        NO                                         SERI0143
+WRREP  CAL     NEWSER+2,4    YES, REPLACE SERIAL IN 73-80               SERI0144
+       XEC*    $WRTBL)                                                  SERI0145
+       SLW*    WRDATA                                                   SERI0146
+       TIX     WRREP,4,1                                                SERI0147
+       CAL     NEWSER+2,4                                               SERI0148
+       ADD     BMPCLM        BUMP SERIAL                                SERI0149
+       XEC*    $WRTBL)       CONVERT TO BCD AND BACK                    SERI0150
+       XEC*    $RDTBL)       (THIS PROPAGATES CARRY)                    SERI0151
+       SLW     NEWSER+1                                                 SERI0152
+       CAL     NEWSER        PROPAGATE CARRY THROUGH 73-78              SERI0153
+       SXA     *+1,1         (WRTBL LEAVES ADDRESS IN XR1)              SERI0154
+       CVR     *-*,,6                                                   SERI0155
+       XEC*    $RDTBL)                                                  SERI0156
+       SLW     NEWSER                                                   SERI0157
+WRCALL CALL    WRITE,*-*,*-*,14 WRITE THE RECORD                        SERI0158
+WRXA   AXT     *-*,1                                                    SERI0159
+WRXC   AXT     *-*,4                                                    SERI0160
+       TRA     2,4           RETURN                                     SERI0161
+*                                                                       SERI0162
+WRWEF  CALL    ENDFIL,*-*    WRITE END OF FILE                          SERI0163
+       TRA     WRXA          RETURN                                     SERI0164
+*                                                                       SERI0165
+INFTY  VFD     36/-1                                                    SERI0166
+BMPCLM BCI     1,100000      BUMP SERIAL IN COLUMN 79                   SERI0167
+SERSW  COMMON  1             SERIALIZATION SWITCH                       SERI0168
+       COMMON  1             NEW SERIAL NUMBER                          SERI0169
+NEWSER COMMON  1             ...(TWO WORDS)                             SERI0170
+       END                                                              SERI0171
+*      FAP                                                              SERI0172
+*RDTBL AND WRTBL     CONVERSION TABLES TO GIVE BETTER COLLATING SEQUENCESERI0173
+       COUNT   50                                                       SERI0174
+       ENTRY   RDTBL)                                                   SERI0175
+       ENTRY   WRTBL)                                                   SERI0176
+*                                                                       SERI0177
+*RDTBL CONVERTS FROM BCD TO MODIFIED SEQUENCE                           SERI0178
+*BLANK 0-9 A-Z +-='.)$*/,(                                              SERI0179
+*                                                                       SERI0180
+RDTBL) CVR     X,,6                                                     SERI0181
+X      DUP     1,10                                                     SERI0182
+       VFD     6/*-X+2,30/X                                             SERI0183
+       VFD     36/X,6/44,30/X,6/46,30/X,36/X,36/X,36/X,6/40,30/X        SERI0184
+       DUP     1,9                                                      SERI0185
+       VFD     6/*-X-4,30/X                                             SERI0186
+       VFD     36/X,6/48,30/X,6/50,30/X,36/X,36/X,36/X,6/42,30/X        SERI0187
+       DUP     1,9                                                      SERI0188
+       VFD     6/*-X-11,30/X                                            SERI0189
+       VFD     36/X,6/52,30/X,6/54,30/X,36/X,36/X,36/X,36/X,6/56,30/X   SERI0190
+       DUP     1,8                                                      SERI0191
+       VFD     6/*-X-19,30/X                                            SERI0192
+       VFD     36/X,6/58,30/X,6/60,30/X,36/X,6/62,30/X,6/63,30/X        SERI0193
+*                                                                       SERI0194
+*WRTBL RECONVERTS FROM RDTBL SEQUENCE TO BCD, AND ALSO                  SERI0195
+*PROPAGATES CARRIES FROM ADDITION OF ONE                                SERI0196
+*LETTERS CYCLE--Z GOES TO A WITH CARRY                                  SERI0197
+*DIGITS CYCLE--9 GOES TO ZERO WITH CARRY                                SERI0198
+*BLANK GOES TO ONE, AND EVERY SPECIAL CHARACTER GOES TO BLANK           SERI0199
+*WITH CARRY                                                             SERI0200
+*                                                                       SERI0201
+WRTBL) CVR     Y,1,6         LEAVE ADDRESS IN XR1                       SERI0202
+Y      VFD     6/48,30/Y                                                SERI0203
+Z      VFD     6/1,30/Y                                                 SERI0204
+       DUP     1,10                                                     SERI0205
+       VFD     6/*-Y-2,30/Y                                             SERI0206
+       VFD     36/Z                                                     SERI0207
+       DUP     1,9                                                      SERI0208
+       VFD     6/*-Y+4,30/Y                                             SERI0209
+       DUP     1,9                                                      SERI0210
+       VFD     6/*-Y+11,30/Y                                            SERI0211
+       DUP     1,8                                                      SERI0212
+       VFD     6/*-Y+19,30/Y                                            SERI0213
+       VFD     6/17,30/Z,6/16,30/Y,6/48,30/Z,6/32,30/Y                  SERI0214
+       VFD     6/48,30/Z,6/11,30/Y,6/48,30/Z,6/12,30/Y                  SERI0215
+       VFD     6/48,30/Z,6/27,30/Y,6/48,30/Z,6/28,30/Y                  SERI0216
+       VFD     6/48,30/Z,6/43,30/Y,6/48,30/Z,6/44,30/Y                  SERI0217
+       VFD     6/48,30/Z,6/49,30/Y,6/48,30/Z,6/59,30/Y                  SERI0218
+       VFD     6/48,30/Z,6/60,30/Y,6/48,30/Z,6/62,30/Y                  SERI0219
+       VFD     6/63,30/Y,36/Y                                           SERI0220
+       END                                                              SERI0221
+*      FAP                                                              SERI0222
+*      SERIAL PROGRAM     WRITES NEW INPUT TAPE                         SERI0223
+       COUNT   340                                                      SERI0224
+       ENTRY   SERIAL                                                   SERI0225
+       SPACE   1                                                        SERI0226
+************************************************************************SERI0227
+*                                                                       SERI0228
+*INSTALLATION-SPECIFIC PARAMETERS                                       SERI0229
+*                                                                       SERI0230
+STMINP         5             LOGICAL NUMBER OF SYSTEM INPUT TAPE        SERI0231
+STMOUT         6             LOGICAL NUMBER OF SYSTEM OUTPUT TAPE       SERI0232
+OLDTAP         10            LOGICAL NUMBER OF NORMAL OLD TAPE          SERI0233
+NEWTAP         9             LOGICAL NUMBER OF NORMAL NEW TAPE          SERI0234
+FLAG   BCI     1,00000-      COLUMN 1 CHARACTER IDENTIFIES CONTROL CARD SERI0235
+*                                                                       SERI0236
+*                                                                       SERI0237
+*                                                                       SERI0238
+************************************************************************SERI0239
+       SPACE                                                            SERI0240
+SERIAL STL     OLDMT         SET OLD-BUFFER-EMPTY FLAG                  SERI0241
+       STZ     DELESW        DELETE SWITCH OFF                          SERI0242
+       STZ     SERSW         SERIAL SWITCH OFF                          SERI0243
+       STL     FCDSW         FIRST-CARD-OF-FILE SWITCH ON               SERI0244
+       STZ     DELTHS        DELETE-THRU SWITCH OFF                     SERI0245
+*                                                                       SERI0246
+*      READ CONTROL CARD FROM SYSTEM INPUT TAPE INTO 'NEW' BUFFER       SERI0247
+*                                                                       SERI0248
+A      IFEOF   EOFA          SET END-OF-FILE EXIT                       SERI0249
+       CLA     STMINP        PICK UP SYSTEM INPUT TAPE NUMBER           SERI0250
+       CALL    (RD),NEW,SERNEW                                          SERI0251
+       LDQ     NEW           TEST FOR FLAG IN COLUMN 1                  SERI0252
+       CLM                                                              SERI0253
+       LGL     6                                                        SERI0254
+       ERA     FLAG                                                     SERI0255
+       TNZ     ORDNRY        NO                                         SERI0256
+       CALL    (PACK),NEW,PACKED,12    YES, PACK UP THE CONTROL CARD    SERI0257
+       CAL     PACKED                                                   SERI0258
+       ANA     =O7777777777  REMOVE FLAG FROM COLUMN 1                  SERI0259
+       AXT     LDICT,4       LOOK UP FIRST SIX CHARACTERS               SERI0260
+CCLOOK LAS*    DICT+LDICT,4                                             SERI0261
+       TRA     *+2                                                      SERI0262
+       TRA*    TDICT+LDICT,4 OFF TO APPROPRIATE ROUTINE                 SERI0263
+       TIX     CCLOOK,4,2                                               SERI0264
+       PAI                   MAKE SPECIAL TEST FOR 'READ' CONTROL CARD  SERI0265
+       IIS     =H0READ0                                                 SERI0266
+       OFT     =O7777777760                                             SERI0267
+       TRA     *+2                                                      SERI0268
+       TRA     READA                                                    SERI0269
+*                                                                       SERI0270
+BADCC  AXT     5,4           UNRECOGNIZED CONTROL CARD                  SERI0271
+       LDQ     BADCCM+5,4                                               SERI0272
+       STQ     POSTNW+5,4                                               SERI0273
+       TIX     *-2,4,1                                                  SERI0274
+       CLA     STMOUT                                                   SERI0275
+       STA     *+2                                                      SERI0276
+       CALL    WRITE,*-*,PRENEW,20                                      SERI0277
+       TRA     A                                                        SERI0278
+BADCCM BCI     5,BAD CONTROL CARD -- IGNORED                            SERI0279
+DICT           DELETX        DICTIONARY OF CONTROL NAMES                SERI0280
+TDICT          DELETE        DICTIONARY OF CONTROL ADDRESSES            SERI0281
+               RUNTOX                                                   SERI0282
+               RUNTO                                                    SERI0283
+               NEWSRX                                                   SERI0284
+               NEWSR                                                    SERI0285
+               OLDSRX                                                   SERI0286
+               OLDSR                                                    SERI0287
+               WRITEX                                                   SERI0288
+               WRITEA                                                   SERI0289
+               ENDFLX                                                   SERI0290
+               ENDFL                                                    SERI0291
+               REWDX                                                    SERI0292
+               REWD                                                     SERI0293
+               CLOSEX                                                   SERI0294
+               CLOSE                                                    SERI0295
+               EXITX                                                    SERI0296
+               EXITY                                                    SERI0297
+LDICT  EQU     *-DICT                                                   SERI0298
+DELETX BCI     2,0DELETE                                                SERI0299
+RUNTOX BCI     2,0RUNTHRUEOF                                            SERI0300
+NEWSRX BCI     2,0NEWSERIALS                                            SERI0301
+OLDSRX BCI     2,0OLDSERIALS                                            SERI0302
+WRITEX BCI     1,0WRITE                                                 SERI0303
+ENDFLX BCI     2,0ENDFILE00                                             SERI0304
+REWDX  BCI     2,0REWIND00                                              SERI0305
+CLOSEX BCI     1,0CLOSE                                                 SERI0306
+EXITX  BCI     1,0EXIT                                                  SERI0307
+*                                                                       SERI0308
+EOFA   LDQ     INFTY         END OF FILE ON SYSTEM INPUT TAPE           SERI0309
+       STQ     SERNEW        PUT INFINITY IN BOTH HIGH- AND LOW-        SERI0310
+       STQ     SERNEW+1      ...ORDER WORDS OF CONVERTED 'NEW' SERIAL   SERI0311
+       TRA     B                                                        SERI0312
+*                                                                       SERI0313
+DELETE LDI     DELETX+1      IS IT REALLY A DELETE CARD                 SERI0314
+       IIS     PACKED+1                                                 SERI0315
+       LFT     770000                                                   SERI0316
+       TRA     CCLOOK        NO                                         SERI0317
+       LFT     7700          IS NEXT CHARACTER BLANK                    SERI0318
+       TRA     *+2                                                      SERI0319
+       TRA     DELB          YES, SET SWITCH AND GO TO B                SERI0320
+       IIS     DELEOF        NO, IS EOF NEXT                            SERI0321
+       OFT     INFTY                                                    SERI0322
+       TRA     DELC          NO, GO CHECK FOR 'DELETE THRU'             SERI0323
+DELA   LDQ     INFTY         YES, SET INFINITY IN HIGH ORDER WORD       SERI0324
+*                            ...OF CONVERTED SERIAL OF 'NEW' BUFFER,    SERI0325
+       STQ     SERNEW                                                   SERI0326
+       STZ     SERNEW+1      ...AND ZERO IN LOW-ORDER WORD              SERI0327
+DELB   STL     DELESW        SET DELETE SWITCH                          SERI0328
+       TRA     B                                                        SERI0329
+DELC   IIS     DELTHR        TEST FOR WORD 'THRU'                       SERI0330
+       OFT     =O7777777700                                             SERI0331
+       TRA     BADCC         NO, BAD CONTROL CARD                       SERI0332
+       RFT     77            IS NEXT CHARACTER BLANK                    SERI0333
+       TRA     DELD          NO GO CHECK FOR 'THRU EOF'                 SERI0334
+       STL     DELTHS        YES, SET DELETE-THRU SWITCH                SERI0335
+       TRA     DELB          GO SET DELETE SWITCH ALSO                  SERI0336
+DELD   CAL     PACKED+1      TEST FOR 'THRU EOF'                        SERI0337
+       LDQ     PACKED+2                                                 SERI0338
+       LGL     18                                                       SERI0339
+       ERA     =HRUEOF                                                  SERI0340
+       TNZ     BADCC         NO, BAD CONTROL CARD                       SERI0341
+       STL     DELTHS        YES, SET DELETE SWITCH AND                 SERI0342
+       TRA     DELA          ...GO SET UP EOF SEARCH                    SERI0343
+DELTHR VFD     O30/25462660-63305164                                    SERI0344
+DELEOF VFD     O24/606060-254626                                        SERI0345
+*                                                                       SERI0346
+RUNTO  LDI     PACKED+1                                                 SERI0347
+       IIS     RUNTOX+1      IS 'EOF' NEXT                              SERI0348
+       OFT     INFTY                                                    SERI0349
+       TRA     *+2                                                      SERI0350
+       TRA     RUNTOF        YES                                        SERI0351
+       IIL     25-60         NO, IS BLANK NEXT                          SERI0352
+       LFT     /                                                        SERI0353
+       TRA     CCLOOK        NO, GO LOOK SOME MORE                      SERI0354
+       TRA     B             YES, GO TO PASS OLD TAPE TO NEW            SERI0355
+*                                                                       SERI0356
+RUNTOF LDQ     INFTY         'EOF', SET INFINITY IN HIGH-ORDER WORD     SERI0357
+       STQ     SERNEW        ...OF CONVERTED 'LOW' SERIAL, ZERO IN LOW- SERI0358
+       STZ     SERNEW+1      ...ORDER WORD, AND PASS ON TO TAPE-PASSER  SERI0359
+*                                                                       SERI0360
+*ROUTINE TO PASS CARDS FROM OLD TAPE TO NEW TAPE                        SERI0361
+*UNTIL OLD SERIAL MATCHES SERIAL ON 'DELETE' OR                         SERI0362
+*'RUN TO' CARD JUST READ FROM SYSTEM INPUT TAPE                         SERI0363
+*                                                                       SERI0364
+B      NZT     OLDMT         IS OLD BUFFER EMPTY                        SERI0365
+       TRA     CA            NO                                         SERI0366
+C      STZ     OLDMT         YES                                        SERI0367
+       IFEOF   EOFC          READ INTO OLD BUFFER                       SERI0368
+       CLA     OLDTAP        FROM CURRENT OLD TAPE                      SERI0369
+       CALL    (RD),OLD,SEROLD                                          SERI0370
+*                                                                       SERI0371
+CA     CAL     SERNEW        COMPARE NEW-OLD IN 73-80                   SERI0372
+       LAS     SEROLD                                                   SERI0373
+       TRA     CB            DIFFERENT                                  SERI0374
+       TRA     *+2                                                      SERI0375
+       TRA     CB            DIFFERENT                                  SERI0376
+       CAL     SERNEW+1                                                 SERI0377
+       LAS     SEROLD+1                                                 SERI0378
+       TRA     CB            DIFFERENT                                  SERI0379
+       TRA     *+2                                                      SERI0380
+       TRA     CB            DIFFERENT                                  SERI0381
+       TSX     PUBNEW,4      THE SAME, PUBLISH THE CONTROL CARD         SERI0382
+       STL     OLDMT         SET OLD-BUFFER-EMPTY FLAG                  SERI0383
+       NZT     DELESW        IS DELETE SWITCH SET                       SERI0384
+       TRA     CC            NO                                         SERI0385
+       LDI     SEROLD        YES, WAS AN END-OF-FILE DELETED            SERI0386
+       ZET     DELTHS        ...OR THE DELETE-THRU SWITCH SET           SERI0387
+       LDI     INFTY                                                    SERI0388
+       STZ     DELTHS        (RESET THE DELETE-THRU SWITCH)             SERI0389
+       ONT     INFTY                                                    SERI0390
+       TSX     PUBOLD,4      NO, A RECORD WAS DELETED.  PUBLISH IT      SERI0391
+       STZ     DELESW        ...TURN OFF THE DELETE SWITCH              SERI0392
+       TRA     A             ...AND RETURN TO CONTROL-CARD SCAN         SERI0393
+*                                                                       SERI0394
+CC     CLA     NEWTAP        RUN THRU -- COPY OLD CARD                  SERI0395
+       CALL    (WR),OLD                                                 SERI0396
+       TRA     A             ...AND RETURN TO CONTROL-CARD SCAN         SERI0397
+*                                                                       SERI0398
+CB     ZET     FCDSW         'OLD' RECORD DOES NOT MATCH, IF FIRST      SERI0399
+       TSX     LFEOT,4       ...RECORD OF FILE, TEST FOR END OF RUN     SERI0400
+       ZET     DELTHS        IS DELETE-THRU SWITCH SET                  SERI0401
+       TRA     C             YES, DELETE THE CARD                       SERI0402
+       CLA     NEWTAP        NO, SO WRITE OUT 'OLD' BUFFER              SERI0403
+       CALL    (WR),OLD                                                 SERI0404
+       TRA     C                                                        SERI0405
+*                                                                       SERI0406
+EOFC   LDQ     INFTY         END OF FILE ON 'OLD' TAPE                  SERI0407
+       STQ     OLD+12        PLACE ALL ONES IN 73-78 OF 'OLD'           SERI0408
+       STQ     SEROLD        ...BUFFER AND IN CONVERTED 'OLD'           SERI0409
+       STZ     SEROLD+1      ...SERIAL, AND ZERO IN LOW-ORDER WORD      SERI0410
+       STL     FCDSW         FIRST-CARD-OF-FILE SWITCH ON               SERI0411
+       TRA     CA                                                       SERI0412
+*                                                                       SERI0413
+*ROUTINE FOR MERGING AND REPLACING                                      SERI0414
+*                                                                       SERI0415
+ORDNRY NZT     OLDMT         IS OLD BUFFER EMPTY                        SERI0416
+       TRA     EA            NO                                         SERI0417
+E      STZ     OLDMT         YES, SET FLAG TO NON-EMPTY                 SERI0418
+       IFEOF   EOFE          READ INTO OLD BUFFER                       SERI0419
+       CLA     OLDTAP        FROM CURRENT OLD TAPE                      SERI0420
+       CALL    (RD),OLD,SEROLD                                          SERI0421
+*                                                                       SERI0422
+EA     CAL     SERNEW        COMPARE NEW-OLD IN 73-80                   SERI0423
+       LAS     SEROLD                                                   SERI0424
+       TRA     EB            OLD IS LESS, WRITE IT OUT                  SERI0425
+       TRA     *+2                                                      SERI0426
+       TRA     EC            NEW IS LESS, WRITE IT OUT                  SERI0427
+       CAL     SERNEW+1                                                 SERI0428
+       LAS     SEROLD+1                                                 SERI0429
+       TRA     EB            OLD IS LESS, WRITE IT OUT                  SERI0430
+       STL     OLDMT         EQUAL, SET OLD-BUFFER EMPTY FLAG           SERI0431
+*                                                                       SERI0432
+EC     AXT     2,4           PUBLISH NEW CARD PLUS COMMENT              SERI0433
+ECA    LDQ     ECINS+2,4     ...ON SYSTEM OUTPUT TAPE                   SERI0434
+       STQ     POSTNW+2,4                                               SERI0435
+       TIX     ECA,4,1                                                  SERI0436
+       CLA     STMOUT                                                   SERI0437
+       STA     *+2                                                      SERI0438
+       CALL    WRITE,*-*,PRENEW,17                                      SERI0439
+       CLA     NEWTAP        WRITE NEW CARD ON NEW TAPE                 SERI0440
+       CALL    (WR),NEW                                                 SERI0441
+       ZET     OLDMT         IF OLD-BUFFER-EMPTY FLAG IS SET, PUBLISH   SERI0442
+       TSX     PUBOLD,4      ...DELETED CARD ON SYSTEM OUTPUT TAPE      SERI0443
+       TRA     A                                                        SERI0444
+ECINS  BCI     2,INSERTED                                               SERI0445
+*                                                                       SERI0446
+EB     ZET     FCDSW         'OLD' RECORD DOES NOT MATCH, IF FIRST      SERI0447
+       TSX     LFEOT,4       ...RECORD OF FILE, TEST FOR END OF RUN     SERI0448
+       CLA     NEWTAP        NO, SO WRITE OUT 'OLD' BUFFER              SERI0449
+       CALL    (WR),OLD                                                 SERI0450
+       TRA     E                                                        SERI0451
+*                                                                       SERI0452
+EOFE   LDQ     INFTY         END OF FILE ON 'OLD' TAPE                  SERI0453
+       STQ     OLD+12        PLACE ALL ONES IN 73-78 OF 'OLD'           SERI0454
+       STQ     SEROLD        ...BUFFER AND IN CONVERTED 'OLD' SERIAL    SERI0455
+       STZ     SEROLD+1      ...AND ZERO IN LOW-ORDER WORD              SERI0456
+       STL     FCDSW         TURN FIRST-CARD-OF-FILE SWITCH ON          SERI0457
+       TRA     EC            GO INSERT 'NEW' CARD                       SERI0458
+*                                                                       SERI0459
+LFEOT  SXA     LFEOTX,4      LOOK FOR *ENDTAPE CARD                     SERI0460
+       CAL     OLD+12        FIRST SEE IF THIS IS AN END OF FILE        SERI0461
+       ERA     INFTY                                                    SERI0462
+       TZE     1,4           IF SO, RETURN LEAVING FSTCDF SWITCH SET    SERI0463
+       LDI     OLD                                                      SERI0464
+       IIL     540000        LOOK FOR ASTERISK IN COLUMN 1              SERI0465
+       LFT     770000                                                   SERI0466
+       TRA     LFEOTX                                                   SERI0467
+       CALL    (PACK),OLD,PACKED,12                                     SERI0468
+       AXT     2,4                                                      SERI0469
+       CAL     PACKED+2,4                                               SERI0470
+       ERA     LFEOTM+2,4                                               SERI0471
+       TNZ     LFEOTX                                                   SERI0472
+       TIX     *-3,4,1                                                  SERI0473
+       TRA     ENDTAP                                                   SERI0474
+LFEOTM BCI     2,*ENDTAPE                                               SERI0475
+LFEOTX AXT     *-*,4                                                    SERI0476
+       STZ     FCDSW                                                    SERI0477
+       TRA     1,4                                                      SERI0478
+*                                                                       SERI0479
+ENDTAP CLA     NEWTAP        CLOSE OUT NEW TAPE                         SERI0480
+       TZE     $EXIT         IF TAPE ZERO, JUST QUIT                    SERI0481
+       STA     ENDTEF+1                                                 SERI0482
+       STA     ENDTRW+1                                                 SERI0483
+       CALL    (WR),OLD                                                 SERI0484
+ENDTEF CALL    ENDFIL,*-*                                               SERI0485
+ENDTRW CALL    REWIND,*-*                                               SERI0486
+       CALL    EXIT                                                     SERI0487
+       SPACE   1                                                        SERI0488
+*                                                                       SERI0489
+*ROUTINES FOR CONTROL CARDS OTHER THAN 'DELETE' AND 'RUN TO'            SERI0490
+*                                                                       SERI0491
+NEWSR  LDI     PACKED+1      MAKE SURE CARD SAYS 'NEW SERIALS'          SERI0492
+       IIS     NEWSRX+1                                                 SERI0493
+       OFT     INFTY                                                    SERI0494
+       TRA     CCLOOK        IT DOES NOT                                SERI0495
+       LDQ     SERNEW        IT DOES, GET NEW SERIAL FROM CARD          SERI0496
+       STQ     NEWSER        STORE IT IN COMMON                         SERI0497
+       LDQ     SERNEW+1                                                 SERI0498
+       STQ     NEWSER+1                                                 SERI0499
+       STL     SERSW         TURN ON SERIAL SWITCH                      SERI0500
+       TRA     FINCON                                                   SERI0501
+*                                                                       SERI0502
+OLDSR  LDI     PACKED+1      MAKE SURE CARD SAYS 'OLD SERIALS'          SERI0503
+       IIS     OLDSRX+1                                                 SERI0504
+       OFT     INFTY                                                    SERI0505
+       TRA     CCLOOK        IT DOES NOT                                SERI0506
+       STZ     SERSW         IT DOES, TURN OFF SERIAL SWITCH            SERI0507
+       TRA     FINCON                                                   SERI0508
+*                                                                       SERI0509
+READA  LDI     PACKED+1      IS TAPE NUMBER 1 OR 2 DIGITS               SERI0510
+       IIS     =H0                                                      SERI0511
+       OFT     =O7777777777                                             SERI0512
+       TRA     CCLOOK        NO, GO LOOK SOME MORE                      SERI0513
+       LDQ     PACKED+1      YES, GET TAPE NUMBER                       SERI0514
+       ANA     =O17                                                     SERI0515
+       LDQ     PACKED+1                                                 SERI0516
+       TSX     GETTAP,4                                                 SERI0517
+       TZE     BADCC                                                    SERI0518
+       STL     FCDSW         SET FIRST-CARD-OF-FILE SWITCH              SERI0519
+       LXA     OLDTAP,4      PICK UP FORMER 'OLD' TAPE NUMBER           SERI0520
+       STO     OLDTAP        STORE NEW 'OLD' TAPE NUMBER                SERI0521
+       ZET     OLDMT         IS OLD BUFFER EMPTY                        SERI0522
+       TRA     FINCON        YES, GO AWAY HAPPY                         SERI0523
+       STL     OLDMT         NO, EMPTY IT BY BACKSPACING                SERI0524
+       SXA     *+2,4                                                    SERI0525
+       CALL    BACKR,*-*                                                SERI0526
+       TRA     FINCON                                                   SERI0527
+*                                                                       SERI0528
+WRITEA LDI     PACKED+1      IS TAPE NUMBER 1 OR 2 DIGITS               SERI0529
+       IIS     =H00                                                     SERI0530
+       OFT     =O77777777                                               SERI0531
+       TRA     CCLOOK        NO, GO LOOK SOME MORE                      SERI0532
+       PIA                   YES, GET TAPE NUMBER                       SERI0533
+       LGR     30                                                       SERI0534
+       TSX     GETTAP,4                                                 SERI0535
+       STO     NEWTAP                                                   SERI0536
+       TRA     FINCON                                                   SERI0537
+*                                                                       SERI0538
+ENDFL  LDI     PACKED+1      MAKE SURE CARD SAYS 'END FILE'             SERI0539
+       IIS     ENDFLX+1                                                 SERI0540
+       OFT     =O777760007777                                           SERI0541
+       TRA     CCLOOK                                                   SERI0542
+       PIA                   GET TAPE NUMBER                            SERI0543
+       LGR     18                                                       SERI0544
+       TSX     GETTAP,4                                                 SERI0545
+       TZE     BADCC                                                    SERI0546
+       STA     *+2                                                      SERI0547
+       CALL    ENDFIL,*-*    WRITE EOF                                  SERI0548
+       TRA     FINCON                                                   SERI0549
+*                                                                       SERI0550
+REWD   LDI     PACKED+1      MAKE SURE CARD SAYS 'REWIND'               SERI0551
+       IIS     REWDX+1                                                  SERI0552
+       OFT     =O776000777777                                           SERI0553
+       TRA     CCLOOK                                                   SERI0554
+       PIA                   GET TAPE NUMBER                            SERI0555
+       LGR     24                                                       SERI0556
+       TSX     GETTAP,4                                                 SERI0557
+       TZE     BADCC                                                    SERI0558
+       STA     *+2                                                      SERI0559
+       CALL    REWIND,*-*                                               SERI0560
+*                                                                       SERI0561
+FINCON TSX     PUBNEW,4      PUBLISH CONTROL CARD                       SERI0562
+       TRA     A             RETURN TO CONTROL-CARD SCAN                SERI0563
+*                                                                       SERI0564
+CLOSE  LDI     PACKED+1      IS REST OF CARD BLANK                      SERI0565
+       IIS     =H                                                       SERI0566
+       OFT     INFTY                                                    SERI0567
+       TRA     CCLOOK        NO, GO BACK AND LOOK AGAIN                 SERI0568
+       CLA     NEWTAP        YES, IS THERE A 'NEW' TAPE                 SERI0569
+       TZE     FINCON        IF NOT, LEAVE                              SERI0570
+       STA     CLOSEF+1      SET UP TO CLOSE OUT 'NEW' TAPE             SERI0571
+       STA     CLOSEG+1                                                 SERI0572
+       STA     CLOSER+1                                                 SERI0573
+CLOSEF CALL    ENDFIL,*-*    WRITE EOF                                  SERI0574
+       CLA     NEWTAP                                                   SERI0575
+       CALL    (WR),CLOSEM   *ENDTAPE                                   SERI0576
+CLOSEG CALL    ENDFIL,*-*    EOF                                        SERI0577
+CLOSER CALL    REWIND,*-*    AND REWIND                                 SERI0578
+       TRA     FINCON        RETURN TO CONTROL-CARD SCAN                SERI0579
+CLOSEM BCI     7,*     ENDTAPE                                          SERI0580
+       BCI     7,                                                       SERI0581
+*                                                                       SERI0582
+*                                                                       SERI0583
+EXITY  TSX     PUBNEW,4      PUBLISH THE EXIT CONTROL CARD              SERI0584
+       CALL    EXIT                                                     SERI0585
+*                                                                       SERI0586
+*SUBROUTINE TO GET TAPE NUMBER. ENTER WITH                              SERI0587
+*FIRST DIGIT IN AC AND SECOND IN MQ                                     SERI0588
+*                                                                       SERI0589
+GETTAP CAS     =O60          TREAT BLANK AS ZERO                        SERI0590
+       TRA     BADCC                                                    SERI0591
+       CLM                                                              SERI0592
+       CAS     =10                                                      SERI0593
+       TRA     BADCC                                                    SERI0594
+       TRA     BADCC                                                    SERI0595
+       XCL                                                              SERI0596
+       ARS     30            LOOK AT SECOND CHARACTER FIRST             SERI0597
+       CAS     =O60                                                     SERI0598
+       TRA     BADCC                                                    SERI0599
+       TRA     GTAPLV                                                   SERI0600
+       CAS     =10                                                      SERI0601
+       TRA     BADCC                                                    SERI0602
+       TRA     BADCC                                                    SERI0603
+       STO     TEMP                                                     SERI0604
+       VLM     =10,,4        FIRST TIMES 10 PLUS SECOND                 SERI0605
+       LLS     4                                                        SERI0606
+       ADD     TEMP                                                     SERI0607
+       TRA     1,4                                                      SERI0608
+GTAPLV XCA                                                              SERI0609
+       TRA     1,4                                                      SERI0610
+*                                                                       SERI0611
+PUBNEW SXA     PUBNWX,4      PUBLISH CONTROL CARD                       SERI0612
+       CLA     STMOUT                                                   SERI0613
+       STA     *+2                                                      SERI0614
+       CALL    WRITE,*-*,PRENEW,15                                      SERI0615
+PUBNWX AXT     *-*,4                                                    SERI0616
+       TRA     1,4                                                      SERI0617
+*                                                                       SERI0618
+PUBOLD SXA     PUBOLX,4      PUBLISH DELETED CARD                       SERI0619
+       CLA     STMOUT        ...WITH COMMENT                            SERI0620
+       STA     *+2                                                      SERI0621
+       CALL    WRITE,*-*,PREOLD,17                                      SERI0622
+PUBOLX AXT     *-*,4                                                    SERI0623
+       TRA     1,4                                                      SERI0624
+*                                                                       SERI0625
+INFTY  VFD     36/-1         INFINITY--A CONSTANT                       SERI0626
+OLDMT                        OLD-BUFFER-IS-EMPTY FLAG                   SERI0627
+DELESW                       DELETE SWITCH                              SERI0628
+DELTHS                       DELETE-THRU SWITCH                         SERI0629
+FCDSW                        FIRST-CARD-OF-FILE SWITCH                  SERI0630
+PRENEW BCI     1,0           DOUBLE-SPACE THE PRINTER                   SERI0631
+NEW    BSS     14            'NEW' BUFFER                               SERI0632
+POSTNW BCI     5,            SPACE FOR COMMENTS                         SERI0633
+PREOLD BCI     1,            SINGLE-SPACE THE PRINTER                   SERI0634
+OLD    BSS     14            'OLD' BUFFER                               SERI0635
+POSTOL BCI     2,DELETED     COMMENT                                    SERI0636
+PACKED BSS     12            'PACKED' BUFFER                            SERI0637
+SERNEW BSS     2             CONVERTED 73-80 OF 'NEW'                   SERI0638
+SEROLD BSS     2             CONVERTED 73-80 OF 'OLD'                   SERI0639
+TEMP   BSS     1                                                        SERI0640
+SERSW  COMMON  1             SERIALIZATION SWITCH                       SERI0641
+       COMMON  1             NEW SERIAL NUMBER                          SERI0642
+NEWSER COMMON  1             ...(TWO WORDS)                             SERI0643
+       END                                                              SERI0644

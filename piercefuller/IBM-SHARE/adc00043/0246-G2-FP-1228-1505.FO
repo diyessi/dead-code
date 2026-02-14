@@ -1,0 +1,247 @@
+C     PROGRAM 1228 CARL M BENNETT REVISED MARCH 1963                    1228 001
+C     POWER AND/OR POWER AND CROSS POWER SPECTRAL ANALYSIS              1228 002
+      DIMENSION X(1600),CXX(100),ZLOGPX(100),FQ(100),IDX(7),            1228 003
+     XY(1600),CYY(100),ZLOGPY(100),IDY(7),                              1228 004
+     XPX(100),PY(100),                                                  1228 005
+     XCXY(100),CYX(100),CC(100),CQ(100),PC(100),PQ(100),PXY(100) ,      1228 006
+     XPHASE(100),COHNCE(100),ZLGPXY(100)                                1228 007
+C     SEE EQUIVALENCE STATEMENTS IN BODY OF THE PROGRAM                 1228 008
+  901 FORMAT(1H1,42X,33HPOWER AND CROSS SPECTRAL ANALYSIS)              1228 009
+  902 FORMAT(100H  N    M   DELTAT   ZERO  CAL     REF     B1     B2    1228 010
+     X  ENERGY      RMS              IDENTIFICATION)                    1228 011
+  903 FORMAT(1X,I4,I4, 0PF9.3,F6.0,F6.0,F9.3,F7.2,F7.2,1PE12.3,1PE11.3, 1228 012
+     X1X,7A6)                                                           1228 013
+  904 FORMAT(2(60H FREQUENCY    POWER X    POWER Y    POWER XY PHASE COH1228 014
+     XERENCE))                                                          1228 015
+  905 FORMAT(2(1P4E11.3,0PF7.1,F8.5,1X))                                1228 016
+  906 FORMAT(1H1,46X,23HPOWER SPECTRAL ANALYSIS)                        1228 017
+  907 FORMAT(5(24H  FREQUENCY   POWER     ))                            1228 018
+  908 FORMAT(5(1X,1PE10.3,1PE11.3,2X))                                  1228 019
+  909 FORMAT(1H0,31X,42HNORMALIZED LAG PRODUCTS OF PREWHITNED DATA)     1228 020
+  910 FORMAT( 6H C(0)=1PE11.4 /(1X,0PF6.3,16F7.3))                      1228 021
+      REWIND2                                                           1228 022
+      REWIND3                                                           1228 023
+      REWIND4                                                           1228 024
+      E2TEN=0.43429448                                                  1228 025
+   10 READ INPUT TAPE 3,3,NX,MX,DELTX,ZEROX,CALX,REFX,B1X,B2X,          1228 026
+     X(IDX(I),I=1,7),(X(K),K=1,NX)                                      1228 027
+    3 FORMAT(I4,I2,6F4.0,7A6/(18(F3.0,1X)))                             1228 028
+      READ INPUT TAPE 3,4,KTRLX,VALID                                   1228 029
+    4 FORMAT(I2,F8.0)                                                   1228 030
+      IF(NX)21,21,20                                                    1228 031
+   20 IF(VALID)21,30,21                                                 1228 032
+   21 PAUSE 44401                                                       1228 033
+      GO TO 150                                                         1228 034
+   30 CALL TREND(NX,X)                                                  1228 035
+      CONVX=(REFX*REFX)/((ZEROX-CALX)*(ZEROX-CALX))                     1228 036
+      CALL LAGS(CXX,NX,0,X,X)                                           1228 037
+      RMSX=SQRTF(CXX(1)*CONVX/FLOATF(NX-1))                             1228 038
+      CALL WHITEN(NX,X,B1X,B2X)                                         1228 039
+      CALL LAGS(CXX,NX,MX,X,X)                                          1228 040
+      CALL SPCTRA(NX,MX,DELTX,CXX,PX,1.0)                               1228 041
+      CALL SCALE(MX,B1X,B2X,CONVX,PX)                                   1228 042
+      DELFQ= 0.5/(DELTX*FLOATF(MX))                                     1228 043
+      L=MX+1                                                            1228 044
+      SUM=0.0                                                           1228 045
+      CXX0=CXX(1)                                                       1228 046
+      DO 40 I=1,L                                                       1228 047
+      FQ(I)=FLOATF(I-1)*DELFQ                                           1228 048
+      ZLOGPX(I)=E2TEN*LOGF(ABSF(PX(I)))                                 1228 049
+      CXX(I)=CXX(I)/CXX0                                                1228 050
+   40 SUM=SUM+PX(I)                                                     1228 051
+      ENRGX=DELFQ*SUM                                                   1228 052
+      CXX0=CXX0*CONVX/FLOATF(NX)                                        1228 053
+      IF(KTRLX)50,50,60                                                 1228 054
+   50 WRITE OUTPUT TAPE 2,906                                           1228 055
+      WRITE OUTPUT TAPE 2,902                                           1228 056
+      WRITE OUTPUT TAPE 2,903,NX,MX,DELTX,ZEROX,CALX,REFX,B1X,B2X,      1228 057
+     XENRGX,RMSX,(IDX(I),I=1,7)                                         1228 058
+      WRITE OUTPUT TAPE 2,907                                           1228 059
+      WRITE OUTPUT TAPE 2,908,(FQ(I),PX(I),I=1,L)                       1228 060
+      WRITE OUTPUT TAPE 2,909                                           1228 061
+      WRITE OUTPUT TAPE 2,910,CXX0,(CXX(I),I=1,L)                       1228 062
+      WRITE OUTPUT TAPE 4,5,FQ(1),IDX(1),IDX(2)                         1228 063
+      WRITE OUTPUT TAPE 4,5,(FQ(I),IDX(1),IDX(2),ZLOGPX(I),CXX(I),I=1,L)1228 064
+    5 FORMAT(F11.7,4X,2A6,2X,  F6.3,4X,F6.3)                            1228 065
+      IF(KTRLX)150,10,52                                                1228 066
+   52 STOP 5555                                                         1228 067
+   60 READ INPUT TAPE 3,3,NY,MY,DELTY,ZEROY,CALY,REFY,B1Y,B2Y,          1228 068
+     X(IDY(I),I=1,7),(Y(K),K=1,NY)                                      1228 069
+      READ INPUT TAPE 3,4,KTRLY,VALID                                   1228 070
+      IF(NY)71,71,70                                                    1228 071
+   70 IF(VALID)71,80,71                                                 1228 072
+   71 PAUSE 44402                                                       1228 073
+      GO TO 100                                                         1228 074
+   80 IF(MX-MY)90,110,90                                                1228 075
+   90 PAUSE 44403                                                       1228 076
+  100 KTRLX=-1                                                          1228 077
+      GO TO 50                                                          1228 078
+  110 IF(DELTX-DELTY)90,120,90                                          1228 079
+  120 CALL TREND(NY,Y)                                                  1228 080
+      CONVY=(REFY*REFY)/((ZEROY-CALY)*(ZEROY-CALY))                     1228 081
+      CALL LAGS(CYY,NY,0,Y,Y)                                           1228 082
+      RMSY=SQRTF(CYY(1)*CONVY/FLOATF(NY-1))                             1228 083
+      CALL WHITEN(NY,Y,B1Y,B2Y)                                         1228 084
+      CALL LAGS(CYY,NY,MY,Y,Y)                                          1228 085
+      CALL SPCTRA(NY,MY,DELTY,CYY,PY,1.0)                               1228 086
+      CALL SCALE(MY,B1Y,B2Y,CONVY,PY)                                   1228 087
+      EQUIVALENCE(M,MX),(DELT,DELTX),(CC,CXY),(CQ,CYX)                  1228 088
+      N=XMIN0F(NX,NY)                                                   1228 089
+      CALL LAGS(CXY,N,M,X,Y)                                            1228 090
+      CALL LAGS(CYX,N,M,Y,X)                                            1228 091
+      DO 130 I=1,L                                                      1228 092
+      CC(I)=0.5*(CXY(I)+CYX(I))                                         1228 093
+  130 CQ(I)=CC(I)-CYX(I)                                                1228 094
+C     NOTE CQ=CC-CYX=(CXY-CYX)/2.0                                      1228 095
+      CALL SPCTRA(N,M,DELT,CC,PC,1.0)                                   1228 096
+      CALL SPCTRA(N,M,DELT,CQ,PQ,-1.0)                                  1228 097
+      CONVXY=ABSF(REFX*REFY/((ZEROX-CALX)*(ZEROY-CALY)))                1228 098
+      OMEGA=3.1415927/FLOATF(M)                                         1228 099
+      A1X=B1X+B2X                                                       1228 100
+      A2X=B1X*B2X                                                       1228 101
+      C0X=1.0+A1X*A1X+A2X*A2X                                           1228 102
+      C1X=2.0*A1X*(1.0+A2X)                                             1228 103
+      C2X=2.0*A2X                                                       1228 104
+      A1Y=B1Y+B2Y                                                       1228 105
+      A2Y=B1Y*B2Y                                                       1228 106
+      C0Y=1.0+A1Y*A1Y+A2Y*A2Y                                           1228 107
+      C1Y=2.0*A1Y*(1.0+A2Y)                                             1228 108
+      C2Y=2.0*A2Y                                                       1228 109
+      CONVY=ABSF(REFX*REFY/((ZEROX-CALX)*(ZEROY-CALY)))                 1228 110
+      EQUIVALENCE(PHASE,X),(COHNCE,Y),(PXY,PC),(ZLGPXY,PQ)              1228 111
+      SUM=0.0                                                           1228 112
+      CYY0=CYY(1)                                                       1228 113
+      DO 140 I=1,L                                                      1228 114
+      PHASE(I)=ARTNF(PQ(I),PC(I))*57.29578                              1228 115
+C     NOTE THE TIME SERIES X AND Y MUST BE PREWHITENED IDENTICALLY OR   1228 116
+C     THE PHASE RELATION IS MEANINGLESS.                                1228 117
+      PXY(I)=SQRTF(PC(I)*PC(I)+PQ(I)*PQ(I))                             1228 118
+      Z=FLOATF(I-1)                                                     1228 119
+      PXY(I)=PXY(I)*CONVXY/(SQRTF((C0X+C1X*COSF(OMEGA*Z)+C2X*COSF(2.0*  1228 120
+     XOMEGA*Z))*(C0Y+C1Y*COSF(OMEGA*Z)+C2Y*COSF(2.0*OMEGA*Z))))         1228 121
+      COHNCE(I)=PXY(I)/SQRTF(PX(I)*PY(I))                               1228 122
+      SUM=SUM+PY(I)                                                     1228 123
+      CYY(I)=CYY(I)/CYY0                                                1228 124
+      ZLOGPY(I)=E2TEN*LOGF(ABSF(PY(I)))                                 1228 125
+  140 ZLGPXY(I)=E2TEN*LOGF(ABSF(PXY(I)))                                1228 126
+      ENRGY=DELFQ*SUM                                                   1228 127
+      CYY0=CYY0*CONVY/FLOATF(NY)                                        1228 128
+      WRITE OUTPUT TAPE 2,901                                           1228 129
+      WRITE OUTPUT TAPE 2,902                                           1228 130
+      WRITE OUTPUT TAPE 2,903,NX,MX,DELTX,ZEROX,CALX,REFX,B1X,B2X,      1228 131
+     XENRGX,RMSX,(IDX(I),I=1,7)                                         1228 132
+     XNY,MY,DELTY,ZEROY,CALY,REFY,B1Y,B2Y,ENRGY,RMSY,(IDY(I),I=1,7)     1228 133
+      WRITE OUTPUT TAPE 2,904                                           1228 134
+      WRITE OUTPUT TAPE 2,905,(FQ(I),PX(I),PY(I),PXY(I),PHASE(I),       1228 135
+     XCOHNCE(I),I=1,L)                                                  1228 136
+      IF(A1X-A1Y)142,141,142                                            1228 137
+  141 IF(A2X-A2Y)142,143,142                                            1228 138
+  142 WRITE OUTPUT TAPE 2,911                                           1228 139
+  911 FORMAT(81H0NOTE-THE PHASE IS INCORRECT SINCE X(I) AND Y(I) WERE NO1228 140
+     XT IDENTICALLY PREWHITENED)                                        1228 141
+  143 WRITE OUTPUT TAPE 2,909                                           1228 142
+      WRITE OUTPUT TAPE 2,910,CXX0,(CXX(I),I=1,L)                       1228 143
+      WRITE OUTPUT TAPE 2,910,CYY0,(CYY(I),I=1,L)                       1228 144
+      WRITE OUTPUT TAPE 4,6,FQ(1),IDX(1),IDX(2),IDY(1),IDY(2)           1228 145
+      WRITE OUTPUT TAPE4,6,(FQ(I),IDX(1),IDX(2),IDY(1),IDY(2),          1228 146
+     XZLOGPX(I),ZLOGPY(I),                                              1228 147
+     XZLGPXY(I),PHASE(I),COHNCE(I),I=1,L)                               1228 148
+    6 FORMAT(F11.7,1X,2A6,1X,2A6,3F7.3,F7.1,F7.3)                       1228 149
+      IF(KTRLY)150,10,10                                                1228 150
+  150 END FILE 2                                                        1228 151
+      END FILE 4                                                        1228 152
+      REWIND 2                                                          1228 153
+      REWIND 4                                                          1228 154
+      END(0,1,1,0,1)                                                    1228 155
+      SUBROUTINE LAGS(C,N,M,X,Y)                                        1228 001
+      DIMENSION X(1600),Y(1600),C(100)                                  1228 002
+      L=M+1                                                             1228 003
+  310 DO 330 K=1,L                                                      1228 004
+      SUM=0.0                                                           1228 005
+      J=N-K+1                                                           1228 006
+      DO 320 I=1,J                                                      1228 007
+      IK=I+K-1                                                          1228 008
+  320 SUM=SUM + X(I)*Y(IK)                                              1228 009
+  330 C(K)=SUM                                                          1228 010
+  350 RETURN                                                            1228 011
+      END (0,1,1,0,0)                                                   1228 012
+      SUBROUTINE SPCTRA (N,M,DELTAT,C,P,TYPE)                           1228 001
+      DIMENSION C(100),P(100)                                           1228 002
+      CST2=2.0 *DELTAT/FLOATF(N)                                        1228 003
+      CST1=C(1)*CST2                                                    1228 004
+      CST3=3.1415927/FLOATF(M)                                          1228 005
+      SUM=0.0                                                           1228 006
+      M1=((M-1)/2)+1                                                    1228 007
+      M2=M1+1                                                           1228 008
+      K=M+1                                                             1228 009
+      IF(TYPE)420,410,410                                               1228 010
+C     IF TYPE IS NEGATIVE,SIN TRANSFORMATION IS TAKEN,OTHERWISE THE COS 1228 011
+C     TRANSFORMATION IS TAKEN.                                          1228 012
+  410 DO 413 L=1,K                                                      1228 013
+      DO 411 I=2,M1                                                     1228 014
+      U=FLOATF(I-1)/FLOATF(M)                                           1228 015
+  411 SUM=SUM+C(I)*COSF(CST3*FLOATF((I-1)*(L-1)))*(2.0-12.0*U*U*(1.0-U))1228 016
+      DO 412 I=M2,K                                                     1228 017
+      U=FLOATF(I-1)/FLOATF(M)                                           1228 018
+  412 SUM=SUM+C(I)*COSF(CST3*FLOATF((I-1)*(L-1)))*4.0                   1228 019
+     X*(1.0-U)*(1.0-U)*(1.0-U)                                          1228 020
+      P(L)=CST1+CST2*SUM                                                1228 021
+  413 SUM=0.0                                                           1228 022
+      GO TO 430                                                         1228 023
+  420 DO 423 L=1,K                                                      1228 024
+      DO 421 I=2,M1                                                     1228 025
+      U=FLOATF(I-1)/FLOATF(M)                                           1228 026
+  421 SUM=SUM+C(I)*SINF(CST3*FLOATF((I-1)*(L-1)))*(2.0-12.0*U*U*(1.0-U))1228 027
+      DO 422 I=M2,K                                                     1228 028
+      U=FLOATF(I-1)/FLOATF(M)                                           1228 029
+  422 SUM=SUM+C(I)*SINF(CST3*FLOATF((I-1)*(L-1)))*4.0                   1228 030
+     X*(1.0-U)*(1.0-U)*(1.0-U)                                          1228 031
+      P(L)=CST1+CST2*SUM                                                1228 032
+  423 SUM=0.0                                                           1228 033
+  430 P(1)=P(1)/2.0                                                     1228 034
+      P(K)=P(K)/2.0                                                     1228 035
+      RETURN                                                            1228 036
+      END(0,1,1,0,0)                                                    1228 037
+      SUBROUTINE WHITEN (N,X,B1,B2)                                     1228 001
+      DIMENSION X(3000)                                                 1228 002
+C     THE TIME SERIES X(I) IS PRE-WHITENED BY AUTOREGRESSIVE METHODS    1228 003
+      A1=B1+B2                                                          1228 004
+      A2=B1*B2                                                          1228 005
+      DO 210 I=3,N                                                      1228 006
+  210 X(I-2)=X(I)+A1*X(I-1)+A2*X(I-2)                                   1228 007
+      N=N-2                                                             1228 008
+      RETURN                                                            1228 009
+      END(0,1,1,0,0)                                                    1228 010
+      SUBROUTINE TREND (N,X)                                            1228 001
+      DIMENSION X(3000)                                                 1228 002
+      ZN=N                                                              1228 003
+      SUMX=0.0                                                          1228 004
+      DO110 I=1,N                                                       1228 005
+  110 SUMX=SUMX + X(I)                                                  1228 006
+      A=SUMX/ZN                                                         1228 007
+      SUMTX=0.0                                                         1228 008
+      DO120 I=1,N                                                       1228 009
+  120 SUMTX=SUMTX + FLOATF(I)*X(I)                                      1228 010
+      SUMT=ZN*(ZN+1.0)/2.0                                              1228 011
+      SUMT2=ZN*(ZN+1.0)*(2.0*ZN + 1.0)/6.0                              1228 012
+      B=(ZN * SUMTX - SUMT * SUMX)/(ZN * SUMT2 - SUMT * SUMT)           1228 013
+      AVET=(ZN+1.0)/2.0                                                 1228 014
+      DO 130 I=1,N                                                      1228 015
+  130 X(I)=X(I)-(A+B*(FLOATF(I)-AVET))                                  1228 016
+C     THE METHOD  OF LEAST SQUARES IS USED TO ELIMINATE LINEAR TREND    1228 017
+      RETURN                                                            1228 018
+      END (0,1,1,0,0)                                                   1228 019
+      SUBROUTINE SCALE (M,B1,B2,CONV,P)                                 1228 001
+      DIMENSION P(100)                                                  1228 002
+      OMEGA=3.1415927/FLOATF(M)                                         1228 003
+      A=B1+B2                                                           1228 004
+      B=B1*B2                                                           1228 005
+      C0=1.0+A*A+B*B                                                    1228 006
+      C1=2.0*A*(1.0+B)                                                  1228 007
+      C2=2.0*B                                                          1228 008
+      L=M+1                                                             1228 009
+      DO 10 I=1,L                                                       1228 010
+      Z=FLOATF(I-1)                                                     1228 011
+   10 P(I)=P(I)*CONV/(C0+C1*COSF(OMEGA*Z)+C2*COSF(2.0*OMEGA*Z))         1228 012
+      RETURN                                                            1228 013
+      END(0,1,1,0,1)                                                    1228 014

@@ -1,0 +1,581 @@
+$ID33C36933-03          TIBJOB MAINTENANCE        9900HVB         332000        
+$EXECUTE       FORTRAN                                                          
+*     FAP                                                                       
+       TTL     CARD-TO-TAPE SIMULATOR FOR IBSYS                         CDTP0010
+       ABS                                                              CDTP0020
+       REM     THIS IS AN ADAPTATION OF THE FORTRAN 2                   CDTP0030
+       REM     CARD-TO-TAPE ROUTINE. IT READS CARDS IN                  CDTP0040
+       REM     EITHER HOLLERITH OR COLUMN BINARY. 7-9                   CDTP0050
+       REM     PUNCH OR 7-8-9 PUNCH IN COL. 1 IS TREATED                CDTP0060
+       REM     AS COLUMN BINARY, 7-8 PUNCH PRODUCES A                   CDTP0070
+       REM     TAPE END-OF-FILE. LOOKAHEAD BITS ARE ADDED.              CDTP0080
+       REM          SYSIN1 IS THE TAPE WRITTEN ON. THE                  CDTP0090
+       REM     ROUTINE INCLUDES ALL ITS OWN I/O EXCEPT                  CDTP0100
+       REM     THAT IT USES THE IOEX PRINT ROUTINE.                     CDTP0110
+       REM          TO USE...                                           CDTP0120
+       REM     AS A SEPARATE SYSTEM                                     CDTP0130
+       REM     SET SSW 1 DOWN                                           CDTP0140
+       REM     CARDS IN CARD READER PRECEDED BY $EXECUTE CDTPSM         CDTP0150
+       REM     AFTER ACTION IS INITIATED, RESET SSW 1. (IF THIS         CDTP0160
+       REM     IS NOT DONE, THERE IS AN OPERATOR STOP AT THE            CDTP0170
+       REM     CONCLUSION OF THE CARD-TO-TAPE)                          CDTP0180
+       REM          TO USE                                              CDTP0190
+       REM     AS PART OF IBSUP                                         CDTP0200
+       REM     MUST BE REASSEMBLED AND ADDED WITH AN IBSUP              CDTP0210
+       REM     CONTROL (CARD, SWITCH, KEY, OR WHATEVER) TO TRANSFER     CDTP0220
+       REM     AT COLD START.                                           CDTP0230
+       LBL     CDTP,X                                                   CDTP0240
+*      IBSYS DEFINITIONS-VERSION 6                                      CDTP0250
+SYSCUR BOOL    102                                                      CDTP0260
+SYSTRA BOOL    100                                                      CDTP0270
+SYSORG BOOL    3720                                                     CDTP0280
+(PROUT BOOL    706                                                      CDTP0290
+(CVPRT BOOL    722                                                      CDTP0300
+SYSIN1 BOOL    151                                                      CDTP0310
+(CHXAC BOOL    724                                                      CDTP0320
+(WDNP) EQU     3                                                        CDTP0330
+(WBNP) EQU     1                                                        CDTP0340
+  L(0) BOOL    3527                                                     CDTP0350
+ TRPSW BOOL    742                                                      CDTP0360
+ ENBSW BOOL    710                                                      CDTP0370
+       ORG     SYSCUR                                                   CDTP0380
+       BCI     1,CDTPSM                                                 CDTP0390
+       ORG     SYSTRA                                                   CDTP0400
+       TRA     SYSORG                                                   CDTP0410
+       ORG     SYSORG                                                   CDTP0420
+START  LDI*    (FGBX)                                                   CDTP0430
+       TSX     OPEN,4                                                   CDTP0440
+FIRST  LXA     ALTERN,1                                                 CDTP0450
+       CLA     BUFLOC,1                                                 CDTP0460
+       STA     *+2                                                      CDTP0470
+       TSX     (READ),4                                                 CDTP0480
+       MTW     **,,CDCNT                                                CDTP0490
+SECOND LAC     ALTERN,1                                                 CDTP0500
+       SXA     ALTERN,1                                                 CDTP0510
+       CLA     BUFLOC,1                                                 CDTP0520
+       STA     *+2                                                      CDTP0530
+       TSX     (READ),4      LOAD SECOND BUFFER                         CDTP0540
+       MTW     **,,CDCNT                                                CDTP0550
+INIT   TRA     OFFTST        CHANGED TO NOP AFTER FIRST CARD.           CDTP0560
+       ZET     (SCHU)-1           TEST FOR EOF AT CARD READER           CDTP0570
+       TRA     ALTERN             NO EOF                                CDTP0580
+       TRA     ENDCRD             TO CLOSE OUT AFTER EOF                CDTP0590
+       REM                                                              CDTP0600
+       REM     ** MOVE TO WORK INPUT BUFFER **                          CDTP0610
+ALTERN AXC     1,1           ALWAYS OPPOSITE FROM READ AT SECOND.       CDTP0620
+       CLA     BUFLOC,1      GET CURRENT BUFFER LOCATION.               CDTP0630
+       ADD     L24           INITIALIZE MOVE LOOP.                      CDTP0640
+       STA     *+4                                                      CDTP0650
+       ADD     L1                                                       CDTP0660
+       STA     *+4                                                      CDTP0670
+       AXT     24,2          MOVE 24 WORDS.                             CDTP0680
+       CLA     **,2                                                     CDTP0690
+       STO     WORKIN+24,2                                              CDTP0700
+       CLA     **,2                                                     CDTP0710
+       STO     WORKIN+25,2                                              CDTP0720
+       TIX     *-4,2,2                                                  CDTP0730
+       CLM                   IDENTIFY CARD TYPE BY COL. 1 BITS.         CDTP0740
+       AXT     16,2                                                     CDTP0750
+       LDQ     WORKIN+20,2   7-8-9 ROWS OF COL. 1 INTO AC.              CDTP0760
+       LGL     1                                                        CDTP0770
+       TXI     *+1,2,2                                                  CDTP0780
+       TXL     *-3,2,20                                                 CDTP0790
+       PAX     0,4           7-8-9 ROWS IN IR(4).                       CDTP0800
+       TRA     CBLK,4        USE AS TRANSFER CODE.                      CDTP0810
+       TRA     COL                7-8-9 ALL PUNCHED                     CDTP0820
+       TRA     ENDFIL        7-8 PUNCHED.                               CDTP0830
+       TRA     COL           7-9 PUNCHED.                               CDTP0840
+       TRA     HOLL          7 PUNCH.                                   CDTP0850
+       TRA     ILEGP         8-9 PUNCHED                                CDTP0860
+       TRA     HOLL          8 PUNCH.                                   CDTP0870
+       TRA     HOLL          9 PUNCH.                                   CDTP0880
+CBLK   TRA     HOLL          NO 7-8- OR 9 PUNCHES.                      CDTP0890
+       REM                                                              CDTP0900
+       REM     ** INSERT LOOK-AHEAD BITS IN CARD GOING OUT **           CDTP0910
+HOLL   ZET     MUDCEL        THIS IS BCD                                CDTP0920
+       TRA     BCDDUP        LAST WAS BCD                               CDTP0930
+       CLA     BINBCD        LAST WAS BIN                               CDTP0940
+       STO     OUTBUF+26                                                CDTP0950
+       CLA     BINBCD+1                                                 CDTP0960
+       STO     OUTBUF+27                                                CDTP0970
+       AXC     1,2           SET BINARY WRITE                           CDTP0980
+       SXA     LOAD,2                                                   CDTP0990
+SETBCD STL     MUDCEL        = NON-ZERO FOR BCD LAST                    CDTP1000
+       REM                                                              CDTP1010
+       REM     ** MOVE LAST CARD TO OUTPUT BUFFER **                    CDTP1020
+       CAL     DOBUF1,1                                                 CDTP1030
+       ADD     L28                                                      CDTP1040
+       STA     *+5                                                      CDTP1050
+       ADD     L1                                                       CDTP1060
+       STA     *+5                                                      CDTP1070
+       AXT     28,2          MOVE 28 WORDS.                             CDTP1080
+       CLA     OUTBUF+28,2                                              CDTP1090
+       STO     **,2                                                     CDTP1100
+       CLA     OUTBUF+29,2                                              CDTP1110
+       STO     **,2                                                     CDTP1120
+       TIX     *-4,2,2                                                  CDTP1130
+       REM                                                              CDTP1140
+       REM     ** CONVERT HOLLERITH TO BCD CODE  **                     CDTP1150
+       AXT     12,2                                                     CDTP1160
+       STZ     ILEGX                                                    CDTP1170
+CLR    STZ     OUTBUF+12,2                                              CDTP1180
+       TIX     *-1,2,1                                                  CDTP1190
+       AXT     2,2                                                      CDTP1200
+THRW   CAL     WORKIN+24,2                                              CDTP1210
+       ORA     WORKIN+22,2                                              CDTP1220
+       ANA     WORKIN+20,2                                              CDTP1230
+       SLW     WORKIN+26,2                                              CDTP1240
+       ERA     WORKIN+20,2                                              CDTP1250
+       SLW     WORKIN+20,2                                              CDTP1260
+       CAL     WORKIN+24,2   TEST FOR ILLEGAL PUNCHES.                  CDTP1270
+       ANA     WORKIN+22,2                                              CDTP1280
+       TNZ     ILEGP         12-11 PUNCHED.                             CDTP1290
+       TXI     *+1,2,14                                                 CDTP1300
+       ORA     WORKIN+16,2                                              CDTP1310
+       TIX     *-1,2,2                                                  CDTP1320
+       SLW     ILEGO+1                                                  CDTP1330
+       ORA     WORKIN+18,2                                              CDTP1340
+       SLW     ILEGO                                                    CDTP1350
+       ANA     WORKIN+26,2                                              CDTP1360
+       TNZ     ILEGP         ERROR INVOLVING 12-0 OR 11-0.              CDTP1370
+       CAL     ILEGO+1                                                  CDTP1380
+       ANA     WORKIN+18,2                                              CDTP1390
+       TNZ     ILEGP         ERROR INVOLVING ONE-ROW.                   CDTP1400
+       CAL     WORKIN+20,2                                              CDTP1410
+       COM                                                              CDTP1420
+       ANA     WORKIN+4,2                                               CDTP1430
+       TXI     *+1,2,8                                                  CDTP1440
+       ORA     WORKIN+14,2                                              CDTP1450
+       TIX     *-1,2,2                                                  CDTP1460
+       ORA     WORKIN+2,2                                               CDTP1470
+       ANA     WORKIN+16,2                                              CDTP1480
+       TNZ     ILEGP         ERROR INVOLVING TWO-ROW.                   CDTP1490
+       CAL     WORKIN+2,2                                               CDTP1500
+       TXI     *+1,2,6                                                  CDTP1510
+       ORA     WORKIN+12,2                                              CDTP1520
+       TIX     *-1,2,2                                                  CDTP1530
+       ANA     WORKIN+14,2                                              CDTP1540
+       TNZ     ILEGP         ERROR INVOLVING THREE-ROW.                 CDTP1550
+       CAL     WORKIN+2,2                                               CDTP1560
+       ORA     WORKIN+10,2                                              CDTP1570
+       ORA     WORKIN+8,2                                               CDTP1580
+       ORA     WORKIN+6,2                                               CDTP1590
+       ANA     WORKIN+12,2                                              CDTP1600
+       TNZ     ILEGP         ERROR INVOLVING FOUR-ROW.                  CDTP1610
+       CAL     WORKIN+24,2                                              CDTP1620
+       COM                                                              CDTP1630
+       ANA     WORKIN+4,2                                               CDTP1640
+       ORA     WORKIN+8,2                                               CDTP1650
+       ORA     WORKIN+6,2                                               CDTP1660
+       ORA     WORKIN+2,2                                               CDTP1670
+       ANA     WORKIN+10,2                                              CDTP1680
+       TNZ     ILEGP         ERROR INVOLVING FIVE-ROW.                  CDTP1690
+       CAL     WORKIN+6,2                                               CDTP1700
+       ORA     WORKIN+4,2                                               CDTP1710
+       ORA     WORKIN+2,2                                               CDTP1720
+       ANA     WORKIN+8,2                                               CDTP1730
+       TNZ     ILEGP         ERROR INVOLVING SIX-ROW.                   CDTP1740
+       ORA     WORKIN+4,2                                               CDTP1750
+       ORA     WORKIN+2,2                                               CDTP1760
+       ANA     WORKIN+6,2                                               CDTP1770
+       TNZ     ILEGP         ERROR INVOLVING SEVEN-ROW.                 CDTP1780
+       CAL     WORKIN+2,2                                               CDTP1790
+       ANA     WORKIN+4,2                                               CDTP1800
+       TZE     *+2                                                      CDTP1810
+ILEGP  STL     ILEGX                                                    CDTP1820
+       CAL     ILEGO         EXCHANGE ZERO AND BLANK                    CDTP1830
+       ORA     WORKIN+22,2                                              CDTP1840
+       ORA     WORKIN+24,2                                              CDTP1850
+       COM                                                              CDTP1860
+       ERA     WORKIN+20,2                                              CDTP1870
+       SLW     WORKIN+20,2                                              CDTP1880
+       TIX     THRW,2,1      GO BACK FOR RIGHT HALF OF CARD.            CDTP1890
+       AXT     2,2                                                      CDTP1900
+       LXA     CLR,4                                                    CDTP1910
+       TXI     *+1,4,-6                                                 CDTP1920
+HALF   SXA     OR,4                                                     CDTP1930
+       TXI     *+1,2,24                                                 CDTP1940
+       LDQ     TC+26,2                                                  CDTP1950
+       STQ     TB+1                                                     CDTP1960
+       AXT     6,4                                                      CDTP1970
+       LDQ     WORKIN+26,2                                              CDTP1980
+CHAR   TXI     *+1,4,50                                                 CDTP1990
+       CLM                                                              CDTP2000
+       ALS     5                                                        CDTP2010
+       LGL     1                                                        CDTP2020
+       TIX     *-2,4,10                                                 CDTP2030
+       CVR     TB,0,6                                                   CDTP2040
+OR     ORS     0,4                                                      CDTP2050
+       TIX     CHAR,4,1                                                 CDTP2060
+       TIX     HALF+2,2,2                                               CDTP2070
+       LXA     CLR,4                                                    CDTP2080
+       TIX     HALF,2,1                                                 CDTP2090
+       TRA     SELECT                                                   CDTP2100
+BCDDUP CLA     BCDBCD                                                   CDTP2110
+       STO     OUTBUF+12                                                CDTP2120
+       CLA     BCDBCD+1                                                 CDTP2130
+       STO     OUTBUF+13                                                CDTP2140
+       AXT     0,2           SET BCD WRITE                              CDTP2150
+       SXA     LOAD,2                                                   CDTP2160
+       TRA     SETBCD                                                   CDTP2170
+       REM                                                              CDTP2180
+       REM     ** INSERT BINARY LOOK-AHEAD BITS **                      CDTP2190
+COL    NZT     MUDCEL        THIS IS BIN.                               CDTP2200
+       TRA     BINDUP        LAST WAS BIN                               CDTP2210
+       CLA     BCDBIN        LAST WAS BCD                               CDTP2220
+       STO     OUTBUF+12                                                CDTP2230
+       CLA     BCDBIN+1                                                 CDTP2240
+       STO     OUTBUF+13                                                CDTP2250
+       AXT     0,2           SET BCD WRITE                              CDTP2260
+       SXA     LOAD,2                                                   CDTP2270
+SETBIN STZ     MUDCEL        = ZERO FOR BIN LAST                        CDTP2280
+       REM                                                              CDTP2290
+       REM     ** MOVE LAST CARD TO OUTPUT BUFFER **                    CDTP2300
+       CAL     DOBUF1,1                                                 CDTP2310
+       ADD     L28                                                      CDTP2320
+       STA     *+5                                                      CDTP2330
+       ADD     L1                                                       CDTP2340
+       STA     *+5                                                      CDTP2350
+       AXT     28,2                                                     CDTP2360
+       CLA     OUTBUF+28,2                                              CDTP2370
+       STO     **,2                                                     CDTP2380
+       CLA     OUTBUF+29,2                                              CDTP2390
+       STO     **,2                                                     CDTP2400
+       TIX     *-4,2,2                                                  CDTP2410
+       REM                                                              CDTP2420
+       REM     ** COLLECT COLUMN BINARY WORDS AND ARRANGE IN            CDTP2430
+       REM     STANDARD ROW BINARY FORMAT **                            CDTP2440
+       AXT     12,6                                                     CDTP2450
+       SXA     DONE,1        SAVE BUFFER LOCATOR INDEX.                 CDTP2460
+       AXC     1,1                                                      CDTP2470
+BIN1   LDQ     WORKIN,1                                                 CDTP2480
+       TXI     *+1,1,1                                                  CDTP2490
+BIN2   VLM     MULTPR,0,3                                               CDTP2500
+       ANA     MASK3                                                    CDTP2510
+       ALS     12,4                                                     CDTP2520
+       TXI     *+1,2,1                                                  CDTP2530
+       TXL     *+2,4,11                                                 CDTP2540
+       STZ     OUTBUF+36,2                                              CDTP2550
+       ORS     OUTBUF+36,2                                              CDTP2560
+       TXL     BIN2,2,23                                                CDTP2570
+       TXL     *+2,2,24                                                 CDTP2580
+       TXL     BIN2,2,35                                                CDTP2590
+       CLM                                                              CDTP2600
+       LGL     37,4                                                     CDTP2610
+       ORS     OUTBUF+36,2                                              CDTP2620
+       TIX     *+3,2,24                                                 CDTP2630
+       LDQ     WORKIN,1                                                 CDTP2640
+       TXI     BIN2,1,-3                                                CDTP2650
+       TIX     BIN1,4,1                                                 CDTP2660
+DONE   AXT     **,1                                                     CDTP2670
+       TRA     SELECT                                                   CDTP2680
+BINDUP CLA     BINBIN                                                   CDTP2690
+       STO     OUTBUF+26                                                CDTP2700
+       CLA     BINBIN+1                                                 CDTP2710
+       STO     OUTBUF+27                                                CDTP2720
+       AXC     1,2           SET BINARY WRITE                           CDTP2730
+       SXA     LOAD,2                                                   CDTP2740
+       TRA     SETBIN                                                   CDTP2750
+MUDCEL PZE                                                              CDTP2760
+SELECT ZET     ILEGX                                                    CDTP2770
+       TRA     ERROR                                                    CDTP2780
+       NZT     FSTCD         SKIP WRITE FIRST TIME THRU                 CDTP2790
+       TRA     FSTCD+1                                                  CDTP2800
+       ZET     RWND                                                     CDTP2810
+RWND   TRA     REWND         GO TO REWIND INPUT TAPE (1ST TIME ONLY).   CDTP2820
+LOAD   AXT     **,2                                                     CDTP2830
+       TSX     WRITE1,4                                                 CDTP2840
+       PZE     WRC,2                                                    CDTP2850
+       TRA     SECOND                                                   CDTP2860
+       REM     ERROR PROCEDURE                                          CDTP2870
+ ERROR TSX     (PROUT,4                                                 CDTP2880
+       PZE     7                                                        CDTP2890
+               MESS1,,4                                                 CDTP2900
+               MESS2,,8                                                 CDTP2910
+               MESS3,,8                                                 CDTP2920
+               MESS4,,6                                                 CDTP2930
+               MESS5,,5                                                 CDTP2940
+               MESS6,,7                                                 CDTP2950
+               MESS6+7,,8                                               CDTP2960
+       CAL     DOBUF1,1      MOVE OUTPUT BUFFER BACK.                   CDTP2970
+       ADD     L28                                                      CDTP2980
+       STA     *+4                                                      CDTP2990
+       ADD     L1                                                       CDTP3000
+       STA     *+4                                                      CDTP3010
+       AXT     28,2                                                     CDTP3020
+       CLA     **,2                                                     CDTP3030
+       STO     OUTBUF+28,2                                              CDTP3040
+       CLA     **,2                                                     CDTP3050
+       STO     OUTBUF+29,2                                              CDTP3060
+       TIX     *-4,2,2                                                  CDTP3070
+       HPR                                                              CDTP3080
+       STZ     ILEGX         RESET ILLEGAL PUNCH INDICATOR.             CDTP3090
+       TRA     FIRST                                                    CDTP3100
+       REM                                                              CDTP3110
+       REM     ** END FILE CARD SIGNAL **                               CDTP3120
+ENDFIL AXT     0,1           SET BCD WRITE                              CDTP3130
+       NZT     MUDCEL        = ZERO FOR BINARY                          CDTP3140
+       AXC     1,1           SET BIN WRITE                              CDTP3150
+       TSX     WRITE2,4           WRITE DIRECTLY FROM OUTBUF            CDTP3160
+       PZE     WRLST,1,-1                                               CDTP3170
+       STZ     FSTCD         SET SKIP FIRST WRITE.                      CDTP3180
+       TSX     EOFILE,4                                                 CDTP3190
+       TRA     SECOND                                                   CDTP3200
+ENDCRD AXT     0,1           WRITE LAST BUFFER FROM WHERE IT SITS.      CDTP3210
+       TCOA    *                                                        CDTP3220
+       NZT     MUDCEL                                                   CDTP3230
+       AXC     1,1                                                      CDTP3240
+       TSX     WRITE2,4                                                 CDTP3250
+       PZE     WRLST,1,-1                                               CDTP3260
+       TSX     EOFILE,4                                                 CDTP3270
+       TSX     REWIND,4                                                 CDTP3280
+ POSIT TSX     CLOSE,4                                                  CDTP3290
+       REM     ** ENTER HERE ON FIRST CARD ONLY **                      CDTP3300
+OFFTST CLA     LNOP                                                     CDTP3310
+       STO     INIT                                                     CDTP3320
+       NZT     (SCHU)-1                                                 CDTP3330
+       TRA     OFFLIN                                                   CDTP3340
+       TRA     ALTERN                                                   CDTP3350
+       REM     ** NO CARDS IN READER HOPPER, INPUT IS OFFLINE **        CDTP3360
+OFFLIN LNT     400000        MONITOR BIT 1                              CDTP3370
+       TRA     *+3                                                      CDTP3380
+       AXT     0,1                                                      CDTP3390
+       TRA     POSIT                                                    CDTP3400
+       AXT     1,1                                                      CDTP3410
+       TRA     POSIT                                                    CDTP3420
+       REM                                                              CDTP3430
+       REM     ** INPUT IS ONLINE, REWIND TAPE **                       CDTP3440
+ REWND TSX     REWIND,4           REWIND TAPE INITIALLY                 CDTP3450
+       STZ     RWND          SET TEST CELL FOR NO MORE REWIND.          CDTP3460
+       TRA     LOAD                                                     CDTP3470
+       REM                                                              CDTP3480
+FSTCD  PZE                   FLAG CELL FOR SKIP FIRST                   CDTP3490
+       STL     *-1           WRITE AND BUFFER AHEAD.                    CDTP3500
+       TRA     SECOND                                                   CDTP3510
+WRC    PZE     DLOC,1,-1     DECIMAL, WHICH BUF                         CDTP3520
+       PZE     BLOC,1,-1     BINARY, WHICH BUF                          CDTP3530
+       PZE     DOBUF2,,(WDNP)                                           CDTP3540
+DLOC   PZE     BOBUF2,,(WBNP)                                           CDTP3550
+BLOC   PZE     DOBUF1,,(WDNP)                                           CDTP3560
+       PZE     BOBUF1,,(WBNP)                                           CDTP3570
+DOBUF2 IOCT    OBUF2,,14                                                CDTP3580
+DOBUF1 IOCT    OBUF1,,14                                                CDTP3590
+BOBUF1 IOCT    OBUF1,,28                                                CDTP3600
+BOBUF2 IOCT    OBUF2,,28                                                CDTP3610
+MESS1  BCI     4,1ILLEGAL PUNCH IN CARD                                 CDTP3620
+MESS2  BCI     8,REMOVE CARDS FROM STACKER AND FEED OUT CARDS.          CDTP3630
+MESS3  BCI     8,THE LAST FOUR CARDS HAVE NOT BEEN PUT ON TAPE.         CDTP3640
+MESS4  BCI     6,THE FIRST OF THESE IS IN ERROR.                        CDTP3650
+MESS5  BCI     5,CORRECT CARD AND RESTART, OR                           CDTP3660
+MESS6  BCI     8,CORRECT CARD, PLACE IT AND UNREAD CARDS IN STACK       CDTP3670
+       BCI     7,ER, READY CARD READER, AND PRESS START.                CDTP3680
+       PZE     BUFER2                                                   CDTP3690
+BUFLOC PZE                                                              CDTP3700
+       PZE     BUFER1                                                   CDTP3710
+CDCNT  EQU     24                                                       CDTP3720
+SKFIL  PZE     0,,1                                                     CDTP3730
+SKLST3 PZE     ,,-1                                                     CDTP3740
+SKREC  PZE     1,,0                                                     CDTP3750
+L1     EQU     SKREC                                                    CDTP3760
+*     TAPE MANIPULATOR                                                  CDTP3770
+*          CALLS                                                        CDTP3780
+*      TSX     REWIND,4           REWINDS SYSIN1                        CDTP3790
+*      TSX    ENDFIL,4            WRITES AN EOF ON SYSIN1               CDTP3800
+*      TSX    CLOSE,4             WAITS FOR ALL ACTION TO BE            CDTP3810
+*                                 COMPLETED, RESETS DATA CHANNEL A      CDTP3820
+*                                 CLEARS AND LOADS TPAE                 CDTP3830
+*      TSX     WRITE1,4           SAME AS FORTRAN'S TSX (TAPE),4        CDTP3840
+*                                 EXCEPT THAT ONLY ONE WORD IS          CDTP3850
+*                                 REQUIRED IN THE CALLING SEQUENCE      CDTP3860
+*      TSX     OPEN,4             SETS UP SYSIN1 UNIT( TURNS OFF        CDTP3870
+*                                 ALL TRAPPING INDICATORS               CDTP3880
+*      PSEUDO-FORTRAN CARD READ                                         CDTP3890
+(READ) BSS     0                                                        CDTP3900
+       STZ     (SCHU)-1           SET END OF FILE INDICATOR ON          CDTP3910
+       TCOA    *                  MAKE SURE LAST READ IS FINISHED       CDTP3920
+       TEFA    2,4   EOF ON PREVIOUS READ.  RETURN NOW                  CDTP3930
+       STL     (SCHU)-1           NO, SET EOF INDICATOR OFF             CDTP3940
+       CLA     1,4                GET CONTROL WORD                      CDTP3950
+       STD     IO(RD              AND PUT INTO IO COMMAND               CDTP3960
+       STA     IO(RD                                                    CDTP3970
+       RCDA                       READ                                  CDTP3980
+       RCHA    IO(RD                                                    CDTP3990
+       TRA     2,4                YES, LEAVE IT ON.  RETURN.            CDTP4000
+ IO(RD IOCD    **,,**                                                   CDTP4010
+       PZE                                                              CDTP4020
+(SCHU) BSS     0                                                        CDTP4030
+REWIND REW     **                                                       CDTP4040
+       TRA     1,4                                                      CDTP4050
+EOFILE SXA     EFX1,1             SAVE XR1                              CDTP4060
+       AXT     5,1                                                      CDTP4070
+   WEF WEF     **                 WRITE THE END OF FILE                 CDTP4080
+       TCOA    *                                                        CDTP4090
+       TRCA    *+3                ANY REDUNDANCY...                     CDTP4100
+  EFX1 AXT     **,1               NO, LETS GO HOME                      CDTP4110
+       TRA     1,4                                                      CDTP4120
+   BSF BSF     **                 OH OH, LET'S JUST SPACE OVER          CDTP4130
+       WRS     **                 SPACE TAPE                            CDTP4140
+       TCOA    *                  EVERYBODY WAIT FOR US                 CDTP4150
+       TRCA    *+1                IGNORE REDUNDANCY WRITING BLANK TAPE  CDTP4160
+       TIX     WEF,1,1                                                  CDTP4170
+       TRA     RDNIN1             TRIED 5 TIMES, THAT'S ENOUGH          CDTP4180
+WRITE2 CLA*    1,4                GET WRLST,1                           CDTP4190
+       TRA     STC                                                      CDTP4200
+WRITE1 CLA*    1,4                GET WRC,2                             CDTP4210
+       STO     CALL                                                     CDTP4220
+       CLA*    CALL               GET DLOC OR BLOC,1                    CDTP4230
+   STC STO     CALL                                                     CDTP4240
+       STA     *+1                                                      CDTP4250
+       CLA     **                                                       CDTP4260
+       STA     IO)WR                                                    CDTP4270
+       STD     IO)WR                                                    CDTP4280
+       SXA     WXR1,1                                                   CDTP4290
+       LXD     CALL,1                                                   CDTP4300
+       TXL     WRBIN,1,2                                                CDTP4310
+       AXT     5,1                                                      CDTP4320
+   WTD WTD     **                                                       CDTP4330
+       RCHA    IO)WR                                                    CDTP4340
+       TCOA    *                                                        CDTP4350
+       TRCA    *+3                                                      CDTP4360
+       LXA     WXR1,1                                                   CDTP4370
+       TRA     2,4                                                      CDTP4380
+   BSR BSR     **                                                       CDTP4390
+       WRS     **                                                       CDTP4400
+       TCOA    *                                                        CDTP4410
+       TRCA    *+1                                                      CDTP4420
+       TIX     WTD,1,1                                                  CDTP4430
+       TRA     RDNIN1                                                   CDTP4440
+ WRBIN AXT     5,1                                                      CDTP4450
+   WTB WTB     **                                                       CDTP4460
+       RCHA    IO)WR                                                    CDTP4470
+       TCOA    *                                                        CDTP4480
+       TRCA    *+3                                                      CDTP4490
+  WXR1 AXT     **,1                                                     CDTP4500
+       TRA     2,4                                                      CDTP4510
+  BSR2 BSR     **                                                       CDTP4520
+       WRS     **                                                       CDTP4530
+       TCOA    *                                                        CDTP4540
+       TRCA    *+1                                                      CDTP4550
+       TIX     WTB,1,1                                                  CDTP4560
+       TRA     RDNIN1                                                   CDTP4570
+RDNIN1 LDQ     CDSIN1                                                   CDTP4580
+       TSX     (CVPRT,4                                                 CDTP4590
+       PZE     RDNCM,,8+512                                             CDTP4600
+       HPR     32760                                                    CDTP4610
+       TRA     *-1                                                      CDTP4620
+ RDNCM BCI     8, REDUNDANCY.  CHANGE AND START ALL OVER AGAIN.         CDTP4630
+  OPEN CLA*    SYSIN1             GET SYSIN1 UNIT                       CDTP4640
+       STD     CDSIN1             SAVE FOR COMMENTS                     CDTP4650
+       PDX     ,1                                                       CDTP4660
+       PXA     ,1                                                       CDTP4670
+       ORS     REWIND             AND PUT INTO ALL IO INSTRUCTIONS      CDTP4680
+       ORS     WEF                                                      CDTP4690
+       ORS     BSF                                                      CDTP4700
+       ORS     BSF+1                                                    CDTP4710
+       ORS     WTD                                                      CDTP4720
+       ORS     BSR                                                      CDTP4730
+       ORS     BSR+1                                                    CDTP4740
+       ORS     WTB                                                      CDTP4750
+       ORS     BSR2                                                     CDTP4760
+       ORS     BSR2+1                                                   CDTP4770
+       ORS     CLOSE                                                    CDTP4780
+       AXT     0,1                                                      CDTP4790
+       ZET*    (CHXAC             WAIT FOR CHANEL A TO BE FREE          CDTP4800
+       TRA     *-1                                                      CDTP4810
+       AXC     1,1                                                      CDTP4820
+       ZET*    (CHXAC             WAIT FOR CHANNEL B TO BE FREE         CDTP4830
+       TRA     *-1                                                      CDTP4840
+       ENB     L(0)               DISABLE TRAPS                         CDTP4850
+       STZ     TRPSW                                                    CDTP4860
+       STL     ENBSW                                                    CDTP4870
+       REWA    1                  REWIND A1 NOW                         CDTP4880
+       TRA     1,4                                                      CDTP4890
+ CLOSE BSF     **                 WAIT FOR REWIND                       CDTP4900
+       BTTA                       TO BE COMPLETED                       CDTP4910
+       TRA     *+2                ON                                    CDTP4920
+       TRA     CLOSE              OFF, TRY AGAIN                        CDTP4930
+       SWT     1                  IS SSW 1 BACK IN POSITION             CDTP4940
+       TRA     RET                YES                                   CDTP4950
+TLMAGN TSX     (PROUT,4           NO, TELL OPERATOR                     CDTP4960
+       PZE     1                                                        CDTP4970
+       PZE     SWCOM,,7+4*512                                           CDTP4980
+       HPR                                                              CDTP4990
+   RET TCOA    *                                                        CDTP5000
+       SWT     1                  DID HE DO IT...                       CDTP5010
+       TTR     IBSYS              O.K., SO LET'S GET OUT OF HERE        CDTP5020
+       TRA     TLMAGN             (THAT MEANS TELLIMAGAIN)              CDTP5030
+CDSIN1 PZE                                                              CDTP5040
+ SWCOM BCI     7, TURN OFF SENSE SWITCH 1 AND PRESS START.              CDTP5050
+(FGBX) PZE     *+1                                                      CDTP5060
+       MZE     0                                                        CDTP5070
+  CALL                                                                  CDTP5080
+ IO)WR                                                                  CDTP5090
+ IBSYS AXT     IBX-IBY+1,1                                              CDTP5100
+       CLA     IBIO+1,1           MOVE LOAD SEQUENCE                    CDTP5110
+       STO     0,1                TO UPPER CORE                         CDTP5120
+       TIX     *-2,1,1                                                  CDTP5130
+       AXT     IBY-IBX-2,1                                              CDTP5140
+       TRA     -7                                                       CDTP5150
+   IBY STZ     IBY-IBX-2,1    -7  ZERO OUT CORE                         CDTP5160
+       TIX     -7,1,1      -6                                           CDTP5170
+       RTBA    1              -5  SIMULATE                              CDTP5180
+       RCHA    -1             -4  LOAD TAPE SEQUENCE                    CDTP5190
+       LCHA    0              -3                                        CDTP5200
+       TTR     1              -2                                        CDTP5210
+  IBIO IOCT    0,,3           -1                                        CDTP5220
+   IBX EQU     *-1                                                      CDTP5230
+WRLST  PZE     DLST,,(WDNP)                                             CDTP5240
+       PZE     BLST,,(WBNP)                                             CDTP5250
+DLST   IOCT    OUTBUF,,14                                               CDTP5260
+BLST   IOCT    OUTBUF,,28                                               CDTP5270
+STAR   BCI     1,00000*                                                 CDTP5280
+LNOP   NOP                                                              CDTP5290
+MASK3  OCT     100010001                                                CDTP5300
+MULTPR OCT     200040010                                                CDTP5310
+L24    PZE     24                                                       CDTP5320
+L28    PZE     28                                                       CDTP5330
+ILEGX  PZE                                                              CDTP5340
+BCDBCD BCI     1,                                                       CDTP5350
+       BCI     1,                                                       CDTP5360
+BINBCD BCI     1,000004                                                 CDTP5370
+       BCI     1,000100                                                 CDTP5380
+BCDBIN BCI     1,                                                       CDTP5390
+       BCI     1,  9977                                                 CDTP5400
+BINBIN BCI     1,000005                                                 CDTP5410
+       BCI     1,010504                                                 CDTP5420
+TB     PZE     TB                                                       CDTP5430
+       PZE                                                              CDTP5440
+TC     PON     TB,0,4096                                                CDTP5450
+       PON     TB,0,4096                                                CDTP5460
+       PON     TB                                                       CDTP5470
+       PON     TB                                                       CDTP5480
+       PZE     TB,0,28762                                               CDTP5490
+       PZE     TB,0,28762                                               CDTP5500
+       PZE     TB,0,24576                                               CDTP5510
+       PZE     TB,0,24576                                               CDTP5520
+       PZE     TB,0,20480                                               CDTP5530
+       PZE     TB,0,20480                                               CDTP5540
+       PZE     TB,0,16384                                               CDTP5550
+       PZE     TB,0,16384                                               CDTP5560
+       PZE     TB,0,12288                                               CDTP5570
+       PZE     TB,0,12288                                               CDTP5580
+       PZE     TB,0,8192                                                CDTP5590
+       PZE     TB,0,8192                                                CDTP5600
+       PZE     TB,0,4096                                                CDTP5610
+       PZE     TB,0,4096                                                CDTP5620
+       SIX     TB                                                       CDTP5630
+       SIX     TB                                                       CDTP5640
+       FOR     TB                                                       CDTP5650
+       FOR     TB                                                       CDTP5660
+       PTW     TB                                                       CDTP5670
+       PTW     TB                                                       CDTP5680
+       PON     TB,0,8192                                                CDTP5690
+       PON     TB,0,8192                                                CDTP5700
+ILEGO  BSS     2                                                        CDTP5710
+OUTBUF BSS     28                                                       CDTP5720
+BUFER1 BSS     CDCNT                                                    CDTP5730
+BUFER2 BSS     CDCNT                                                    CDTP5740
+WORKIN BSS     CDCNT+2                                                  CDTP5750
+OBUF1  BSS     28                                                       CDTP5760
+ OBUF2 BSS     28                                                       CDTP5770
+       END                                                              CDTP5780

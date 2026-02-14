@@ -1,0 +1,262 @@
+C                 ANALYSIS OF VARIANCE OR COVARIANCE                    AOVC0001
+C     BY JOHN R HOWELL    MARTIN CO  ORLANDO FLORIDA                    AOVC0002
+C     SEPTEMBER 8, 1961                                                 AOVC0003
+      DIMENSION SX1(2000), SX2(2000), SX1X2(2000), NSA(2000,8),NF(2000),AOVC0004
+     1 NLS(8),OBS(6),NSC(8),MEPC(300,8),EISQ(256),MEID(256),MUBS(8),    AOVC0005
+     2CS1(300),CS2(300),MDGL(300),SOLV(300),DEV(300),MSB(8)             AOVC0006
+    5 FORMAT (1H1)                                                      AOVC0007
+   10 FORMAT (1X, 6I5, 9I2)                                             AOVC0008
+   20 FORMAT (1X, 6E10.0, 8I2)                                          AOVC0009
+   30 FORMAT (1X, 3F12.5, I5, 8I2)                                      AOVC0010
+   40 FORMAT(1H1, 30X,21H ANALYSIS OF VARIANCE//                        AOVC0011
+     1 10X, 7H SOURCE,8X,12H DEG/FREEDOM, 6X,12H SUM/SQUARES,           AOVC0012
+     2 6X,12H MEAN SQUARE,11X, 2H F//                                   AOVC0013
+     3 10X, 8H BETWEEN, 11X, I4,11X, 2(F11.4, 7X), F11.3/               AOVC0014
+     4 10X, 8H WITHIN ,11X, I4,11X, F11.4,7X, F11.4/                    AOVC0015
+     5 10X, 8H TOTAL  ,11X, I4,11X, F11.4///)                           AOVC0016
+   50 FORMAT(1H1,30X,23H ANALYSIS OF COVARIANCE//                       AOVC0017
+     1 10X, 7H SOURCE,8X,12H DEG/FREEDOM, 6X,12H SUM/CRS.PRD,           AOVC0018
+     2 6X,12H MEAN SQUARE,11X, 2H F//                                   AOVC0019
+     3 10X, 8H BETWEEN, 11X, I4,11X, 2(F11.4, 7X), F11.3/               AOVC0020
+     4 10X, 8H WITHIN ,11X, I4,11X, F11.4,7X, F11.4/                    AOVC0021
+     5 10X, 8H TOTAL  ,11X, I4,11X, F11.4///)                           AOVC0022
+   55 FORMAT (1X,8I2)                                                   AOVC0023
+   60 FORMAT (10X, 8I2, 2F19.4, I15, 2F19.4)                            AOVC0024
+   65 FORMAT(29X,I4,11X,F11.4///)                                       AOVC0025
+   70 FORMAT (11X,6HSOURCE,21X,7HSUM(X1),12X,7HSUM(X2),                 AOVC0026
+     16X,9HFREQUENCY,11X,8HMEAN(X1), 9X,10HEFFECT(X1)//)                AOVC0027
+   73 FORMAT (1H1,30X,20H SUMMARY OF ANALYSIS///)                       AOVC0028
+   75 FORMAT (10X,8I2,3X,I4,11X,F11.4,7X,F11.4//)                       AOVC0029
+C PARAMETER CARD INPUT                                                  AOVC0030
+   80 READ INPUT TAPE 2,10, NOBS,NCLS,NSB,NPC,N1OB,N2OB,KISQ,           AOVC0031
+     1 (NLS(I), I=1,NSB)                                                AOVC0032
+C SET UP FROM FIRST DATA CARD                                           AOVC0033
+   85 READ INPUT TAPE 2,20, (OBS(I), I=1,6), (NSA(1,J), J=1,NSB)        AOVC0034
+      SX1(1)=OBS(N1OB)                                                  AOVC0035
+      SX2(1)=OBS(N2OB)                                                  AOVC0036
+      SX1X2(1)=(SX1(1))*(SX2(1))                                        AOVC0037
+      WRITE OUTPUT TAPE 10,5                                            AOVC0038
+C READ DATA AND PRINT SUMMARY OF INPUT                                  AOVC0039
+   90 DO 115 K=1,NCLS                                                   AOVC0040
+      NCNT=0                                                            AOVC0041
+  100 READ INPUT TAPE 2, 20, (OBS(I), I=1,6), (NSC(J),J=1,NSB)          AOVC0042
+      NCNT=NCNT+1                                                       AOVC0043
+  102 IF (NSA(K,NSB)- NSC(NSB)) 109, 105, 109                           AOVC0044
+  105 SX1(K)=SX1(K)+OBS(N1OB)                                           AOVC0045
+      SX2(K)=SX2(K)+OBS(N2OB)                                           AOVC0046
+      SX1X2(K) = SX1X2(K) + (OBS(N1OB))*(OBS(N2OB))                     AOVC0047
+      GO TO 100                                                         AOVC0048
+  109 NF(K)=NCNT                                                        AOVC0049
+      WRITE OUTPUT TAPE 10,30,SX1(K),SX2(K),SX1X2(K),NF(K),             AOVC0050
+     1(NSA(K,J), J=1,NSB)                                               AOVC0051
+      M=K+1                                                             AOVC0052
+      SX1(M)= OBS(N1OB)                                                 AOVC0053
+      SX2(M)= OBS(N2OB)                                                 AOVC0054
+      SX1X2(M)=OBS(N1OB)*OBS(N2OB)                                      AOVC0055
+      DO 110 L=1,NSB                                                    AOVC0056
+  110 NSA(M,L)=NSC(L)                                                   AOVC0057
+  115 CONTINUE                                                          AOVC0058
+      SSX1X2=0.                                                         AOVC0059
+      SSX1=0.                                                           AOVC0060
+      SSX2=0.                                                           AOVC0061
+      BSQ =0.                                                           AOVC0062
+      DO 120 J=1,NCLS                                                   AOVC0063
+      SSX1X2= SSX1X2+ SX1X2(J)                                          AOVC0064
+      SSX1= SSX1 + SX1(J)                                               AOVC0065
+      SSX2= SSX2 + SX2(J)                                               AOVC0066
+  120 BSQ= BSQ +(SX1(J)* SX2(J))/FLOATF(NF(J))                          AOVC0067
+      CT =(SSX1 * SSX2)/(FLOATF(NOBS))                                  AOVC0068
+      BSQ= BSQ - CT                                                     AOVC0069
+      TSQ = SSX1X2 - CT                                                 AOVC0070
+      WSQ = TSQ - BSQ                                                   AOVC0071
+      NTDP=NOBS-1                                                       AOVC0072
+      NBDP=NCLS-1                                                       AOVC0073
+      NWDP=NTDP-NBDP                                                    AOVC0074
+      IF(NWDP) 150, 180, 150                                            AOVC0075
+C OUTPUT FOR F                                                          AOVC0076
+  150 BMSQ = BSQ/FLOATF(NBDP)                                           AOVC0077
+      WMSQ = WSQ/FLOATF(NWDP)                                           AOVC0078
+      IF(BMSQ-WMSQ) 160,160,170                                         AOVC0079
+  160 FRAT = WMSQ/BMSQ                                                  AOVC0080
+      GO TO 180                                                         AOVC0081
+  170 FRAT = BMSQ /WMSQ                                                 AOVC0082
+  180 IF(N1OB-N2OB) 190, 185, 190                                       AOVC0083
+  185 WRITE OUTPUT TAPE 10,40,NBDP,BSQ,BMSQ,FRAT,                       AOVC0084
+     1 NWDP, WSQ, WMSQ, NTDP, TSQ                                       AOVC0085
+      GO TO 195                                                         AOVC0086
+  190 WRITE OUTPUT TAPE 10,50, NBDP, BSQ, BMSQ, FRAT,                   AOVC0087
+     1 NWDP, WSQ, WMSQ, NTDP, TSQ                                       AOVC0088
+  195 WRITE OUTPUT TAPE 10, 70                                          AOVC0089
+      IF(KISQ-1)198,450,450                                             AOVC0090
+  198 DO 350 M=1,NPC                                                    AOVC0091
+  200 EISQ(M)=0.                                                        AOVC0092
+C READ IN PARAMETER CARD                                                AOVC0093
+  220 READ INPUT TAPE 2, 55, (MEPC(M,I),I=1,NSB)                        AOVC0094
+C INITIALIZE STORAGE                                                    AOVC0095
+  225 SM1=0.                                                            AOVC0096
+      SM2=0.                                                            AOVC0097
+      NFRQ =0                                                           AOVC0098
+C ACCUMULATE SUMS AND FREQUENCY                                         AOVC0099
+  228 DO 250 J=1,NCLS                                                   AOVC0100
+      DO 240 K=1,NSB                                                    AOVC0101
+      IF (MEPC(M,K))230,240,230                                         AOVC0102
+  230 IF (MEPC(M,K)-NSA(J,K))250,240,250                                AOVC0103
+  240 CONTINUE                                                          AOVC0104
+      SM1 = SM1 + SX1(J)                                                AOVC0105
+      SM2 = SM2 + SX2(J)                                                AOVC0106
+      NFRQ=NFRQ + NF(J)                                                 AOVC0107
+  250 CONTINUE                                                          AOVC0108
+C GET MEAN1, EFFECT1 AND PRODUCT                                        AOVC0109
+  260 AMN1 =(SM1/FLOATF(NFRQ))                                          AOVC0110
+      EFCT1= AMN1 - (SSX1 /FLOATF(NOBS))                                AOVC0111
+      EISQ(M)=EISQ(M)+SM2*EFCT1                                         AOVC0112
+      WRITE OUTPUT TAPE 10,60,(MEPC(M,L),L=1,8), SM1,SM2, NFRQ,         AOVC0113
+     1 AMN1,EFCT1                                                       AOVC0114
+C GENERATE NEXT SUBSCRIPT OR RESTORE MEPC INPUT AT END                  AOVC0115
+  265 DO 300 I=1,NSB                                                    AOVC0116
+      IR = NSB - I+1                                                    AOVC0117
+       IF(MEPC(M,IR)) 270,300,270                                       AOVC0118
+  270 MEPC(M,IR)=MEPC(M,IR)+1                                           AOVC0119
+      IF(MEPC(M,IR)-NLS(IR)) 225,225,280                                AOVC0120
+  280 MEPC(M,IR)=1                                                      AOVC0121
+  300 CONTINUE                                                          AOVC0122
+  315 DO 330 KK=1,NSB                                                   AOVC0123
+      IF (MEPC(M,KK))325,320,325                                        AOVC0124
+  320 MUBS(KK)=1                                                        AOVC0125
+      GO TO 330                                                         AOVC0126
+  325 MUBS(KK)=NLS(KK)-1                                                AOVC0127
+  330 CONTINUE                                                          AOVC0128
+      MEID(M)=1                                                         AOVC0129
+      DO 335 KK=1,NSB                                                   AOVC0130
+  335 MEID(M)=MEID(M)*MUBS(KK)                                          AOVC0131
+      WRITE OUTPUT TAPE 10,65,MEID(M),EISQ(M)                           AOVC0132
+  350 CONTINUE                                                          AOVC0133
+C SUBTRACT LOWER ORDER COMPONENTS                                       AOVC0134
+  370 NPCM1=NPC-1                                                       AOVC0135
+      DO 420 J=1,NPCM1                                                  AOVC0136
+      JP1=J+1                                                           AOVC0137
+      DO 420 K=JP1,NPC                                                  AOVC0138
+      DO 410 L=1,NSB                                                    AOVC0139
+      IF(MEPC(J,L))410,410,400                                          AOVC0140
+  400 IF(MEPC(J,L)-MEPC(K,L))420,410,420                                AOVC0141
+  410 CONTINUE                                                          AOVC0142
+      EISQ(K)=EISQ(K)-EISQ(J)                                           AOVC0143
+  420 CONTINUE                                                          AOVC0144
+      WRITE OUTPUT TAPE 10,73                                           AOVC0145
+      DO 430 M=1,NPC                                                    AOVC0146
+      BMSQ=EISQ(M)/FLOATF(MEID(M))                                      AOVC0147
+      WRITE OUTPUT TAPE 10,75,(MEPC(M,N),N=1,8),MEID(M),EISQ(M),BMSQ    AOVC0148
+      DO 425 N=1,8                                                      AOVC0149
+  425 MEPC(M,N)=0                                                       AOVC0150
+  430 CONTINUE                                                          AOVC0151
+      GO TO 80                                                          AOVC0152
+C COMPUTE GRAND MEAN S                                                  AOVC0153
+  450 S=SSX1/FLOATF(NOBS)                                               AOVC0154
+C SET MATRIX SIZE COUNTER TO ZERO                                       AOVC0155
+      MTXS=0                                                            AOVC0156
+C GENERATE ROW (COLUMN) HEADINGS FOR THE MATRIX                         AOVC0157
+      DO 520 J=1,NPC                                                    AOVC0158
+      MTXS=MTXS+1                                                       AOVC0159
+      READ INPUT TAPE 2,55,(MEPC(MTXS,I),I=1,NSB)                       AOVC0160
+  460 MTM1=MTXS                                                         AOVC0161
+      MTXS=MTXS+1                                                       AOVC0162
+      DO 465 I=1,NSB                                                    AOVC0163
+  465 MEPC (MTXS,I)=MEPC(MTM1,I)                                        AOVC0164
+      DO 500 I=1,NSB                                                    AOVC0165
+      IR=NSB-I+1                                                        AOVC0166
+      IF(MEPC(MTM1,IR))470,500,470                                      AOVC0167
+  470 MEPC(MTXS,IR)=MEPC(MTXS,IR)+1                                     AOVC0168
+      IF(MEPC(MTXS,IR)-NLS(IR))505,505,480                              AOVC0169
+  480 MEPC(MTXS,IR)=1                                                   AOVC0170
+  500 CONTINUE                                                          AOVC0171
+  505 DO 510 IJ=1,NSB                                                   AOVC0172
+      IF(MEPC(MTXS,IJ))510,510,508                                      AOVC0173
+  508 IF(MEPC(MTXS,IJ)-NLS(IJ))460,510,510                              AOVC0174
+  510 CONTINUE                                                          AOVC0175
+  520 CONTINUE                                                          AOVC0176
+C ACCUMULATE 2-VARIATE CONSTANT VECTORS AND THE DIAGONAL                AOVC0177
+      DO 580 M=1,MTXS                                                   AOVC0178
+      CS1(M)=0.                                                         AOVC0179
+      CS2(M)=0.                                                         AOVC0180
+      MDGL(M)=0                                                         AOVC0181
+      DO 580 J=1,NCLS                                                   AOVC0182
+      DO 570 K=1,NSB                                                    AOVC0183
+      IF (MEPC(M,K))560,570,560                                         AOVC0184
+  560 IF (MEPC(M,K)-NSA(J,K))580,570,580                                AOVC0185
+  570 CONTINUE                                                          AOVC0186
+      CS1(M)=CS1(M)+SX1(J)                                              AOVC0187
+      CS2(M)=CS2(M)+SX2(J)                                              AOVC0188
+      MDGL(M)=MDGL(M)+NF(J)                                             AOVC0189
+  580 CONTINUE                                                          AOVC0190
+C SET UP CONSTANT VECTOR                                                AOVC0191
+      DO 600 M=1,MTXS                                                   AOVC0192
+      DEV(M)=CS1(M)                                                     AOVC0193
+  600 SOLV(M)=0.                                                        AOVC0194
+C SOLVE SET OF EQUATIONS BY ITERATION                                   AOVC0195
+      DO 685 J=1,5                                                      AOVC0196
+      DO 685 M=1,MTXS                                                   AOVC0197
+      QUOT=S-DEV(M)/FLOATF(MDGL(M))                                     AOVC0198
+      SOLV(M)=SOLV(M)-QUOT                                              AOVC0199
+      DO 685 N=1,MTXS                                                   AOVC0200
+C TEST IF THE DESIRED ELEMENT IS THE DIAGONAL                           AOVC0201
+      IF(M-N)620,610,620                                                AOVC0202
+  610 EL=MDGL(M)                                                        AOVC0203
+      GO TO 680                                                         AOVC0204
+C TEST IF NEED TO ADD THE SUBSCRIPTS                                    AOVC0205
+  620 DO 630 K=1,NSB                                                    AOVC0206
+      IF(MEPC(M,K))630,630,625                                          AOVC0207
+  625 IF(MEPC(N,K))630,630,640                                          AOVC0208
+  630 CONTINUE                                                          AOVC0209
+      GO TO 650                                                         AOVC0210
+C IF NEITHER, THE ELEMENT IS ZERO                                       AOVC0211
+  640 GO TO 685                                                         AOVC0212
+C ADD ROW AND COLUMN SUBSCRIPTS                                         AOVC0213
+  650 DO 655 L=1,NSB                                                    AOVC0214
+  655 MSB(L)=MEPC(M,L)+MEPC(N,L)                                        AOVC0215
+C ACCUMULATE THE DESIRED ELEMENT                                        AOVC0216
+      IEL=0                                                             AOVC0217
+      DO 665 K=1,NCLS                                                   AOVC0218
+      DO 660 L=1,NSB                                                    AOVC0219
+      IF(MSB(L))660,660,658                                             AOVC0220
+  658 IF(MSB(L)-NSA(K,L))665,660,665                                    AOVC0221
+  660 CONTINUE                                                          AOVC0222
+      IEL=IEL+NF(K)                                                     AOVC0223
+  665 CONTINUE                                                          AOVC0224
+      EL=IEL                                                            AOVC0225
+C ADJUST THE PROPER CONSTANT                                            AOVC0226
+  680 DEV(N)=DEV(N)+EL*QUOT                                             AOVC0227
+  685 CONTINUE                                                          AOVC0228
+C FINAL CYCLE                                                           AOVC0229
+      DO 690 M=1,MTXS                                                   AOVC0230
+  690 SOLV(M)=SOLV(M)-(S-DEV(M)/FLOATF(MDGL(M)))                        AOVC0231
+C OUTPUT SUMS,MEANS,RAW SUMS OF SQUARES,ETC.                            AOVC0232
+      J=0                                                               AOVC0233
+      JP1=1                                                             AOVC0234
+      DO 760 I=1,NPC                                                    AOVC0235
+      DO 700 K=1,NSB                                                    AOVC0236
+  700 MEPC(I,K)=MEPC(JP1,K)                                             AOVC0237
+      EISQ(I)=0                                                         AOVC0238
+  705 J=J+1                                                             AOVC0239
+      AMN1=CS1(J)/FLOATF(MDGL(J))                                       AOVC0240
+      WRITE OUTPUT TAPE 10,60,(MEPC(J,L),L=1,8),CS1(J),CS2(J),MDGL(J),  AOVC0241
+     1AMN1,SOLV(J)                                                      AOVC0242
+      EISQ(I)=EISQ(I)+CS2(J)*SOLV(J)                                    AOVC0243
+C TEST FOR BRANCHING TO PRINT ANOTHER LINE,OR SUM OF SQUARES            AOVC0244
+      JP1=J+1                                                           AOVC0245
+      DO 725 K=1,NSB                                                    AOVC0246
+      IF(MEPC(JP1,K)-1)725,725,705                                      AOVC0247
+  725 CONTINUE                                                          AOVC0248
+C GENERATE DEGREES OF FREEDOM AND OUTPUT IT AND SUM OF SQUARES          AOVC0249
+      DO 740 L=1,NSB                                                    AOVC0250
+      IF (MEPC(J,L))735,730,735                                         AOVC0251
+  730 MUBS(L)=1                                                         AOVC0252
+      GO TO 740                                                         AOVC0253
+  735 MUBS(L)=NLS(L)-1                                                  AOVC0254
+  740 CONTINUE                                                          AOVC0255
+      MEID(I)=1                                                         AOVC0256
+      DO 750 L=1,NSB                                                    AOVC0257
+  750 MEID(I)=MEID(I)*MUBS(L)                                           AOVC0258
+      WRITE OUTPUT TAPE 10,65,MEID(I),EISQ(I)                           AOVC0259
+  760 CONTINUE                                                          AOVC0260
+      GO TO 370                                                         AOVC0261
+      END                                                               AOVC0262

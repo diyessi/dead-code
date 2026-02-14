@@ -1,0 +1,275 @@
+*     FAP                                                               BCD00001
+       LBL     ICONV,X                                                  BCD00002
+       COUNT   220                                                      BCD00003
+*ICONV =COMPOSITE FIELD INPUT CONVERSION ROUTINE                        BCD00004
+       ENTRY   ICONV                                                    BCD00005
+       ENTRY   ICON                                                     BCD00006
+ ICONV CLA     1,4               INITIALIZE ROUTINE                     BCD00007
+       TXI     *+1,4,-1                                                 BCD00008
+       SXD     X1,1              SAVE IR1                               BCD00009
+       SXD     X2,2              SAVE IR2                               BCD00010
+       SUB     (1)               STORE FIRST BCD WORD-1 INTO            BCD00011
+       STA     B6                NXTBCD ROUTINE                         BCD00012
+*      COMPUTE GATES                                                    BCD00013
+ AGATE SXD     X4,4              SAVE IR4 FOR LATER USE                 BCD00014
+       CLA     1,4               CALL NEXT CALLING WORD                 BCD00015
+       TPL     EXIT              IF NO MORE GET OUT                     BCD00016
+       STA     A2                STORE ADDRESS FOR EFFECTIVE ADDRESS    BCD00017
+       LRS     18                GET DECREMENT                          BCD00018
+       STZ     ERASE+7                                                  BCD00019
+       STA     ERASE+7           SAVE DECREMENT FOR COLUMN COUNT        BCD00020
+       ALS     3                 GET PREFIX                             BCD00021
+       PDX     ,1                PUT TO IR1 FOR GATES                   BCD00022
+       PXD     0,0               ZERO TO AC.                            BCD00023
+       LLS     3                 GET TAG                                BCD00024
+ A2    PAX     ,2                PUT TO IR2 FOR EFFECTIVE ADDRESS       BCD00025
+       CLA     X1+1,2            PUT VALUE OF INDEX X INTO AC           BCD00026
+       ARS     18                SHIFT IT TO AC                         BCD00027
+       ADD     A2                ADD ADDRESS OF CHLLING WORD.           BCD00028
+       STA     ST1               STORE EFFECTIVE ADDRESS IN NUM         BCD00029
+       CAL     G1,1              COMPUTER AND SET UP                    BCD00030
+       LDQ     G2,1                                                     BCD00031
+       SLW     GT1               GATE1                                  BCD00032
+       STZ     ERASE+3                                                  BCD00033
+       STQ     GT2               AND GATE 2                             BCD00034
+       AXT     1,4               SET UP HOLLERITH COUNT                 BCD00035
+       STZ     ERASE+1           ZERO TO INTEGER WORD                   BCD00036
+       STZ     ERASE+2           ZERO TO FRACTIONAL PART                BCD00037
+*      GET NEXT BCD SUBROUTINE                                          BCD00038
+ NTBCD LDQ     ERASE+7           GET DECREMENT                          BCD00039
+       PXD     0,0               ZERO OUT AC                            BCD00040
+       DVH     (100)             SEPARATE ENDING WORD FROM              BCD00041
+       AXT     ,2                BEGINING                               BCD00042
+       PAX     ,1                                                       BCD00043
+       TXH     ERROR,1,80        ENDING WORD GREATER THAN 80            BCD00044
+       SXD     B3,1                                                     BCD00045
+ B2    TXI     B1,2,-1           ENDING WORD                            BCD00046
+ B1    TIX     B2,1,6            ENDING COLUMN                          BCD00047
+       SXD     NXTBCD,2          STORE LIMITS OF COLUMNS                BCD00048
+       SXD     B10,1                                                    BCD00049
+       LLS     35                                                       BCD00050
+       AXT     ,2                                                       BCD00051
+       PAX     ,1                                                       BCD00052
+ B3    TXH     ERROR,1,**        BEGINING IS GREATER THAN ENDING.       BCD00053
+ B4    TXI     B5,2,-1           BEGINING WORD                          BCD00054
+ B5    TIX     B4,1,6            BEGINING COLUMN                        BCD00055
+ B13   SXD     B9,1              SET LIMIT FOR STARTING LOOP            BCD00056
+       AXT     1,1                                                      BCD00057
+ B6    LDQ     **,2              LOAD Q WITH CORRECT BCD WORD           BCD00058
+ B7    PXD     0,0               ZERO OUT AL                            BCD00059
+       LGL     6                 SHIFT NEXT BCD INTO AL                 BCD00060
+ B8    TXI     B9,1,1            ADD ONE TO NUMBER OF PLACES SHIFTED.   BCD00061
+ B9    TXL     B7,1,**           IF NOT ENOUGH FOR B GO BACK            BCD00062
+       STQ     ERASE+5                                                  BCD00063
+ GT1                             GATE1                                  BCD00064
+NXTBCD TXH     B11,2,0           IS IT WORD                             BCD00065
+ B10   TXH     GT2,1,**          YES IF LAST COLUMN GO TO GT2           BCD00066
+ B11   TNX     B7,1,6            IS IT SIX BITS. IF YES B12 IF NO B7    BCD00067
+ B12   TXI     B13,2,-1          YES ADVANCE IR2                        BCD00068
+ GT2                             GATE2                                  BCD00069
+ X4    TXL     OCT1,0,0                                                 BCD00070
+ X2    TXL     NUM,0,0           FAP                                    BCD00071
+ X1    TXL     NUM,0,0           INTEGER 709                            BCD00072
+ G1    TXL     NUM,0,0           FLOATING POINT                         BCD00073
+       TXL     OCT2,0,0                                                 BCD00074
+       TXL     NUM1,0,0                                                 BCD00075
+       TXL     NUM2,0,0                                                 BCD00076
+ G2    TXL     FL1,0,ICON                                               BCD00077
+*OCTAL CONVERSIONS                                                      BCD00078
+ OCT1  SLW     ERASE                                                    BCD00079
+       SUB     (8)                                                      BCD00080
+       TMI     OCT3                                                     BCD00081
+       SUB     (8)                                                      BCD00082
+       TZE     OCTP                                                     BCD00083
+       SUB     (16)                                                     BCD00084
+       TZE     OCTM                                                     BCD00085
+       SUB     (16)                                                     BCD00086
+       TZE     OCTB                                                     BCD00087
+       TRA     ERROR                                                    BCD00088
+ OCT3  TXH     ERROR,4,12                                               BCD00089
+       CAL     ERASE                                                    BCD00090
+       LGR     3                                                        BCD00091
+       CAL     ERASE+2                                                  BCD00092
+       LGL     3                                                        BCD00093
+       SLW     ERASE+2                                                  BCD00094
+       TXI     NXTBCD,4,1                                               BCD00095
+ OCT2  CLA     ERASE+2                                                  BCD00096
+       TXH     *+1,4,11          IF MORE THAN 11DIGITS SKIP SIGN        BCD00097
+ OCTS  SSP                                                              BCD00098
+       STO*    ST1                                                      BCD00099
+       CAL     NUM4-2                                                   BCD00100
+       ANS     OCTS                                                     BCD00101
+       TRA     ICON                                                     BCD00102
+ OCTM  CAL     MZE                                                      BCD00103
+       ORS     OCTS                                                     BCD00104
+ OCTP  TRA     NXTBCD                                                   BCD00105
+ OCTB  ZET     ERASE+2                                                  BCD00106
+       TRA     OCT2                                                     BCD00107
+       TRA     NXTBCD                                                   BCD00108
+*      NUMERICAL  CONVERSION                                            BCD00109
+ NUM   SLW     ERASE             SAVE BIT                               BCD00110
+       SUB     (10)              TEST IF IT IS MRE THAN 10              BCD00111
+       TPL     TEST              IF YES GO TO TEST.                     BCD00112
+       LDQ     ERASE+1           NO MULTIPLY BY PREVIOUS INTEGER        BCD00113
+       MPY     (10)              BY 10                                  BCD00114
+       XCA                                                              BCD00115
+       ACL     ERASE             ADD BIT TO IT AND STORE                BCD00116
+       SLW     ERASE+1                                                  BCD00117
+       LDQ     ERASE+5           RESTORE MQ                             BCD00118
+       TRA     NXTBCD            PICK UP NEXT BCD BIT.                  BCD00119
+ TEST  LXA     ERASE,4           BUT BCD BIT TO IR4                     BCD00120
+       TXH     ERROR,4,48        IS IT TO LARGE                         BCD00121
+       TXH     BLANK,4,47        IS IT BCD BLANK                        BCD00122
+       TXH     ERROR,4,32        IS IT ILLEGAL                          BCD00123
+       TXH     MINUS,4,31        ISI TMINUS                             BCD00124
+       TXH     ERROR,4,27                                               BCD00125
+       TXH     POINT,4,26        IS IT A POINT                          BCD00126
+       TXH     ERROR,4,21                                               BCD00127
+       TXH     E1,4,20           SEE IF IT IS FLOATING EXPONENT         BCD00128
+       TXH     ERROR,4,16                                               BCD00129
+       TXH     PLUS,4,15         IS IT PLUS                             BCD00130
+       TRA     ERROR                                                    BCD00131
+ BLANK ZET     ERASE+1           IS IT FIRST BLANK                      BCD00132
+       TRA     GT2               NO TERMINATE INPUT                     BCD00133
+       CLA     MZE               PUT MINUS ZERO TO INTEGER.             BCD00134
+       STO     ERASE+1                                                  BCD00135
+       TRA     NXTBCD            GO PICK UP NEXT DIGIT                  BCD00136
+ PLUS  STZ     ERASE+3           STORE ZERO TO SIGN WORD                BCD00137
+       ZET     ERASE+1                                                  BCD00138
+       TRA     ERROR                                                    BCD00139
+       TRA     NXTBCD            PICK UP NEXT DIGIT                     BCD00140
+ MINUS CLA     MZE               STORE MINUS TO SIGN WORD               BCD00141
+       STO     ERASE+3                                                  BCD00142
+       ZET     ERASE+1                                                  BCD00143
+       TRA     ERROR                                                    BCD00144
+       TRA     NXTBCD            PICK UP NEXT DIGIT.                    BCD00145
+ NUM1  CLA     ERASE+1           PICK UP INTEGER                        BCD00146
+       ALS     18                MAKE IT A FAP INTEGER                  BCD00147
+       TOV     *                 TURN OF OVERFLOW LIGHT.                BCD00148
+       TRA     NUM3              GO TO STORE IT                         BCD00149
+ NUM2  CLA     ERASE+1           INTEGER TO BE STORED                   BCD00150
+       TRA     NUM3              GO TO STORE IT                         BCD00151
+ FLT   CAL     VALT1                                                    BCD00152
+       STA     GT1               CHANGE GATE1                           BCD00153
+       AXT     ,4                ZERO TO DIGIT TRACER                   BCD00154
+       TRA     NXTBCD            PICK UP NEXT BIT                       BCD00155
+ FR1   SLW     ERASE             STORE BIT                              BCD00156
+       SUB     (10)              SEE IF IT IS MORE THAN 10              BCD00157
+       TMI     *+5                                                      BCD00158
+       SUB     (11)              SEE IF IT IS FLOATING EXPOMENT         BCD00159
+       TZE     E1                                                       BCD00160
+       TPL     FR2                                                      BCD00161
+       TMI     ERROR                                                    BCD00162
+       LDQ     ERASE+2           LOAD OLD FRACTION TO MQ                BCD00163
+       MPY     (10)              MULTIPLY BY 10                         BCD00164
+       XCA                                                              BCD00165
+       ACL     ERASE             ADD NEW FRACTION                       BCD00166
+       SLW     ERASE+2           SAVE FOR REUSE                         BCD00167
+       LDQ     ERASE+5           LOAD MQ WITH SAVE LOCATION.            BCD00168
+       TXL     *+2,4,0                                                  BCD00169
+       TXL     ERROR,4,-8                                               BCD00170
+       TXI     NXTBCD,4,-1       PICK UP NEXT BIT.                      BCD00171
+ FR2   CAL     ERASE             SEE IF BIT IS                          BCD00172
+       SUB     (60)              BLANK                                  BCD00173
+       TZE     FL1               YES TERMINATE LOOP                     BCD00174
+       TRA     ERROR             NO ERROR                               BCD00175
+ FL1   CAL     ERASE+1           FLOAT INTEGERS.                        BCD00176
+       LDQ     (MAXI)                                                   BCD00177
+       TLQ     ERROR                                                    BCD00178
+       ACL     (233)                                                    BCD00179
+       FAD     (233)                                                    BCD00180
+       SLW     ERASE+1                                                  BCD00181
+       CAL     ERASE+2           FLOAD FRACTION                         BCD00182
+       ACL     (233)                                                    BCD00183
+       FAD     (233)                                                    BCD00184
+       FDP     TENS,4            SCALE IT                               BCD00185
+       XCA                                                              BCD00186
+       FAD     ERASE+1           ADD INTEGER                            BCD00187
+ NUM3  STO     ERASE+1           SAVE NUMBER                            BCD00188
+       CLA     ERASE+3                                                  BCD00189
+       TMI     NUM4                                                     BCD00190
+       CLA     ERASE+1                                                  BCD00191
+       SSP                                                              BCD00192
+       TRA     ST1                                                      BCD00193
+ NUM4  CLA     ERASE+1                                                  BCD00194
+       SSM                                                              BCD00195
+ ST1   STO     **0               STORE NUMBER                           BCD00196
+ GT3   TRA     ICON                                                     BCD00197
+ ICON  LXD     X4,4              RESTORE IR4                            BCD00198
+       TXI     AGATE,4,-1        PICK UP NEXT WORD                      BCD00199
+*FLOATING POINT EXPONENT CONVERSION                                     BCD00200
+ E1    CLA     EG2               SET UP GATES                           BCD00201
+       STA     GT3               FOR E CONVERSION                       BCD00202
+       CLA     EG1                                                      BCD00203
+       STA     GT2                                                      BCD00204
+       CLA     G1                                                       BCD00205
+       STA     GT1                                                      BCD00206
+       TRA     FL1               GO TO CONVERSION                       BCD00207
+ E21   STZ     ERASE+1                                                  BCD00208
+       STZ     ERASE+3                                                  BCD00209
+       LDQ     ERASE+5                                                  BCD00210
+       TRA     NXTBCD                                                   BCD00211
+ E2    LAC     ERASE+1,4         NUMBER OF EXPONENTS TO IR 4            BCD00212
+       TXL     E7+1,4,0          IFEXPONENT IS ZERO  SKIP THE FOLLOWING BCD00213
+       TXL     ERROR,4,-39       IF NUMBER OUT OF FLOATING POINT BOUND  BCD00214
+       CLA     ERASE+3           IS IT LESS OR GRAETER THAN ZERO        BCD00215
+       LDQ*    ST1                                                      BCD00216
+       TMI     E5                IF LESS THAN ZERO GO TO E5             BCD00217
+ E4    TXH     E3,4,-9           CONVERT MORE                           BCD00218
+       TXI     *+1,4,8                                                  BCD00219
+       FMP     TENS+8                                                   BCD00220
+       XCA                                                              BCD00221
+       TRA     E4                                                       BCD00222
+ E3    FMP     TENS,4                                                   BCD00223
+       TRA     E7                                                       BCD00224
+ E5    XCA                       CONVERT LESS                           BCD00225
+       TXH     E6,4,-9                                                  BCD00226
+       TXI     *+1,4,8                                                  BCD00227
+       FDP     TENS+8                                                   BCD00228
+       TRA     E5                                                       BCD00229
+ E6    FDP     TENS,4                                                   BCD00230
+       XCA                                                              BCD00231
+ E7    STO*    ST1               STORE                                  BCD00232
+       LXD     G2,4                                                     BCD00233
+       SXA     GT3,4                                                    BCD00234
+       TRA     ICON                                                     BCD00235
+ EG1   TXL     E2,0,0                                                   BCD00236
+ EG2   TXL     E21,0,0                                                  BCD00237
+*      NORMAL RETURN                                                    BCD00238
+ EXIT  LXD     X1,1              RESTORE IR1                            BCD00239
+       LXD     X2,2              RESTORE IR 2                           BCD00240
+       DCT                       RESTORE DIVIDE CHEK TRIGER             BCD00241
+       NOP                                                              BCD00242
+       TOV     *                                                        BCD00243
+       TRA     2,4               EXIT                                   BCD00244
+*      ERROR RETURN                                                     BCD00245
+ ERROR LXD     X4,4                                                     BCD00246
+       TXI     *+1,4,-1                                                 BCD00247
+       CLA     1,4                                                      BCD00248
+       TMI     *-2                                                      BCD00249
+       LXD     X1,1                                                     BCD00250
+       LXD     X2,2                                                     BCD00251
+       TRA     1,4               ERROR RETURN                           BCD00252
+ (11)  DEC     11                                                       BCD00253
+ (100) DEC     100                                                      BCD00254
+ (10)  DEC     10                                                       BCD00255
+ (1)   DEC     1                                                        BCD00256
+ MZE   MZE     0                                                        BCD00257
+ VALT1 PZE     FR1                                                      BCD00258
+ (60)  OCT     60                                                       BCD00259
+ (233) DEC     155B8                                                    BCD00260
+ TENS  DEC     0.0                                                      BCD00261
+       DEC     10.0                                                     BCD00262
+       DEC     100.0                                                    BCD00263
+       DEC     1000.0                                                   BCD00264
+       DEC     10000.0                                                  BCD00265
+       DEC     100000.0                                                 BCD00266
+       DEC     1000000.0                                                BCD00267
+       DEC     10000000.0                                               BCD00268
+       DEC     100000000.0                                              BCD00269
+ (8)   OCT     10                                                       BCD00270
+ (16)  OCT     20                                                       BCD00271
+(MAXI) OCT     777777777                                                BCD00272
+ ERASE BOOL    77462                                                    BCD00273
+ POINT EQU     FLT                                                      BCD00274
+       END                                                              BCD00275

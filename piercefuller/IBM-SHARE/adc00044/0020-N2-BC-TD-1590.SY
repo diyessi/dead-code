@@ -1,0 +1,1142 @@
+*     LABEL                                                             TD  0000
+*       DUMP                                                            TD  0001
+*      FAP                                                              TD  0002
+*        IMPROVED TAPE DUMP  ---   TREVOR BARKER                        TD  0003
+*       AUGUST 21,1958                                                  TD  0004
+*     INPUT -- TAPE ADDRESS IN TOP ROW OF KEYS                          TD  0005
+*     POSITIONING -- SW5 DOWN TO REWIND                                 TD  0006
+*          DIVIDE LOWER KEYS INTO TWO SETS OF NINE, CONSIDER EACH AS    TD  0007
+*          A SIGNED 8 BIT NUMBER.   THE FIRST IS THE NUMBER OF FILES TO TD  0008
+*          MOVE, THE SECOND RECORDS (+ FOR FORWARDS, - FOR BACK)        TD  0009
+*     OUTPUT -- SW1 UP TO PRINT ONLINE, SW2 DOWN TO PREPARE TAPE A2     TD  0010
+*          FOR OFFLINE PRINTER (NOT ON PROGRAM CONTROL)                 TD  0011
+*     STOP -- SW4 DOWN TO STOP AT ANY TIME.                             TD  0012
+*          IF THE LEFTMOST SIX KEYS OF THE TOP ROW ARE NOT ZERO,        TD  0013
+*          PROGRAM WILL STOP AFTER THIS MANY FILES                      TD  0014
+*     DECIMAL OUTPUT -- SW3 DOWN TO PRINT BINARY RECORDS IN DECIMAL     TD  0015
+*          INSTEAD OF OCTAL                                             TD  0016
+*     SW6 DOWN TO FORCE BINARY STYLE PRINTING (OCTAL OR                 TD  0017
+*          DECIMAL)  FOR BCD RECORDS                                    TD  0018
+       ENTRY   TDUMP         AC NON ZERO                                TD  0019
+ORG    OPSYN   NULL                                                     TD  0020
+ABS    OPSYN   NULL                                                     TD  0021
+...    SYN     0               USED TO INITIALIZE FROM LENGTH           TD  0022
+       ORG     0                                                        TD  0023
+IBTD   REM 0687 031159                                                  TD  0024
+                   I.B. TAPE DUMP                                       TD  0025
+TDUMP  SYN     *                                                        TD  0026
+       TRA     START1                                                   TD  0027
+       PMC     ON                                                       TD  0028
+..     SYN     0                                                        TD  0029
+WEFA   OPSYN   NULL                                                     TD  0030
+SSWT   OPSYN   SWT                                                      TD  0031
+RCH    EQU     0             RELATIVE ADDRESSES                         TD  0032
+SCH    EQU     1                                                        TD  0033
+TCO    EQU     2                                                        TD  0034
+TRC    EQU     3                                                        TD  0035
+TEF    EQU     4                                                        TD  0036
+ITELL  SET     0                                                        TD  0037
+DEBUG  MACRO                                                            TD  0038
+       SXD     TELLME+ITELL,3                                           TD  0039
+       STL     TELLME+ITELL                                             TD  0040
+ITELL  SET     ITELL+1                                                  TD  0041
+DEBUG  END                                                              TD  0042
+TELLME BSS     50                                                       TD  0043
+SKPON  MACRO                                                            TD  0044
+       ZET     ONOFF                                                    TD  0045
+SKPON  END                                                              TD  0046
+SKPOFF MACRO                                                            TD  0047
+       NZT     ONOFF                                                    TD  0048
+SKPOFF END                                                              TD  0049
+SETUP  MACRO                                                            TD  0050
+       REM     INITIALISATION                                           TD  0051
+       LAXM                                                             TD  0052
+       NOP                                                              TD  0053
+       STZ     KEYWD                                                    TD  0054
+       STZ     NOBODY                                                   TD  0055
+       STZ     DECFRC        SET SIM SW UP                              TD  0056
+       STZ     BINFRC                                                   TD  0057
+       STZ     REWFRC                                                   TD  0058
+       GETTAP                                                           TD  0059
+       GETREC                                                           TD  0060
+       GETFIL                                                           TD  0061
+       GETSR                                                            TD  0062
+       GETSF                                                            TD  0063
+       GETOPT                                                           TD  0064
+SETUP  END                                                              TD  0065
+NOBODY                                                                  TD  0066
+ONOFF                                                                   TD  0067
+DECFRC                                                                  TD  0068
+BINFRC                                                                  TD  0069
+REWFRC                                                                  TD  0070
+KEYWD                                                                   TD  0071
+READ   MACRO   BUF,COM                                                  TD  0072
+       RTDA    2             READ MONI FOR INPUT                        TD  0073
+       RCHA    COM                                                      TD  0074
+       TCOA    *                                                        TD  0075
+       TEFA    EXITF         END                                        TD  0076
+       TRCA    *+1           IGNORE                                    5TD  0077
+       RMT                                                             8TD  0078
+COM    IOCD    BUF,,12                                                 9TD  0079
+       RMT                                                            10TD  0080
+READ   END                                                            11TD  0081
+SWT    MACRO   N                                                        TD  0082
+       IFF     1-N,NOT                                                  TD  0083
+       SWT1                                                             TD  0084
+       IFF     2-N,NOT                                                  TD  0085
+       SWT2                                                             TD  0086
+       IFF     3-N,NOT                                                  TD  0087
+       SWT3                                                             TD  0088
+       IFF     4-N,NOT                                                  TD  0089
+       SWT4                                                             TD  0090
+       IFF     5-N,NOT                                                  TD  0091
+       SWT5                                                             TD  0092
+       IFF     6-N,NOT                                                  TD  0093
+       SWT6                                                             TD  0094
+SWT    END                                                              TD  0095
+SWT1   MACRO                 ON LINE PRINT                              TD  0096
+       SKPON                                                            TD  0097
+       TRA     *+3           DONT IF OFF LINE                           TD  0098
+       SSWT    1             NONE IF DOWN                               TD  0099
+SWT1   END                                                              TD  0100
+SWT2   MACRO                 OFF LINE PRINT                             TD  0101
+       SKPON                                                            TD  0102
+       TRA     *+3           ALWAYS IF OFF-LINE                         TD  0103
+       SSWT    2             DO IF DOWN                                 TD  0104
+SWT2   END                                                              TD  0105
+SWT3   MACRO                 DECIMAL FORCED                             TD  0106
+       SKPOFF                                                           TD  0107
+       TRA     *+4                                                      TD  0108
+       ZET     DECFRC                                                   TD  0109
+       TRA     *+4           DO                                         TD  0110
+       TRA     *+2           DONT                                       TD  0111
+       SSWT    3                                                        TD  0112
+SWT3   END                                                              TD  0113
+SWT4   MACRO   SWT4L,MORRE                                              TD  0114
+       SKPON                                                            TD  0115
+       TRA     SWT4L+1                                                  TD  0116
+SWT4L  SSWT    4                                                        TD  0117
+SWT4   END                                                              TD  0118
+SWT5   MACRO   SWT5L                                                    TD  0119
+       SKPOFF                                                           TD  0120
+       TRA     SWT5L                                                    TD  0121
+       ZET     REWFRC                                                   TD  0122
+       TRA     SWT5L+2                                                  TD  0123
+       TRA     SWT5L+1                                                  TD  0124
+SWT5L  SSWT    5                                                        TD  0125
+SWT5   END                                                              TD  0126
+SWT6   MACRO   SWT6L                                                    TD  0127
+       SKPOFF                                                           TD  0128
+       TRA     SWT6L                                                    TD  0129
+       ZET     BINFRC                                                   TD  0130
+       TRA     SWT6L+2                                                  TD  0131
+       TRA     SWT6L+1                                                  TD  0132
+SWT6L  SSWT    6                                                        TD  0133
+SWT6   END                                                              TD  0134
+HTR    MACRO   START         DONT STOP                                  TD  0135
+       SKPOFF                IF OFF-LINE                                TD  0136
+       HPR     64                                                       TD  0137
+       TRA     START                                                    TD  0138
+HTR    END                                                              TD  0139
+RECORD MACRO                                                            TD  0140
+       EAXM                                                             TD  0141
+       NZT     NORECT        NO COUNT, NO TEST                          TD  0142
+       TRA     MORRE                                                    TD  0143
+       TIX     MORRE,3,1     COUNT OFF                                  TD  0144
+       LAXM                                                             TD  0145
+       NOP                                                              TD  0146
+       TRA     STOP                                                     TD  0147
+MORRE  SYN     *                                                        TD  0148
+       LAXM                                                             TD  0149
+       NOP                                                              TD  0150
+RECORD END                                                              TD  0151
+NORECT OCT     1                                                        TD  0152
+KEYIN  OPSYN   ENK                                                      TD  0153
+ENK    MACRO                                                            TD  0154
+       LDQ     KEYWD                                                    TD  0155
+       SKPOFF                                                           TD  0156
+       KEYIN                                                            TD  0157
+ENK    END                                                              TD  0158
+BCD3D  MACRO                                                            TD  0159
+       SLW     WORK          6BCD CHAR                                  TD  0160
+       ANA     =O17          LAST NUM                                   TD  0161
+       STO     DIG1          CHAR                                       TD  0162
+       CAL     WORK          ONE BEFORE                                 TD  0163
+       ANA     =O1700        LAST NUM * 2**6                            TD  0164
+       STO     DIG2          CHAR                                       TD  0165
+       CAL     WORK          THIRD, TOP NUM CHAR                        TD  0166
+       ANA     =O170000                                                 TD  0167
+       LGR     36+12-6       TO MQ *2 **6                               TD  0168
+       MPY     =10           *10                                        TD  0169
+       XCA                                                              TD  0170
+       ADD     DIG2          ADD SEC *2 **6                             TD  0171
+       LGR     36+6          TO MQ LOOSE POWER                          TD  0172
+       MPY     =10                                                      TD  0173
+       XCA                                                              TD  0174
+       ADD     DIG1                                                     TD  0175
+       STO     DIG1                                                     TD  0176
+       CAL     WORK          CHECK FOR MINUS                            TD  0177
+       ANA     =O606060606060  LEAVE MINUS                              TD  0178
+       ARS     1               MOVE TO PLUS                             TD  0179
+       PAI                     TO MATCH                                 TD  0180
+       CAL     WORK                                                     TD  0181
+       ANA     =O202020202020                                           TD  0182
+       RIA                   RESET ALL 40S THAT                         TD  0183
+       PXD     0,0           HAVE 20S TO 0,                             TD  0184
+       OFT     =O202020202020  IF ANY REMAINS OF                        TD  0185
+       SSM                     40 LEFT, MINUS                           TD  0186
+       ACL     DIG1                                                     TD  0187
+BCD3D  END                                                              TD  0188
+WORK                                                                    TD  0189
+DIG1                                                                    TD  0190
+DIG2                                                                    TD  0191
+DIG3                                                                    TD  0192
+TAPEOK MACRO   SYMB,X,TADDR                                             TD  0193
+X      TAPENO  SYMB                                                     TD  0194
+       CAS     TADDR                                                    TD  0195
+       TRA     *+2                                                      TD  0196
+       TRA     EXITT                                                    TD  0197
+       RMT                                                              TD  0198
+TADDR  PZE     X                                                        TD  0199
+       RMT                                                              TD  0200
+TAPEOK END                                                              TD  0201
+GETTAP MACRO   LOG,DONETP                                               TD  0202
+       CAL     BUF                                                      TD  0203
+       ANA     =O07000000                                               TD  0204
+       TZE     LOG           LOGICAL NUMBER GIVEN                       TD  0205
+       LDQ     BUF           ELSE                                       TD  0206
+       PXD     0,0                                                      TD  0207
+       RQL     12+3          LOOSE TWO BCD CHARS AND                    TD  0208
+       DUP     2,3           MOVE THE REST                              TD  0209
+       LGL     3             INTO THE                                   TD  0210
+       RQL     3             AC                                         TD  0211
+       LGL     3                                                        TD  0212
+       TZE     EXITT                                                    TD  0213
+       ORA     =O200         MAKE IT NICE                               TD  0214
+       TRA     DONETP                                                   TD  0215
+LOG    CAL     BUF                                                      TD  0216
+       BCD3D                                                            TD  0217
+       CAS*    $(IOU)        IF IN IOU                                  TD  0218
+       TRA     EXITT         CONNIE SAYS SO                             TD  0219
+       NOP                                                              TD  0220
+       ADD     $(IOU)        PICK UP                                    TD  0221
+       STA     *+1           ENTRY                                      TD  0222
+       CLA     ..                                                       TD  0223
+       TZE     EXITT                                                    TD  0224
+DONETP SYN     *             DONT DUMP THESE                            TD  0225
+       TAPEOK  A2                                                       TD  0226
+       TAPEOK  A3                                                       TD  0227
+       TAPEOK  B4                                                       TD  0228
+       TAPEOK  B10                                                      TD  0229
+       ALS     18                                                       TD  0230
+       ORS     KEYWD                                                    TD  0231
+GETTAP END                                                              TD  0232
+GETREC MACRO                                                            TD  0233
+       CAL     BLUFF+1                                                  TD  0234
+       BCD3D                                                            TD  0235
+       TPL     *+2           IF NEGATIVE GIVE                           TD  0236
+       STL     NOBODY        WORD COUNT ONLY                            TD  0237
+       EAXM                                                             TD  0238
+       STO     NORECT        TO INDICATE THAT NO CHECK ON RECORD COUNT DTD  0239
+       PAX     0,3                                                      TD  0240
+       TXI     *+1,3,1                                                  TD  0241
+       LAXM                                                             TD  0242
+       NOP                                                              TD  0243
+GETREC END                                                              TD  0244
+GETFIL MACRO                                                            TD  0245
+       CAL     BLUFF+2                                                  TD  0246
+       BCD3D                                                            TD  0247
+       ANA     =O77          AVOID                                      TD  0248
+       LDQ     =0            OVERFLOW                                   TD  0249
+       LGR     6                                                        TD  0250
+       XCL                                                              TD  0251
+       ORS     KEYWD                                                    TD  0252
+GETFIL END                                                              TD  0253
+GETSR  MACRO                                                            TD  0254
+       CAL     BLUFF+3                                                  TD  0255
+       BCD3D                                                            TD  0256
+       XCA                                                              TD  0257
+       PXD     0,0                                                      TD  0258
+       LGL     1             PICK UP SIGN                               TD  0259
+       RQL     36-1-8                                                   TD  0260
+       LGL     8                                                        TD  0261
+       ORS     KEYWD                                                    TD  0262
+GETSR  END                                                              TD  0263
+GETSF  MACRO                                                            TD  0264
+       CAL     BLUFF+4                                                  TD  0265
+       BCD3D                                                            TD  0266
+       XCA                                                              TD  0267
+       PXD     0,0                                                      TD  0268
+       LGL     1                                                        TD  0269
+       RQL     36-1-8                                                   TD  0270
+       LGL     8                                                        TD  0271
+       ALS     9                                                        TD  0272
+       ORS     KEYWD                                                    TD  0273
+GETSF  END                                                              TD  0274
+GETOPT MACRO                                                            TD  0275
+       LDI     BLUFF+5                                                  TD  0276
+       RNT     510000        IF REWIND                                  TD  0277
+       TRA     *+2                                                      TD  0278
+       STL     REWFRC                                                   TD  0279
+       RNT     2400                                                     TD  0280
+       TRA     *+2                                                      TD  0281
+       STL     DECFRC                                                   TD  0282
+       RNT     22                                                       TD  0283
+       TRA     *+2                                                      TD  0284
+       STL     BINFRC                                                   TD  0285
+GETOPT END                                                              TD  0286
+LIMIT  MACRO                                                            TD  0287
+       CLA     LINC                                                     TD  0288
+       ADD     =1                                                       TD  0289
+       STO     LINC                                                     TD  0290
+       CAS     LINC+1                                                   TD  0291
+       TRA*    $(XCED)                                                  TD  0292
+       TRA*    $(XCED)                                                  TD  0293
+       CAL     LINECT                                                   TD  0294
+       ADM     =1                                                       TD  0295
+       STA     LINECT                                                   TD  0296
+LINECT BOOL    141                                                      TD  0297
+LINC   BOOL    133                                                      TD  0298
+LIMIT  END                                                              TD  0299
+LCT    PZE     0                                                        TD  0300
+TITLEC MACRO   TITCOM                                                   TD  0301
+       WTDA    3                                                        TD  0302
+       RCHA    TITCOM                                                   TD  0303
+       TCOA    *                                                        TD  0304
+       TRCA    *+1                                                      TD  0305
+       RMT                                                              TD  0306
+TITCOM IORT    BLUFF2,,16                                               TD  0307
+       RMT                                                              TD  0308
+TITLEC END                                                              TD  0309
+BLUFF2 BCI     2,1CONTROL *                                             TD  0310
+BUF    BSS     12                                                       TD  0311
+       BCI     2,**                                                     TD  0312
+BLUFF  SYN     BUF                                                      TD  0313
+SIZE   MACRO                                                            TD  0314
+       CALL    SPACE,LENGTH                                             TD  0315
+       LDQ     LENGTH                                                   TD  0316
+       RQL     18               UN-FORTRAN THIS INITEGER                TD  0317
+       PXD     0,0                                                      TD  0318
+       DVP     =12                                                      TD  0319
+       STQ     Z                                                        TD  0320
+       MPY     =12                                                      TD  0321
+       STQ     L                                                        TD  0322
+       CAL     L                                                        TD  0323
+       COM                                                              TD  0324
+       SLW     WS2                                                      TD  0325
+       CAL     L                                                        TD  0326
+       STA     SETAL                                                    TD  0327
+       STA     SDTAL                                                    TD  0328
+       ALS     18                                                       TD  0329
+       STD     SETDL                                                    TD  0330
+       SUB     =O1000000                                                TD  0331
+       STD     SETDL1                                                   TD  0332
+       CAL     WS2                                                      TD  0333
+       STA     SETDL1                                                   TD  0334
+       ALS     18                                                       TD  0335
+       COM                                                              TD  0336
+       STD     SGTDM1                                                   TD  0337
+       ADD     =O1000000      TWOS COMPLEMENT                           TD  0338
+       STD     SETDMW                                                   TD  0339
+       STD     SFTMWD                                                   TD  0340
+       STD     SGTMWD                                                   TD  0341
+SIZE   END                                                              TD  0342
+WS2    PZE                                                              TD  0343
+LENGTH PZE                                                              TD  0344
+L      PZE                                                              TD  0345
+Z      PZE                                                              TD  0346
+ GO    TTR     STRIN                                                    TD  0347
+STRIN  SXA     OUT,4         PICK UP                                    TD  0348
+       LXA     0,4           LOCATION 0 AND                             TD  0349
+       TXI     *+1,4,-1      STR INSTRUCTION                            TD  0350
+       SXA     *+2,4                                                    TD  0351
+       SXA     TPAA,4                                                   TD  0352
+       LXA     ..,4                                                     TD  0353
+       TXH     TPAA-1,4,0                                               TD  0354
+       SWT     4                                                        TD  0355
+       TRA     OUT                                                      TD  0356
+       SWT     2                                                        TD  0357
+       TRA     *+2                                                      TD  0358
+       WEFA    3                                                        TD  0359
+STOP   SYN     *                                                        TD  0360
+       HTR     START                                                    TD  0361
+       SXA     1,4                                                      TD  0362
+ TPAA  LXD     ..,4                                                     TD  0363
+ THSCH TXI     *+1,4,CHA                                                TD  0364
+       SXA     *+2,4                                                    TD  0365
+       LXA     OUT,4                                                    TD  0366
+       XEC     ..                                                       TD  0367
+ OUT   AXT     ..,4                                                     TD  0368
+       TRA*    0                                                        TD  0369
+ CHAN  PZE     ,,CHF                                                    TD  0370
+       PZE     ,,CHE                                                    TD  0371
+       PZE     ,,CHD                                                    TD  0372
+       PZE     ,,CHC                                                    TD  0373
+       PZE     ,,CHB                                                    TD  0374
+       PZE     ,,CHA                                                    TD  0375
+ CHA   RCHA*   1                                                        TD  0376
+       SCHA*   1                                                        TD  0377
+       TCOA*   1                                                        TD  0378
+       TRCA*   1                                                        TD  0379
+       TEFA*   1                                                        TD  0380
+ CHB   RCHB*   1                                                        TD  0381
+       SCHB*   1                                                        TD  0382
+       TCOB*   1                                                        TD  0383
+       TRCB*   1                                                        TD  0384
+       TEFB*   1                                                        TD  0385
+ CHC   RCHC*   1                                                        TD  0386
+       SCHC*   1                                                        TD  0387
+       TCOC*   1                                                        TD  0388
+       TRCC*   1                                                        TD  0389
+       TEFC*   1                                                        TD  0390
+ CHD   RCHD*   1                                                        TD  0391
+       SCHD*   1                                                        TD  0392
+       TCOD*   1                                                        TD  0393
+       TRCD*   1                                                        TD  0394
+       TEFD*   1                                                        TD  0395
+ CHE   RCHE*   1                                                        TD  0396
+       SCHE*   1                                                        TD  0397
+       TCOE*   1                                                        TD  0398
+       TRCE*   1                                                        TD  0399
+       TEFE*   1                                                        TD  0400
+ CHF   RCHF*   1                                                        TD  0401
+       SCHF*   1                                                        TD  0402
+       TCOF*   1                                                        TD  0403
+       TRCF*   1                                                        TD  0404
+       TEFF*   1                                                        TD  0405
+ REW   REWA    1                                                        TD  0406
+ BSF   BSFA    1                                                        TD  0407
+ BSR   BSRA    1                                                        TD  0408
+ RTD   RTDA    1                                                        TD  0409
+ RTB   RTBA    1                                                        TD  0410
+START1 LDQ     GO                                                       TD  0411
+       STQ     2                                                        TD  0412
+       STO     ONOFF         CHECK IF OFF OR ON LINE                    TD  0413
+START  SKPOFF                                                           TD  0414
+       TRA     START2                                                   TD  0415
+       SIZE                     SET UP FOR  REMAINDER OF MEMORY         TD  0416
+       READ    BLUFF                                                    TD  0417
+       TITLEC                                                           TD  0418
+       SETUP                                                            TD  0419
+START2 SLF                                                              TD  0420
+       ENK                                                              TD  0421
+       PXD                                                              TD  0422
+       LGL     6                                                        TD  0423
+       STA     EFB                                                      TD  0424
+       PXD                                                              TD  0425
+       LGL     12                                                       TD  0426
+       TZE     SKPA                                                     TD  0427
+       STA     REW                    INITIALIZE TAPE INSTRUCETION      TD  0428
+       STA     BSF                    X                                 TD  0429
+       STA     BSR                    X                                 TD  0430
+       ORA     BIT                    X                                 TD  0431
+       STA     RTB                    X                                 TD  0432
+       ERA     BIT                    X                                 TD  0433
+       STA     RTD                    X                                 TD  0434
+       STA     MSA                    X                                 TD  0435
+       ARS     9                      X                                 TD  0436
+       PAX     ,1                     X                                 TD  0437
+       CLA     CHAN+6,1               X                                 TD  0438
+       STD     THSCH                  X                                 TD  0439
+ SKPA  CLA     MSAB+1                 REWIND IF WANTED                  TD  0440
+       SWT     5                      X                                 TD  0441
+       TRA     *+3                    X                                 TD  0442
+       XEC     REW                    X                                 TD  0443
+       CLA     MSAB                   AND FIX MESSAGE                   TD  0444
+       STO     MSAA+2                 X                                 TD  0445
+       AXT     2,4                                                      TD  0446
+ AAB   PXD                            POSITION TAPE                     TD  0447
+       LLS 8                          X                                 TD  0448
+       PAX     ,2                     X                                 TD  0449
+ AAA   TXL     SKPB,2,0               X                                 TD  0450
+       TPL     SKPC                   X                                 TD  0451
+       XEC     BSR+1,4                                                  TD  0452
+       TXI     AAA,2,-1               X                                 TD  0453
+ SKPC  XEC     RTB                    X                                 TD  0454
+       TXL     *+3,4,1                X                                 TD  0455
+       STR     FLSK,,RCH              X                                 TD  0456
+       STR                                                              TD  0457
+       STR     *-1,,TCO                                                 TD  0458
+       TXI     AAA,2,-1               X                                 TD  0459
+ SKPB  STO     MSA+3,4                X                                 TD  0460
+       RQL     1                                                        TD  0461
+       TIX     AAB,4,1                X                                 TD  0462
+       TSX     SPACER,4                                                 TD  0463
+       PZE     3                                                        TD  0464
+       TSX     PRINT,4                PRINT MESSAGE                     TD  0465
+       PZE     MSA,3,8                X                                 TD  0466
+       STR     *,,TEF                                                   TD  0467
+       STR     *,,TRC                                                   TD  0468
+       AXT     1,1                                                      TD  0469
+ FBK   SXA     MSB+1,1                                                  TD  0470
+       AXT     1,1                                                      TD  0471
+ RBK   SXA     MSB,1                                                    TD  0472
+       AXT     3,4                    READ RECORD AND TEST MODE         TD  0473
+       TRA     *+4                                                      TD  0474
+ BAD   TXL     SKPD,4,1                                                 TD  0475
+       XEC     BSR                    X                                 TD  0476
+       TIX     BIN,4,3                X                                 TD  0477
+       XEC     RTD                    X                                 TD  0478
+       TXI     *+2,4,2                X                                 TD  0479
+ BIN   XEC     RTB                   X                                  TD  0480
+       STR     CW1,,RCH               X                                 TD  0481
+       STR                                                              TD  0482
+       STR     *-1,,TCO                                                 TD  0483
+       STR     EF,,TEF                                                  TD  0484
+       STR     BAD,,TRC               X                                 TD  0485
+       STL     ORD                    X                                 TD  0486
+       SWT     3                                                        TD  0487
+ SKPD  STZ     ORD                                                      TD  0488
+       AXT     4,2                    SET UP RECORD HEADING             TD  0489
+       CLA     MSBC+4,2               X                                 TD  0490
+       TXH     *+2,4,3                X                                 TD  0491
+       CLA     MSBD+4,2               X                                 TD  0492
+       STO     MSBA+8,2               X                                 TD  0493
+       TIX     *-4,2,1                X                                 TD  0494
+       TXH     *+3,4,1                X                                 TD  0495
+       CLA     MSBE                   X                                 TD  0496
+       STO     MSBA+4                 X                                 TD  0497
+       TXH     *+4,4,3                                                  TD  0498
+       CLA     MSBD+4                 X                                 TD  0499
+       ZET     ORD                    X                                 TD  0500
+       STO     MSBA+7                 X                                 TD  0501
+       AXT     7,2                    SET CONTROL MASKS FOR             TD  0502
+       CAL     MSCA+7,2               PRINT IN DECIMAL OR OCTAL         TD  0503
+       NZT     ORD                    X                                 TD  0504
+       SSM                            X                                 TD  0505
+       STO     MSCA+7,2               X                                 TD  0506
+       TIX     *-4,2,1                X                                 TD  0507
+       STR     TMP,,SCH               TEST RECORD LENGTH                TD  0508
+       LXA     TMP,1                  X                                 TD  0509
+       TXL     LONG,1,0                                                 TD  0510
+ SHORT CLA     BLNKS                                                    TD  0511
+       STO*    TMP                                                      TD  0512
+       SXA     WORDS,1                                                  TD  0513
+SETDMW SYN     *                                                        TD  0514
+       TXI     *+1,1,...   -WS2                                         TD  0515
+       SXA     MSB+2,1                PUT NUMBER OF WORDS               TD  0516
+       SXA     MSB+3,1                IN MESSAGE                        TD  0517
+       AXT     4,2                                                      TD  0518
+ SH2   SXA     BOBCD,4                                                  TD  0519
+       AXT     4,4                                                      TD  0520
+       CLA     BLNKS,2                                                  TD  0521
+       STO     MSBB+4,4                                                 TD  0522
+       TIX     *+1,2,1                                                  TD  0523
+       TIX     *-3,4,1                                                  TD  0524
+       CLA     MSK+3                                                    TD  0525
+       STO     MSBA-2                                                   TD  0526
+       STO     MSBA-1                                                   TD  0527
+       TXH     *+3,2,0                                                  TD  0528
+       CLA     MSK+4                                                    TD  0529
+       STZ     MSBA-2                                                   TD  0530
+       STZ     MSBA-1                                                   TD  0531
+       TSX     SPACER,4                                                 TD  0532
+       PZE     2                                                        TD  0533
+       RECORD                                                           TD  0534
+       TSX     PRINT,4                                                  TD  0535
+       PZE     MSB,4,12                                                 TD  0536
+       TXH     *+3,2,0                                                  TD  0537
+       TSX     PRINT,4                                                  TD  0538
+       PZE     MSBF,3,12                                                TD  0539
+       TSX     PRINT,4                                                  TD  0540
+       PZE     MSBG,,11                                                 TD  0541
+       TXL     DOWN,1,0                                                 TD  0542
+       CLA     ONE                                                      TD  0543
+       STO     NUM                                                      TD  0544
+ BOBCD AXT     ..,4                                                     TD  0545
+       TXL     ROUND,4,3                                                TD  0546
+       SWT     6                                                        TD  0547
+       TRA     BCD                                                      TD  0548
+       CLA     LSTM                                                     TD  0549
+       ZET     ORD                                                      TD  0550
+       ARS     18                                                       TD  0551
+       STA     *+2                                                      TD  0552
+       TSX     PRINT,4                                                  TD  0553
+       PZE     ..,,7                                                    TD  0554
+       TSX     SPACER,4                                                 TD  0555
+       PZE     1                                                        TD  0556
+ ROUND SXA     NORM,1                                                   TD  0557
+       AXT     1,4                    CHECK CONSECUTIVE EQUAL WORDS     TD  0558
+       CLA*    WORDS                  X                                 TD  0559
+       TNX     ALL,1,1                X                                 TD  0560
+       CAS*    WORDS                  X                                 TD  0561
+       TXI     *+3,1,1                                                  TD  0562
+       TXI     *-3,4,1                X                                 TD  0563
+       TXI     *+1,1,1                X                                 TD  0564
+ ALL   TXL     NORM,4,3                                                 TD  0565
+       PXA     ,4                                                       TD  0566
+       LGR     2                                                        TD  0567
+       ALS     2                                                        TD  0568
+       PAX     ,4                                                       TD  0569
+       PXD                                                              TD  0570
+       LGL     20                                                       TD  0571
+       STD     *+1                                                      TD  0572
+       TXI     *+1,1,..                                                 TD  0573
+       CLA     NUM                                                      TD  0574
+       STO     MSD                                                      TD  0575
+       PXA     ,4                                                       TD  0576
+       ADD     NUM                                                      TD  0577
+       STO     NUM                                                      TD  0578
+       SUB     ONE                                                      TD  0579
+       STO     MSD+1                                                    TD  0580
+       CLA*    WORDS                                                    TD  0581
+       STO     MSD+2                                                    TD  0582
+       CAL     MSD+6                                                    TD  0583
+       NZT     ORD                                                      TD  0584
+       SSM                                                              TD  0585
+       STO     MSD+6                                                    TD  0586
+       TSX     PRINT,4                                                  TD  0587
+       PZE     MSD,3,10                                                 TD  0588
+       TIX     ROUND,1,1                                                TD  0589
+       TRA     DOWN                                                     TD  0590
+ NORM  AXT     ..,1                                                     TD  0591
+       AXT     24,4                                                     TD  0592
+       LDQ     CODE                                                     TD  0593
+       TXH     *+2,1,3                                                  TD  0594
+       LDQ     CODE+4,1                                                 TD  0595
+       CLA     MSCB+24,4                                                TD  0596
+       TQP     *+2                                                      TD  0597
+       ANA     MSCB                                                     TD  0598
+       STO     MSC+30,4                                                 TD  0599
+       RQL     1                                                        TD  0600
+       TIX     *-5,4,1                                                  TD  0601
+       CLA     NUM                                                      TD  0602
+       STO     MSC                                                      TD  0603
+       ADD     TWO                                                      TD  0604
+       STO     MSC+1                                                    TD  0605
+       ADD     TWO                                                      TD  0606
+       STO     NUM                                                      TD  0607
+       AXT     4,4                                                      TD  0608
+       CLA*    WORDS                                                    TD  0609
+       STO     MSC+6,4                                                  TD  0610
+       TXI     *+1,1,-1                                                 TD  0611
+       TIX     *-3,4,1                                                  TD  0612
+       ZET     NOBODY        DONT PRINT BODY OR                         TD  0613
+       TRA     NOBOTY        DUMP                                       TD  0614
+       TSX     PRINT,4                                                  TD  0615
+       PZE     MSC,6,12                                                 TD  0616
+NOBOTY SYN     *                                                        TD  0617
+       LXA     NORM,1                                                   TD  0618
+       TIX     ROUND,1,4                                                TD  0619
+ DOWN  SLT     4                                                        TD  0620
+       TRA     *+2                                                      TD  0621
+       TRA     MORE                                                     TD  0622
+       LXA     MSB,1                                                    TD  0623
+       TXI     RBK,1,1                                                  TD  0624
+ BCD   AXT     0,2                                                      TD  0625
+       AXT     12,4                                                     TD  0626
+       STL     TMP                                                      TD  0627
+ BCDB  CLA*    WORDS                                                    TD  0628
+       CAS     BLNKS                                                    TD  0629
+       STZ     TMP                                                      TD  0630
+       TRA     *+2                                                      TD  0631
+       STZ     TMP                                                      TD  0632
+       STO     LINE+12,4                                                TD  0633
+       TIX     *+4,1,1                                                  TD  0634
+       TXH     *+2,1,0                                                  TD  0635
+       STZ     TMP                                                      TD  0636
+       AXT     0,1                                                      TD  0637
+       TIX     BCDB,4,1                                                 TD  0638
+       ZET     TMP                                                      TD  0639
+       TXI     BCD+1,2,1                                                TD  0640
+       TXL     NICE,2,0                                                 TD  0641
+       SXA     MSF,2                                                    TD  0642
+       AXT     0,4                                                      TD  0643
+       TXI     *+1,4,12                                                 TD  0644
+       TIX     *-1,2,1                                                  TD  0645
+       SXA     MSF+1,4                                                  TD  0646
+       TSX     SPACER,4                                                 TD  0647
+       PZE     1                                                        TD  0648
+       TSX     PRINT,4                                                  TD  0649
+       PZE     MSF,2,9                                                  TD  0650
+       TSX     SPACER,4                                                 TD  0651
+       PZE     1                                                        TD  0652
+ NICE  TSX     PRINT,4                                                  TD  0653
+       PZE     LINE,,12                                                 TD  0654
+       TXH     BCD,1,1                                                  TD  0655
+       TRA     DOWN                                                     TD  0656
+ EF    LXA     MSB,2                                                    TD  0657
+       LXA     MSB+1,1                                                  TD  0658
+       TXH     EFB,2,1                                                  TD  0659
+       SXA     MSE,1                                                    TD  0660
+       TSX     SPACER,4                                                 TD  0661
+       PZE     1                                                        TD  0662
+       TSX     PRINT,4                                                  TD  0663
+       PZE     MSE,1,4                                                  TD  0664
+ EFB   AXT     ..,4                                                     TD  0665
+       TXL     EFC,4,0                                                  TD  0666
+       TIX     EFBX,4,1                                                 TD  0667
+       HTR     START                                                    TD  0668
+EFBX   SXA     EFB,4                                                    TD  0669
+ EFC   TXI     FBK,1,1                                                  TD  0670
+ PRINT SXA     POUT,4                                                   TD  0671
+       CLS     1,4                                                      TD  0672
+       STO     *+2                                                      TD  0673
+       TSX     YMSAG,4                                                  TD  0674
+       PZE                                                              TD  0675
+       SWT     2                                                        TD  0676
+       TRA     POUT                                                     TD  0677
+       CLA     YGCTL                                                    TD  0678
+       STD     PRCW                                                     TD  0679
+       STA     PRCW                                                     TD  0680
+       WTDA    3                                                        TD  0681
+       RCHA    PRCW1                                                    TD  0682
+       LIMIT                 COUNT LINES                                TD  0683
+       TCOA    *                                                        TD  0684
+       TRCA    *+1           IGNORE WRITE REDUND.                       TD  0685
+ POUT  AXT     ..,4                                                     TD  0686
+       STR                            TEST SWITCH FOR END               TD  0687
+       TRA     2,4                                                      TD  0688
+PRCW1  IOCP    BLNKS,,1                                                 TD  0689
+ PRCW  IORT                                                             TD  0690
+SPACER SYN     *                                                        TD  0691
+       SXA     SOUT,4                                                   TD  0692
+       CLA     1,4                                                      TD  0693
+       PAX     ,4                                                       TD  0694
+       SXA     COUNT,4                                                  TD  0695
+       TSX     PRINT,4                                                  TD  0696
+       PZE     BLNKS,,1                                                 TD  0697
+ COUNT AXT     ..,4                                                     TD  0698
+       TIX     *-4,4,1                                                  TD  0699
+ SOUT  AXT     ..,4                                                     TD  0700
+       TRA     2,4                                                      TD  0701
+ LONG  TXI     *+1,1,-1                                                 TD  0702
+       SXA     WORDS,1                                                  TD  0703
+       SLN     4                                                        TD  0704
+       XEC     BSR                                                      TD  0705
+       AXT     1,2                                                      TD  0706
+       SXA     MSBF,2                                                   TD  0707
+       AXT     0,2                                                      TD  0708
+SFTMWD SYN     *                                                        TD  0709
+       TXI     SH2,1,...      -WS2                                      TD  0710
+ MORE  LXA     MSBF,2                                                   TD  0711
+       TXI     *+1,2,1                                                  TD  0712
+       SXA     MSBF,2                                                   TD  0713
+       LXA     BOBCD,4                                                  TD  0714
+       TXH     *+3,4,3                                                  TD  0715
+       XEC     RTB                                                      TD  0716
+       TRA     *+2                                                      TD  0717
+       XEC     RTD                                                      TD  0718
+       CLA     CW2                                                      TD  0719
+       STO     0,2                                                      TD  0720
+       TIX     *-1,2,1                                                  TD  0721
+       CLA     CW1                                                      TD  0722
+       STO     -1                                                       TD  0723
+       LAC     MSBF,2                                                   TD  0724
+       SXA     *+1,2                                                    TD  0725
+       STR     ..,,RCH                                                  TD  0726
+       STR     *,,TCO                                                   TD  0727
+       STR     TMP,,SCH                                                 TD  0728
+       LXA     TMP,1                                                    TD  0729
+       TXH     OKNOW,1,0                                                TD  0730
+       SLN     4                                                        TD  0731
+       XEC     BSR                                                      TD  0732
+       TSX     SPACER,4                                                 TD  0733
+       PZE     1                                                        TD  0734
+       TSX     PRINT,4                                                  TD  0735
+       PZE     MSBF,3,12                                                TD  0736
+       TSX     PRINT,4                                                  TD  0737
+       PZE     MSBG,,11                                                 TD  0738
+SGTDM1 SYN     *                                                        TD  0739
+       TXI     BOBCD,1,...   -WS2-1                                     TD  0740
+ OKNOW SXA     WORDS,1                                                  TD  0741
+SGTMWD SYN     *                                                        TD  0742
+       TXI     *+1,1,...    -WS2                                        TD  0743
+       SXA     MSK,1                                                    TD  0744
+       SXA     MSK+1,1                                                  TD  0745
+       CLA     MSBF                                                     TD  0746
+       STO     MSK+2                                                    TD  0747
+       TSX     SPACER,4                                                 TD  0748
+       PZE     1                                                        TD  0749
+       TSX     PRINT,4                                                  TD  0750
+       PZE     MSK,3,12                                                 TD  0751
+       TSX     PRINT,4                                                  TD  0752
+       PZE     MSBG,,11                                                 TD  0753
+       CLA     BLNKS                                                    TD  0754
+       STO*    TMP                                                      TD  0755
+       TRA     BOBCD                                                    TD  0756
+*                        MESSAGE PRINTER ADDAPTED FOR TAPE DUMP         TD  0757
+ YMSAG TRA     YGSTT                                                    TD  0758
+*   COMMENT PRINTER                                                     TD  0759
+ YZZZZ CLA    1,4                    GET CONTROL WORD                   TD  0760
+       TMI    *+3                                                       TD  0761
+       WRS     753                                                      TD  0762
+       WRS     753                                                      TD  0763
+       SXA    YZZX1,1                SAVE CONTITION                     TD  0764
+       SXA    YZZX2,2                X                                  TD  0765
+       SXA    YZZX4,4                X                                  TD  0766
+       AXT    0,1                    X                                  TD  0767
+       SLT    1                      X                                  TD  0768
+       TXI    *+1,1,1                X                                  TD  0769
+       SXA    YLGHT,1                X                                  TD  0770
+ YSXAD PDX    6,2                    PLACE N IN X2 ---  CONSTANT 6      TD  0771
+       LGR    18                     COMPUTE N+L AND STORE              TD  0772
+       ADD    1,4                    X                                  TD  0773
+       STA    YWRDS                  X                                  TD  0774
+       CLA    YSXAD                  INITIALIZE FOR OCTAL OR BCD        TD  0775
+       TQP    *+2                    X                                  TD  0776
+       ARS    1                      X                                  TD  0777
+       STA    YBCDD+1                X                                  TD  0778
+       CLA    YSWCH                  SET TXL--TXH SWITCH                TD  0779
+       LLS    0                      FOR BCD OR OCTAL                   TD  0780
+       STO     YSWCH                 X                                  TD  0781
+       AXT    24,1                   CLEAR WORKSPACE                    TD  0782
+       TCOA    *                     WAIT BEFORE CLEARING SPACE         TD  0783
+       NOP    YCIMG+23,1             X     ADDRESS TABLE                TD  0784
+       STZ    YCIMG+24,1             X     X                            TD  0785
+ YORAD TIX    *-1,1,1                X                                  TD  0786
+       AXT    2,4                    SET X4 FOR FIRST FALF IMAGE        TD  0787
+       WRS     753                                                      TD  0788
+       TXL     YLGHT,2,0             EXIT IF NO OF WORDS IS ZERO        TD  0789
+       CLM                                                              TD  0790
+       SSM                           X                                  TD  0791
+       STO    YZBIT                  X                                  TD  0792
+ YWRDS LDQ    **,2                   GET WORD                           TD  0793
+ YBCDD CLM                           GET TWICE BCD DIGIT IN X1          TD  0794
+       LGL    **                     X   ADDRESS 6 FOR BCD, 3 FOR OCTAL TD  0795
+       ALS    1                      X                                  TD  0796
+       PAX    ,1                                                        TD  0797
+       CAL    YZBIT                  GET STORB BIT                      TD  0798
+       TXH    *+3,1,30               CHECK ZONES AND ZERO NUMERIC       TD  0799
+       TXH    YZNUM,1,0                AND PLACE CORRECT ZONE BIT       TD  0800
+       TXI    YZERO,1,2              X                                  TD  0801
+       TNX    YZYYY,1,62             X                                  TD  0802
+       TNX    YZXXX,1,32             X                                  TD  0803
+       TXL    YNORL+2,1,2            X                                  TD  0804
+ YZERO ORS    YCIMG+20,4             X     ZERO ZONE                    TD  0805
+       TXI    *+5,1,-2               X                                  TD  0806
+ YZXXX ORS    YCIMG+22,4             X     X ZONE                       TD  0807
+       TXI    *+3,1,-2               X                                  TD  0808
+ YZYYY ORS    YCIMG+24,4             X     Y ZONE                       TD  0809
+       TXI    *+1,1,-32              X                                  TD  0810
+ YZNUM TXL    YNORL+2,1,0            NUMERIC EQUAL ZERO, FINISHED       TD  0811
+       TXL    YNORL,1,18             NUMERIC LESS OR EQUAL NINE         TD  0812
+       TXH    *+2,1,20               NUMERIC GREATER THAN TEN           TD  0813
+       TXI    YZERO,1,-18            NUMERIC IS TEN, PLACE 0 BIT        TD  0814
+       ORS    YCIMG+4,4              GREATER THAN TEN, PLACE 8 BIT      TD  0815
+       TXI    *+2,1,-11              AND ADJUST FOR OTHER NUMERIC       TD  0816
+ YNORL TXI    *+1,1,5                PLACE NUMERIC BIT                  TD  0817
+       ORS*   YORAD,4                X                                  TD  0818
+       ARS    1                      SHIFT STROBE BIT                   TD  0819
+       SLW    YZBIT                  X                                  TD  0820
+       TZE    *+6                    TEST FOR END OF HALF IMAGE         TD  0821
+ YSWCH TXH    *+2,0,0                TXL-TXH SWITCH                     TD  0822
+       ANA    YZMSK                  TEST FOR END OF WORD               TD  0823
+       ANA    YZMSK+1                                                   TD  0824
+       TNZ    YBCDD                  GET NEW DIGIT                      TD  0825
+       SLN    1                                                         TD  0826
+       TNX    YZNRF,2,1              IF LAST WORD USED, PRINT + EXIT    TD  0827
+       SLT    1                      NEW WORD OR NEW HALF               TD  0828
+       TRA    *+2                    X                                  TD  0829
+       TRA    YWRDS                  NEW WORD                           TD  0830
+       TIX    YORAD+3,4,1            BACK IF ONLY ONE HALF DONE         TD  0831
+ YPRNT RCHA   YDCTR                  PRINT IMAGE                        TD  0832
+       SLT    1                                                         TD  0833
+       TRA     YORAD-4                                                  TD  0834
+ YLGHT AXT    **,1                   EXIT                               TD  0835
+       TXH    *+2,1,0                X                                  TD  0836
+       SLN    1                      X                                  TD  0837
+ YZZX1 AXT    **,1                   X                                  TD  0838
+ YZZX2 AXT    **,2                   X                                  TD  0839
+ YZZX4 AXT    **,4                   X                                  TD  0840
+       TRA    2,4                    X                                  TD  0841
+ YZNRF SLN    1                      SET INDICATOR FOR EXIT ADFTER PRINTTD  0842
+       TRA    YPRNT                                                     TD  0843
+ YZMSK OCT    373737373737           MASK                               TD  0844
+       OCT    377737773777           ANOTHER MASK                       TD  0845
+ YDCTR PZE    YCIMG,,24              PRINT CONTROL WORD                 TD  0846
+ YCIMG BSS    24                     WORKSPACE FOR CARD IMAGE           TD  0847
+ YZBIT PZE                           STORAGE FOR STROBE BIT             TD  0848
+*   MESSAGE PRINTER PROPPER                                             TD  0849
+ YGSTT SXA     YGOUT,1                                                  TD  0850
+       SXA     YGOUT+1,2                                                TD  0851
+       SXA     YGOUT+2,4                                                TD  0852
+       LDQ     1,4                   GET CONTROL WORD                   TD  0853
+       SLQ     YGCTL                 INITIALIZE CONTROL WROD OF         TD  0854
+       RQL     18                       PRINT ROUTINE                   TD  0855
+       PXD                                                              TD  0856
+       LGL     3                     X                                  TD  0857
+       PAX     ,3                                                       TD  0858
+       ADM     1,4                   L+T                                TD  0859
+       TXL     YGFXB,2,0             NO WORDS TO INSERT                 TD  0860
+       STA     YGXXA                                                    TD  0861
+ YGFXA STA     *+1                                                      TD  0862
+       LXD     ..,4                                                     TD  0863
+       ADD     YGONE                                                    TD  0864
+       TXH     YGFXA,4,4095                                             TD  0865
+       TIX     YGFXA,1,1                                                TD  0866
+ YGFXB STA     YGCTL                                                    TD  0867
+       TXL     YGCTL4,2,0                                               TD  0868
+       PXA     ,2                                                       TD  0869
+       ADM     YGXXA                 L+2T                               TD  0870
+       STA     *+1                                                      TD  0871
+ YGXXO CLA     ..,2                                                     TD  0872
+       ALS     4                                                        TD  0873
+       ARS     4                                                        TD  0874
+       AXT     10,4                  SET FOR BCD OR OCTAL               TD  0875
+       TPL     *+2                                                      TD  0876
+       AXT     8,4                                                      TD  0877
+       SXA     YGTMP,4                                                  TD  0878
+ YGXXA LDQ     ..,2                  GET WORD TO BE CONVERTED           TD  0879
+       SXA     YGXXD,2                                                  TD  0880
+       LDC     YGCTL,1               PREPRRE FOR CONVERSION             TD  0881
+ YGFXC AXT     31,2                                                     TD  0882
+       TXL     YGXXD,1,0                                                TD  0883
+       TXI     *+1,1,1                                                  TD  0884
+       AXT     36,4                                                     TD  0885
+ YGXXE TZE     YGXXD                                                    TD  0886
+       TIX     YGFXD,2,1                                                TD  0887
+       CAL     YGXXO                                                    TD  0888
+       ADD     YGONE                                                    TD  0889
+       STA     YGXXO                                                    TD  0890
+       LXA     YGXXD,2                                                  TD  0891
+       XEC     YGXXO                                                    TD  0892
+       ALS     4                                                        TD  0893
+       ARS     4                                                        TD  0894
+       AXT     30,2                                                     TD  0895
+ YGFXD LBT                           FIND PLACE FOR NEXT DIGIT          TD  0896
+       TRA     YGXXB                                                    TD  0897
+       SLW     YGTMP+1                                                  TD  0898
+       CAL     YGMSK                 CLEAR SPACE FOR DIGIT              TD  0899
+       ALS     36,4                                                     TD  0900
+       COM                                                              TD  0901
+       ANS*    YGCTL                                                    TD  0902
+       CLM                                                              TD  0903
+       DVH     YGTMP                 FORM DIGIT                         TD  0904
+       ALS     36,4                  INSERT                             TD  0905
+       ORS*    YGCTL                                                    TD  0906
+       SXA     YGSGN,1                                                  TD  0907
+       SXA     YGSGN+1,4                                                TD  0908
+       CAL     YGTMP+1                                                  TD  0909
+ YGXXB ARS     1                                                        TD  0910
+       TIX     YGXXE,4,6                                                TD  0911
+       TRA     YGXXE-3                                                  TD  0912
+ YGXXD AXT     ..,2                                                     TD  0913
+       CLA*    YGXXO                                                    TD  0914
+       ARS     33                                                       TD  0915
+       TZE     YGFXE                                                    TD  0916
+ YGSGN AXT     ..,1                                                     TD  0917
+       AXT     ..,4                                                     TD  0918
+       CAL     YGMSK                 INSERT PLUS OR MINUS SIGN          TD  0919
+       ALS     36,4                  IF WANTED                          TD  0920
+       COM                                                              TD  0921
+       ANS*    YGCTL                                                    TD  0922
+       CLA     YGPLS                                                    TD  0923
+       LDQ*    YGXXA                                                    TD  0924
+       TQP     *+2                                                      TD  0925
+       ALS     1                                                        TD  0926
+       ALS     36,4                                                     TD  0927
+       ORS*    YGCTL                                                    TD  0928
+ YGFXE TIX     YGXXO,2,1                                                TD  0929
+YGCTL4 SYN     *                                                        TD  0930
+       SWT     1                                                        TD  0931
+       TRA     *+2                                                      TD  0932
+       TRA     *+3                                                      TD  0933
+       TSX     YZZZZ,4               PRINT                              TD  0934
+ YGCTL ...     ..,1,..               X  (TAG BECAUSE THIS IS IND ADD)   TD  0935
+ YGOUT AXT     ..,1                  EXIT                               TD  0936
+       AXT     ..,2                                                     TD  0937
+       AXT     ..,4                                                     TD  0938
+       TRA     2,4                                                      TD  0939
+ YGTMP PZE                                                              TD  0940
+       PZE                                                              TD  0941
+ YGONE PZE     1                                                        TD  0942
+ YGPLS OCT     20                                                       TD  0943
+ YGMSK OCT     77                                                       TD  0944
+*                                     MESSAGES                          TD  0945
+ MSA   PZE                            TAPE NUMBER                       TD  0946
+       PZE                            FILES SKIPPED                     TD  0947
+       PZE                            RECORDS SKIPPED                   TD  0948
+       CAL                                                              TD  0949
+       OCT     7400,100074000000,100000007400                           TD  0950
+ MSAA  BCI     8,TAPE  XXXX  YYYYYYND    XXXX FILES  XXXX RECORDS       TD  0951
+ MSAB  BCI     2, REWOUAS FOU                                           TD  0952
+ MSB   PZE                            RECORD                            TD  0953
+       PZE                            FILE                              TD  0954
+       PZE                            LENGTH                            TD  0955
+       PZE                            AGAIN                             TD  0956
+       CLA                                                              TD  0957
+       CLA                                                              TD  0958
+       OCT     36                                                       TD  0959
+       CLA                                                              TD  0960
+       OCT     0074000000,-76000000,76000                               TD  0961
+ MSBA  BCI     8,RECORD XXXX, FILE XXXX                                 TD  0962
+ MSBB  BCI     4,                                                       TD  0963
+ MSBC  BCI     4,BCD                                                    TD  0964
+ MSBD  BCI     5,BINARY, PRINTED IN OCT.  DEC.                          TD  0965
+ MSBE  BCI     1,CHECK                                                  TD  0966
+ MSBF  PZE                                                              TD  0967
+SETAL  SYN     *                                                        TD  0968
+       PZE     L                                                        TD  0969
+SDTAL  SYN     *                                                        TD  0970
+       PZE     L                                                        TD  0971
+       OCT     6000000000,-76000000,76000                               TD  0972
+       BCI     8,VERY, VERY LONG RECORD        INSTALLMENT XX           TD  0973
+       BCI     4,XXXXX   (XXXXX   ) WORDS                               TD  0974
+ BLNKS BCI     1,                                                       TD  0975
+ MSBG  BCI     8,                                                       TD  0976
+       BCI     2,     8                                                 TD  0977
+       BCI     1,  10                                                   TD  0978
+ MSK   PZE                                                              TD  0979
+       PZE                                                              TD  0980
+       PZE                                                              TD  0981
+       OCT     -76000000,76000                                          TD  0982
+       CLA                                                              TD  0983
+       OCT     30000000                                                 TD  0984
+       BCI     8,LAST INSTALLMENT  (XX)                                 TD  0985
+       BCI     4,XXXXX   (XXXXX   ) WORDS                               TD  0986
+ MSC   PZE                                                              TD  0987
+       PZE                                                              TD  0988
+       BSS     28                                                       TD  0989
+ MSCB  CLA                                                              TD  0990
+       CLA                                                              TD  0991
+       OCT     7600,54000000000,17                                      TD  0992
+ MSCA  CLA                                                              TD  0993
+       OCT     17760000000,100000000037                                 TD  0994
+       CLA                                                              TD  0995
+       OCT     100007777400,100777740000,100000017777                   TD  0996
+       BCI     6,                                                       TD  0997
+       BCI     6,                                                       TD  0998
+ MSD   PZE                                                              TD  0999
+       PZE                                                              TD  1000
+       PZE                                                              TD  1001
+       CLA                                                              TD  1002
+       OCT     76,760000000,100000017777                                TD  1003
+       BCI     3,                                                       TD  1004
+       BCI     7,WORDS XXXXX TO XXXXX ARE ALL XXXXXXXXXXXXX             TD  1005
+ MSE   PZE                                                              TD  1006
+       OCT     36                                                       TD  1007
+       BCI     4,NO RECORDS IN FILE XXXX                                TD  1008
+ MSF   PZE                                                              TD  1009
+       PZE                                                              TD  1010
+       CLA                                                              TD  1011
+       OCT     74,37000000                                              TD  1012
+       BCI     3,                                                       TD  1013
+       BCI     6,XXXX LINES --XXXXX WORDS-- OF BLANKS                   TD  1014
+ LSTMA BCI     7,                  OCTAL PRINT FORCED                   TD  1015
+ LSTMB BCI     7,                  DECIMAL PRINT FORCED                 TD  1016
+ LSTM  PZE     LSTMA,,LSTMB                                             TD  1017
+*                                     CONSTANTS                         TD  1018
+ FLSK  IOCPN   0,,-1                                                    TD  1019
+       TCH     *-1                                                      TD  1020
+SETDL  SYN     *                                                        TD  1021
+ CW2   IOCPN   0,,L                                                     TD  1022
+SETDL1 SYN     *                                                        TD  1023
+ CW1   IORT    WS2,,L+1                                                 TD  1024
+ CODE  PZE                                                              TD  1025
+       OCT     100000000,60300000000,61700000000                        TD  1026
+ WORDS PZE     ..,1                                                     TD  1027
+ ORD   PZE                            ZERO IF BIN REC PRINTED IN OCTAL  TD  1028
+ BIT   OCT     20                                                       TD  1029
+ TMP                                                                    TD  1030
+ LINE  BSS     12                                                       TD  1031
+ NUM   PZE                                                              TD  1032
+ ONE   PZE     1                                                        TD  1033
+ TWO   PZE     2                                                        TD  1034
+EXITL  SYN     *                                                        TD  1035
+       AXT     LINMES,1                                                 TD  1036
+       TRA     GIMEND                                                   TD  1037
+FILEME BCI     8,1 END OF FILE A2, TAPE DUMP TERMINATED                 TD  1038
+EXITF  AXT     FILEME,1                                                 TD  1039
+       BSRA    2                                                        TD  1040
+       TRA     GIMEND                                                   TD  1041
+TAPEME BCI     8,0 TAPE SPECIFIED INCORRECT OR ILLEGAL                  TD  1042
+EXITT  AXT     TAPEME,1                                                 TD  1043
+       TRA     GIME                                                     TD  1044
+LINMES BCI     8,0PAGE LIMIT EXCEEDED, END OF TAPE DUMP.                TD  1045
+GIMEND SYN     *                                                        TD  1046
+       WTDA    3                                                        TD  1047
+       SXA     COM,1                                                    TD  1048
+       RCHA    COM                                                      TD  1049
+       TCOA    *                                                        TD  1050
+       TRCA    *+1                                                      TD  1051
+       CALL    EXIT                                                     TD  1052
+GIME   SYN     *                                                        TD  1053
+       WTDA    3                                                        TD  1054
+       SXA     COM,1                                                    TD  1055
+       RCHA    COM                                                      TD  1056
+       TCOA    *                                                        TD  1057
+       TRCA    *+1                                                      TD  1058
+       TRA     START                                                    TD  1059
+COM    IORT    *-*,0,8                                                  TD  1060
+       RMT     *                                                        TD  1061
+       END                                                              TD  1062
+*       STANDARD CALL PROGRAM FOR TDUMP UNDER FORTRAN MONITOR           TD  1063
+*      FORTRAN                                                          TD  1064
+       CALL    TDUMP                                                    TD  1065
+       END                                                              TD  1066
+*      FAP                                                              TD  1067
+       REM     MINIMIZE MONITOR                                         TD  1068
+       ENTRY   (FPT)                                                    TD  1069
+(FPT)  TRA*    0                                                        TD  1070
+       END                                                              TD  1071
+*      FAP                                                              TD  1072
+*      SPECIAL VERSION OF THE TAPE DUMP CALLER FOR USE TAPE             TD  1073
+       CALL    TDUMP                                                    TD  1074
+       END                                                              TD  1075
+*      ROW                                                              TD  1076
+*   NOTE THAT THIS IS A ONE CARD PROGRAM ... PLEASE SAVE IT             TD  1077
+*      FAP                                                              TD  1078
+*      SINGLE CARD PROGRAM TO GET TDUMP FROM USE TAPE                   TD  1079
+       LBL     GETTDUMP,X                                               TD  1080
+       FUL                                                              TD  1081
+BOTTOM BOOL    77753                                                    TD  1082
+       ORG     0                                                        TD  1083
+       IORT    BOTTOM,,-1                                               TD  1084
+       TCOA    *                                                        TD  1085
+       TRA     BOTTOM                                                   TD  1086
+       LOC     BOTTOM                                                   TD  1087
+       REWA    10                                                       TD  1088
+ BACK  RTBA    10                                                       TD  1089
+       RCHA    IDIO                                                     TD  1090
+       TCOA    *                                                        TD  1091
+       TEFA    HALT                                                     TD  1092
+       CLA     NAME                                                     TD  1093
+       SUB     WANT                                                     TD  1094
+       TZE     *+3                                                      TD  1095
+       RTBA    10                                                       TD  1096
+       TRA     BACK                                                     TD  1097
+       RTBA    10                                                       TD  1098
+       RCHA    CW                                                       TD  1099
+       TCOA    *                                                        TD  1100
+*     THA AC BEING ZERO INDICATES TO TDUMP THAT TDUMP IS BEING USED ONLITD  1101
+       ZAC                                                              TD  1102
+       TRA*    TRAWD                                                    TD  1103
+ HALT  HTR     *                                                        TD  1104
+ IDIO  IOCD    *+1,,3                                                   TD  1105
+ NAME  PZE                                                              TD  1106
+ CW    PZE                                                              TD  1107
+ TRAWD PZE                                                              TD  1108
+WANT   BCI     1,TDUMP                                                  TD  1109
+       END                                                              TD  1110
+                                                                        TD  1111
+*      FAP                                                              TD  1112
+*SPACE                                                                  TD  1113
+       COUNT   20                                                       TD  1114
+*SPACE         CALL SPACE(L)                                            TD  1115
+       ENTRY   SPACE                                                    TD  1116
+ SPACE CAL     99                                                       TD  1117
+    STD     PRO                                                         TD  1118
+       ANA     MASK                                                     TD  1119
+       ALS     18                                                       TD  1120
+D     ONE                                                          0100 TD  1121
+       SUB     PRO                                                      TD  1122
+       STO*    1,4                                                      TD  1123
+       CAL     PRO           STORE IN ADDRESS PROGRAM TERMINAL LOCATION TD  1124
+   ARS     18                                                           TD  1125
+       STA*    1,4                                                      TD  1126
+    TRA     2,4                                                         TD  1127
+ PRO   PZE     0                                                        TD  1128
+ ONE   PZE     0,0,1                                                    TD  1129
+ MASK  PZE     -1                                                       TD  1130
+ END                                                                  0 TD  1131
+*     DATA                                                              TD  1132
+     2     0     1     0     0   R                                      TD  1133
+Z    2     4     0     1     0   R                                      TD  1134
+  2202    15     0     0     0   R                                      TD  1135
+     2    -4     0     4     0                                          TD  1136
+  2203     1     0     0     0                                          TD  1137
+2202  10Z      0    -1     0   4                                        TD  1138
+  2202  1009     0    -1     0    DB                                    TD  1139
+ -  6     0    -0     0   42                                        029 TD  1140
+     2     0    15    -0     12                                         TD  1141

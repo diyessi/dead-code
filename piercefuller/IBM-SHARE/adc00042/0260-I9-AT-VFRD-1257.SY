@@ -1,0 +1,652 @@
+ VFRD  SXA     VFX1,1            SAVE IRS AND SI                        VFRD0001
+ VFSW  EQU     1                 SENSE SWITCH, UP-TAPE, DOWN-CARDS(A)   VFRD0002
+ VFCH  EQU     1                 TAPE CHANNEL (1=A,2=B)                 VFRD0003
+ VFUN  EQU     3                 TAPE UNIT (1-9)                        VFRD0004
+ VFMAX EQU     70                MAXIMUM OF 5 14-WD RECORDS IN BLOCK    VFRD0005
+ VFN   EQU     10                MAXIMUM NO. OF TRIES PER READ          VFRD0006
+ VFBF2 EQU     VFBF1+VFMAX                                              VFRD0007
+       SXA     VFX2,2                                                   VFRD0008
+       SXA     VFX4,4                                                   VFRD0009
+       STI     VFSIR                                                    VFRD0010
+       LFTM                                                             VFRD0011
+       DCT                                                              VFRD0012
+       NOP                                                              VFRD0013
+       CLA     1,4               GET PARAMETER                          VFRD0014
+       PDX     0,1                                                      VFRD0015
+       SXA     VFDAT,1                                                  VFRD0016
+       SXA     VFORS,1                                                  VFRD0017
+       STA     VFTAB             SET TABLE PICKUP                       VFRD0018
+       STT     VFTAB                                                    VFRD0019
+       STZ     VFC2              CANCEL READ CLUE                       VFRD0020
+       TMI     VFNXE             TO DATA ALREADY IN                     VFRD0021
+       STL     VFC2              SET READ CLUE                          VFRD0022
+       ZET     VFC1              IF NOT 1ST READ                        VFRD0023
+       TRA     VFNOR             TO BLOCK DONE TEST                     VFRD0024
+       STL     VFC1              CANCEL 1ST READ                        VFRD0025
+       TSX     VFBSW,2           INITIATE 1ST READ                      VFRD0026
+       TSX     VFCHK,4           WAIT FOR 1ST READ                      VFRD0027
+       TRA     VFER0             TO REDUN ERROR                         VFRD0028
+       TRA     VFEOF             TO EOF EXIT                            VFRD0029
+ VFRD2 TSX     VFBSW,2           INIT NEXT READ                         VFRD0030
+       STL     VFC12             SET READ INITIATED CLUE                VFRD0031
+       LAC     VFBSW,4           GET BUFFER SWITCH                      VFRD0032
+       SWT     VFSW              CARD-TAPE TEST                         VFRD0033
+       TRA     VFTP2             TO TAPE                                VFRD0034
+       TRA     VFCNV             TO CONVERT CARD                        VFRD0035
+ VFNOR AXT     **,4              GET RECORD COUNT                       VFRD0036
+       TIX     VFNXR,4,1         TO NEXT RECORD IN BLOCK                VFRD0037
+       ZET     VFC13             IF REDUN SET                           VFRD0038
+       TRA     VFER0             TO ERROR                               VFRD0039
+       ZET     VFC3              IF EOF SET                             VFRD0040
+       TRA     VFEOF             TO EOF EXIT                            VFRD0041
+       TRA     VFRD2             TO NEXT READ                           VFRD0042
+ VFNXR STZ     VFC2              CANCEL READ CLUE                       VFRD0043
+       SXA     VFNOR,4           STORE REDUCED RECORD COUNT             VFRD0044
+       TRA     VFDMV             TO DATA MOVE                           VFRD0045
+ VFTP2 CLA     VFCNL,4           SET BUFFER LOC IN MOVE                 VFRD0046
+       STA     VFBFM                                                    VFRD0047
+       LXA     VFCNL,4           SET RECORD COUNT                       VFRD0048
+       SXA     VFNOR,4                                                  VFRD0049
+       LXD     VFCNL,4           GET WDS PER RECORD                     VFRD0050
+       SXD     VFADR,4           SET BUF LOC ADDER                      VFRD0051
+ VFDMV AXT     0,1                                                      VFRD0052
+       LXD     VFADR,4                                                  VFRD0053
+ VFBFM CLA     **,1              MOVE RECORD FROM                       VFRD0054
+ VFDAT STO     **,1              BUFFER TO DATA                         VFRD0055
+       TXI     *+1,1,-1                                                 VFRD0056
+       TIX     VFBFM,4,1                                                VFRD0057
+       LXA     VFBFM,4           SET MOVE FOR NEXT                      VFRD0058
+ VFADR TXI     *+1,4,**          RECORD IN BLOCK                        VFRD0059
+       SXA     VFBFM,4                                                  VFRD0060
+       TRA     VFNXE             TO PROCESS                             VFRD0061
+ VFCNV STZ     VFN1              CLEAR MIS-PUNCH CLUE                   VFRD0062
+       AXT     2,2                                                      VFRD0063
+       TXL     *+2,4,1                                                  VFRD0064
+       AXT     2-VFMAX,2                                                VFRD0065
+       AXT     2,1                                                      VFRD0066
+ VFCVT CAL     VFBF1+24,2        FORM ROW 13                            VFRD0067
+       ORA     VFBF1+22,2                                               VFRD0068
+       ANA     VFBF1+20,2                                               VFRD0069
+       SLW     VFBF1+26,2                                               VFRD0070
+       ERA     VFBF1+20,2                                               VFRD0071
+       SLW     VFBF1+20,2                                               VFRD0072
+       LDI     VFBF1+24,2        TEST ILLEGAL PUNCHES                   VFRD0073
+       OFT     VFBF1+22,2                                               VFRD0074
+       STL     VFN1              11-12 ERR                              VFRD0075
+       LDI     VFBF1+2,2                                                VFRD0076
+       OFT     VFBF1+4,2                                                VFRD0077
+       STL     VFN1              8-9 ERR                                VFRD0078
+       OSI     VFBF1+4,2                                                VFRD0079
+       OFT     VFBF1+6,2                                                VFRD0080
+       STL     VFN1              7 ERR                                  VFRD0081
+       OSI     VFBF1+6,2                                                VFRD0082
+       OFT     VFBF1+8,2                                                VFRD0083
+       STL     VFN1              6 ERR                                  VFRD0084
+       RIS     VFBF1+4,2                                                VFRD0085
+       OSI     VFBF1+8,2                                                VFRD0086
+       OFT     VFBF1+10,2                                               VFRD0087
+       STL     VFN1              5 ERR                                  VFRD0088
+       OSI     VFBF1+10,2                                               VFRD0089
+       OFT     VFBF1+12,2                                               VFRD0090
+       STL     VFN1              4 ERR                                  VFRD0091
+       OSI     VFBF1+12,2                                               VFRD0092
+       OFT     VFBF1+14,2                                               VFRD0093
+       STL     VFN1              3 ERR                                  VFRD0094
+       OSI     VFBF1+14,2                                               VFRD0095
+       OFT     VFBF1+16,2                                               VFRD0096
+       STL     VFN1              2 ERR                                  VFRD0097
+       OSI     VFBF1+16,2                                               VFRD0098
+       OSI     VFBF1+4,2                                                VFRD0099
+       OFT     VFBF1+18,2                                               VFRD0100
+       STL     VFN1              1 ERR                                  VFRD0101
+       OSI     VFBF1+18,2                                               VFRD0102
+       OFT     VFBF1+26,2                                               VFRD0103
+       STL     VFN1              DOUBLE ZONE ERR                        VFRD0104
+       OSI     VFBF1+22,2                                               VFRD0105
+       OSI     VFBF1+24,2                                               VFRD0106
+       IIS     VFBTS             EXCHANGE ZEROS AND BLANKS              VFRD0107
+       IIS     VFBF1+20,2                                               VFRD0108
+       STI     VFBF1+20,2                                               VFRD0109
+       LDI     VFBF1+4,2                                                VFRD0110
+       RIS     VFBF1+20,2                                               VFRD0111
+       OFT     VFBF1+16,2                                               VFRD0112
+       STL     VFN1              2-8 ERR                                VFRD0113
+       LDI     VFBF1+4,2                                                VFRD0114
+       RIS     VFBF1+24,2                                               VFRD0115
+       OFT     VFBF1+10,2                                               VFRD0116
+       STL     VFN1              5-8 ERR                                VFRD0117
+       LXA     VFORS,4                                                  VFRD0118
+       TXI     *+1,4,6                                                  VFRD0119
+       SXA     VFORS,4                                                  VFRD0120
+       SXA     *+2,4                                                    VFRD0121
+       AXT     6,4                                                      VFRD0122
+       STZ     **,4              CLEAR BCD STORAGE                      VFRD0123
+       TIX     *-1,4,1                                                  VFRD0124
+       TXI     *+1,2,24                                                 VFRD0125
+       TXI     *+1,1,24                                                 VFRD0126
+ VFCV1 LDQ     VFTB4+26,1        SET UP TABLE 3                         VFRD0127
+       STQ     VFTB3+1                                                  VFRD0128
+       AXT     6,4                                                      VFRD0129
+       LDQ     VFBF1+26,2                                               VFRD0130
+       CLM                                                              VFRD0131
+       CAQ     VFTB2,0,1         BUILD BCD                              VFRD0132
+       CVR     VFTB3,0,6                                                VFRD0133
+ VFORS ORS     **,4                                                     VFRD0134
+       TIX     *-4,4,1                                                  VFRD0135
+       TNX     *+2,1,2                                                  VFRD0136
+       TXI     VFCV1,2,-2        TO NEXT ROW                            VFRD0137
+       TXI     *+1,2,-1                                                 VFRD0138
+       TIX     VFCVT,1,1         GO BACK FOR RIGHT HALF OF CARD         VFRD0139
+       ZET     VFN1                                                     VFRD0140
+       TRA     VFER1             ILLEGAL PUNCH                          VFRD0141
+*  GET TABLE ENTRY AND PROCESS IT                                       VFRD0142
+ VFNXE AXT     **,1              GET REPEAT COUNT                       VFRD0143
+       TIX     *+2,1,1           TO REPEAT                              VFRD0144
+       TRA     VFGET             TO NEXT TABLE PICKUP                   VFRD0145
+       SXA     VFNXE,1           STORE REDUCED COUNT                    VFRD0146
+       TRA     VFJST             TO INCREMENT                           VFRD0147
+ VFGET LXA     VFX1,1            RESTORE IRS                            VFRD0148
+       LXA     VFX2,2                                                   VFRD0149
+ VFTAB LDQ     **,**             GET NEXT TABLE ENTRY                   VFRD0150
+       LXA     VFTAB,1           STEP PICKUP LOC                        VFRD0151
+       TXI     *+1,1,1                                                  VFRD0152
+       SXA     VFTAB,1                                                  VFRD0153
+       PXD     0,0                                                      VFRD0154
+       LGL     3                 GET PREFIX                             VFRD0155
+       PAX     0,4                                                      VFRD0156
+       PXD     0,0                                                      VFRD0157
+       TXH     VFREP,4,6         TO SET 1ST REPEAT                      VFRD0158
+       TXL     VFEOR,4,0         TO RECORD DONE                         VFRD0159
+       TXH     VFER3,4,4         ILLEGAL TYPE CODE                      VFRD0160
+       SXA     VFPFX,4           SAVE PREFIX                            VFRD0161
+       STZ     VFINC             CLEAR INCREMENTS                       VFRD0162
+       LGL     7                 SAVE FIELD LENGTH                      VFRD0163
+       STA     VFGTN                                                    VFRD0164
+       PXD     0,0                                                      VFRD0165
+       LGL     26                                                       VFRD0166
+       STT     VFPLG             SET STORE TAG                          VFRD0167
+       SLW     VFSAV             SAVE COLUMN AND STORE LOC              VFRD0168
+ VFJST CAL     VFSAV             INCREMENT                              VFRD0169
+       ACL     VFINC                                                    VFRD0170
+       STD     VFSAV                                                    VFRD0171
+       STA     VFSAV                                                    VFRD0172
+       STA     VFPLG             SET 1ST STORE LOC                      VFRD0173
+       SUB     VF1DC             ADJUST COLUMN                          VFRD0174
+       LGR     54                                                       VFRD0175
+       VLM     VF24,,15                                                 VFRD0176
+       VDP     VF36,,13                                                 VFRD0177
+       STA     VFISH             SET INITIAL SHIFT                      VFRD0178
+       PAC     0,2                                                      VFRD0179
+       TXI     *+1,2,36          SET 1ST WORD LIMIT                     VFRD0180
+       XCL                                                              VFRD0181
+       ACL     VFDAT                                                    VFRD0182
+       PAC     0,4               SET MINUS PICKUP LOC                   VFRD0183
+       SXA     VFBC1,4           SAVE                                   VFRD0184
+       LDQ     0,4                                                      VFRD0185
+ VFISH RQL     **                SET 1ST WORD                           VFRD0186
+ VFGTN AXT     **,1              GET N                                  VFRD0187
+       STZ     VFC10             CLEAR FIXED DEC CLUE                   VFRD0188
+       STZ     VFC4              CLEAR SIGN                             VFRD0189
+       STZ     VFC8              CLEAR TRAILING BLANK                   VFRD0190
+       STZ     VFC9              CLEAR PUNCH ENCOUNTERED                VFRD0191
+       STZ     VFN1              CLEAR CONVERT STORAGE                  VFRD0192
+       SXA     VFOCN,0           CLEAR OCTAL COUNT                      VFRD0193
+       TOV     *+1               CLEAR OVERFLOW                         VFRD0194
+       AXT     38,4              SET POINT COUNT                        VFRD0195
+       SXA     VFPCT,4                                                  VFRD0196
+ VFPFX AXT     **,4              RESTORE PREFIX                         VFRD0197
+       TRA     *+5,4             TO SCAN FIELD                          VFRD0198
+       TRA     VFOCT             1     OCTAL                            VFRD0199
+       TRA     VFBCD             2     BCD                              VFRD0200
+       TRA     VFSCN             3     FLOATING DEC                     VFRD0201
+       STL     VFC10             4     FIXED DEC CLUE                   VFRD0202
+       TRA     VFSCN                                                    VFRD0203
+ VFREP LGL     7                                                        VFRD0204
+       STA     VFNXE             SET REPEAT COUNT                       VFRD0205
+       PXD     0,0                                                      VFRD0206
+       LGL     26                                                       VFRD0207
+       SLW     VFINC             SET INCREMENTS                         VFRD0208
+       TRA     VFJST             TO 1ST REPEAT                          VFRD0209
+*  SCAN- CONVERT MINUS OVERPUNCHED DIGIT                                VFRD0210
+ VFMDG STL     VFC4              SET MINUS                              VFRD0211
+*  SCAN- CONVERT DECIMAL DIGIT                                          VFRD0212
+ VFDDG CLA     VFPCT                                                    VFRD0213
+       ZET     VFC7              IF POINT ON                            VFRD0214
+       SUB     VFP10             STEP POINT COUNT                       VFRD0215
+       STO     VFPCT                                                    VFRD0216
+       SXA     VFDD,4            STORE DIGIT                            VFRD0217
+       CLA     VFN1              CONVERT                                VFRD0218
+       ALS     3                                                        VFRD0219
+       ADD     VFN1                                                     VFRD0220
+       ADD     VFN1                                                     VFRD0221
+       ADD     VFDD                                                     VFRD0222
+       STO     VFN1                                                     VFRD0223
+*  DECIMAL FIELD SCAN                                                   VFRD0224
+ VFRT1 STL     VFC9              SET PUNCH ENCOUNTERED                  VFRD0225
+       ZET     VFC8              IF TRAILING BLANK SET                  VFRD0226
+       TRA     VFER2             TO EMBEDDED BLANK ERROR                VFRD0227
+ VFRT2 TNX     VFFDN,1,1         TO FIELD DONE                          VFRD0228
+       TIX     VFSCN,2,6         TO SCAN                                VFRD0229
+ VFBC1 AXT     **,2              SET PICKUP INDEX                       VFRD0230
+       LDQ     1,2               GET NEXT WORD                          VFRD0231
+       TXI     *+1,2,-1          SET FOR NEXT PICKUP                    VFRD0232
+       SXA     VFBC1,2                                                  VFRD0233
+       AXT     36,2              RESET CHARACTER COUNT                  VFRD0234
+ VFSCN PXD     0,0               GET NEXT CHARACTER                     VFRD0235
+       LGL     6                                                        VFRD0236
+       PAX     0,4                                                      VFRD0237
+       TXL     VFDDG,4,9         TO DIGIT                               VFRD0238
+       TXH     VFH42,4,42        TO BLANK TEST                          VFRD0239
+       TXL     *+2,4,41          TO REMOVE OVERPUNCH                    VFRD0240
+       TXI     VFMDG,4,-42       TO MINUS ZERO                          VFRD0241
+       TIX     VFMDG,4,32        TO MINUS DIGIT                         VFRD0242
+       TXH     VFMNS,4,31        TO MINUS SIGN                          VFRD0243
+       TXL     VFER2,4,15        ERR                                    VFRD0244
+       TXL     VFPLS,4,16        TO PLUS SIGN                           VFRD0245
+       TXL     VFER2,4,17        ERR                                    VFRD0246
+       TXL     VFSCL,4,18        TO LETTER B                            VFRD0247
+       TXL     VFER2,4,20        ERR                                    VFRD0248
+       TXL     VFEXP,4,21        TO LETTER E                            VFRD0249
+       TXL     VFER2,4,26        ERR                                    VFRD0250
+       TXH     VFER2,4,27        ERR                                    VFRD0251
+*  SCAN- PROCESS DECIMAL POINT                                          VFRD0252
+       STL     VFC7              SET POINT CLUE                         VFRD0253
+       TRA     VFRT1             TO RESUME SCAN                         VFRD0254
+ VFH42 TXL     VFER2,4,47        ERR                                    VFRD0255
+       TXH     VFER2,4,48        ERR                                    VFRD0256
+*  SCAN- PROCESS BLANK                                                  VFRD0257
+       ZET     VFC9              IF PUNCH ENCOUNTERED                   VFRD0258
+       STL     VFC8              SET TRAILING BLANK                     VFRD0259
+       TRA     VFRT2             TO RESUME SCAN                         VFRD0260
+* SCAN- PROCESS PLUS SIGN                                               VFRD0261
+ VFPLS NZT     VFC5              IF E SET                               VFRD0262
+       ZET     VFC6              OR B SET                               VFRD0263
+       TRA     VFRT1+1           IGNORE PLUS                            VFRD0264
+       NZT     VFC9              IF 1ST PUNCH                           VFRD0265
+       TRA     VFRT1             SET PUNCH ENCOUNTERED                  VFRD0266
+* SCAN- PROCESS LETTER E (REAL OR IMPLIED)                              VFRD0267
+ VFEXP STL     VFC5              SET E CLUE                             VFRD0268
+ VFEX2 CLA     VFN1              RESET N                                VFRD0269
+       ZET     VFC4              IF SIGN ON                             VFRD0270
+       SSM                       MAKE MINUS                             VFRD0271
+       STO     VFN2                                                     VFRD0272
+       STZ     VFN1                                                     VFRD0273
+       STZ     VFC4              CLEAR SIGN                             VFRD0274
+       STZ     VFC7              CLEAR POINT                            VFRD0275
+       TRA     VFRT1             RESUME SCAN                            VFRD0276
+*  SCAN- PROCESS MINUS SIGN                                             VFRD0277
+ VFMNS NZT     VFC5              IF E SET                               VFRD0278
+       ZET     VFC6              OR B SET                               VFRD0279
+       TRA     VFMN1             TO SET SIGN AND RETURN                 VFRD0280
+       NZT     VFC9              IF 1ST PUNCH                           VFRD0281
+       TRA     VFMN1             SET SIGN AND RETURN                    VFRD0282
+       STL     VFC5              SET E CLUE                             VFRD0283
+       CLA     VFN1              RESET N                                VFRD0284
+       ZET     VFC4              IF SIGN ON                             VFRD0285
+       SSM                       MAKE MINUS                             VFRD0286
+       STO     VFN2                                                     VFRD0287
+       STZ     VFN1                                                     VFRD0288
+       STZ     VFC7              CLEAR POINT                            VFRD0289
+ VFMN1 STL     VFC4              SET SIGN                               VFRD0290
+       TRA     VFRT1             RETURN                                 VFRD0291
+* SCAN- PROCESS LETTER B                                                VFRD0292
+ VFSCL STL     VFC6              SET B CLUE                             VFRD0293
+       TRA     VFEX2             TO RESET N                             VFRD0294
+ VFFDN TOV     VFER4             TO NUMBER TOO LARGE                    VFRD0295
+       NZT     VFC9              IF BLANK FIELD                         VFRD0296
+       TRA     VFNXE             TO NEXT ENTRY                          VFRD0297
+       ZET     VFC10             IF FIXED POINT FIELD                   VFRD0298
+       TRA     VFFXP             JMP                                    VFRD0299
+*  PROCESS FLOATING POINT FIELD                                         VFRD0300
+       ZET     VFC6              IF B SET                               VFRD0301
+       TRA     VFER2             TO ERROR                               VFRD0302
+       CLA     VFN1              GET N OR EXPONENT                      VFRD0303
+       ZET     VFC4              IF SIGN ON                             VFRD0304
+       SSM                       MAKE NEGATIVE                          VFRD0305
+       ZET     VFC5              IF E SET                               VFRD0306
+       TRA     VFFL1             TO ADJUST EXPONENT                     VFRD0307
+       STZ     VFC7              CLEAR POINT                            VFRD0308
+       LXA     VFPCT,4           GET POINT COUNT                        VFRD0309
+       TRA     VFFL2             TO FLOAT                               VFRD0310
+ VFFL1 STZ     VFC5              CLEAR E                                VFRD0311
+       ADD     VFPCT             FORM TRUE EXPONENT                     VFRD0312
+       TPL     *+4               TO TOO BIG TEST                        VFRD0313
+       TZE     *+3               MINUS ZERO OK                          VFRD0314
+       PXD     0,0               TOO SMALL                              VFRD0315
+       TRA     VFDST             TO STORE ZERO                          VFRD0316
+       PAX     0,4                                                      VFRD0317
+       TXH     VFER6,4,76        TO EXP TOO BIG                         VFRD0318
+       CLA     VFN2              GET N                                  VFRD0319
+ VFFL2 LRS     8                 SAVE LO ORDER BITS                     VFRD0320
+       ORA     VFCH1             SET HI BITS FLOATER                    VFRD0321
+       STO     VFN2                                                     VFRD0322
+       CLA     VFCH2             SET LO BITS FLOATER                    VFRD0323
+       LLS     8                                                        VFRD0324
+       FAD     VFN2              FLOAT                                  VFRD0325
+       FRN                       ROUND                                  VFRD0326
+       XCA                                                              VFRD0327
+       FMP     VFP10-1,4                                                VFRD0328
+       TOV     VFER6             TO EXP TOO BIG                         VFRD0329
+ VFDST TSX     VFSTR,4           TO STORE                               VFRD0330
+       TRA     VFNXE             TO NEXT ENTRY                          VFRD0331
+*  PROCESS FIXED POINT FIELD                                            VFRD0332
+ VFFXP STZ     VFC10             CLEAR FIXED CLUE                       VFRD0333
+       ZET     VFC5              IF E SET                               VFRD0334
+       TRA     VFER2             TO ERROR                               VFRD0335
+       NZT     VFC6              IF B NOT SET                           VFRD0336
+       TRA     VFINT             TO INTEGER                             VFRD0337
+       STZ     VFC6              CLEAR B                                VFRD0338
+       LDQ     VFC6              CLEAR MQ                               VFRD0339
+       CLA     VFN2              N TO ACC                               VFRD0340
+       LAC     VFN1,4                                                   VFRD0341
+       TXL     VFFX4,4,0         TO B = 0                               VFRD0342
+       ZET     VFC4              IF SCALE FACTOR NEGATIVE               VFRD0343
+       TRA     VFFX2             TO LEFT SHIFT                          VFRD0344
+       TXH     VFFX3,4,-36       TO SF LESS THAN 36                     VFRD0345
+       TXI     *+1,4,35          SUBTRACT OUT 35                        VFRD0346
+       LRS     0,4               SHIFT                                  VFRD0347
+       RND                                                              VFRD0348
+       XCA                       ADJUSTED N TO MQ                       VFRD0349
+       CLM                       SAVE SIGN                              VFRD0350
+       TRA     VFFX4             TO POINT COUNT                         VFRD0351
+ VFFX2 ALS     0,4               SHIFT                                  VFRD0352
+       TOV     VFER5             TO BITS LOST                           VFRD0353
+       TRA     VFFX4             TO POINT COUNT                         VFRD0354
+ VFFX3 LRS     0,4               SHIFT                                  VFRD0355
+ VFFX4 LXA     VFPCT,4           GET POINT COUNT                        VFRD0356
+       TNX     VFER7,4,27        TO TOO MANY DECIMAL PLACES             VFRD0357
+       DVP     VFP10+11,4        DIVIDE BY 10 POWER                     VFRD0358
+       DCT                                                              VFRD0359
+       TRA     VFER5             TO BITS LOST                           VFRD0360
+       ALS     1                 DOUBLE REMAINDER                       VFRD0361
+       LAS     VFP10+11,4                                               VFRD0362
+       TXL     *+1,0,0                                                  VFRD0363
+       CAL     *-1               GET 1-BIT                              VFRD0364
+       XCA                       ROUND                                  VFRD0365
+       RND                                                              VFRD0366
+       TRA     VFDST             TO STORE                               VFRD0367
+* PROCESS INTEGER FOR STORE                                             VFRD0368
+ VFINT ZET     VFC7              IF POINT                               VFRD0369
+       TRA     VFER2             TO ERROR                               VFRD0370
+       CLA     VFN1              GET N                                  VFRD0371
+       ZET     VFC4              IF SIGN ON                             VFRD0372
+       SSM                       MAKE NEGATIVE                          VFRD0373
+       TRA     VFDST             TO STORE                               VFRD0374
+*  SCAN- CONVERT OCTAL DIGIT                                            VFRD0375
+ VFODG SXA     VFDD,4            STORE DIGIT                            VFRD0376
+       CAL     VFN1              CONVERT                                VFRD0377
+       ALS     3                                                        VFRD0378
+       ADD     VFDD                                                     VFRD0379
+       SLW     VFN1                                                     VFRD0380
+ VFOCN AXT     **,4              STEP DIGIT COUNT                       VFRD0381
+       TXI     *+1,4,1                                                  VFRD0382
+       SXA     VFOCN,4                                                  VFRD0383
+       TXH     VFER4,4,12        TO MORE THAN 12 DIGITS                 VFRD0384
+*  OCTAL FIELD SCAN                                                     VFRD0385
+ VFRT3 STL     VFC9              SET PUNCH ENCOUNTERED                  VFRD0386
+       ZET     VFC8              IF TRAILING BLANK SET                  VFRD0387
+       TRA     VFER2             TO EMBEDDED BLANK ERROR                VFRD0388
+ VFRT4 TNX     VFOST,1,1         TO FIELD DONE                          VFRD0389
+       TIX     VFOCT,2,6         TO SCAN                                VFRD0390
+       LXA     VFBC1,2           SET PICKUP INDEX                       VFRD0391
+       LDQ     1,2               GET NEXT WORD                          VFRD0392
+       TXI     *+1,2,-1          SET FOR NEXT PICKUP                    VFRD0393
+       SXA     VFBC1,2                                                  VFRD0394
+       AXT     36,2              RESET CHARACTER COUNT                  VFRD0395
+ VFOCT PXD     0,0               GET NEXT CHARACTER                     VFRD0396
+       LGL     6                                                        VFRD0397
+       PAX     0,4                                                      VFRD0398
+       TXL     VFODG,4,7         TO DIGIT                               VFRD0399
+       TXL     VFER2,4,15        TO ILLEGAL CHARACTER                   VFRD0400
+       TXL     VFRT3,4,16        IGNORE PLUS SIGN                       VFRD0401
+       TXL     VFER2,4,31        ILLEGAL                                VFRD0402
+       TXH     *+3,4,32                                                 VFRD0403
+       STL     VFC4              SET MINUS CLUE                         VFRD0404
+       TRA     VFRT3             RESUME SCAN                            VFRD0405
+       TXL     VFER2,4,47        ILLEGAL                                VFRD0406
+       TXH     VFER2,4,48        ILLEGAL                                VFRD0407
+       ZET     VFC9              IF PUNCH ENCOUNTERED                   VFRD0408
+       STL     VFC8              SET TRAILING BLANK                     VFRD0409
+       TRA     VFRT4             RESUME SCAN                            VFRD0410
+*  STORE OCTAL FIELD                                                    VFRD0411
+ VFOST NZT     VFC9              IF BLANK FIELD                         VFRD0412
+       TRA     VFNXE             TO NEXT ENTRY                          VFRD0413
+       CLA     VFN1              GET N                                  VFRD0414
+       ZET     VFC4              IF SIGN ON                             VFRD0415
+       SSM                       MAKE MINUS                             VFRD0416
+       TRA     VFDST             TO STORE                               VFRD0417
+*  BCD FIELD SCAN AND STORE                                             VFRD0418
+ VFBCD AXT     6,4               SET STORE CONTROL                      VFRD0419
+       TRA     VFBSH             TO 1ST SHIFT                           VFRD0420
+ VFRT5 TNX     VFBST,1,1         TO FIELD DONE                          VFRD0421
+       TIX     VFBSH,2,6         TO SHIFT                               VFRD0422
+       LXA     VFBC1,2           SET PICKUP INDEX                       VFRD0423
+       LDQ     1,2               GET NEXT WORD                          VFRD0424
+       TXI     *+1,2,-1          SET FOR NEXT PICKUP                    VFRD0425
+       SXA     VFBC1,2                                                  VFRD0426
+       AXT     36,2              RESET CHARACTER COUNT                  VFRD0427
+ VFBSH LGL     6                 GET CHARACTER FROM MQ                  VFRD0428
+       TIX     VFRT5,4,1         TO TEST FIELD                          VFRD0429
+       TSX     VFPBT,4           TO STORE                               VFRD0430
+       LXA     VFPLG,4           STEP STORE LOCATION                    VFRD0431
+       TXI     *+1,4,1                                                  VFRD0432
+       SXA     VFPLG,4                                                  VFRD0433
+       AXT     6,4               RESET STORE CONTROL                    VFRD0434
+       TRA     VFRT5             TO TEST FIELD                          VFRD0435
+ VFBST TXH     VFNXE,4,5         TO NEXT ENTRY                          VFRD0436
+       LDQ     VF60S             FILL LAST WORD                         VFRD0437
+       LGL     6                 WITH BLANKS                            VFRD0438
+       TIX     *-1,4,1                                                  VFRD0439
+       AXC     VFNXE-1,4         SET FOR NEXT ENTRY                     VFRD0440
+ VFPBT SSM                       MOVE P TO S                            VFRD0441
+       PBT                                                              VFRD0442
+       SSP                                                              VFRD0443
+ VFSTR SXA     VFSX1,1           SAVE IRS                               VFRD0444
+       SXA     VFSX2,2                                                  VFRD0445
+       LXA     VFX1,1            SET FOR TAGGED STORE                   VFRD0446
+       LXA     VFX2,2                                                   VFRD0447
+ VFPLG STO     **,**             STORE 1 WORD                           VFRD0448
+ VFSX1 AXT     **,1              RESTORE IRS                            VFRD0449
+ VFSX2 AXT     **,2                                                     VFRD0450
+       TRA     1,4               EXIT                                   VFRD0451
+ VFTB2 BCI   8,000000000001000010000011000100000101000110000111         VFRD0452
+       BCI   8,001000001001001010001011001100001101001110001111         VFRD0453
+       BCI   8,010000010001010010010011010100010101010110010111         VFRD0454
+       BCI   8,011000011001011010011011011100011101011110011111         VFRD0455
+       BCI   8,100000100001100010100011100100100101100110100111         VFRD0456
+       BCI   8,101000101001101010101011101100101101101110101111         VFRD0457
+       BCI   8,110000110001110010110011110100110101110110110111         VFRD0458
+       BCI   8,111000111001111010111011111100111101111110111111         VFRD0459
+ VFTB3 PZE     VFTB3                                                    VFRD0460
+       PZE     **                GETS SET FROM VFTB4                    VFRD0461
+ VFTB4 PON     VFTB3,0,4096                                             VFRD0462
+       PON     VFTB3,0,4096                                             VFRD0463
+       PON     VFTB3                                                    VFRD0464
+       PON     VFTB3                                                    VFRD0465
+       PZE     VFTB3,0,7*4096                                           VFRD0466
+       PZE     VFTB3,0,7*4096                                           VFRD0467
+       PZE     VFTB3,0,6*4096                                           VFRD0468
+       PZE     VFTB3,0,6*4096                                           VFRD0469
+       PZE     VFTB3,0,5*4096                                           VFRD0470
+       PZE     VFTB3,0,5*4096                                           VFRD0471
+       PZE     VFTB3,0,4*4096                                           VFRD0472
+       PZE     VFTB3,0,4*4096                                           VFRD0473
+       PZE     VFTB3,0,3*4096                                           VFRD0474
+       PZE     VFTB3,0,3*4096                                           VFRD0475
+       PZE     VFTB3,0,2*4096                                           VFRD0476
+       PZE     VFTB3,0,2*4096                                           VFRD0477
+       PZE     VFTB3,0,4096                                             VFRD0478
+       PZE     VFTB3,0,4096                                             VFRD0479
+       SIX     VFTB3                                                    VFRD0480
+       SIX     VFTB3                                                    VFRD0481
+       FOR     VFTB3                                                    VFRD0482
+       FOR     VFTB3                                                    VFRD0483
+       PTW     VFTB3                                                    VFRD0484
+       PTW     VFTB3                                                    VFRD0485
+       PON     VFTB3,0,2*4096                                           VFRD0486
+       PON     VFTB3,0,2*4096                                           VFRD0487
+*  TABLE OF FLOATING POWERS OF 10 FOR SCALING FLOATING-POINT NUMBERS    VFRD0488
+       OCT     377454732313,373741367021,370601137164,365464114135      VFRD0489
+       OCT     361755023373,356612334311,353473426555,347770675742      VFRD0490
+       OCT     344623713116,341503074077,336402374714,332635456171      VFRD0491
+       OCT     327512676456,324410545213,320647410336,315522640262      VFRD0492
+       OCT     312417031702,306661534466,303532743536,300425434430      VFRD0493
+       OCT     274674055532,271543212741,266434157116,262706576512      VFRD0494
+       OCT     257553630410,254443023471,250721522450,245564416672      VFRD0495
+       OCT     242452013710,236734654500,233575360400,230461132000      VFRD0496
+       OCT     224750220000,221606500000,216470400000,212764000000      VFRD0497
+       OCT     207620000000,204500000000,201400000000,175631463146      VFRD0498
+       OCT     172507534122,167406111565,163643334273,160517426542      VFRD0499
+       OCT     155414336750,151655376247,146527461671,143422701372      VFRD0500
+       OCT     137667633766,134537657770,131431363140,125702270232      VFRD0501
+       OCT     122550223342,117440165750,113715126246,110560736522      VFRD0502
+       OCT     105447113564,101730171124,076571624103,073456166403      VFRD0503
+       OCT     067743444004,064602666320,061465370246,055757132075      VFRD0504
+       OCT     052614110061,047474723216,043773036660,040625513700      VFRD0505
+       OCT     035504411400,032403472631,026637304365,023514235136      VFRD0506
+       OCT     020411660745,014651264556,011524220445,006420163521      VFRD0507
+       OCT     002663437347      VFP10 MUST FOLLOW THIS CARD            VFRD0508
+*  TABLE OF POWERS OF 10 FOR SCALING FIXED-POINT NUMBERS                VFRD0509
+ VFP10 DEC     1,10,100,1000,10000,100000,1000000                       VFRD0510
+       DEC     10000000,100000000,1000000000,10000000000                VFRD0511
+*  INPUT - INITIATE READ FROM CARD OR TAPE                              VFRD0512
+ VFBSW AXC     1,1               BUFFER SWITCH = 1 OR -1                VFRD0513
+       SXA     VFBSW,1           FLIP SWITCH                            VFRD0514
+       SWT     VFSW              CARD-TAPE TEST                         VFRD0515
+       TRA     VFTAP             TO TAPE                                VFRD0516
+       RCDA                      READ CARD                              VFRD0517
+       RCHA    VFCNL,1                                                  VFRD0518
+       TEFA    *+1               TURN OFF EOF                           VFRD0519
+       TRA     1,2               RETURN                                 VFRD0520
+ VFTAP RDS     VFCH*512+VFUN+128             READ TAPE                  VFRD0521
+       VFD     1/VFCH+1,O11/540,9/1,15/VFCNL   RCHX                     VFRD0522
+       VFD     1/VFCH+1,O11/30,24/*+1        TEFX                       VFRD0523
+       VFD     1/VFCH+1,O11/22,24/*+1        TRCX                       VFRD0524
+       TRA     1,2               RETURN                                 VFRD0525
+*  INPUT - DELAY AND CHECK INPUT FOR REDUN AND EOF                      VFRD0526
+*  CALLING SEQUENCE                                                     VFRD0527
+*      TSX     VFCHK,4                                                  VFRD0528
+*      REDUNDANCY RETURN AFTER N TRIES WITH TAPE BACK-SPACED            VFRD0529
+*      EOF RETURN                                                       VFRD0530
+*      NORMAL RETURN                                                    VFRD0531
+ VFCHK STO     VFN1              SAVE ACC                               VFRD0532
+       SWT     VFSW              CARD-TAPE TEST                         VFRD0533
+       TRA     VFTPK             TO TAPE                                VFRD0534
+       TCOA    *                 DELAY TIL CARD IN                      VFRD0535
+       TEFA    VFXT3             TO EOF RETURN                          VFRD0536
+ VF1RC AXT     1,2                                                      VFRD0537
+       SXA     VFCNL,2           SET NO. RECS IN BLOCK                  VFRD0538
+       SXD     VFCNL,1           SET NO. WDS IN REC                     VFRD0539
+ VFXT2 CLA     VFN1              RESTORE ACC                            VFRD0540
+       TRA     3,4               RETURN                                 VFRD0541
+ VFTPK AXT     VFN,1             SET TRY COUNT FOR TAPE                 VFRD0542
+       SXA     VFTCK,1                                                  VFRD0543
+ VFTDY PZE     *,,VFCH*64+3008   DELAY TILL TAPE IN                     VFRD0544
+       VFD     1/VFCH+1,O11/30,24/VFXT3   TEFX                          VFRD0545
+       VFD     1/VFCH+1,O11/22,24/VFTCK   TRCX                          VFRD0546
+       VFD     1/VFCH+1,O11/640,24/VFCNL   SCHX                         VFRD0547
+       LXA     VFCNL,1           GET LAST WORD + 1                      VFRD0548
+       LXA     VFBSW,2           GET BUFFER SWITCH                      VFRD0549
+       CLA     VFCNL,2                                                  VFRD0550
+       PAC     0,2                                                      VFRD0551
+       SXD     *+1,2                                                    VFRD0552
+       TXI     *+1,1,**          FORM NO. WDS READ                      VFRD0553
+       PXA     0,1                                                      VFRD0554
+       LRS     35                                                       VFRD0555
+       DVP     VF14              CHECK FOR BLOCK                        VFRD0556
+       TNZ     VF1RC             TO NOT 14N                             VFRD0557
+       LXA     VF14,1            SET NO. WDS = 14                       VFRD0558
+       STQ     VFCNL                                                    VFRD0559
+       TRA     VFXT2-1                                                  VFRD0560
+ VFTCK AXT     **,1              GET TRY COUNT                          VFRD0561
+       BSR     VFCH*512+VFUN     BACKSPACE                              VFRD0562
+       TIX     *+2,1,1                                                  VFRD0563
+       TXI     VFXT2,4,2         TO REDUN RETURN                        VFRD0564
+       SXA     VFTCK,1           STORE REDUCED COUNT                    VFRD0565
+       LAC     VFBSW,1           RE-FLIP BUFFER                         VFRD0566
+       SXA     VFBSW,1                                                  VFRD0567
+       TSX     VFBSW,2           RE-READ                                VFRD0568
+       TRA     VFTDY             TO DELAY                               VFRD0569
+ VFXT3 VFD     1/VFCH+1,O11/22,24/*+1   REDUN OFF                       VFRD0570
+       TXI     VFXT2,4,1         TO EOF RETURN                          VFRD0571
+ VFEOR ZET     VFC2              IF NO READ                             VFRD0572
+       NZT     VFC12             OR READ NOT INITIATED                  VFRD0573
+       TRA     VFX4              TO NORMAL EXIT                         VFRD0574
+       TSX     VFCHK,4           TO CHECK READ                          VFRD0575
+       TRA     VFTER             REDUN                                  VFRD0576
+       STL     VFC3              SET EOF CLUE                           VFRD0577
+ VFCEL STZ     VFC12             CANCEL READ INITIATED                  VFRD0578
+       TRA     VFX4              TO NORMAL EXIT                         VFRD0579
+ VFTER STL     VFC13             SET REDUN CLUE                         VFRD0580
+       TRA     VFCEL             OUT                                    VFRD0581
+ VFER0 AXT     1,1               TAPE CHECK                             VFRD0582
+       STZ     VFC13             CLEAR REDUN CLUE                       VFRD0583
+       STZ     VFC1              SET 1ST READ                           VFRD0584
+       TRA     VFERR                                                    VFRD0585
+ VFER1 AXT     2,1               ILLEGAL PUNCH                          VFRD0586
+       TRA     VFERR                                                    VFRD0587
+ VFER2 AXT     3,1               ILLEGAL CHARACTER IN FIELD             VFRD0588
+       TRA     VFERR+1                                                  VFRD0589
+ VFER3 AXT     4,1               ILLEGAL PREFIX IN TABLE                VFRD0590
+       TRA     VFERR                                                    VFRD0591
+ VFER4 AXT     5,1               NUMERIC STRING TOO LARGE               VFRD0592
+       TRA     VFERR                                                    VFRD0593
+ VFER5 AXT     6,1               LEADING BITS LOST IN SCALING           VFRD0594
+       TRA     VFERR                                                    VFRD0595
+ VFER6 AXT     7,1               TRUE EXPONENT TOO LARGE                VFRD0596
+       TRA     VFERR                                                    VFRD0597
+ VFER7 AXT     8,1               MORE THAN 10 DEC PLACES IN FIXD FLD    VFRD0598
+ VFERR AXT     0,4               CLEAR X4                               VFRD0599
+       STZ     VFC5              CLEAR E                                VFRD0600
+       STZ     VFC6                    B                                VFRD0601
+       STZ     VFC7                    POINT                            VFRD0602
+       SXA     VFNXE,0           CLEAR REPEAT COUNT                     VFRD0603
+       PXD     0,1               SET ERROR CODE                         VFRD0604
+       SXA     VFDD,4            SET ILLEGAL CHARACTER                  VFRD0605
+       ORA     VFDD              IN ACC ADDRESS                         VFRD0606
+       LXA     VFX4,4                                                   VFRD0607
+       TXI     *+1,4,2           SET ERROR EXIT                         VFRD0608
+       SXA     VFX4,4                                                   VFRD0609
+       TRA     VFEOR             TO CHECK READ                          VFRD0610
+ VFEOF STZ     VFC3              CANCEL EOF CLUE                        VFRD0611
+       STZ     VFC1              SET 1ST READ CLUE                      VFRD0612
+       LXA     VFX4,4                                                   VFRD0613
+       TXI     VFX1,4,1          TO EOF EXIT                            VFRD0614
+ VFX4  AXT     **,4              RESTORE IRS AND SI                     VFRD0615
+ VFX1  AXT     **,1                                                     VFRD0616
+ VFX2  AXT     **,2                                                     VFRD0617
+       LDI     VFSIR                                                    VFRD0618
+       EFTM                                                             VFRD0619
+       TOV     4,4               CLEAR OVERFLOW                         VFRD0620
+       TRA     4,4               RETURN                                 VFRD0621
+       IORT    VFBF1,0,VFMAX                                            VFRD0622
+ VFCNL PZE     **,,**            NO. RECS,,NO. WDS                      VFRD0623
+       IORT    VFBF2,0,VFMAX                                            VFRD0624
+ VF14  DEC     14                NO. WDS PER TAPE RECORD WITHIN BLOCK   VFRD0625
+ VF24  DEC     24                                                       VFRD0626
+ VF36  DEC     36                                                       VFRD0627
+ VFCH1 OCT     243000000000      FLOATERS                               VFRD0628
+ VFCH2 OCT     466000000                                                VFRD0629
+ VF1DC OCT     1000000                                                  VFRD0630
+ VF60S BCI   1,                                                         VFRD0631
+ VFBTS SVN     -1,7,-1                                                  VFRD0632
+ VFC1  PZE     0                 0 = 1ST READ                           VFRD0633
+ VFC2  PZE     0                 0 = NO READ- PROCESS DATA              VFRD0634
+ VFC3  PZE     0                 0 = NO EOF                             VFRD0635
+ VFC4  PZE     0                 0 = NO SIGN                            VFRD0636
+ VFC5  PZE     0                 0 = NO E                               VFRD0637
+ VFC6  PZE     0                 0 = NO B                               VFRD0638
+ VFC7  PZE     0                 0 = NO POINT                           VFRD0639
+ VFC8  PZE     0                 0 = NO TRAILING BLANK                  VFRD0640
+ VFC9  PZE     0                 0 = NO PUNCH ENCOUNTERED               VFRD0641
+ VFC10 PZE     0                 0 = FLOAT FIELD                        VFRD0642
+ VFC12 PZE     0                 0 = NO READ INITIATED                  VFRD0643
+ VFC13 PZE     0                 0 = NO REDUNDANCY CHECK                VFRD0644
+ VFINC PZE     0,0,0                                                    VFRD0645
+ VFSAV PZE     0,0,0                                                    VFRD0646
+ VFDD  PZE     0                                                        VFRD0647
+ VFPCT PZE     0                                                        VFRD0648
+ VFN1  PZE     0                                                        VFRD0649
+ VFN2  PZE     0                                                        VFRD0650
+ VFSIR PZE     0                                                        VFRD0651
+ VFBF1 BSS     2*VFMAX,O                                                VFRD0652

@@ -1,0 +1,1456 @@
+C     TIME SERIES DECOMPOSITION AND ADJUSTMENT                          ERTS0000
+C     (ADAPTATION OF TV-TSDA TO 8K 704)                                 ERTS0001
+C     PART I.  TABLES 1 TO 13, 29 TO 32                                 ERTS0002
+C                                                                       ERTS0003
+C     L. T. UNG            ESSO RESEARCH AND ENGINEERING CO.            ERTS0004
+C                          FEBRUARY 2, 1959                             ERTS0005
+C                                                                       ERTS0006
+C                                                                       ERTS0007
+C     ------------------------------------------------------------------ERTS0008
+C                                                                       ERTS0009
+C     DEFINITION OF INPUT SYMBOLS -                                     ERTS0010
+C     KODE = INPUT OPTION INDEX                                         ERTS0011
+C     KC = SERIES IDENTIFICATION NUMBER                                 ERTS0012
+C     N = TOTAL NUMBER OF MONTHS (OR ELEMENTS) IN THE TIME SERIES       ERTS0013
+C     X = ORIGINAL OBSERVATIONS                                         ERTS0014
+C     K33 = FORECASTING OPTION                                          ERTS0015
+C     LFSTYR = FIRST YEAR OF TIME SERIES                                ERTS0016
+C     NFSTYR = FIRST YEAR OF DELIVERY DAY ADJUSTMENT FACTORS (IF        ERTS0017
+C             REQUIRED)                                                 ERTS0018
+C     NDDA  = NUMBER OF DELIVERY DAY ADJUSTMENT FACTORS                 ERTS0019
+C     SIGMA = MULTIPLE OF STANDARD ERROR TO BE USED IN SETTING          ERTS0020
+C             UPPER AND LOWER CONTROL LIMITS FOR DETERMINING EXTREME    ERTS0021
+C             SEASONAL-IRREGULAR RATIOS                                 ERTS0022
+C                                                                       ERTS0023
+C     ------------------------------------------------------------------ERTS0024
+C                                                                       ERTS0025
+C                                                                       ERTS0026
+      DIMENSION   LR(35), X(372), K(35), RA(372), A(372), OMA(372),     ERTS0027
+     1            CMA(372), ROC(372), B(372), UCL(372), BCL(372),       ERTS0028
+     2            ERC(372), PAF(372), PAS(372), WMA(372), BTM(384),     ERTS0029
+     3            STA(372), STS(372), TOC(372), TGP(372), RESULT(400),  ERTS0030
+     4            DDA(372)                                              ERTS0031
+      EQUIVALENCE (X(1), TOC(1), BTM(1), TGP(1)),                       ERTS0032
+     1            (CMA(1), UCL(1), ERC(1), PAS(1), STS(1)),             ERTS0033
+     2            (RA(1), A(1), ROC(1)), (RESULT(1), DDA(1)),           ERTS0034
+     3            (STA(1), OMA(1), B(1), BCL (1), PAF(1),WMA(1))        ERTS0035
+C                                                                       ERTS0036
+C                                                                       ERTS0037
+C                                                                       ERTS0038
+C     (THIS OPERATION IS BY-PASSED IF A PROGRAM TAPE IS TO BE           ERTS0039
+C     PREPARED FROM THE TWO BINARY DECKS MAKING UP TSDA)                ERTS0040
+C                                                                       ERTS0041
+   10 REWIND 3                                                          ERTS0042
+   11 REWIND 4                                                          ERTS0043
+C                                                                       ERTS0044
+C        PREPARATION OF TAPE 4, CONTAINING TITLE CARDS 1 TO 40          ERTS0045
+   15 DO 20 I = 1,32                                                    ERTS0046
+   16 IF(SENSE SWITCH 1)19, 17                                          ERTS0047
+   17 READ 7160, NTABLE                                                 ERTS0048
+   18 GO TO 20                                                          ERTS0049
+   19 READ INPUT TAPE 6, 7160, NTABLE                                   ERTS0050
+   20 WRITE OUTPUT TAPE 4, 7160, NTABLE                                 ERTS0051
+   22 DO 27 I=1,8                                                       ERTS0052
+   23 IF(SENSE SWITCH 1)26, 24                                          ERTS0053
+   24 READ 7170                                                         ERTS0054
+   25 GO TO 27                                                          ERTS0055
+   26 READ INPUT TAPE 6, 7170                                           ERTS0056
+   27 WRITE OUTPUT TAPE 4, 7170                                         ERTS0057
+   28 REWIND 4                                                          ERTS0058
+C                                                                       ERTS0059
+C        CHECK OF INPUT DATA AND PREPARATION OF PRINTOUT                ERTS0060
+   30 DO 35 I=1,4                                                       ERTS0061
+   31 IF ( SENSE SWITCH 1)34, 32                                        ERTS0062
+   32 READ 7033                                                         ERTS0063
+   33 GO TO 35                                                          ERTS0064
+   34 READ INPUT TAPE 6, 7033                                           ERTS0065
+   35 WRITE OUTPUT TAPE 1, 7033                                         ERTS0066
+   36 IF(SENSE SWITCH 1)39, 37                                          ERTS0067
+   37 READ               7036, KC, KODE, LFSTYR,N,NFSTYR,NDDA,SIGMA,K33 ERTS0068
+   38 GO TO 40                                                          ERTS0069
+   39 READ INPUT TAPE 6, 7036, KC, KODE, LFSTYR,N,NFSTYR,NDDA,SIGMA,K33 ERTS0070
+   40 LY = (N+11)/12                                                    ERTS0071
+   41 LLSTYR = LFSTYR+LY-1                                              ERTS0072
+   43 WRITE OUTPUT TAPE 1, 7043, KC, LFSTYR, LLSTYR, N, SIGMA           ERTS0073
+   44 IF(84-N)45, 45, 6970                                              ERTS0074
+   45 IF(N-360) 46, 46, 6970                                            ERTS0075
+   46 IF(KODE)47, 47, 49                                                ERTS0076
+   47 WRITE OUTPUT TAPE 1, 7045                                         ERTS0077
+   48 GO TO 52                                                          ERTS0078
+   49 WRITE OUTPUT TAPE 1, 7047                                         ERTS0079
+   50 IF(84-NDDA) 51,51,6970                                            ERTS0080
+   51 IF(NDDA-372) 52,52,6970                                           ERTS0081
+   52 IF (K33) 53,55,55                                                 ERTS0082
+   53 WRITE OUTPUT TAPE 1, 7053                                         ERTS0083
+   54 GO TO 62                                                          ERTS0084
+   55 IF (K33-4) 56,56,6985                                             ERTS0085
+   56 WRITE OUTPUT TAPE 1, 7056                                         ERTS0086
+   57 IF (K33-3) 58,58,60                                               ERTS0087
+   58 WRITE OUTPUT TAPE 1, 7058, K33                                    ERTS0088
+   59 GO TO 62                                                          ERTS0089
+   60 WRITE OUTPUT TAPE 1, 7060                                         ERTS0090
+   62 IF( SENSE SWITCH 1)65, 63                                         ERTS0091
+   63 READ 7062, (K(J),J= 1,35)                                         ERTS0092
+   64 GO TO 66                                                          ERTS0093
+   65 READ INPUT TAPE 6,7062, (K(J),J = 1,35)                           ERTS0094
+   66 JJ = 0                                                            ERTS0095
+      DO 68 I = 1,32                                                    ERTS0096
+      IF(K(I)-I)68, 67, 68                                              ERTS0097
+   67 JJ = JJ+1                                                         ERTS0098
+      LR(JJ) = K(I)                                                     ERTS0099
+   68 CONTINUE                                                          ERTS0100
+   70 WRITE OUTPUT TAPE 1, 7070                                         ERTS0101
+   72 IF(JJ) 74,74,73                                                   ERTS0102
+   73 WRITE OUTPUT TAPE 1, 7073, (LR(I), I = 1,JJ)                      ERTS0103
+   74 K(33)=K33                                                         ERTS0104
+   75 IF(SENSE SWITCH 1)78, 76                                          ERTS0105
+   76 READ 7075, (X(I), I = 1,N)                                        ERTS0106
+   77 GO TO 79                                                          ERTS0107
+   78 READ INPUT TAPE 6, 7075, (X(I), I = 1,N)                          ERTS0108
+   79 LR(1) = LFSTYR                                                    ERTS0109
+      DO 80 I = 2,LY                                                    ERTS0110
+   80 LR(I) = LR(I-1)+1                                                 ERTS0111
+C                                                                       ERTS0112
+   81 NP1=N+1                                                           ERTS0113
+   82 NP7=N+7                                                           ERTS0114
+   83 NP8=N+8                                                           ERTS0115
+   84 NP12=N+12                                                         ERTS0116
+   85 NP14=N+14                                                         ERTS0117
+   86 N1=N-1                                                            ERTS0118
+   87 N5=N-5                                                            ERTS0119
+   88 N11=N-11                                                          ERTS0120
+   89 N12=N-12                                                          ERTS0121
+C                                                                       ERTS0122
+C     TABLE 1 ORIGINAL OBSERVATIONS.                                    ERTS0123
+   90 KK = 1                                                            ERTS0124
+   91 IF(K(1)-1) 6500,92,6500                                           ERTS0125
+   92 NOPTS = N                                                         ERTS0126
+   93 NOBLK = 0                                                         ERTS0127
+   94 DO 95  I=1,NOPTS                                                  ERTS0128
+   95 RESULT(I) = X(I)                                                  ERTS0129
+   96 GO TO 6000                                                        ERTS0130
+C     OPTIONS-  KODE=0  NO DELIVERY-DAY ADJUSTMENT NEEDED               ERTS0131
+C                    1  DDA FACTORS TO BE ENTERED AFTER DATA            ERTS0132
+C                    2  DDA FACTORS ALREADY ENTERED                     ERTS0133
+  100 IF(KODE) 180, 180, 102                                            ERTS0134
+  102 IF(KODE-2) 104,110,5400                                           ERTS0135
+  104 IF(SENSE SWITCH 1)107, 105                                        ERTS0136
+  105 READ 7084, (DDA(I),I = 1,NDDA)                                    ERTS0137
+  106 GO TO 108                                                         ERTS0138
+  107 READ INPUT TAPE 6,7084, (DDA(I),I = 1,NDDA)                       ERTS0139
+  108 WRITE TAPE3,NFSTYR,NDDA,(DDA(I),I = 1,372)                        ERTS0140
+  109 GO TO 120                                                         ERTS0141
+  110 READ TAPE 3, NFSTYR, NDDA, (DDA(I),I=1,372)                       ERTS0142
+  120 IF(LR(1)-NFSTYR) 6950, 122, 122                                   ERTS0143
+  122 MM1 = (LR(1)-NFSTYR)*12                                           ERTS0144
+  124 MM2 = MM1+N                                                       ERTS0145
+  126 IF(NDDA-MM2) 6950, 140, 140                                       ERTS0146
+C                                                                       ERTS0147
+C     TABLE 31 DELIVERY-DAY ADJUSTMENT FACTORS                          ERTS0148
+  140 KK = 31                                                           ERTS0149
+  142 IF(K(31)-31) 6500,144,6500                                        ERTS0150
+  144 NOPTS = N                                                         ERTS0151
+  145 NOBLK = 0                                                         ERTS0152
+  146 DO 148 I = 1,NOPTS                                                ERTS0153
+  147 II = I + MM1                                                      ERTS0154
+  148 RESULT(I) = RESULT(II)                                            ERTS0155
+  149 GO TO 6000                                                        ERTS0156
+C                                                                       ERTS0157
+C     TABLE 32 ADJUSTED OBSERVATIONS                                    ERTS0158
+  154 DO 158 I=1,N                                                      ERTS0159
+  158 X(I) = DDA(I)*X(I)/10000.0                                        ERTS0160
+  161 KK = 32                                                           ERTS0161
+  162 IF(K(32)-32) 6500,164,6500                                        ERTS0162
+  164 NOPTS = N                                                         ERTS0163
+  166 NOBLK = 0                                                         ERTS0164
+  168 DO 170 I=1, NOPTS                                                 ERTS0165
+  170 RESULT(I) = X(I)                                                  ERTS0166
+  172 GO TO 6000                                                        ERTS0167
+C                                                                       ERTS0168
+  180 WRITE TAPE 3, NFSTYR, NDDA, (DDA(I),I=1,372)                      ERTS0169
+  182 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0170
+  184 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0171
+  190 WRITE TAPE 3, KODE, LY, N, SIGMA, KC, (LR(L),L=1,30),(K(J),J=1,35)ERTS0172
+  192 WRITE TAPE 3, (X(I), I=1,372)                                     ERTS0173
+C                                                                       ERTS0174
+C     TABLE 2 RATIOS OF EACH MONTH TO AVERAGE OF PRECEDING AND FOLLOWINGERTS0175
+C             MONTHS, ALSO ARITHMETIC MEANS OF RATIOS FOR EACH MONTH.   ERTS0176
+  200 DO 210 I=2,N1                                                     ERTS0177
+  210 RA(I)=(2.*X(I))/(X(I-1)+X(I+1))*100.0                             ERTS0178
+  225 KK = 2                                                            ERTS0179
+  230 IF(K(2)-2) 6500,240,6500                                          ERTS0180
+  240 NOPTS = N -2                                                      ERTS0181
+  242 NOBLK = 1                                                         ERTS0182
+  246 DO 248 I = 1, NOPTS                                               ERTS0183
+  248 RESULT (I+1) = RA (I+1)                                           ERTS0184
+  250 GO TO 6000                                                        ERTS0185
+C                                                                       ERTS0186
+  300 RA(1) = 0.0                                                       ERTS0187
+  310 MY = 1                                                            ERTS0188
+  380 SUM=0.                                                            ERTS0189
+  390 DO 420 I=MY,N,12                                                  ERTS0190
+  400 SUM=SUM+RA(I)                                                     ERTS0191
+  410 IF(RA(I+12))430,430,420                                           ERTS0192
+  420 CONTINUE                                                          ERTS0193
+  430 DN=((I-MY)/12)+1                                                  ERTS0194
+  432 IF(MY-1) 434, 434, 440                                            ERTS0195
+  434 DN = DN - 1.                                                      ERTS0196
+  440 STA(MY)=SUM/DN                                                    ERTS0197
+  450 IF(MY-12)460,6400,6400                                            ERTS0198
+  460 MY=MY+1                                                           ERTS0199
+  470 GO TO 380                                                         ERTS0200
+C                                                                       ERTS0201
+C     TABLE 3 TWELVE-MONTH MOVING AVERAGE OF THE ORIGINAL SERIES        ERTS0202
+  500 A(1)=0.0                                                          ERTS0203
+  510 DO 520 I=1,12                                                     ERTS0204
+  520 A(1)=A(1)+X(I)                                                    ERTS0205
+  540 DO 550 I=2,N11                                                    ERTS0206
+  550 A(I)=A(I-1)-X(I-1)+X(I+11)                                        ERTS0207
+  552 WRITE TAPE 3,(A(I),I = 1,372)                                     ERTS0208
+  555 DO 560 I=1,N11                                                    ERTS0209
+  560 OMA(I)=A(I)/12.                                                   ERTS0210
+  565 WRITE TAPE 3,(OMA(I),I = 1,372)                                   ERTS0211
+  570 REWIND 3                                                          ERTS0212
+  577 KK = 3                                                            ERTS0213
+  580 IF(K(3)-3) 6500,582,6500                                          ERTS0214
+  582 NOPTS = N - 11                                                    ERTS0215
+  584 NOBLK = 5                                                         ERTS0216
+  588 DO 590 I = 1, NOPTS                                               ERTS0217
+  590 RESULT(I+5) = OMA(I)                                              ERTS0218
+  592 GO TO 6000                                                        ERTS0219
+C                                                                       ERTS0220
+C     TABLE 4 CENTERED TWELVE-MONTH MOVING AVERAGE                      ERTS0221
+  600 DO 610 I=1,N12                                                    ERTS0222
+  610 CMA(I)=(OMA(I)+OMA(I+1))/2.                                       ERTS0223
+  615 KK = 4                                                            ERTS0224
+  620 IF(K(4)-4) 6500,630,6500                                          ERTS0225
+  630 NOPTS = N - 12                                                    ERTS0226
+  632 NOBLK = 6                                                         ERTS0227
+  636 DO 638 I = 1, NOPTS                                               ERTS0228
+  638 RESULT (I+6) = CMA(I)                                             ERTS0229
+  640 GO TO 6000                                                        ERTS0230
+C                                                                       ERTS0231
+C     TABLE 5 RATIOS OF ORIGINAL OBSERVATIONS TO CENTERED TWELVE-MONTH  ERTS0232
+C             MOVING AVERAGE                                            ERTS0233
+  700 DO 710 I=1,N12                                                    ERTS0234
+  710 ROC(I)=X(I+6)/CMA(I)*100.0                                        ERTS0235
+  735 KK = 5                                                            ERTS0236
+  740 IF(K(5)-5) 6500,750,6500                                          ERTS0237
+  750 NOPTS = N - 12                                                    ERTS0238
+  752 NOBLK = 6                                                         ERTS0239
+  756 DO 758 I = 1, NOPTS                                               ERTS0240
+  758 RESULT (I+6) = ROC(I)                                             ERTS0241
+  760 GO TO 6000                                                        ERTS0242
+C                                                                       ERTS0243
+C     TABLE 6 PRELIMINARY SEASONAL ADJUSTMENT FACTORS                   ERTS0244
+  800 ASSIGN 1015 TO M1                                                 ERTS0245
+  803 ASSIGN 830 TO M4                                                  ERTS0246
+  804 NX = N12                                                          ERTS0247
+  805 DO 810 I=1,N                                                      ERTS0248
+  810 ROC(I)=ROC(I)/100.                                                ERTS0249
+  815 MY=1                                                              ERTS0250
+  820 DO 825 I=1,N                                                      ERTS0251
+  825 TOC(I)=ROC(I)                                                     ERTS0252
+  826 GO TO M4,(827,830)                                                ERTS0253
+  827 WRITE TAPE 3, (TOC(I),I=1,372)                                    ERTS0254
+  828 REWIND 3                                                          ERTS0255
+  830 DO 845 I=MY,N,12                                                  ERTS0256
+  835 B(I+24)=(ROC(I)+ROC(I+12)+ROC(I+24)+ROC(I+36)+ROC(I+48))/5.       ERTS0257
+  840 IF(NX-(I+60))850, 845, 845                                        ERTS0258
+  845 CONTINUE                                                          ERTS0259
+  850 B(MY)=.4*ROC(MY)+.4*ROC(MY+12)+.2*ROC(MY+24)                      ERTS0260
+  855 B(MY+12)=.3*ROC(MY)+.3*ROC(MY+12)+.2*ROC(MY+24)+.2*               ERTS0261
+     1ROC(MY+36)                                                        ERTS0262
+  860 B(I+36)=.3*ROC(I+48)+.3*ROC(I+36)+.2*ROC(I+24)+.2*ROC(I+12)       ERTS0263
+  865 B(I+48)=.4*ROC(I+48)+.4*ROC(I+36)+.2*ROC(I+24)                    ERTS0264
+  870 TN=((I-MY)/12)+5                                                  ERTS0265
+  875 LEND=I+48                                                         ERTS0266
+  880 VAR=0.                                                            ERTS0267
+  885 DO 890 L=MY,LEND,12                                               ERTS0268
+  890 VAR=VAR+((ROC(L)-B(L))**2)/TN                                     ERTS0269
+  895 S=SQRTF(VAR)                                                      ERTS0270
+  900 DO 910 L=MY,LEND,12                                               ERTS0271
+  905 UCL(L)=B(L)+SIGMA*S                                               ERTS0272
+  910 BCL(L)=B(L)-SIGMA*S                                               ERTS0273
+  915 IF(UCL(MY)-ROC(MY))  920,920,925                                  ERTS0274
+  920 ROC(MY)=(TOC(MY)+TOC(MY+12)+TOC(MY+24))/3.                        ERTS0275
+  925 IF(BCL(MY)-ROC(MY))   935,930,930                                 ERTS0276
+  930 ROC(MY)=(TOC(MY)+TOC(MY+12)+TOC(MY+24))/3.                        ERTS0277
+  935 IF(UCL(LEND)-ROC(LEND))   940,940,945                             ERTS0278
+  940 ROC(LEND)=(TOC(LEND)+TOC(LEND-12)+TOC(LEND-24))/3.                ERTS0279
+  945 IF(BCL(LEND)-ROC(LEND))   955,950,950                             ERTS0280
+  950 ROC(LEND)=(TOC(LEND)+TOC(LEND-12)+TOC(LEND-24))/3.                ERTS0281
+  955 LST=MY+12                                                         ERTS0282
+  960 NST=LEND-12                                                       ERTS0283
+  965 DO 990 L=LST,NST,12                                               ERTS0284
+  970 IF(UCL(L)-ROC(L))    975,975,980                                  ERTS0285
+  975 ROC(L)=(TOC(L-12)+TOC(L)+TOC(L+12))/3.                            ERTS0286
+  980 IF(BCL(L)-ROC(L))    990,985,985                                  ERTS0287
+  985 ROC(L)=(TOC(L-12)+TOC(L)+TOC(L+12))/3.                            ERTS0288
+  990 CONTINUE                                                          ERTS0289
+  995 IF(MY-12)    1000,1010,1010                                       ERTS0290
+ 1000 MY=MY+1                                                           ERTS0291
+ 1005 GO TO 830                                                         ERTS0292
+ 1010 GO TO M1,(1015,1745)                                              ERTS0293
+ 1015 ASSIGN 1270 TO M2                                                 ERTS0294
+ 1020 DO 1025 I=1,N12                                                   ERTS0295
+ 1025 ERC(I+6) = ROC(I)                                                 ERTS0296
+ 1030 DO 1035 I=1,6                                                     ERTS0297
+ 1035 ERC(I) = ERC(I+12)                                                ERTS0298
+ 1045 DO 1050 I=N5,N                                                    ERTS0299
+ 1050 ERC(I) = ERC(I-12)                                                ERTS0300
+ 1100 NCOMP = LY*12                                                     ERTS0301
+ 1110 DO 1115 I=NP1,NCOMP                                               ERTS0302
+ 1115 ERC(I) = (ERC(I-24)+ERC(I-12))/2.0                                ERTS0303
+ 1120 L = 1                                                             ERTS0304
+ 1125 J = 12                                                            ERTS0305
+ 1130 SUM = 0.0                                                         ERTS0306
+ 1135 DO 1140 I=L,J                                                     ERTS0307
+ 1140 SUM = SUM + ERC(I)                                                ERTS0308
+ 1145 XBAR = SUM/12.0                                                   ERTS0309
+ 1150 DO 1155 I=L,J                                                     ERTS0310
+ 1155 ERC(I) = ERC(I)/XBAR                                              ERTS0311
+ 1160 L = L+12                                                          ERTS0312
+ 1165 J = J+12                                                          ERTS0313
+ 1170 IF(J-NCOMP) 1130, 1130, 1265                                      ERTS0314
+ 1265 GO TO M2,(1270,1948)                                              ERTS0315
+ 1270 ASSIGN 1365 TO M3                                                 ERTS0316
+ 1275 MY=1                                                              ERTS0317
+ 1280 DO 1295 I=MY,N,12                                                 ERTS0318
+ 1285 PAF(I+24)=(ERC(I)+2.*ERC(I+12)+3.*ERC(I+24)+2.*ERC(I+36)          ERTS0319
+     1+ERC(I+48))/9.                                                    ERTS0320
+ 1290 IF(N-(I+60))1300, 1295, 1295                                      ERTS0321
+ 1295 CONTINUE                                                          ERTS0322
+ 1300 PAF(MY)=(9.*ERC(MY)+7.*ERC(MY+12)+2.*ERC(MY+24))/18.              ERTS0323
+ 1305 PAF(MY+12)=(5.*ERC(MY)+7.*ERC(MY+12)+4.*ERC(MY+24)+2.*            ERTS0324
+     1ERC(MY+36))/18.                                                   ERTS0325
+ 1310 PAF(I+36)=(5.*ERC(I+48)+7.*ERC(I+36)+4.*ERC(I+24)                 ERTS0326
+     1+2.*ERC(I+12))/18.                                                ERTS0327
+ 1315 PAF(I+48)=(9.*ERC(I+48)+7.*ERC(I+36)+2.*ERC(I+24))/18.            ERTS0328
+ 1320 PAF(I+60)=(3.*PAF(I+48)-PAF(I+36))/2.                             ERTS0329
+ 1330 IF(MY-12)    1335,1345,1345                                       ERTS0330
+ 1335 MY=MY+1                                                           ERTS0331
+ 1340 GO TO 1280                                                        ERTS0332
+ 1345 CONTINUE                                                          ERTS0333
+ 1350 DO 1355 I=1,NP12                                                  ERTS0334
+ 1355 PAF(I)=PAF(I)*100.                                                ERTS0335
+ 1360 GO TO M3,(1365,2050)                                              ERTS0336
+ 1365 KK = 6                                                            ERTS0337
+ 1367 IF(K(6)-6) 6500,1370,6500                                         ERTS0338
+ 1370 NOPTS = N                                                         ERTS0339
+ 1372 NOBLK = 0                                                         ERTS0340
+ 1376 DO 1378 I = 1, NOPTS                                              ERTS0341
+ 1378 RESULT (I) = PAF (I)                                              ERTS0342
+ 1380 GO TO 6000                                                        ERTS0343
+C                                                                       ERTS0344
+C     TABLE 7 PRELIMINARY SEASONALLY ADJUSTED SERIES                    ERTS0345
+ 1400 READ TAPE 3                                                       ERTS0346
+ 1401 READ TAPE 3                                                       ERTS0347
+ 1402 READ TAPE 3,(X(I),I= 1,372)                                       ERTS0348
+ 1405 DO 1410 I=1,N                                                     ERTS0349
+ 1410 PAS(I)=X(I)/PAF(I)*100.0                                          ERTS0350
+ 1412 KK = 7                                                            ERTS0351
+ 1415 IF(K(7)-7)6500,1420,6500                                          ERTS0352
+ 1420 NOPTS = N                                                         ERTS0353
+ 1422 NOBLK = 0                                                         ERTS0354
+ 1426 DO 1428 I = 1, NOPTS                                              ERTS0355
+ 1428 RESULT (I) = PAS(I)                                               ERTS0356
+ 1430 GO TO 6000                                                        ERTS0357
+C                                                                       ERTS0358
+C     TWELVE MONTHS TO DATE OF ORIGINAL SERIES                          ERTS0359
+ 1500 READ TAPE3,(A(I),I= 1,372)                                        ERTS0360
+ 1502 BACKSPACE 3                                                       ERTS0361
+ 1503 BACKSPACE 3                                                       ERTS0362
+ 1505 KK = 29                                                           ERTS0363
+ 1510 IF(K(29)-29)6500,1520,6500                                        ERTS0364
+ 1520 NOPTS = N - 11                                                    ERTS0365
+ 1522 NOBLK = 11                                                        ERTS0366
+ 1524 DO 1526 I = 1, NOPTS                                              ERTS0367
+ 1526 RESULT (I+11) = A(I)                                              ERTS0368
+ 1528 GO TO 6000                                                        ERTS0369
+C                                                                       ERTS0370
+C     TABLE 8 WEIGHTED 15-MONTH MOVING AVERAGE (SPENCERS 15-TERM FORMULAERTS0371
+C             ) OF PRELIMINARY SEASONALLY ADJUSTED SERIES               ERTS0372
+ 1550 DO 1555 I=1,7                                                     ERTS0373
+ 1555 BTM(I)=(PAS(1)+PAS(2)+PAS(3)+PAS(4))/4.                           ERTS0374
+ 1575 DO1580 I=NP8,NP14                                                 ERTS0375
+ 1580 BTM(I)=(PAS(N-3)+PAS(N-2)+PAS(N-1)+PAS(N))/4.                     ERTS0376
+ 1585 DO1588 I=8,NP7                                                    ERTS0377
+ 1588 BTM(I)=PAS(I-7)                                                   ERTS0378
+ 1590 DO1592 I=1,N                                                      ERTS0379
+ 1592 WMA(I)=(-3.*BTM(I)-6.*BTM(I+1)-5.*BTM(I+2)+3.*                    ERTS0380
+     1BTM(I+3)+21.*BTM(I+4)+46.*BTM(I+5)+67.*BTM(I+6)+                  ERTS0381
+     274.*BTM(I+7)+67.*BTM(I+8)+46.*BTM(I+9)+21.*                       ERTS0382
+     3BTM(I+10)+3.*BTM(I+11)-5.*BTM(I+12)-6.*BTM(I+13)-                 ERTS0383
+     43.*BTM(I+14))/320.                                                ERTS0384
+ 1593 KK = 8                                                            ERTS0385
+ 1594 IF(K(8)-8)6500,1595,6500                                          ERTS0386
+ 1595 NOPTS = N                                                         ERTS0387
+ 1596 NOBLK = 0                                                         ERTS0388
+ 1597 DO 1598 I = 1, NOPTS                                              ERTS0389
+ 1598 RESULT (I) = WMA (I)                                              ERTS0390
+ 1599 GO TO 6000                                                        ERTS0391
+C                                                                       ERTS0392
+C     TABLE 9 RATIOS OF ORIGINAL TO WEIGHTED 15-MONTH MOVING AVERAGE    ERTS0393
+ 1610 READ TAPE3,(X(I),I = 1,372)                                       ERTS0394
+ 1611 READ TAPE 3                                                       ERTS0395
+ 1612 READ TAPE 3                                                       ERTS0396
+ 1615 DO 1620 I=1,N                                                     ERTS0397
+ 1620 ROC(I)=X(I)/WMA(I)*100.0                                          ERTS0398
+ 1625 KK = 9                                                            ERTS0399
+ 1630 IF(K( 9)- 9)6500,1640,6500                                        ERTS0400
+ 1640 NOPTS = N                                                         ERTS0401
+ 1642 NOBLK = 0                                                         ERTS0402
+ 1644 DO 1646 I = 1, NOPTS                                              ERTS0403
+ 1646 RESULT (I) = ROC (I)                                              ERTS0404
+ 1648 GO TO 6000                                                        ERTS0405
+C                                                                       ERTS0406
+C     TABLE 10 SMOOTHED RATIOS OF ORIGINAL TO WEIGHTED 15-MONTH MOVING  ERTS0407
+C              AVERAGE                                                  ERTS0408
+ 1700 DO 1705 I=1,N                                                     ERTS0409
+ 1705 BTM(I)=PAS(I)/WMA(I)                                              ERTS0410
+ 1710 DN = N - 1                                                        ERTS0411
+ 1715 AMP=0.                                                            ERTS0412
+ 1720 DO 1725 I=1,N1                                                    ERTS0413
+ 1725 AMP=AMP+ABSF(BTM(I+1)-BTM(I))                                     ERTS0414
+ 1730 AMP=(AMP/DN)*100.                                                 ERTS0415
+ 1735 ASSIGN 1745 TO M1                                                 ERTS0416
+ 1737 ASSIGN 827 TO M4                                                  ERTS0417
+ 1738 NX = N                                                            ERTS0418
+ 1740 GO TO 815                                                         ERTS0419
+ 1745 KK = 10                                                           ERTS0420
+ 1750 IF(K(10)-10)6500,1760,6500                                        ERTS0421
+ 1760 NOPTS = N                                                         ERTS0422
+ 1762 NOBLK = 0                                                         ERTS0423
+ 1764 DO 1766 I = 1, NOPTS                                              ERTS0424
+ 1766 RESULT(I) = ROC (I)                                               ERTS0425
+ 1768 GO TO 6000                                                        ERTS0426
+C                                                                       ERTS0427
+C     TABLES 10 * AND 10**, STABLE ADJUSTMENT FACTORS AND SEASONALLY    ERTS0428
+C                           ADJUSTED SERIES BASED ON A CONSTANT         ERTS0429
+C                           SEASONAL PATTERN                            ERTS0430
+ 1800 KK = 30                                                           ERTS0431
+ 1802 IF(K(30)-30) 1935,1805,1935                                       ERTS0432
+ 1805 MY=1                                                              ERTS0433
+ 1810 SUMS=0.                                                           ERTS0434
+ 1815 DO 1830 I=MY,N,12                                                 ERTS0435
+ 1820 SUMS=SUMS+ROC(I)                                                  ERTS0436
+ 1825 IF(ROC(I+12))1835,1835,1830                                       ERTS0437
+ 1830 CONTINUE                                                          ERTS0438
+ 1835 C=((I-MY)/12)+1                                                   ERTS0439
+ 1840 STA(MY)=SUMS/C                                                    ERTS0440
+ 1845 IF(MY-12)1850,1860,1860                                           ERTS0441
+ 1850 MY=MY+1                                                           ERTS0442
+ 1855 GO TO 1810                                                        ERTS0443
+ 1860 SUM=0.                                                            ERTS0444
+ 1865 DO 1870 I=1,12                                                    ERTS0445
+ 1870 SUM=SUM+STA(I)                                                    ERTS0446
+ 1875 AUG=SUM/12.                                                       ERTS0447
+ 1880 DO 1885 I=1,12                                                    ERTS0448
+ 1885 STA(I)=(STA(I)/AUG)*100.                                          ERTS0449
+ 1905 GO TO 6600                                                        ERTS0450
+C                                                                       ERTS0451
+ 1910 READ TAPE 3                                                       ERTS0452
+ 1911 READ TAPE 3                                                       ERTS0453
+ 1912 READ TAPE 3,(X(I), I=1,372)                                       ERTS0454
+ 1913 DO 1914 I = 1,3                                                   ERTS0455
+ 1914 READ TAPE 3                                                       ERTS0456
+ 1915 MY=1                                                              ERTS0457
+ 1917 DO1920 I=MY,N,12                                                  ERTS0458
+ 1918 STS(I)=X(I)/STA(MY)*100.0                                         ERTS0459
+ 1919 IF(X(I+12))1922,1922,1920                                         ERTS0460
+ 1920 CONTINUE                                                          ERTS0461
+ 1922 IF(MY-12)1924,1930,1924                                           ERTS0462
+ 1924 MY=MY+1                                                           ERTS0463
+ 1926 GO TO 1917                                                        ERTS0464
+ 1930 NOPTS = N                                                         ERTS0465
+ 1931 NOBLK = 0                                                         ERTS0466
+ 1932 DO 1933 I = 1, NOPTS                                              ERTS0467
+ 1933 RESULT (I) = STS (I)                                              ERTS0468
+ 1934 GO TO 6000                                                        ERTS0469
+ 1935 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0470
+      READ TAPE 3                                                       ERTS0471
+      READ TAPE 3                                                       ERTS0472
+ 1936 READ TAPE 3, (X(I), I=1,372)                                      ERTS0473
+ 1937 DO 1938 I=1,3                                                     ERTS0474
+ 1938 READ TAPE 3                                                       ERTS0475
+ 1939 GO TO 6500                                                        ERTS0476
+C                                                                       ERTS0477
+ 1940 ASSIGN 1948 TO M2                                                 ERTS0478
+ 1942 DO 1944 I=1,N                                                     ERTS0479
+ 1944 ERC(I)=ROC(I)/100.                                                ERTS0480
+ 1946 GO TO 1110                                                        ERTS0481
+ 1948 IF(AMP-2.)1950,2050,2050                                          ERTS0482
+ 1950 ASSIGN 2050 TO M3                                                 ERTS0483
+ 1952 GO TO 1275                                                        ERTS0484
+C                                                                       ERTS0485
+C     TABLE 11 CENTERED RATIOS OF ORIGINAL TO WEIGHTED 15-MONTH MOVING  ERTS0486
+C              AVERAGE (ADJUSTED TO TOTAL OF 1200 EACH YEAR)            ERTS0487
+C                                                                       ERTS0488
+ 2050 DO2060 I=1,NP12                                                   ERTS0489
+ 2060 ERC(I)=ERC(I)*100.                                                ERTS0490
+ 2065 KK = 11                                                           ERTS0491
+ 2070 IF(K(11)-11)6500,2075,6500                                        ERTS0492
+ 2075 NOPTS = N                                                         ERTS0493
+ 2076 NOBLK = 0                                                         ERTS0494
+ 2078 DO 2080 I = 1, NOPTS                                              ERTS0495
+ 2080 RESULT (I) = ERC (I)                                              ERTS0496
+ 2082 GO TO 6000                                                        ERTS0497
+C                                                                       ERTS0498
+C     TABLE 12 FINAL SEASONAL ADJUSTMENT FACTORS (S SERIES)             ERTS0499
+ 2100 IF(AMP-2.0) 2260, 2110, 2110                                      ERTS0500
+ 2110 MY=1                                                              ERTS0501
+ 2120 DO2150 I=MY,N,12                                                  ERTS0502
+ 2130 PAF(I+36)=(ERC(I)+2.*ERC(I+12)+3.*ERC(I+24)                       ERTS0503
+     1+3.*ERC(I+36)+3.*ERC(I+48)+2.*ERC(I+60)+ERC(I+72))/15.            ERTS0504
+ 2140 IF(N-(I+84)) 2160, 2150, 2150                                     ERTS0505
+ 2150 CONTINUE                                                          ERTS0506
+ 2160 PAF(MY)=(6.*ERC(MY)+6.*ERC(MY+12)+2.*ERC(MY+24)+                  ERTS0507
+     1ERC(MY+36))/15.                                                   ERTS0508
+ 2170 PAF(MY+12)=(9.*ERC(MY)+9.*ERC(MY+12)+6.*ERC(MY+24)                ERTS0509
+     1+4.*ERC(MY+36)+2.*ERC(MY+48))/30.                                 ERTS0510
+ 2180 PAF(MY+24)=(5.*ERC(MY)+7.*ERC(MY+12)+6.*ERC(MY+24)                ERTS0511
+     1+6.*ERC(MY+36)+4.*ERC(MY+48)+2.*ERC(MY+60))/30.                   ERTS0512
+ 2190 PAF(I+48)=(5.*ERC(I+72)+7.*ERC(I+60)+6.*ERC(I+48)+                ERTS0513
+     16.*ERC(I+36)+4.*ERC(I+24)+2.*ERC(I+12))/30.                       ERTS0514
+ 2200 PAF(I+60)=(9.*ERC(I+72)+9.*ERC(I+60)+6.*ERC(I+48)                 ERTS0515
+     1+4.*ERC(I+36)+2.*ERC(I+24))/30.                                   ERTS0516
+ 2210 PAF(I+72)=(6.*ERC(I+72)+6.*ERC(I+60)+2.*ERC                       ERTS0517
+     1(I+48)+ERC(I+36))/15.                                             ERTS0518
+ 2220 PAF(I+84)=(3.*PAF(I+72)-PAF(I+60))/2.                             ERTS0519
+ 2230 IF(MY-12) 2240,2260,2260                                          ERTS0520
+ 2240 MY=MY+1                                                           ERTS0521
+ 2250 GO TO 2120                                                        ERTS0522
+ 2260 KK = 12                                                           ERTS0523
+ 2265 LR (LY+1) = LR (LY) + 1                                           ERTS0524
+ 2267 WRITE TAPE 3, (PAF(I),I=1,372)                                    ERTS0525
+ 2270 IF(K(12)-12)6500,2280,6500                                        ERTS0526
+ 2280 NOPTS = N + 12                                                    ERTS0527
+ 2282 NOBLK = 0                                                         ERTS0528
+ 2284 DO 2286 I = 1, NOPTS                                              ERTS0529
+ 2286 RESULT (I) = PAF (I)                                              ERTS0530
+ 2288 GO TO 6000                                                        ERTS0531
+C                                                                       ERTS0532
+C     TABLE 13 FINAL SEASONALLY ADJUSTED SERIES (CI SERIES)             ERTS0533
+ 2300 DO2320 I=1,N                                                      ERTS0534
+ 2320 PAS(I)=X(I)/PAF(I)*100.0                                          ERTS0535
+ 2322 WRITE TAPE 3, (PAS(I),I=1,372)                                    ERTS0536
+ 2323 REWIND 3                                                          ERTS0537
+      IF(K(34)-1)2325, 2324, 2325                                       ERTS0538
+ 2324 WRITE OUTPUT TAPE 2, 7324,(PAS(I),I = 1,N)                        ERTS0539
+ 2325 KK = 13                                                           ERTS0540
+ 2330 IF(K(13)-13)6500,2340,6500                                        ERTS0541
+ 2340 NOPTS = N                                                         ERTS0542
+ 2342 NOBLK = 0                                                         ERTS0543
+ 2344 DO 2346 I = 1, NOPTS                                              ERTS0544
+ 2346 RESULT (I) = PAS(I)                                               ERTS0545
+ 2348 GO TO 6000                                                        ERTS0546
+C                                                                       ERTS0547
+C     PRINT ROUTINE FOR TABLES                                          ERTS0548
+ 6000 IF(NOBLK) 6130, 6130, 6110                                        ERTS0549
+ 6110 DO 6120 I = 1,NOBLK                                               ERTS0550
+ 6120 RESULT(I) = 0.0                                                   ERTS0551
+ 6130 NN = NOBLK + NOPTS                                                ERTS0552
+ 6135 JA = 1                                                            ERTS0553
+ 6140 JB = 12                                                           ERTS0554
+ 6150 L = 1                                                             ERTS0555
+ 6160 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0556
+ 6165 IF(KK-NTABLE) 6900, 6170, 6900                                    ERTS0557
+ 6170 WRITE OUTPUT TAPE 1, 7160, NTABLE                                 ERTS0558
+ 6180 WRITE OUTPUT TAPE 1, 7180, KC                                     ERTS0559
+ 6190 WRITE OUTPUT TAPE 1, 7190, LR(L), (RESULT(I), I = JA,JB)          ERTS0560
+ 6200 IF(JB-NN) 6210, 6300, 6300                                        ERTS0561
+ 6210 JA = JA + 12                                                      ERTS0562
+ 6220 JB = JB + 12                                                      ERTS0563
+ 6230 L = L + 1                                                         ERTS0564
+ 6240 IF(JB-NN) 6190, 6190, 6250                                        ERTS0565
+ 6250 JB = NN                                                           ERTS0566
+ 6260 GO TO 6190                                                        ERTS0567
+ 6300 GO TO (100,300,600,700,800,1400,1500,1610,1700,                   ERTS0568
+     1       1800,2100,2300,5400,5400,5400,5400,5400,5400,              ERTS0569
+     2       5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400,      ERTS0570
+     3       5400,1550,1940,154,190),KK                                 ERTS0571
+ 6400 WRITE OUTPUT TAPE 1, 7400, (STA(I),I = 1,12)                      ERTS0572
+ 6420 GO TO 500                                                         ERTS0573
+ 6500 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0574
+ 6510 GO TO (100,500,600,700,800,1400,1500,1610,                        ERTS0575
+     1      1700,1800,2100,2300,5400,5400,5400,5400,5400,               ERTS0576
+     2       5400,5400,5400,5400,5400,5400,5400,5400,5400,              ERTS0577
+     3      5400,5400,1550,1940,154,190),KK                             ERTS0578
+ 6600 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0579
+ 6605 LRO = 0                                                           ERTS0580
+ 6610 WRITE OUTPUT TAPE 1, 7160, NTABLE                                 ERTS0581
+ 6620 WRITE OUTPUT TAPE 1, 7180, KC                                     ERTS0582
+ 6630 WRITE OUTPUT TAPE 1, 7190, LRO,(STA(I),I = 1,12)                  ERTS0583
+ 6640 GO TO 1910                                                        ERTS0584
+ 6900 PRINT 7900, KC, KK                                                ERTS0585
+ 6910 PAUSE 25252                                                       ERTS0586
+ 6920 GO TO 5400                                                        ERTS0587
+ 6950 WRITE OUTPUT TAPE 1, 7950                                         ERTS0588
+ 6960 GO TO 5400                                                        ERTS0589
+ 6970 WRITE OUTPUT TAPE 1, 7970                                         ERTS0590
+ 6980 GO TO 5400                                                        ERTS0591
+ 6985 WRITE OUTPUT TAPE 1, 7985, K33                                    ERTS0592
+ 6990 GO TO 5400                                                        ERTS0593
+C                                                                       ERTS0594
+C     RESET ARRAYS FOR NEXT PROBLEM                                     ERTS0595
+ 5400 DO 5580 I=1,NP12                                                  ERTS0596
+ 5420 X(I) = 0.0                                                        ERTS0597
+ 5430 CMA(I) = 0.0                                                      ERTS0598
+ 5440 RA(I) = 0.0                                                       ERTS0599
+ 5580 STA(I) = 0.0                                                      ERTS0600
+ 5585 REWIND 3                                                          ERTS0601
+ 5590 REWIND 4                                                          ERTS0602
+ 5595 IF(K(35)-1)5600, 30, 5600                                         ERTS0603
+ 5600 CONTINUE                                                          ERTS0604
+C                                                                       ERTS0605
+C        F O R M A T S                                                  ERTS0606
+C                                                                       ERTS0607
+ 7033 FORMAT(72H                                                        ERTS0608
+     1                )                                                 ERTS0609
+ 7036 FORMAT(6I6,F6.4,I6)                                               ERTS0610
+ 7043 FORMAT(1H /////26H          TIME SERIES NO. I6 //16H          YEARERTS0611
+     1S I6, 4H TO I6 //26H          NO. OF ELEMENTS I6 //91H          COERTS0612
+     2NTROL LIMITS USED IN DETERMINING EXTREME VALUES IN SEASONAL-IRREGUERTS0613
+     3LAR RATIOS - // F25.4, 25H  TIMES STANDARD ERRORS  )              ERTS0614
+ 7045 FORMAT(61H0         NO CORRECTION FOR DELIVERY DAY ADJUSTMENT FACTERTS0615
+     1ORS. )                                                            ERTS0616
+ 7047 FORMAT( 94H0         TO BE CORRECTED FOR DELIVERY DAY ADJUSTMENT FERTS0617
+     1ACTORS BEFORE ANALYSIS.  SEE TABLE 31. )                          ERTS0618
+ 7053 FORMAT( 33H0         NO FORECAST REQUESTED. )                     ERTS0619
+ 7056 FORMAT( 48H0         TWENTY-FOUR MONTH FORECAST REQUESTED. )      ERTS0620
+ 7058 FORMAT( 47H               DEGREE OF EQUATION TO BE USED - I2 )    ERTS0621
+ 7060 FORMAT( 62H               DEGREES OF EQUATIONS TO BE USED - 1,2,  ERTS0622
+     1AND 3. )                                                          ERTS0623
+ 7062 FORMAT(24I3)                                                      ERTS0624
+ 7070 FORMAT( 41H0         TABLES TO 2E+7R9NTED OUT.  NO -)             ERTS0625
+ 7073 FORMAT( I20,7I10)                                                 ERTS0626
+ 7075 FORMAT(6F12.0)                                                    ERTS0627
+ 7084 FORMAT(12F6.0)                                                    ERTS0628
+ 7160 FORMAT(3H   I2,67H                                                ERTS0629
+     1                   )                                              ERTS0630
+ 7170 FORMAT(72H                                                        ERTS0631
+     1                 )                                                ERTS0632
+ 7180 FORMAT(108H+                                                      ERTS0633
+     1                                          SERIES NO. I4 //115H  YEERTS0634
+     2AR     JAN      FEB      MAR      APR      MAY      JUN      JUL  ERTS0635
+     3    AUG      SEP      OCT      NOV      DEC  )                    ERTS0636
+ 7190 FORMAT(1H0I5,12F9.1)                                              ERTS0637
+ 7324 FORMAT(6F12.1)                                                    ERTS0638
+ 7400 FORMAT(20H0           AVERAGES//F15.1,11F9.1)                     ERTS0639
+ 7900 FORMAT(21H1    TIME SERIES NO. I4 / 27H     WRONG TITLE FOR TABLE ERTS0640
+     1I3 / 78H     BY-PASS REST OF JOB AND CHECK ORDER OF TITLE CARDS ONERTS0641
+     2INPUT TAPE 4 LATER. )                                             ERTS0642
+ 7950 FORMAT( 65H1         TIME PERIOD OF INPUT DATA OUTSIDE THAT OF DDAERTS0643
+     1 FACTORS. )                                                       ERTS0644
+ 7970 FORMAT(110H1         NO. ITEMS IN TIME SERIES OR DELIVERY DAY ADJUERTS0645
+     1STMENT FACTORS EXCEEDED RANGES OF 84-360 OR 84-372.    )          ERTS0646
+ 7985 FORMAT( 31H1         FORECASTING OPTION = I2, 43H , OR GREATER THAERTS0647
+     1N PERMISSIBLE VALUE OF 4. )                                       ERTS0648
+      END (2,2,2,2,2)                                                   ERTS0649
+C     TIME SERIES DECOMPOSITION AND ADJUSTMENT                          ERTS0800
+C     (ADAPTATION OF TV-TSDA TO 8K 704)                                 ERTS0801
+C     PART II.  TABLES 14 TO 28                                         ERTS0802
+C                                                                       ERTS0803
+C     L. T. UNG   ESSO RESEARCH AND ENGINEERING CO.                     ERTS0804
+C                 FEBRUARY 2, 1959                                      ERTS0805
+C                                                                       ERTS0806
+C                                                                       ERTS0807
+      DIMENSION   LR(35), X(372), K(35), RA(372), A(372), OMA(372),     ERTS0808
+     1            CMA(372), ROC(372), B(372), UCL(372), BCL(372),       ERTS0809
+     2            ERC(372), PAF(372), PAS(372), WMA(372), BTM(384),     ERTS0810
+     3            STA(372), STS(372), TOC(372), TGP(372), RESULT(400),  ERTS0811
+     4            XPRED(40), TRDCYL(40), RSUM(10), V(5), CFDEG1(4),     ERTS0812
+     5            CFDEG2(4), CFDEG3(4), BB(5,5), DDA(400)               ERTS0813
+      EQUIVALENCE (X(1), TOC(1), BTM(1), TGP(1), BB(1)),                ERTS0814
+     1            (CMA(1), UCL(1), ERC(1), PAS(1), STS(1)),             ERTS0815
+     2            (RA(1), A(1), ROC(1)), (RESULT(1),DDA(1)),            ERTS0816
+     3            (STA(1), OMA(1), B(1), BCL (1), PAF(1),WMA(1))        ERTS0817
+C                                                                       ERTS0818
+ 2370 REWIND 4                                                          ERTS0819
+ 2372 DO 2374 I = 1,18                                                  ERTS0820
+ 2374 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS0821
+ 2376 REWIND 3                                                          ERTS0822
+ 2378 READ TAPE 3                                                       ERTS0823
+ 2380 READ TAPE 3, KODE, LY, N, SIGMA, KC, (LR(L),L=1,30), (K(J),J=1,35)ERTS0824
+ 2382 DO 2384 I = 1, 5                                                  ERTS0825
+ 2384 READ TAPE 3                                                       ERTS0826
+ 2385 N1 = N - 1                                                        ERTS0827
+ 2386 N11 = N-11                                                        ERTS0828
+ 2387 N12 = N - 12                                                      ERTS0829
+ 2388 NP7 = N+7                                                         ERTS0830
+ 2389 NP8 = N+8                                                         ERTS0831
+ 2390 NP12 = N + 12                                                     ERTS0832
+ 2391 NP14 = N+14                                                       ERTS0833
+C                                                                       ERTS0834
+C     TABLE 14 RATIOS OF CI TO AVERAGE OF PRECEDING AND FOLLOWING VALUESERTS0835
+ 2400 READ TAPE 3, (PAS(I), I = 1,372)                                  ERTS0836
+ 2405 DO2410 I=2,N1                                                     ERTS0837
+ 2410 RA(I)=(2.*PAS(I))/(PAS(I-1)+PAS(I+1))*100.0                       ERTS0838
+ 2420 KK = 14                                                           ERTS0839
+ 2430 IF(K(14)-14)6500,2440,6500                                        ERTS0840
+ 2440 NOPTS = N - 2                                                     ERTS0841
+ 2442 NOBLK = 1                                                         ERTS0842
+ 2444 DO 2446 I = 1, NOPTS                                              ERTS0843
+ 2446 RESULT(I+1) = RA(I+1)                                             ERTS0844
+ 2448 GO TO 6000                                                        ERTS0845
+C                                                                       ERTS0846
+C     MONTHLY ARITHMETIC MEANS OF ABOVE RATIOS                          ERTS0847
+ 2500 RA(1) = 0.0                                                       ERTS0848
+ 2550 MY = 1                                                            ERTS0849
+ 2580 SUM = 0.                                                          ERTS0850
+ 2590 DO2620 I=MY,N,12                                                  ERTS0851
+ 2600 SUM=SUM+RA(I)                                                     ERTS0852
+ 2610 IF(RA(I+12))2630,2630,2620                                        ERTS0853
+ 2620 CONTINUE                                                          ERTS0854
+ 2630 DN=((I-MY)/12)+1                                                  ERTS0855
+ 2632 IF(MY-1) 2634, 2634, 2640                                         ERTS0856
+ 2634 DN = DN - 1.0                                                     ERTS0857
+ 2640 STA(MY)=SUM/DN                                                    ERTS0858
+ 2650 IF(MY-12)2660,6400,6400                                           ERTS0859
+ 2660 MY=MY+1                                                           ERTS0860
+ 2670 GO TO 2580                                                        ERTS0861
+C                                                                       ERTS0862
+C     TABLE 15 12-MONTH MOVING AVERAGE OF CI                            ERTS0863
+ 2800 A(1)=0.                                                           ERTS0864
+ 2810 DO2820 I=1,12                                                     ERTS0865
+ 2820 A(1)=A(1)+PAS(I)                                                  ERTS0866
+ 2840 DO2850 I=2,N11                                                    ERTS0867
+ 2850 A(I)=A(I-1)-PAS(I-1)+PAS(I+11)                                    ERTS0868
+ 2860 DO2870 I=1,N11                                                    ERTS0869
+ 2870 OMA(I)=A(I)/12.                                                   ERTS0870
+ 2875 KK = 15                                                           ERTS0871
+ 2880 IF(K(15)-15)6500,2882,6500                                        ERTS0872
+ 2882 NOPTS = N - 11                                                    ERTS0873
+ 2884 NOBLK = 5                                                         ERTS0874
+ 2886 DO 2888 I = 1, NOPTS                                              ERTS0875
+ 2888 RESULT (I+5) = OMA(I)                                             ERTS0876
+ 2890 GO TO 6000                                                        ERTS0877
+C                                                                       ERTS0878
+C     TABLE 16 RATIO OF 12-MONTH MOVING AVERAGES, FINAL SEASONALLY ADJUSERTS0879
+C              TED SERIES TO ORIGINAL                                   ERTS0880
+ 2900 DO 2901 I = 1,4                                                   ERTS0881
+ 2901 BACKSPACE 3                                                       ERTS0882
+ 2902 READ TAPE 3,(TGP(I),I = 1,372)                                    ERTS0883
+ 2905 DO2910 I=1,N11                                                    ERTS0884
+ 2910 ROC(I)=(OMA(I)/TGP(I))*100.                                       ERTS0885
+ 2915 KK = 16                                                           ERTS0886
+ 2920 IF(K(16)-16)6500,2930,6500                                        ERTS0887
+ 2930 NOPTS = N - 11                                                    ERTS0888
+ 2932 NOBLK = 5                                                         ERTS0889
+ 2934 DO 2936 I = 1, NOPTS                                              ERTS0890
+ 2936 RESULT (I+5) = ROC (I)                                            ERTS0891
+ 2938 GO TO 6000                                                        ERTS0892
+C                                                                       ERTS0893
+C     TABLE 17 RATIOS OF FOLLOWING 12 MONTHS TO PRECEDING JANUARY, FINALERTS0894
+C              SEASONALLY ADJUSTED SERIES                               ERTS0895
+ 3000 JA=2                                                              ERTS0896
+ 3010 JB=13                                                             ERTS0897
+ 3020 DO3030 I=JA,JB                                                    ERTS0898
+ 3030 ROC(I)=(PAS(I)/PAS(JA-1))*100.                                    ERTS0899
+ 3040 IF(JB-N)3050,3095,3095                                            ERTS0900
+ 3050 JA=JA+12                                                          ERTS0901
+ 3060 JB=JB+12                                                          ERTS0902
+ 3070 IF(JB-N)3020,3020,3080                                            ERTS0903
+ 3080 JB=N                                                              ERTS0904
+ 3090 GO TO 3020                                                        ERTS0905
+ 3095 KK = 17                                                           ERTS0906
+ 3096 IF(K(17)-17)6500,3097,6500                                        ERTS0907
+ 3097 NOPTS = N - 1                                                     ERTS0908
+ 3098 NOBLK = 1                                                         ERTS0909
+ 3100 DO 3102 I = 1, NOPTS                                              ERTS0910
+ 3102 RESULT (I+1) = ROC (I+1)                                          ERTS0911
+ 3103 GO TO 6000                                                        ERTS0912
+C                                                                       ERTS0913
+C     TABLE 18 WEIGHTED 15-MONTH MOVING AVERAGE OF FINAL SEASONALLY     ERTS0914
+C              ADJUSTED SERIES                                          ERTS0915
+ 3110 DO 3120 I=1,7                                                     ERTS0916
+ 3120 BTM(I)=(PAS(1)+PAS(2)+PAS(3)+PAS(4))/4.                           ERTS0917
+ 3160 DO3170 I=NP8,NP14                                                 ERTS0918
+ 3170 BTM(I)=(PAS(N-3)+PAS(N-2)+PAS(N-1)+PAS(N))/4.                     ERTS0919
+ 3180 DO3190 I=8,NP7                                                    ERTS0920
+ 3190 BTM(I)=PAS(I-7)                                                   ERTS0921
+ 3200 DO3210 I=1,N                                                      ERTS0922
+ 3210 WMA(I)=(-3.*BTM(I)-6.*BTM(I+1)-5.*BTM(I+2)+3.*                    ERTS0923
+     1BTM(I+3)+21.*BTM(I+4)+46.*BTM(I+5)+67.*BTM(I+6)+                  ERTS0924
+     274.*BTM(I+7)+67.*BTM(I+8)+46.*BTM(I+9)+21.*                       ERTS0925
+     3BTM(I+10)+3.*BTM(I+11)-5.*BTM(I+12)-6.*BTM(I+13)-                 ERTS0926
+     43.*BTM(I+14))/320.                                                ERTS0927
+ 3211 DO 3212 I = 1,3                                                   ERTS0928
+ 3212 READ TAPE 3                                                       ERTS0929
+ 3213 WRITE TAPE 3, (WMA(I),I=1,372)                                    ERTS0930
+ 3214 REWIND 3                                                          ERTS0931
+ 3215 KK = 18                                                           ERTS0932
+ 3220 IF(K(18)-18)6500,3230,6500                                        ERTS0933
+ 3230 NOPTS = N                                                         ERTS0934
+ 3232 NOBLK = 0                                                         ERTS0935
+ 3234 DO 3236 I = 1, NOPTS                                              ERTS0936
+ 3236 RESULT (I) = WMA (I)                                              ERTS0937
+ 3238 GO TO 6000                                                        ERTS0938
+C                                                                       ERTS0939
+C     TABLE 19  PERCENT CHANGE FROM PRECEDING MONTH, ORIGINAL SERIES    ERTS0940
+C                                                                       ERTS0941
+ 3400 READ TAPE 3                                                       ERTS0942
+ 3401 READ TAPE 3                                                       ERTS0943
+ 3402 READ TAPE 3, (X(I),I=1,372)                                       ERTS0944
+ 3420 XN1=N1                                                            ERTS0945
+ 3440 SUM = 0.0                                                         ERTS0946
+ 3450 DO 3480 I=1,N1                                                    ERTS0947
+ 3470 STS(I) = (X(I+1)/X(I)-1.0)*100.0                                  ERTS0948
+ 3480 SUM=SUM+ABSF(STS(I))                                              ERTS0949
+ 3482 O=SUM/XN1                                                         ERTS0950
+ 3484 KK = 19                                                           ERTS0951
+ 3486 IF(K(19)-19)6500,3488,6500                                        ERTS0952
+ 3488 NOPTS = N - 1                                                     ERTS0953
+ 3489 NOBLK = 1                                                         ERTS0954
+ 3490 DO 3492 I = 1, NOPTS                                              ERTS0955
+ 3492 RESULT (I+1) = STS (I)                                            ERTS0956
+ 3494 GO TO 6000                                                        ERTS0957
+C                                                                       ERTS0958
+C     TABLE 20  PERCENT CHANGE FROM PRECEDING MONTH, FINAL SEASONAL     ERTS0959
+C               FACTORS                                                 ERTS0960
+ 3500 DO 3501 I = 1,3                                                   ERTS0961
+ 3501 READ TAPE 3                                                       ERTS0962
+ 3502 READ TAPE 3, (PAF(I),I=1,372)                                     ERTS0963
+ 3505 SUM=0.                                                            ERTS0964
+ 3510 DO3540 I=1,N1                                                     ERTS0965
+ 3530 CMA(I) = (PAF(I+1)/PAF(I)-1.0)*100.0                              ERTS0966
+ 3540 SUM=SUM+ABSF(CMA(I))                                              ERTS0967
+ 3550 S=SUM/XN1                                                         ERTS0968
+ 3555 KK = 20                                                           ERTS0969
+ 3560 IF(K(20)-20 )6500,3570,6500                                       ERTS0970
+ 3570 NOPTS = N - 1                                                     ERTS0971
+ 3572 NOBLK = 1                                                         ERTS0972
+ 3574 DO 3576 I = 1, NOPTS                                              ERTS0973
+ 3576 RESULT (I+1) = CMA (I)                                            ERTS0974
+ 3578 GO TO 6000                                                        ERTS0975
+C                                                                       ERTS0976
+C     TABLE 21  PERCENT CHANGE FROM PRECEDING MONTH, FINAL SEASONALLY   ERTS0977
+C               ADJUSTED SERIES                                         ERTS0978
+ 3600 READ TAPE 3, (PAS(I),I=1,372)                                     ERTS0979
+ 3601 READ TAPE 3                                                       ERTS0980
+ 3605 SUM=0.                                                            ERTS0981
+ 3610 DO 3640 I=1,N1                                                    ERTS0982
+ 3630 ROC(I) = (PAS(I+1)/PAS(I)-1.0)*100.0                              ERTS0983
+ 3640 SUM=SUM+ABSF(ROC(I))                                              ERTS0984
+ 3650 CI=SUM/XN1                                                        ERTS0985
+ 3652 WRITE TAPE 3, (ROC(I), I = 1,372)                                 ERTS0986
+ 3655 KK = 21                                                           ERTS0987
+ 3660 IF(K(21)-21 )6500,3670,6500                                       ERTS0988
+ 3670 NOPTS = N - 1                                                     ERTS0989
+ 3672 NOBLK = 1                                                         ERTS0990
+ 3674 DO 3676 I = 1, NOPTS                                              ERTS0991
+ 3676 RESULT (I+1) = ROC (I)                                            ERTS0992
+ 3678 GO TO 6000                                                        ERTS0993
+C                                                                       ERTS0994
+C     TABLE 22  PERCENT CHANGE FROM PRECEDING MONTH, SEASONAL-IRREGULAR ERTS0995
+C               RATIOS                                                  ERTS0996
+ 3700 DO 3701 I = 1,5                                                   ERTS0997
+ 3701 BACKSPACE 3                                                       ERTS0998
+ 3702 READ TAPE 3, (TOC(I),I=1,372)                                     ERTS0999
+ 3703 READ TAPE 3                                                       ERTS1000
+ 3704 READ TAPE 3                                                       ERTS1001
+ 3705 DO3720 I=1,N1                                                     ERTS1002
+ 3720 STA(I) = (TOC(I+1)/TOC(I)-1.0)*100.0                              ERTS1003
+ 3725 KK = 22                                                           ERTS1004
+ 3730 IF(K(22)-22 )6500,3740,6500                                       ERTS1005
+ 3740 NOPTS = N - 1                                                     ERTS1006
+ 3742 NOBLK = 1                                                         ERTS1007
+ 3744 DO 3746 I = 1, NOPTS                                              ERTS1008
+ 3746 RESULT (I+1) = STA (I)                                            ERTS1009
+ 3748 GO TO 6000                                                        ERTS1010
+C                                                                       ERTS1011
+C     TABLE 23  IRREGULAR COMPONENTS (RATIOS OF FINAL SEASONALLY        ERTS1012
+C               ADJUSTED SERIES TO ITS WEIGHTED 15-MONTH MOVING AVERAGE)ERTS1013
+ 3800 READ TAPE 3, (WMA(I),I=1,372)                                     ERTS1014
+ 3801 READ TAPE 3                                                       ERTS1015
+ 3810 DO 3820 I=1,N                                                     ERTS1016
+ 3820 ERC(I)=(PAS(I)/WMA(I))*100.                                       ERTS1017
+ 3825 KK = 23                                                           ERTS1018
+ 3830 IF(K(23)-23 )6500,3840,6500                                       ERTS1019
+ 3840 NOPTS = N                                                         ERTS1020
+ 3842 NOBLK = 0                                                         ERTS1021
+ 3844 DO 3846 I = 1, NOPTS                                              ERTS1022
+ 3846 RESULT (I) = ERC (I)                                              ERTS1023
+ 3848 GO TO 6000                                                        ERTS1024
+C                                                                       ERTS1025
+C     TABLE 24  PERCENT CHANGE FROM PRECEDING MONTH, IRREGULAR COMPONENTERTS1026
+ 3900 SUM=0.                                                            ERTS1027
+ 3910 DO3940 I=1,N1                                                     ERTS1028
+ 3930 OMA(I) = (ERC(I+1)/ERC(I)-1.0)*100.0                              ERTS1029
+ 3940 SUM=SUM+ABSF(OMA(I))                                              ERTS1030
+ 3950 R=SUM/XN1                                                         ERTS1031
+ 3952 WRITE TAPE 3, (OMA(I), I = 1,372)                                 ERTS1032
+ 3953 DO 3954 I = 1,3                                                   ERTS1033
+ 3954 BACKSPACE 3                                                       ERTS1034
+ 3955 KK = 24                                                           ERTS1035
+ 3960 IF(K(24)-24)6500,3970,6500                                        ERTS1036
+ 3970 NOPTS = N - 1                                                     ERTS1037
+ 3972 NOBLK = 1                                                         ERTS1038
+ 3974 DO 3976 I = 1, NOPTS                                              ERTS1039
+ 3976 RESULT (I+1) = OMA(I)                                             ERTS1040
+ 3978 GO TO 6000                                                        ERTS1041
+C                                                                       ERTS1042
+C     TABLE 25  PERCENT CHANGE FROM PRECEDING MONTH, WEIGHTED 15-MONTH  ERTS1043
+C               MOVING AVERAGE OF THE FINAL SEASONALLY ADJUSTED SERIES  ERTS1044
+ 4000 READ TAPE 3, (WMA(I),I=1,372)                                     ERTS1045
+ 4001 READ TAPE 3                                                       ERTS1046
+ 4002 READ TAPE 3                                                       ERTS1047
+ 4005 SUM=0.                                                            ERTS1048
+ 4010 DO4040 I=1,N1                                                     ERTS1049
+ 4030 A(I) = (WMA(I+1)/WMA(I)-1.0)*100.0                                ERTS1050
+ 4040 SUM=SUM+ABSF(A(I))                                                ERTS1051
+ 4050 C=SUM/XN1                                                         ERTS1052
+ 4060 D=C                                                               ERTS1053
+ 4062 WRITE TAPE 3, (A(I), I = 1,372)                                   ERTS1054
+ 4065 KK = 25                                                           ERTS1055
+ 4070 IF(K(25)-25 )6500,4072,6500                                       ERTS1056
+ 4072 NOPTS = N - 1                                                     ERTS1057
+ 4074 NOBLK = 1                                                         ERTS1058
+ 4076 DO 4078 I = 1, NOPTS                                              ERTS1059
+ 4078 RESULT (I+1) = A(I)                                               ERTS1060
+ 4080 GO TO 6000                                                        ERTS1061
+C                                                                       ERTS1062
+C     TABLE 26  MOVING AVERAGE OF FINAL SEASONALLY ADJUSTED SERIES,     ERTS1063
+C               LENGTH TO EQUAL NUMBER OF MONTHS FOR CYCLICAL DOMINANCE ERTS1064
+ 4100 DO 4102 I = 1,4                                                   ERTS1065
+ 4102 BACKSPACE 3                                                       ERTS1066
+ 4103 READ TAPE 3, (WMA(I), I = 1,372)                                  ERTS1067
+ 4105 RTOC=R/C                                                          ERTS1068
+ 4110 X(1) = RTOC                                                       ERTS1069
+ 4120 RTOS=R/S                                                          ERTS1070
+ 4130 STOC=S/C                                                          ERTS1071
+ 4140 RTOO=R/O                                                          ERTS1072
+ 4150 CTOO=C/O                                                          ERTS1073
+ 4160 STOO=S/O                                                          ERTS1074
+ 4170 DO4320 J=2,5                                                      ERTS1075
+ 4180 NJ=N-J                                                            ERTS1076
+ 4190 SUM=0.                                                            ERTS1077
+ 4200 SUMS=0.                                                           ERTS1078
+ 4210 DO 4280 I=1,NJ                                                    ERTS1079
+ 4220 LKC=I+J                                                           ERTS1080
+ 4270 SUMS = SUMS + ABSF((ERC(LKC)/ERC(I)-1.0)*100.0)                   ERTS1081
+ 4280 SUM = SUM + ABSF((WMA(LKC)/WMA(I)-1.0)*100.0)                     ERTS1082
+ 4320 X(J) = SUMS/SUM                                                   ERTS1083
+ 4330 DO4400 I=1,5                                                      ERTS1084
+ 4340 CMA(I) = X(I)                                                     ERTS1085
+ 4350 X(I) = X(I) - 1.0                                                 ERTS1086
+ 4360 IF( X(I) )4370,4370,4390                                          ERTS1087
+ 4370 BCL(I) = X(I)                                                     ERTS1088
+ 4380 GO TO 4400                                                        ERTS1089
+ 4390 BCL(I) = X(I) - 50.0                                              ERTS1090
+ 4400 CONTINUE                                                          ERTS1091
+ 4410 SMALL=BCL(1)                                                      ERTS1092
+ 4420 MCD=1                                                             ERTS1093
+ 4430 DO4470 I=2,5                                                      ERTS1094
+ 4440 IF(SMALL-BCL(I))4450,4470,4470                                    ERTS1095
+ 4450 SMALL=BCL(I)                                                      ERTS1096
+ 4460 MCD=I                                                             ERTS1097
+ 4470 CONTINUE                                                          ERTS1098
+ 4480 NMCD=N-(MCD-1)                                                    ERTS1099
+ 4482 MCD1 = MCD+1                                                      ERTS1100
+ 4484 DO 4486 I = MCD1,6                                                ERTS1101
+ 4486 CMA(I) = 0.0                                                      ERTS1102
+ 4487 DO 4488 I=1,6                                                     ERTS1103
+ 4488 XPRED(I)=CMA(I)                                                   ERTS1104
+ 4500 DO 4501 I = 1,2                                                   ERTS1105
+ 4501 BACKSPACE 3                                                       ERTS1106
+ 4502 READ TAPE 3, (PAS(I),I=1,372)                                     ERTS1107
+ 4503 READ TAPE 3                                                       ERTS1108
+ 4504 IF(MCD-1) 4505,4505,4530                                          ERTS1109
+ 4505 DO4510 I=1,N                                                      ERTS1110
+ 4510 TOC(I)=PAS(I)                                                     ERTS1111
+ 4520 GO TO 4625                                                        ERTS1112
+ 4530 STA(1)=0.                                                         ERTS1113
+ 4540 MCD1=MCD-1                                                        ERTS1114
+ 4550 DO4560 I=1,MCD                                                    ERTS1115
+ 4560 STA(1)=STA(1)+PAS(I)                                              ERTS1116
+ 4570 DO4590 I=2,NMCD                                                   ERTS1117
+ 4580 LHD=I+MCD1                                                        ERTS1118
+ 4590 STA(I)=STA(I-1)-PAS(I-1)+PAS(LHD)                                 ERTS1119
+ 4600 XMCD=MCD                                                          ERTS1120
+ 4610 DO4620 I=1,NMCD                                                   ERTS1121
+ 4620 TOC(I)=STA(I)/XMCD                                                ERTS1122
+ 4625 IF(K(34)-1)4630, 4627, 4630                                       ERTS1123
+ 4627 WRITE OUTPUT TAPE 2, 7324,(TOC(I),I = 1,NMCD)                     ERTS1124
+ 4630 IF(K(26)-26) 4700, 4635, 4700                                     ERTS1125
+ 4635 NOBLK = INTF(XMCD/2.02)                                           ERTS1126
+ 4640 NOPTS = N-MCD+1                                                   ERTS1127
+ 4641 NN = NOPTS + NOBLK                                                ERTS1128
+ 4642 KK = 26                                                           ERTS1129
+ 4645 DO 4650 I = 1, NOPTS                                              ERTS1130
+ 4647 II = I+NOBLK                                                      ERTS1131
+ 4650 RESULT(II) = TOC(I)                                               ERTS1132
+ 4655 IF(NOBLK) 4667, 4667, 4660                                        ERTS1133
+ 4660 DO 4665 I = 1, NOBLK                                              ERTS1134
+ 4665 RESULT(I) = 0.0                                                   ERTS1135
+ 4667 WRITE OUTPUT TAPE 1, 7667, MCD                                    ERTS1136
+ 4670 JA = 1                                                            ERTS1137
+ 4675 JB = 12                                                           ERTS1138
+ 4680 L = 1                                                             ERTS1139
+ 4690 GO TO 6180                                                        ERTS1140
+C                                                                       ERTS1141
+C     TABLE 27  IRREGULAR, CYCLICAL AND SEASONAL COMPONENTS, THEIR      ERTS1142
+C               RELATIONS, AND AVERAGE DURATION OF RUNS                 ERTS1143
+ 4700 ASSIGN 4860 TO M                                                  ERTS1144
+ 4710 DO 4720 I=1,N1                                                    ERTS1145
+ 4720 STA(I) = (TOC(I+1)/TOC(I)-1.0)*100.0                              ERTS1146
+ 4760 Z=1.                                                              ERTS1147
+ 4770 DO4840 I=1,N1                                                     ERTS1148
+ 4780 IF(STA(I))4790,4820,4820                                          ERTS1149
+ 4790 IF(STA(I+1))4840,4800,4800                                        ERTS1150
+ 4800 Z=Z+1.                                                            ERTS1151
+ 4810 GO TO 4840                                                        ERTS1152
+ 4820 IF(STA(I+1))4830,4840,4840                                        ERTS1153
+ 4830 Z=Z+1.                                                            ERTS1154
+ 4840 CONTINUE                                                          ERTS1155
+ 4850 GO TO M, (4860,4910,4960,4994)                                    ERTS1156
+ 4860 ADRMA = XN1/Z                                                     ERTS1157
+ 4870 READ TAPE 3, (STA(I), I = 1,372)                                  ERTS1158
+ 4890 ASSIGN 4910 TO M                                                  ERTS1159
+ 4900 GO TO 4760                                                        ERTS1160
+ 4910 ADRCI = XN1/Z                                                     ERTS1161
+ 4920 READ TAPE 3, (STA(I), I = 1,372)                                  ERTS1162
+ 4940 ASSIGN 4960 TO M                                                  ERTS1163
+ 4950 GO TO 4760                                                        ERTS1164
+ 4960 ADRI=XN1/Z                                                        ERTS1165
+ 4970 READ TAPE 3, (STA(I), I = 1,372)                                  ERTS1166
+ 4990 ASSIGN 4994 TO M                                                  ERTS1167
+ 4992 GO TO 4760                                                        ERTS1168
+ 4994 ADRC = XN1/Z                                                      ERTS1169
+ 4996 IF(K(27)-27) 5100, 5000, 5100                                     ERTS1170
+ 5000 WRITE OUTPUT TAPE 1, 8000, KC                                     ERTS1171
+ 5010 WRITE OUTPUT TAPE 1, 8010                                         ERTS1172
+ 5020 WRITE OUTPUT TAPE 1, 8020, O, R, D, S, CI                         ERTS1173
+ 5030 WRITE OUTPUT TAPE 1, 8030                                         ERTS1174
+ 5040 WRITE OUTPUT TAPE 1, 8040, RTOC, RTOS, STOC, RTOO, CTOO, STOO     ERTS1175
+ 5050 WRITE OUTPUT TAPE 1, 8050                                         ERTS1176
+ 5060 WRITE OUTPUT TAPE 1, 8060, MCD                                    ERTS1177
+ 5070 WRITE OUTPUT TAPE 1, 8070, ADRCI, ADRI, ADRC, ADRMA               ERTS1178
+ 5080 WRITE OUTPUT TAPE 1, 8080                                         ERTS1179
+ 5090 WRITE OUTPUT TAPE 1, 8090, (XPRED(I),I = 1,5)                     ERTS1180
+ 5095 WRITE OUTPUT TAPE 1, 8095, MCD                                    ERTS1181
+C                                                                       ERTS1182
+C     TABLE 28  RATIOS OF 12-MONTH MOVING AVERAGES, IRREGULAR AMPLITUDE ERTS1183
+C               TO CYCLICAL AMPLITUDE                                   ERTS1184
+ 5100 DO 5102 I = 1,2                                                   ERTS1185
+ 5102 BACKSPACE 3                                                       ERTS1186
+ 5104 READ TAPE 3, (OMA(I), I = 1,372)                                  ERTS1187
+ 5106 READ TAPE 3,(A(I), I = 1, 372)                                    ERTS1188
+ 5110 ERC(1) = 0.0                                                      ERTS1189
+ 5115 TOC(1) = 0.0                                                      ERTS1190
+ 5200 DO5220 I=1,12                                                     ERTS1191
+ 5210 TOC(1) = TOC(1) + ABSF(OMA(I))                                    ERTS1192
+ 5220 ERC(1) = ERC(1) + ABSF(A(I))                                      ERTS1193
+ 5240 DO5260 I=2,N12                                                    ERTS1194
+ 5250 TOC(I)=TOC(I-1)-ABSF(OMA(I-1))+ABSF(OMA(I+11))                    ERTS1195
+ 5260 ERC(I)=ERC(I-1)-ABSF(A(I-1))+ABSF(A(I+11))                        ERTS1196
+ 5270 DO5300 I=1,N12                                                    ERTS1197
+ 5300 STA(I) = (TOC(I)/ERC(I))*100.0                                    ERTS1198
+ 5305 KK = 28                                                           ERTS1199
+ 5310 IF(K(28)-28)6500,5320,6500                                        ERTS1200
+ 5320 NOPTS = N-12                                                      ERTS1201
+ 5322 NOBLK = 6                                                         ERTS1202
+ 5324 DO 5326 I = 1, NOPTS                                              ERTS1203
+ 5326 RESULT (I+6) = STA (I)                                            ERTS1204
+ 5328 GO TO 6000                                                        ERTS1205
+C                                                                       ERTS1206
+C         PREPARATION OF TWENTY-FOUR MONTH FORECAST                     ERTS1207
+ 9000 IF(K(33))5400, 9001, 9001                                         ERTS1208
+ 9001 IF(K(33)-4)9002, 9005, 5400                                       ERTS1209
+ 9002 M = K(33)                                                         ERTS1210
+ 9003 MK = K(33)                                                        ERTS1211
+ 9004 GO TO 9010                                                        ERTS1212
+ 9005 M = 3                                                             ERTS1213
+ 9006 MK = 3                                                            ERTS1214
+ 9010 NP = XMODF(N,12)                                                  ERTS1215
+ 9011 REWIND 3                                                          ERTS1216
+ 9012 IF(KODE) 9013,9013,9020                                           ERTS1217
+ 9013 READ TAPE 3                                                       ERTS1218
+ 9014 DO 9016 I=1,24                                                    ERTS1219
+ 9015 NPI=I+NP                                                          ERTS1220
+ 9016 DDA(NPI)=10000.0                                                  ERTS1221
+ 9017 GO TO 9027                                                        ERTS1222
+ 9020 READ TAPE 3, NFSTYR, NDDA, (DDA(I),I = 1,372)                     ERTS1223
+ 9021 MM1=(LR(1)-NFSTYR)*12+N                                           ERTS1224
+ 9022 IF(NDDA-MM1-24) 9014,9023,9023                                    ERTS1225
+ 9023 DO 9026 I=1,24                                                    ERTS1226
+ 9024 II=I+MM1                                                          ERTS1227
+ 9025 NPI = I+NP                                                        ERTS1228
+ 9026 DDA(NPI) = DDA(II)                                                ERTS1229
+ 9027 DO 9028 I=1,5                                                     ERTS1230
+ 9028 READ TAPE 3                                                       ERTS1231
+ 9030 READ TAPE 3,  (PAF(I),I=1,372)                                    ERTS1232
+ 9032 DO 9038 I=1,12                                                    ERTS1233
+ 9034 II=N+I                                                            ERTS1234
+ 9035 NPI = I+NP                                                        ERTS1235
+ 9036 PAF(NPI) = PAF(II)                                                ERTS1236
+ 9038 PAF(NPI+12) = PAF(II)                                             ERTS1237
+ 9040 READ TAPE 3, (PAS(I),I=1,372)                                     ERTS1238
+ 9060 IF(NP)9080, 9080, 9062                                            ERTS1239
+ 9062 LLR1 = LR(LY)                                                     ERTS1240
+ 9064 LLR2 = LLR1+1                                                     ERTS1241
+ 9066 LLR3 = LLR1+2                                                     ERTS1242
+ 9068 DO 9076 I = 1,NP                                                  ERTS1243
+ 9070 DDA(I) = 0.0                                                      ERTS1244
+ 9072 PAF(I) = 0.0                                                      ERTS1245
+ 9074 TRDCYL(I) = 0.0                                                   ERTS1246
+ 9076 XPRED(I) = 0.0                                                    ERTS1247
+ 9078 GO TO 9084                                                        ERTS1248
+ 9080 LLR1 = LR(LY)+1                                                   ERTS1249
+ 9082 LLR2 = LLR1+1                                                     ERTS1250
+ 9084 NPP24 = NP+24                                                     ERTS1251
+ 9085 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS1252
+ 9086 WRITE OUTPUT TAPE 1, 7160, NTABLE                                 ERTS1253
+ 9089 WRITE OUTPUT TAPE 1, 7180, KC                                     ERTS1254
+      READ INPUT TAPE 4, 7170                                           ERTS1255
+      WRITE OUTPUT TAPE 1, 7170                                         ERTS1256
+      READ INPUT TAPE 4, 7170                                           ERTS1257
+      WRITE OUTPUT TAPE 1, 7170                                         ERTS1258
+ 9090 IF(NP)9092, 9092, 9094                                            ERTS1259
+ 9092 WRITE OUTPUT TAPE 1, 7190, LLR1, (DDA(I),I = 1,12),LLR2, (DDA(I),IERTS1260
+     1= 13,24),LLR1, (PAF(I),I = 1,12),LLR2,(PAF(I),I = 13,24)          ERTS1261
+ 9093 GO TO 9100                                                        ERTS1262
+ 9094 WRITE OUTPUT TAPE 1, 7190, LLR1, (DDA(I),I = 1,12),LLR2, (DDA(I),IERTS1263
+     1= 13,24), LLR3, (DDA(I), I = 25,NPP24)                            ERTS1264
+ 9096 WRITE OUTPUT TAPE 1, 7190, LLR1,(PAF(I),I = 1,12), LLR2,(PAF(I),I ERTS1265
+     1= 13,24), LLR3,(PAF(I), I = 25,NPP24)                             ERTS1266
+C                                                                       ERTS1267
+C         LEAST SQUARE CALCULATION OF TREND LINE                        ERTS1268
+ 9100 READ INPUT TAPE 4, 7170                                           ERTS1269
+ 9101 WRITE OUTPUT TAPE 1, 7170                                         ERTS1270
+ 9102 READ INPUT TAPE 4, 7170                                           ERTS1271
+ 9103 WRITE OUTPUT TAPE 1, 7170                                         ERTS1272
+ 9104 READ INPUT TAPE 4, 7170                                           ERTS1273
+ 9105 WRITE OUTPUT TAPE 1, 7170                                         ERTS1274
+ 9120 IF(K(33)) 5400,9400, 9121                                         ERTS1275
+ 9121 LS=2*M+1                                                          ERTS1276
+ 9122 LB=M+2                                                            ERTS1277
+ 9124 LV=M+1                                                            ERTS1278
+ 9126 RSUM(1)=N                                                         ERTS1279
+ 9128 DO 9130 J=2,LS                                                    ERTS1280
+ 9130 RSUM(J)=0.0                                                       ERTS1281
+ 9132 DO 9134 J=1,LV                                                    ERTS1282
+ 9134 V(J)=0.0                                                          ERTS1283
+ 9135 XM=0.0                                                            ERTS1284
+ 9140 DO 9160 I=1,N                                                     ERTS1285
+ 9141 XM=XM+1.0                                                         ERTS1286
+ 9142 P=1.0                                                             ERTS1287
+ 9144 V(1)=V(1)+PAS(I)                                                  ERTS1288
+ 9146 DO 9152 J=2,LV                                                    ERTS1289
+ 9148 P=XM*P                                                            ERTS1290
+ 9150 RSUM(J) = RSUM(J)+P                                               ERTS1291
+ 9152 V(J)=V(J)+PAS(I)*P                                                ERTS1292
+ 9154 DO 9160 J=LB,LS                                                   ERTS1293
+ 9156 P=XM*P                                                            ERTS1294
+ 9160 RSUM(J) = RSUM(J)+P                                               ERTS1295
+C                                                                       ERTS1296
+C         CALCULATION OF TREND EQUATION COEFFICIENTS                    ERTS1297
+ 9165 IF(K(33)-4)9169, 9168, 5400                                       ERTS1298
+ 9168 M = 1                                                             ERTS1299
+ 9169 LB = M+2                                                          ERTS1300
+ 9170 LV = M+1                                                          ERTS1301
+ 9171 DO 9176 I=1,LV                                                    ERTS1302
+ 9172 DO 9176 K=1,LV                                                    ERTS1303
+ 9174 J = K+I                                                           ERTS1304
+ 9176 BB(K,I)=RSUM(J-1)                                                 ERTS1305
+ 9178 DO 9180 K=1,LV                                                    ERTS1306
+ 9180 BB(K,LB)=V(K)                                                     ERTS1307
+ 9230 DO 9248 L=1, LV                                                   ERTS1308
+ 9232 DIVB=BB(L,L)                                                      ERTS1309
+ 9234 DO 9236 J = L,LB                                                  ERTS1310
+ 9236 BB(L,J)=BB(L,J)/DIVB                                              ERTS1311
+ 9238 I1 = L + 1                                                        ERTS1312
+ 9240 IF(I1 - LB) 9242, 9250, 9250                                      ERTS1313
+ 9242 DO 9248 I = I1, LV                                                ERTS1314
+ 9244 FMULTB=BB(I,L)                                                    ERTS1315
+ 9246 DO 9248 J = L, LB                                                 ERTS1316
+ 9248 BB(I,J)=BB(I,J)-BB(L,J)*FMULTB                                    ERTS1317
+ 9250 A(LV)=BB(LV,LB)                                                   ERTS1318
+ 9252 I=LV                                                              ERTS1319
+ 9254 SIGMA=0.0                                                         ERTS1320
+ 9256 DO 9258  J=I,LV                                                   ERTS1321
+ 9258 SIGMA=SIGMA + BB(I-1,J) * A(J)                                    ERTS1322
+ 9260 I=I-1                                                             ERTS1323
+ 9262 A(I) =BB(I,LB) - SIGMA                                            ERTS1324
+ 9264 IF (I-1) 9270,  9270,  9254                                       ERTS1325
+ 9270 DO 9284 I=1, LV                                                   ERTS1326
+ 9272 GO TO (9274, 9278, 9282), M                                       ERTS1327
+ 9274 CFDEG1 (I) = A(I)                                                 ERTS1328
+ 9276 GO TO 9284                                                        ERTS1329
+ 9278 CFDEG 2(I) = A(I)                                                 ERTS1330
+ 9280 GO TO 9284                                                        ERTS1331
+ 9282 CFDEG 3 (I) = A(I)                                                ERTS1332
+ 9284 CONTINUE                                                          ERTS1333
+ 9290 IF(M-MK)9292, 9300, 9300                                          ERTS1334
+ 9292 M = M+1                                                           ERTS1335
+ 9294 GO TO 9169                                                        ERTS1336
+C                                                                       ERTS1337
+C     TWENTY-FOUR MONTH EXTRAPOLATION OF TREND-CYCLIC EQUATION          ERTS1338
+ 9300 IF(K(33)-4)9304, 9303, 5400                                       ERTS1339
+ 9303 M = 1                                                             ERTS1340
+ 9304 MP1 = M+1                                                         ERTS1341
+ 9305 DO 9316 I = 1,4                                                   ERTS1342
+ 9306 GO TO (9307,9310,9314),M                                          ERTS1343
+ 9307 A(I) = CFDEG1(I)                                                  ERTS1344
+ 9308 GO TO 9316                                                        ERTS1345
+ 9310 A(I) = CFDEG2(I)                                                  ERTS1346
+ 9312 GO TO 9316                                                        ERTS1347
+ 9314 A(I) = CFDEG3(I)                                                  ERTS1348
+ 9316 CONTINUE                                                          ERTS1349
+ 9320 DO 9336 I = 1,24                                                  ERTS1350
+ 9322 XX = I+N                                                          ERTS1351
+ 9324 Z = A(MP1)                                                        ERTS1352
+ 9326 DO 9330 JJ = 1,M                                                  ERTS1353
+ 9328 MM = M-JJ                                                         ERTS1354
+ 9330 Z = A(MM+1)+Z*XX                                                  ERTS1355
+ 9332 NPI = I+NP                                                        ERTS1356
+ 9334 TRDCYL(NPI) = Z                                                   ERTS1357
+ 9336 XPRED(NPI) = Z*PAF(NPI)/DDA(NPI)*100.0                            ERTS1358
+ 9338 WRITE OUTPUT TAPE 1, 8338, M, (A(I),I=1,MP1)                      ERTS1359
+ 9340 IF(NP) 9342, 9342, 9348                                           ERTS1360
+ 9342 WRITE OUTPUT TAPE 1, 7190, LLR1, (TRDCYL(I), I= 1,12),LLR2,(TRDCYLERTS1361
+     1(I),I=13,24),LLR1,(XPRED(I),I=1,12),LLR2,(XPRED(I),I=13,24)       ERTS1362
+ 9346 GO TO 9360                                                        ERTS1363
+ 9348 WRITE OUTPUT TAPE 1, 7190, LLR1, (TRDCYL(I), I= 1,12),LLR2,(TRDCYLERTS1364
+     1(I),I= 13,24),LLR3, (TRDCYL(I),I= 25,NPP24)                       ERTS1365
+ 9350 WRITE OUTPUT TAPE 1, 7190, LLR1,(XPRED(I),I= 1,12),LLR2,(XPRED(I),ERTS1366
+     1I = 13,24),LLR3,(XPRED(I),I = 25,NPP24)                           ERTS1367
+ 9360 IF(M-MK)9362, 5400, 5400                                          ERTS1368
+ 9362 M = M+1                                                           ERTS1369
+ 9364 GO TO 9304                                                        ERTS1370
+C                                                                       ERTS1371
+C        EXTRAPOLATION USING ZERO ORDER TREND-CYCLIC EQUATION           ERTS1372
+ 9400 MP1=M+1                                                           ERTS1373
+ 9402 FN=N                                                              ERTS1374
+ 9404 YSUM=0.0                                                          ERTS1375
+ 9406 DO 9408 I=1,N                                                     ERTS1376
+ 9408 YSUM=YSUM+PAS(I)                                                  ERTS1377
+ 9410 A(1)=YSUM/FN                                                      ERTS1378
+ 9412 DO 9418 I=1,24                                                    ERTS1379
+ 9414 NPI=I+NP                                                          ERTS1380
+ 9416 TRDCYL(NPI)=A(1)                                                  ERTS1381
+ 9418 XPRED(NPI)=TRDCYL(NPI)*PAF(NPI)/DDA(NPI)*100.0                    ERTS1382
+ 9420 GO TO 9338                                                        ERTS1383
+C                                                                       ERTS1384
+C     STOP - NEXT PROBLEM                                               ERTS1385
+ 5400 STOP 66666                                                        ERTS1386
+C                                                                       ERTS1387
+C     PRINT ROUTINE FOR TABLES                                          ERTS1388
+ 6000 IF(NOBLK) 6130, 6130, 6110                                        ERTS1389
+ 6110 DO 6120 I = 1,NOBLK                                               ERTS1390
+ 6120 RESULT(I) = 0.0                                                   ERTS1391
+ 6130 NN = NOBLK + NOPTS                                                ERTS1392
+ 6135 JA = 1                                                            ERTS1393
+ 6140 JB = 12                                                           ERTS1394
+ 6150 L = 1                                                             ERTS1395
+ 6160 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS1396
+ 6165 IF(KK-NTABLE) 6900, 6170, 6900                                    ERTS1397
+ 6170 WRITE OUTPUT TAPE 1, 7160, NTABLE                                 ERTS1398
+ 6180 WRITE OUTPUT TAPE 1, 7180, KC                                     ERTS1399
+ 6190 WRITE OUTPUT TAPE 1, 7190, LR(L), (RESULT(I), I = JA,JB)          ERTS1400
+ 6200 IF(JB-NN) 6210, 6300, 6300                                        ERTS1401
+ 6210 JA = JA + 12                                                      ERTS1402
+ 6220 JB = JB + 12                                                      ERTS1403
+ 6230 L = L + 1                                                         ERTS1404
+ 6240 IF(JB-NN) 6190, 6190, 6250                                        ERTS1405
+ 6250 JB = NN                                                           ERTS1406
+ 6260 GO TO 6190                                                        ERTS1407
+ 6300 GO TO (5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400,ERTS1408
+     15400, 5400, 5400, 2500, 2900, 3000, 3110, 3400, 3500, 3600, 3700, ERTS1409
+     23800, 3900, 4000, 4100, 4700, 5400, 9000, 5400, 5400, 5400, 5400) ERTS1410
+     3,KK                                                               ERTS1411
+ 6400 WRITE OUTPUT TAPE 1, 7400, (STA(I),I = 1,12)                      ERTS1412
+ 6410 GO TO 2800                                                        ERTS1413
+ 6500 READ INPUT TAPE 4, 7160, NTABLE                                   ERTS1414
+ 6510 GO TO (5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400, 5400,ERTS1415
+     15400, 5400, 5400, 2800, 2900, 3000, 3110, 3400, 3500, 3600, 3700, ERTS1416
+     23800, 3900, 4000, 4100, 4700, 5400, 9000, 5400, 5400, 5400, 5400) ERTS1417
+     3,KK                                                               ERTS1418
+ 6900 PRINT 7900, KC, KK                                                ERTS1419
+ 6910 PAUSE 25252                                                       ERTS1420
+ 6920 GO TO 5400                                                        ERTS1421
+C                                                                       ERTS1422
+C        F O R M A T S                                                  ERTS1423
+C                                                                       ERTS1424
+ 7160 FORMAT(3H   I2,67H                                                ERTS1425
+     1                   )                                              ERTS1426
+ 7170 FORMAT(72H                                                        ERTS1427
+     1                 )                                                ERTS1428
+ 7180 FORMAT(108H+                                                      ERTS1429
+     1                                          SERIES NO. I4 //115H  YEERTS1430
+     2AR     JAN      FEB      MAR      APR      MAY      JUN      JUL  ERTS1431
+     3    AUG      SEP      OCT      NOV      DEC  )                    ERTS1432
+ 7190 FORMAT(1H0I5,12F9.1)                                              ERTS1433
+ 7324 FORMAT(6F12.1)                                                    ERTS1434
+ 7400 FORMAT(20H0           AVERAGES//F15.1,11F9.1)                     ERTS1435
+ 7667 FORMAT(4H126 I4,  41H-MO MOVING AVERAGE,FINAL ADJUSTED SERIES )   ERTS1436
+ 7900 FORMAT(21H1    TIME SERIES NO. I4 / 27H     WRONG TITLE FOR TABLE ERTS1437
+     1I3 / 78H     BY-PASS REST OF JOB AND CHECK ORDER OF TITLE CARDS ONERTS1438
+     2INPUT TAPE 4 LATER. )                                             ERTS1439
+ 8000 FORMAT(108H127 I,C,+S COMPONENTS, THEIR RELATIONS, AND AVERAGE DURERTS1440
+     1ATION OF RUN                              SERIES NO.   I4)        ERTS1441
+ 8010 FORMAT(89H0                      O               I               CERTS1442
+     1               S               CI)                                ERTS1443
+ 8020 FORMAT(1H0F24.2,4F16.2)                                           ERTS1444
+ 8030 FORMAT(105H0                     I/C             I/S             SERTS1445
+     1/C             I/O             C/O             S/O)               ERTS1446
+ 8040 FORMAT(1H0F24.2,5F16.2)                                           ERTS1447
+ 8050 FORMAT(49H0                         AVERAGE DURATION OF RUN)      ERTS1448
+ 8060 FORMAT(66H0                     CI               I               CERTS1449
+     1          I1, 6H-MO MA)                                           ERTS1450
+ 8070 FORMAT(1H0F24.2,3F16.2)                                           ERTS1451
+ 8080 FORMAT(37H0                         MONTHS SPAN //86H             ERTS1452
+     1        1               2               3               4         ERTS1453
+     2      5)                                                          ERTS1454
+ 8090 FORMAT(20H0               I/C F4.2,4F16.2)                        ERTS1455
+ 8095 FORMAT(35H0     MONTHS FOR CYCLICAL DOMINANCE  I10)               ERTS1456
+ 8338 FORMAT (1H0I20,F30.5,3F15.5)                                      ERTS1457
+      END (2,2,2,2,2)                                                   ERTS1458
+1        SALES OF HEAVY PEANUT OIL BY AFFILIATES, M GAL.                ERTS3000
+         A.  TOTAL NEW ENGLAND SALES                                    ERTS3001
+         JOB NO. 1024-PO-NE.3                    MAY 1, 1959            ERTS3002
+         EXPLORATORY ECONOMICS DEPT.             B. I. NARY             ERTS3003
+  4321     1  1947   139  1945   192 20000     4                        ERTS3004
+  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24ERTS3005
+ 25 26 27 28 29 30 31 32                                                ERTS3006
+         403         390         382         400         391         381ERTS3007
+         359         371         383         406         381         386ERTS3008
+         396         391         406         380         380         399ERTS3009
+         364         381         401         395         398         400ERTS3010
+         389         401         406         385         370         376ERTS3011
+         318         365         368         370         370         381ERTS3012
+         385         388         388         385         397         393ERTS3013
+         355         397         394         407         398         389ERTS3014
+         416         404         404         405         416         405ERTS3015
+         373         404         391         414         402         390ERTS3016
+         414         409         398         377         361         360ERTS3017
+         355         382         403         418         396         395ERTS3018
+         407         407         403         410         399         399ERTS3019
+         381         382         392         401         380         370ERTS3020
+         357         372         373         358         349         360ERTS3021
+         334         351         357         366         376         380ERTS3022
+         378         400         411         399         397         401ERTS3023
+         350         389         395         394         406         391ERTS3024
+         395         405         407         397         401         390ERTS3025
+         360         380         392         406         398         377ERTS3026
+         402         398         387         380         379         367ERTS3027
+         348         365         364         380         361         329ERTS3028
+         352         342         336         331         342         355ERTS3029
+         324                                                            ERTS3030
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3031
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3032
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3033
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3034
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3035
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3036
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3037
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3038
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3039
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3040
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3041
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3042
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3043
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3044
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3045
+ 1     1     1     1     1     1     1     1     1     1     1     1    ERTS3046
+1   1     ORIGINAL SERIES                                               ERTS1900
+1  31     DELIVERY-DAY ADJUSTMENT FACTORS X 10,000                      ERTS1901
+1  32     ADJUSTED OBSERVATIONS                                         ERTS1902
+1   2     RATIOS OF ORIGINAL TO PROCEDING AND FOLLOWING                 ERTS1903
+1   3     UNCENTERED 12-MONTH MOVING AVERAGE OF ORIGINAL                ERTS1904
+1   4     CENTERED 12-MONTH MOVING AVERAGE OF ORIGINAL                  ERTS1905
+1   5     RATIO OF ORIGINAL TO CENTERED MOVING AVERAGE                  ERTS1906
+1   6     PRELIMINARY ADJUSTMENT FACTORS                                ERTS1907
+1   7     PRELIMINARY ADJUSTED SERIES                                   ERTS1908
+1  29A    12 MONTHS TO DATE       (29A = 7A)                            ERTS1909
+1   8     WEIGHTED 15-MO MOVING AVERAGE OF PRELIMINARY ADJUSTED SERIES  ERTS1910
+1   9     RATIOS OF ORIGINAL TO WEIGHTED 15-MONTH MOVING AVERAGE        ERTS1911
+1  10     MODIFIED RATIOS, ORIGINAL / WEIGHTED 15-MONTH MOVING AVERAGE  ERTS1912
+1  30*    STABLE-SEASONAL ADJUSTMENT FACTORS     (30* = 9*)             ERTS1913
+1  30**   STABLE-SEASONAL ADJUSTED SERIES        (30** = 9**)           ERTS1914
+1  11     CENTERED RATIOS, ORIGINAL / WEIGHTED 15-MO MOVING AVERAGE     ERTS1915
+1  12     FINAL SEASONAL ADJUSTMENT FACTORS                             ERTS1916
+1  13     FINAL SEASONALLY ADJUSTED SERIES                              ERTS1917
+1  14     RATIOS, FINAL ADJUSTMENT TO PRECEDING AND FOLLOWING           ERTS1918
+1  15     UNCENTERED 12-MONTH MOVING AVERAGE OF FINAL ADJ. SERIES       ERTS1919
+1  16     RATIOS, 12-MO MOVING AVERAGES, FINAL ADJ. SERIES TO ORIGINAL  ERTS1920
+1  17     RATIOS, EACH TO PRECEDING JANUARY, FINAL ADJ. SERIES          ERTS1921
+1  18     WEIGHTED 15-MONTH MOVING AVERAGE OF FINAL ADJUSTED SERIES     ERTS1922
+1  19     PERCENT CHANGE FROM PRECEDING MONTH, ORIGINAL SERIES          ERTS1923
+1  20     PERCENT CHANGE FROM PRECEDING MONTH, FINAL SEASONAL FACTORS   ERTS1924
+1  21     PERCENT CHANGE FROM PRECEDING MONTH, FINAL ADJUSTED SERIES    ERTS1925
+1  22     PERCENT CHANGE FROM PRECEDING MONTH, S-I RATIOS               ERTS1926
+1  23     IRREGULAR COMPONENT                                           ERTS1927
+1  24     PERCENT CHANGE FROM PRECEDING MONTH, IRREGULAR                ERTS1928
+1  25     PERCENT CHANGE FROM PRECEDING MONTH, CYCLICAL                 ERTS1929
+1  28     RATIOS, 12-MO MOVING AVERAGES OF IRREGULAR AND CYCLICAL AMPS  ERTS1930
+1  33    T W E N T Y - F O U R   M O N T H   F O R E C A S T            ERTS1931
+0        DELIVERY-DAY ADJUSTMENT FACTORS AND SEASONAL ADJUSTMENT FACTORSERTS1932
+         USED IN MAKING FORECAST -                                      ERTS1933
+0        DEGREE AND COEFFICIENTS OF EQUATION USED, PREDICTED VALUES     ERTS1934
+         USING EQUATION, AND AFTER CORRECTIONS FOR SEASONAL AND DELIVERYERTS1935
+         DAY ADJUSTMENTS -                                              ERTS1936
+                                                                        ERTS1937
+                                                                        ERTS1938
+                                                                        ERTS1939
+       REM              M1 ' PROGRAM TAPE PREPARATION AND LOADING       ERTS1800
+       ORG 7680                                                         ERTS1801
+       CLA *+34         RESTORE ORIGINAL INSTRUCTION                    ERTS1802
+       STO 34             IN DECK I                                     ERTS1803
+       CLA *+31         MODIFY DECK I EXIT                              ERTS1804
+       STO 2685                                                         ERTS1805
+       REW 5            READY TAPE 5 FOR PROGRAM RECORDS                ERTS1806
+       LXA *+31,1       WRITE DECK I AS FIRST BINARY                    ERTS1807
+       WTB 5              RECORD ON TAPE 5                              ERTS1808
+       CPY *-7,1                                                        ERTS1809
+       TIX *-1,1,1                                                      ERTS1810
+       RCD              LOAD BUTTON SEQUENCE                            ERTS1811
+       CPY 0              TO READ IN DECK II                            ERTS1812
+       CPY 1                                                            ERTS1813
+       TRA 0                                                            ERTS1814
+       CLA *+22         RESTORE ORIGINAL INSTRUCTION                    ERTS1815
+       STO 32             IN DECK II                                    ERTS1816
+       CLA *+17         MODIFY DECK II EXIT                             ERTS1817
+       STO 2780                                                         ERTS1818
+       LXA *+19,1       WRITE DECK II AS SECOND BINARY                  ERTS1819
+       WTB 5              RECORD ON TAPE 5                              ERTS1820
+       CPY *-19,1                                                       ERTS1821
+       TIX *-1,1,1                                                      ERTS1822
+       REW 5            REWIND TAPE 5 ALSO RETURN FROM DECK II          ERTS1823
+       LXA *+14,1       READ IN FIRST BINARY RECORD                     ERTS1824
+       RTB 5              (DECK I)                                      ERTS1825
+       CPY *-24,1                                                       ERTS1826
+       TIX *-1,1,1                                                      ERTS1827
+       TRA 34           TRANSFER CONTROL TO DECK I                      ERTS1828
+       LXA *+9,1        RETURN FROM DECK I, READ IN                     ERTS1829
+       RTB 5              SECOND BINARY RECORD (DECKII)                 ERTS1830
+       CPY *-29,1                                                       ERTS1831
+       TIX *-1,1,1                                                      ERTS1832
+       TRA 32           TRANSFER CONTROL TO DECK II                     ERTS1833
+       TRA *-11                                                         ERTS1834
+       TRA *-6                                                          ERTS1835
+       REW 3                                                            ERTS1836
+       REW 4                                                            ERTS1837
+       DEC 7680                                                         ERTS1838
+       ORG 34                                                           ERTS1839
+       TRA 7680         TEMPORARY DECK I EXIT                           ERTS1840
+       ORG 32                                                           ERTS1841
+       TRA 7693         TEMPORARY DECK II EXIT                          ERTS1842
+       END                                                              ERTS1843
+       REM              M2 ' PROGRAM TAPE  LOADER                       ERTS1844
+       ORG 7701                                                         ERTS1845
+       REW 5            REWIND TAPE 5 ALSO RETURN FROM DECK II          ERTS1846
+       LXA *+14,1       READ IN FIRST BINARY RECORD                     ERTS1847
+       RTB 5              (DECK I)                                      ERTS1848
+       CPY *-24,1                                                       ERTS1849
+       TIX *-1,1,1                                                      ERTS1850
+       TRA 34           TRANSFER CONTROL TO DECK I                      ERTS1851
+       LXA *+9,1        RETURN FROM DECK I, READ IN                     ERTS1852
+       RTB 5              SECOND BINARY RECORD (DECKII)                 ERTS1853
+       CPY *-29,1                                                       ERTS1854
+       TIX *-1,1,1                                                      ERTS1855
+       TRA 32           TRANSFER CONTROL TO DECK II                     ERTS1856
+       ORG 7716                                                         ERTS1857
+       DEC 7680                                                         ERTS1858
+       END                                                              ERTS1859

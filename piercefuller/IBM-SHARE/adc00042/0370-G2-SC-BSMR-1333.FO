@@ -1,0 +1,961 @@
+*ID                          MAIN PROGRAM (STEPWISE)                    BSMR0001
+*     OCTAL LIST                                                        BSMR0002
+*     LABEL                                                             BSMR0003
+                                                                        BSMR0004
+       DIMENSION                                                        BSMR0005
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0006
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0007
+     3 DATUM(2000), SUM(61)                                             BSMR0008
+                                                                        BSMR0009
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0010
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0011
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0012
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0013
+                                                                        BSMR0014
+    1  SENSE LIGHT 0                                                    BSMR0015
+       DO 2  J=1,60                                                     BSMR0016
+       DO 2  K=1,60                                                     BSMR0017
+    2  NN(J,K) = 0                                                      BSMR0018
+       WRITE OUTPUT TAPE 6, 3                                           BSMR0019
+    3  FORMAT ( 39H1  NONSIMPLE STEPWISE LINEAR REGRESSION// )          BSMR0020
+       NWAY = 1                                                         BSMR0021
+       L PATH = 1                                                       BSMR0022
+       CALL INPUT                                                       BSMR0023
+                                                                        BSMR0024
+       IF (INDEX(59)) 10,20,10                                          BSMR0025
+                                                                        BSMR0026
+   10  CALL SUMS                                                        BSMR0027
+   20  IF (IFCNST) 30,50,30                                             BSMR0028
+                                                                        BSMR0029
+   30  DEFRM = NODATA                                                   BSMR0030
+       DO 40  I=1,NOVAR                                                 BSMR0031
+   40  AVE(I) = 0.0                                                     BSMR0032
+                                                                        BSMR0033
+       GO TO 60                                                         BSMR0034
+                                                                        BSMR0035
+   50  CALL RESID                                                       BSMR0036
+       DEFRM = NODATA                                                   BSMR0037
+       DEFRM = DEFRM - 1.0                                              BSMR0038
+   60  CALL SIM COR                                                     BSMR0039
+       IF (NIN) 200,200,260                                             BSMR0040
+   65  NOVAR = NOVAR                                                    BSMR0041
+       TEST(NIN) = VECTOR(NOVAR,NOVAR)                                  BSMR0042
+   66  CALL OUTPUT                                                      BSMR0043
+       IF (NOSTEP - 2) 67,67,70                                         BSMR0044
+   67  WRITE OUTPUT TAPE 6, 68, NO STEP                                 BSMR0045
+   68  FORMAT (13H0 AFTER STEP   I4,// )                                BSMR0046
+   70  INDEX(57) = INDEX(57) + 1                                        BSMR0047
+   71  IF (INDEX(57) - INDEX(58)) 72,72,350                             BSMR0048
+   72  IF (NIN - INDEX(60)) 74,350,350                                  BSMR0049
+   74  CONTINUE                                                         BSMR0050
+       IF (SENSE LIGHT 1) 350,80                                        BSMR0051
+   80  GO TO (90,85,1), NWAY                                            BSMR0052
+   85  NWAY = 1                                                         BSMR0053
+   90  IF (NIN-2) 180,180,100                                           BSMR0054
+                                                                        BSMR0055
+  100  CALL DELETE                                                      BSMR0056
+       IF (REMARK) 120,180,120                                          BSMR0057
+                                                                        BSMR0058
+  120  L PATH = 1                                                       BSMR0059
+  130  CALL TRANSF                                                      BSMR0060
+        L PATH = L PATH                                                 BSMR0061
+       GO TO (66,290,180), L PATH                                       BSMR0062
+                                                                        BSMR0063
+C      ********************* TRY ADJUNCTION *************************** BSMR0064
+                                                                        BSMR0065
+  180  IF (NIN - NOVMI) 210,190,190                                     BSMR0066
+                                                                        BSMR0067
+  190  WRITE OUTPUT TAPE 6, 191                                         BSMR0068
+  191  FORMAT ( 51H0 **************** VARIABLES EXHAUSTED ************/)BSMR0069
+       GO TO 350                                                        BSMR0070
+                                                                        BSMR0071
+  200  NWAY = 1                                                         BSMR0072
+  210  NOVAR = NOVAR                                                    BSMR0073
+       IF (VECTOR(NOVAR,NOVAR)) 220,220,250                             BSMR0074
+  220    WRITE OUTPUT TAPE 6, 221, VECTOR(NOVAR,NOVAR)                  BSMR0075
+         PRINT                221, VECTOR(NOVAR,NOVAR)                  BSMR0076
+  221  FORMAT ( 80H0************* PROBLEM TERMINATED, SUM OF SQUARES IS BSMR0077
+     1NON-POSITIVE **************       E13.5/)                         BSMR0078
+  230  GO TO 350                                                        BSMR0079
+                                                                        BSMR0080
+  250  CALL ADJOIN                                                      BSMR0081
+                                                                        BSMR0082
+       IF (SENSE LIGHT 1) 350,255                                       BSMR0083
+                                                                        BSMR0084
+  255  L PATH = L PATH                                                  BSMR0085
+       GO TO (130,270,130), L PATH                                      BSMR0086
+                                                                        BSMR0087
+  260  NWAY = 2                                                         BSMR0088
+  270  L = 1                                                            BSMR0089
+       L PATH = 2                                                       BSMR0090
+  280  K = NN(NIN,L)                                                    BSMR0091
+       GO TO 130                                                        BSMR0092
+                                                                        BSMR0093
+  290  L = L + 1                                                        BSMR0094
+       IF (L - NIN) 280,280,300                                         BSMR0095
+  300  GO TO (180,65,390), NWAY                                         BSMR0096
+                                                                        BSMR0097
+  350  WRITE OUTPUT TAPE 6,351                                          BSMR0098
+  351  FORMAT (36H1 SUMMARY OF BEST SETS OF VARIABLES   /)              BSMR0099
+       INDEX(55) = 0                                                    BSMR0100
+       NWAY = 3                                                         BSMR0101
+       NIN = INDEX (53)                                                 BSMR0102
+  360  IF (INDEX(54) - NIN) 1,370,370                                   BSMR0103
+  370  IF (NN(NIN,1)) 395,395,380                                       BSMR0104
+                                                                        BSMR0105
+  380  DO 385 I = 1,NOVAR                                               BSMR0106
+       DO 385 J = 1,NOVAR                                               BSMR0107
+  385  VECTOR (I,J) = SAVE(I,J)                                         BSMR0108
+       GO TO 270                                                        BSMR0109
+  390  CALL OUTPUT                                                      BSMR0110
+  395  NIN = NIN + 1                                                    BSMR0111
+       GO TO 360                                                        BSMR0112
+       END                                                              BSMR0113
+*ID                          SUBROUTINE INPUT (STEPWISE)                BSMR0114
+*     OCTAL LIST                                                        BSMR0115
+*     LABEL                                                             BSMR0116
+       SUBROUTINE INPUT                                                 BSMR0117
+                                                                        BSMR0118
+       DIMENSION                                                        BSMR0119
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0120
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0121
+     3 DATUM(2000),SUM(61)                                              BSMR0122
+                                                                        BSMR0123
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0124
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0125
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0126
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0127
+                                                                        BSMR0128
+    1  READ INPUT TAPE 5,2,                                             BSMR0129
+     1  NOPROB,  NXJ,     NYJ,     INDEX Y,  NODATA,  NIN,              BSMR0130
+     2  NINLO,   NINHI,   NN NIN,  NCOUNT,   NSKIP,   N LIST,           BSMR0131
+     3  IFWT,     IFCNST,   IFSTEP,   IF RAW,   IF AVE,   IFCOEN,       BSMR0132
+     4  IFLIST,   IFDUMP,   IFQUAD                                      BSMR0133
+                                                                        BSMR0134
+      WRITE OUTPUT TAPE 6,2,                                            BSMR0135
+     1  NOPROB,  NXJ,     NYJ,     INDEX Y,  NODATA,  NIN,              BSMR0136
+     2  NINLO,   NINHI,   NN NIN,  NCOUNT,   NSKIP,   N LIST,           BSMR0137
+     3  IFWT,     IFCNST,   IFSTEP,   IF RAW,   IF AVE,   IFCOEN,       BSMR0138
+     4  IFLIST,   IFDUMP,   IFQUAD                                      BSMR0139
+    2  FORMAT (12I6)                                                    BSMR0140
+       IF (NXJ) 3,3,5                                                   BSMR0141
+    3  CALL EXIT                                                        BSMR0142
+    5  CONTINUE                                                         BSMR0143
+                                                                        BSMR0144
+       INDEX (49) = NSKIP                                               BSMR0145
+C      INDEX (51)  RECORDS DATA BEING STORED IN MEMORY.                 BSMR0146
+       INDEX (52) = N LIST                                              BSMR0147
+       INDEX (53) = XMAX0F(1,NINLO,NIN)                                 BSMR0148
+       INDEX (54) = NINHI                                               BSMR0149
+       INDEX (55) = IFSTEP                                              BSMR0150
+       INDEX (56) = IFWT                                                BSMR0151
+       INDEX(57) = 0                                                    BSMR0152
+                                                                        BSMR0153
+       REWIND 4                                                         BSMR0154
+                                                                        BSMR0155
+       TOL = 0.0001                                                     BSMR0156
+       N READ = 0                                                       BSMR0157
+       N WRITE = 0                                                      BSMR0158
+       INVAR = NXJ + 1                                                  BSMR0159
+                                                                        BSMR0160
+    7  FORMAT (37H1STEPWISE REGRESSION PROBLEM NUMBER   I5/             BSMR0161
+     X 37H NUMBER OF DATA                      I5/                      BSMR0162
+     X 37H NUMBER OF VARIABLES                 I5/                      BSMR0163
+     X 37H WEIGHTED DEGREES OF FREEDOM         F12.3//)                 BSMR0164
+                                                                        BSMR0165
+       IF (NCOUNT) 11,11,10                                             BSMR0166
+   10  INDEX(58) = NCOUNT                                               BSMR0167
+   11  IF (NN NIN) 12,14,12                                             BSMR0168
+   12  IF (NN NIN - 5)  13,14,14                                        BSMR0169
+   13  NN NIN = 5                                                       BSMR0170
+   14  INDEX(60) = NN NIN                                               BSMR0171
+   15  INDEX(59) = IFRAW                                                BSMR0172
+       IF (NODATA) 25,30,30                                             BSMR0173
+   25  NODATA = - NODATA                                                BSMR0174
+       N WRITE = 1                                                      BSMR0175
+   30  IF (INDEX Y) 31,32,32                                            BSMR0176
+   31  INDEX Y = - INDEX Y                                              BSMR0177
+       N READ = 1                                                       BSMR0178
+   32  N TOTAL = NXJ + NYJ                                              BSMR0179
+       NEW = NXJ + INDEX Y                                              BSMR0180
+       IF (NTOTAL - 60) 34,33,33                                        BSMR0181
+   33  WRITE OUTPUT TAPE 6,39, NTOTAL                                   BSMR0182
+       CALL EXIT                                                        BSMR0183
+                                                                        BSMR0184
+   34  NOSTEP = 0                                                       BSMR0185
+                                                                        BSMR0186
+       DO 35  J=1,61                                                    BSMR0187
+       SUM(J) = 0.0                                                     BSMR0188
+   35  TEST(J) = +2.0E+30                                               BSMR0189
+                                                                        BSMR0190
+       IF (NIN) 50,50,40                                                BSMR0191
+   39  FORMAT (50H0 TOTAL NUMBER OF VARIABLES TOO LARGE                 BSMR0192
+     X   I6  )                                                          BSMR0193
+                                                                        BSMR0194
+   40  READ INPUT TAPE 5,41,(NN(NIN,J),J=1,NIN)                         BSMR0195
+   41  FORMAT (24I3)                                                    BSMR0196
+                                                                        BSMR0197
+       READ INPUT TAPE 5, 141, (TEST(J), J=1,NIN)                       BSMR0198
+                                                                        BSMR0199
+       GO TO 60                                                         BSMR0200
+                                                                        BSMR0201
+   50  NIN = 0                                                          BSMR0202
+   60  IF(IFQUAD)70,90,70                                               BSMR0203
+                                                                        BSMR0204
+   70  NOVAR=(INVAR*(INVAR+1))/2                                        BSMR0205
+       IF (NOVAR - 60) 100,72,72                                        BSMR0206
+   72  IFQUAD = 0                                                       BSMR0207
+       WRITE OUTPUT TAPE 6, 74                                          BSMR0208
+   74  FORMAT (50H0 TOO MANY CROSS PRODUCTS, THESE ARE DELETED         )BSMR0209
+                                                                        BSMR0210
+                                                                        BSMR0211
+   90  NOVAR=INVAR                                                      BSMR0212
+  100  IF (IFCNST) 105,110,110                                          BSMR0213
+                                                                        BSMR0214
+  105  NOVAR = NOVAR + 1                                                BSMR0215
+  110  NOVPL = NOVAR + 1                                                BSMR0216
+       INDEX (51) = 0                                                   BSMR0217
+       IF (NODATA*NOVPL - 2000) 114,114,116                             BSMR0218
+                                                                        BSMR0219
+  114  INDEX (51) = 1                                                   BSMR0220
+                                                                        BSMR0221
+  116  DO 120 I=1,NOVPL                                                 BSMR0222
+      DO 120 J = 1, NOVPL                                               BSMR0223
+  120 VECTOR(I,J) = 0.0                                                 BSMR0224
+                                                                        BSMR0225
+        REWIND 9                                                        BSMR0226
+       IF (IF LIST) 125,127,125                                         BSMR0227
+  125  WRITE OUTPUT TAPE 6, 126                                         BSMR0228
+  126  FORMAT (17H1  INPUT DATA          //)                            BSMR0229
+  127  IF (IF WT) 129,200,129                                           BSMR0230
+                                                                        BSMR0231
+C     *******************CALCULATION FOR UNIT WEIGHTS*******************BSMR0232
+  129  DO 170  N=1,NODATA                                               BSMR0233
+       IF (N READ) 130,131,130                                          BSMR0234
+  130  READ TAPE 4, (DATA(LK), LK=1,NTOTAL)                             BSMR0235
+       GO TO 145                                                        BSMR0236
+                                                                        BSMR0237
+  131  READ INPUT TAPE 5,141, (DATA(LL), LL=1,NTOTAL)                   BSMR0238
+                                                                        BSMR0239
+       IF (N WRITE) 133,139,133                                         BSMR0240
+  133  WRITE TAPE 4, (DATA(LK), LK=1,NTOTAL)                            BSMR0241
+                                                                        BSMR0242
+  139  IF (IFLIST) 140,145,140                                          BSMR0243
+  140  WRITE OUTPUT TAPE 6, 142, N, (DATA(LL), LL=1,NTOTAL)             BSMR0244
+  141  FORMAT (6F12.5)                                                  BSMR0245
+  142  FORMAT (I4, 8F12.5/(F16.5,7F12.5))                               BSMR0246
+                                                                        BSMR0247
+  145  DATA(NOVAR) = DATA(NEW)                                          BSMR0248
+       IF(IFQUAD)150,157,150                                            BSMR0249
+                                                                        BSMR0250
+  150  L=INVAR                                                          BSMR0251
+                                                                        BSMR0252
+      DO 155 I=2,INVAR                                                  BSMR0253
+      DO 155 J=I,INVAR                                                  BSMR0254
+      DATA(L)=DATA(I-1)*DATA(J-1)                                       BSMR0255
+  155  L=L+1                                                            BSMR0256
+                                                                        BSMR0257
+  157  IF (IFCNST) 159,160,160                                          BSMR0258
+                                                                        BSMR0259
+  159  DATA(NOVAR-1) = 1.0                                              BSMR0260
+                                                                        BSMR0261
+  160  IF (INDEX (51)) 162,165,162                                      BSMR0262
+                                                                        BSMR0263
+  162  DO 163  J=1,NOVAR                                                BSMR0264
+       JJ = NOVAR*(N-1) + J                                             BSMR0265
+  163  DATUM(JJ) = DATA(J)                                              BSMR0266
+       GO TO 166                                                        BSMR0267
+                                                                        BSMR0268
+  165  WRITE TAPE 9,(DATA(K), K = 1, NOVAR)                             BSMR0269
+  166  DO 168  I=1,NOVAR                                                BSMR0270
+                                                                        BSMR0271
+       VECTOR(I, NOVPL) = VECTOR(I, NOVPL) + DATA(I)                    BSMR0272
+       DO 168  J=I,NOVAR                                                BSMR0273
+  168  VECTOR(I,J) = VECTOR(I,J) + DATA(I)*DATA(J)                      BSMR0274
+                                                                        BSMR0275
+       VECTOR(NOVPL,NOVPL) = VECTOR (NOVPL,NOVPL) + 1.0                 BSMR0276
+  170  CONTINUE                                                         BSMR0277
+       DENOM = VECTOR(NOVPL,NOVPL) - 1.0                                BSMR0278
+      GO TO 290                                                         BSMR0279
+                                                                        BSMR0280
+C****************CALCULATION FOR VARIABLE WEIGHTS***********************BSMR0281
+                                                                        BSMR0282
+  200  DO 260 N = 1, NODATA                                             BSMR0283
+       IF (N READ) 201,202,201                                          BSMR0284
+  201  READ TAPE 4, (DATA(LL), LL=1,NTOTAL),WHT                         BSMR0285
+       GO TO 204                                                        BSMR0286
+                                                                        BSMR0287
+  202  READ INPUT TAPE 5,141, (DATA(LL), LL=1,NTOTAL),WHT               BSMR0288
+                                                                        BSMR0289
+       IF (N WRITE) 203,204,203                                         BSMR0290
+  203  WRITE TAPE 4, (DATA(LL), LL=1,NTOTAL),WHT                        BSMR0291
+                                                                        BSMR0292
+  204  IF (N READ) 210,205,210                                          BSMR0293
+  205  IF (IF LIST) 206,210,206                                         BSMR0294
+  206  WRITE OUTPUT TAPE 6,142, N, (DATA(LL), LL=1,NTOTAL),WHT          BSMR0295
+                                                                        BSMR0296
+  210  DATA(NOVAR) = DATA(NEW)                                          BSMR0297
+       DATA(NOVPL)=WHT                                                  BSMR0298
+                                                                        BSMR0299
+       IF (IFQUAD)  220,235,220                                         BSMR0300
+  220  L=INVAR                                                          BSMR0301
+                                                                        BSMR0302
+      DO 230 I=2,INVAR                                                  BSMR0303
+      DO  230 J=I,INVAR                                                 BSMR0304
+      DATA(L)=DATA(I-1)*DATA(J-1)                                       BSMR0305
+  230 L=L+1                                                             BSMR0306
+                                                                        BSMR0307
+  235  IF (IFCNST) 238,240,240                                          BSMR0308
+                                                                        BSMR0309
+  238  DATA(NOVAR-1) = 1.0                                              BSMR0310
+                                                                        BSMR0311
+  240  IF (INDEX (51)) 242,245,242                                      BSMR0312
+  242  DO 243  J=1,NOVPL                                                BSMR0313
+       JJ = NOVPL*(N-1) + J                                             BSMR0314
+  243  DATUM(JJ) = DATA(J)                                              BSMR0315
+       GO TO 246                                                        BSMR0316
+                                                                        BSMR0317
+  245  WRITE TAPE 9,(DATA(K), K = 1, NOVAR) ,WHT                        BSMR0318
+                                                                        BSMR0319
+  246  DO 250  I=1,NOVAR                                                BSMR0320
+      VECTOR (I,NOVPL) = VECTOR (I, NOVPL) + DATA (I) * WHT             BSMR0321
+                                                                        BSMR0322
+      DO 250 J = I, NOVAR                                               BSMR0323
+  250  VECTOR(I,J) = VECTOR(I,J)+DATA(I)*DATA(J)*WHT                    BSMR0324
+                                                                        BSMR0325
+       VECTOR(NOVPL,NOVPL) = VECTOR(NOVPL,NOVPL) + WHT                  BSMR0326
+  260  CONTINUE                                                         BSMR0327
+       DENOM = VECTOR (NOVPL,NOVPL)                                     BSMR0328
+                                                                        BSMR0329
+  290 NOVMI = NOVAR - 1                                                 BSMR0330
+       INDEX (54) = XMIN0F(NINHI,NOVMI)                                 BSMR0331
+                                                                        BSMR0332
+       DO 299 J=1,60                                                    BSMR0333
+       DATA(J) = 0.0                                                    BSMR0334
+  299  SIGMCO(J) = 0.0                                                  BSMR0335
+                                                                        BSMR0336
+  300 WRITE OUTPUT TAPE 6, 7, NOPROB, NODATA, NOVAR, VECTOR(NOVPL,      BSMR0337
+     1NOVPL)                                                            BSMR0338
+                                                                        BSMR0339
+  303  FORMAT (39H0  VAR.   WTED AVERAGE     STAND. DEV.  //)           BSMR0340
+       DO 305  J=1,NOVAR                                                BSMR0341
+       AVE (J) = VECTOR(J,NOVPL)/VECTOR (NOVPL,NOVPL)                   BSMR0342
+       DUMMY = (VECTOR(J,J)-VECTOR(J,NOVPL)*AVE(J))/DENOM               BSMR0343
+  305  SIGMCO(J) = SQRTF(DUMMY)                                         BSMR0344
+  306  FORMAT (I6,E15.5,E16.5)                                          BSMR0345
+                                                                        BSMR0346
+       WRITE OUTPUT TAPE 6,303                                          BSMR0347
+       DO 320 J=1,NOVAR                                                 BSMR0348
+  320  WRITE OUTPUT TAPE 6,306,J,AVE(J),SIGMCO(J)                       BSMR0349
+       IF (IFDUMP) 340,350,340                                          BSMR0350
+  340  WRITE OUTPUT TAPE 6, 2, (INDEX(J), J=50,60)                      BSMR0351
+  350  CONTINUE                                                         BSMR0352
+       RETURN                                                           BSMR0353
+       END                                                              BSMR0354
+*ID                          SUBROUTINE SUMS (STEPWISE)                 BSMR0355
+*     OCTAL LIST                                                        BSMR0356
+*     LABEL                                                             BSMR0357
+       SUBROUTINE SUMS                                                  BSMR0358
+                                                                        BSMR0359
+C       RAW SUMS OF SQUARES AND CROSS PRODUCTS                          BSMR0360
+                                                                        BSMR0361
+       DIMENSION                                                        BSMR0362
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0363
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0364
+     3 DATUM(2000)                                                      BSMR0365
+                                                                        BSMR0366
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0367
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0368
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0369
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0370
+                                                                        BSMR0371
+      WRITE OUTPUT TAPE 6, 1                                            BSMR0372
+    1 FORMAT (1H 49H                               SUM  OF  VARIABLES//)BSMR0373
+      WRITE OUTPUT TAPE 6, 2, (I, VECTOR (I, NOVPL), I = 1, NOVMI)      BSMR0374
+    2 FORMAT (1H 11H     SUM X( I2,3H) = F12.4,8H  SUM X( I2,3H) =F12.4,BSMR0375
+     18H  SUM X( I2,3H) =F12.4,8H  SUM X(I2,3H) =F12.4 )                BSMR0376
+      WRITE OUTPUT TAPE 6, 3, VECTOR (NOVAR, NOVPL)                     BSMR0377
+    3 FORMAT (17H      SUM   Y   =F12.4)                                BSMR0378
+      WRITE OUTPUT TAPE 6, 4                                            BSMR0379
+    4 FORMAT(1H0 70H                            RAW  SUM  OF  SQUARES  ABSMR0380
+     1ND  CROSS PRODUCTS// )                                            BSMR0381
+      WRITE OUTPUT TAPE 6, 5,((I,J, VECTOR(I,J), J=I,NOVMI),I=1,NOVMI)  BSMR0382
+    5 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   BSMR0383
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       BSMR0384
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     BSMR0385
+      WRITE OUTPUT TAPE 6, 6, (I, VECTOR(I,NOVAR),I=1,NOVMI)            BSMR0386
+    6 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      BSMR0387
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          BSMR0388
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        BSMR0389
+      WRITE OUTPUT TAPE 6, 7, VECTOR (NOVAR, NOVAR)                     BSMR0390
+    7 FORMAT (1H 21H     Y     VS   Y   =F15.6)                         BSMR0391
+       RETURN                                                           BSMR0392
+       END                                                              BSMR0393
+*ID                          SUBROUTINE RESID (STEPWISE)                BSMR0394
+*     OCTAL LIST                                                        BSMR0395
+*     LABEL                                                             BSMR0396
+       SUBROUTINE RESID                                                 BSMR0397
+                                                                        BSMR0398
+       DIMENSION                                                        BSMR0399
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0400
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0401
+     3 DATUM(2000)                                                      BSMR0402
+                                                                        BSMR0403
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0404
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0405
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0406
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0407
+                                                                        BSMR0408
+      IF(VECTOR(NOVPL,NOVPL)) 1,1,3                                     BSMR0409
+                                                                        BSMR0410
+    1  WRITE OUTPUT TAPE 6, 2, NOPROB                                   BSMR0411
+    2  FORMAT (32H0 ZERO NUMBER OF DATA, PROBLEM    I6/)                BSMR0412
+       CALL EXIT                                                        BSMR0413
+                                                                        BSMR0414
+    3 DO 5 I = 1, NOVAR                                                 BSMR0415
+      DO 4 J = I, NOVAR                                                 BSMR0416
+    4 VECTOR (I,J) = VECTOR (I,J) - (VECTOR(I,NOVPL) * VECTOR (J,NOVPL) BSMR0417
+     1 / VECTOR (NOVPL, NOVPL))                                         BSMR0418
+    5 AVE(I)  = VECTOR(I,NOVPL) / VECTOR(NOVPL,NOVPL)                   BSMR0419
+                                                                        BSMR0420
+       IF (IFAVE) 11,20,11                                              BSMR0421
+                                                                        BSMR0422
+   11 WRITE OUTPUT TAPE 6, 19                                           BSMR0423
+      WRITE OUTPUT TAPE 6, 12, ((I,J, VECTOR(I,J),J=I,NOVMI),I=1,NOVMI) BSMR0424
+   12 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   BSMR0425
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       BSMR0426
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     BSMR0427
+      WRITE OUTPUT TAPE 6, 17, (I,VECTOR(I,NOVAR),I=1,NOVMI)            BSMR0428
+      WRITE OUTPUT TAPE 6, 15, VECTOR(NOVAR,NOVAR)                      BSMR0429
+   15 FORMAT (1H 21H     Y     VS   Y   =F15.6)                         BSMR0430
+   17 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      BSMR0431
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          BSMR0432
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        BSMR0433
+   18 FORMAT (1H063H                                  AVERAGE  VALUE  OFBSMR0434
+     -  VARIABLES// )                                                   BSMR0435
+   19 FORMAT(1H077H                             RESIDUAL  SUMS  OF  SQUABSMR0436
+     -RES  AND  CROSS PRODUCTS//)                                       BSMR0437
+                                                                        BSMR0438
+   20  RETURN                                                           BSMR0439
+       END                                                              BSMR0440
+*ID                          SUBROUTINE SIM COR (STEPWISE)              BSMR0441
+*     OCTAL LIST                                                        BSMR0442
+*     LABEL                                                             BSMR0443
+       SUBROUTINE SIM COR                                               BSMR0444
+                                                                        BSMR0445
+C      SIMPLE  CORRELATION COEFFICIENTS                                 BSMR0446
+                                                                        BSMR0447
+       DIMENSION                                                        BSMR0448
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0449
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0450
+     3 DATUM(2000)                                                      BSMR0451
+                                                                        BSMR0452
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0453
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0454
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0455
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0456
+                                                                        BSMR0457
+      DO 50  I = 1,NOVAR                                                BSMR0458
+       IF (VECTOR(I,I)) 20,20,40                                        BSMR0459
+                                                                        BSMR0460
+  20  WRITE OUTPUT TAPE 6,21,  I                                        BSMR0461
+   21  FORMAT (10H0 VARIABLE   I5,  13H IS CONSTANT     //)             BSMR0462
+   30 SIGMA(I) =     1.0                                                BSMR0463
+       DO 35 J = 1,NOVAR                                                BSMR0464
+       VECTOR (I,J) = 0.0                                               BSMR0465
+   35  VECTOR (J,I) = 0.0                                               BSMR0466
+       GO TO 50                                                         BSMR0467
+   40 SIGMA(I) = SQRTF (VECTOR (I,I))                                   BSMR0468
+   50 VECTOR(I,I) = 1.0                                                 BSMR0469
+                                                                        BSMR0470
+      DO 60  I = 1,NOVMI                                                BSMR0471
+      IP1 = I + 1                                                       BSMR0472
+      DO 60 J = IP1, NOVAR                                              BSMR0473
+      VECTOR(I,J) = VECTOR(I,J) /( SIGMA(I)* SIGMA(J))                  BSMR0474
+   60 VECTOR(J,I) = VECTOR(I,J)                                         BSMR0475
+                                                                        BSMR0476
+       DO 70   J=1,NOVAR                                                BSMR0477
+       DO 70   K=1,NOVAR                                                BSMR0478
+   70  SAVE(J,K) = VECTOR(J,K)                                          BSMR0479
+                                                                        BSMR0480
+       IF (IFCOEN) 85,73,85                                             BSMR0481
+                                                                        BSMR0482
+   73 WRITE OUTPUT TAPE 6,74                                            BSMR0483
+   74 FORMAT(1H069H                                   SIMPLE   CORRELATIBSMR0484
+     XON  COEFFICIENTS//)                                               BSMR0485
+      NOVM2  = NOVMI  - 1                                               BSMR0486
+                                                                        BSMR0487
+      DO 80  I = 1, NOVM2                                               BSMR0488
+      IP1 =  I + 1                                                      BSMR0489
+   80  WRITE  OUTPUT TAPE 6, 81,(I,J,VECTOR(I,J), J= IP1,NOVMI )        BSMR0490
+                                                                        BSMR0491
+   81 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   BSMR0492
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       BSMR0493
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     BSMR0494
+                                                                        BSMR0495
+      WRITE OUTPUT TAPE 6, 84, (I, VECTOR(I,NOVAR),I=1,NOVMI)           BSMR0496
+                                                                        BSMR0497
+   84 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      BSMR0498
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          BSMR0499
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        BSMR0500
+   85  RETURN                                                           BSMR0501
+       END                                                              BSMR0502
+*ID                          SUBROUTINE OUTPUT (STEPWISE)               BSMR0503
+*     OCTAL LIST                                                        BSMR0504
+*     LABEL                                                             BSMR0505
+       SUBROUTINE OUTPUT                                                BSMR0506
+                                                                        BSMR0507
+       DIMENSION                                                        BSMR0508
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0509
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0510
+     3 DATUM(2000)                                                      BSMR0511
+                                                                        BSMR0512
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0513
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0514
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0515
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0516
+                                                                        BSMR0517
+       WHT = 1.0                                                        BSMR0518
+       IF (SENSE LIGHT 1) 2,3                                           BSMR0519
+    2  SENSE LIGHT 1                                                    BSMR0520
+       GO TO 5                                                          BSMR0521
+                                                                        BSMR0522
+    3  NOSTEP = NOSTEP + 1                                              BSMR0523
+    5  DO 7 J=1,60                                                      BSMR0524
+    7  NOT(J) = 0                                                       BSMR0525
+                                                                        BSMR0526
+       DO 10 J=1,NIN                                                    BSMR0527
+       I = NN(NIN,J)                                                    BSMR0528
+       NOT(I) = 1                                                       BSMR0529
+   10  COEN(J) = VECTOR(I,NOVAR)*SIGMA(NOVAR)/SIGMA(I)                  BSMR0530
+                                                                        BSMR0531
+      IF (IFCNST) 12,14,12                                              BSMR0532
+                                                                        BSMR0533
+   12  CNST = 0.0                                                       BSMR0534
+       GO TO 17                                                         BSMR0535
+                                                                        BSMR0536
+   14 CNST = AVE(NOVAR)                                                 BSMR0537
+                                                                        BSMR0538
+       DO 16   I=1,NIN                                                  BSMR0539
+       J = NN(NIN,I)                                                    BSMR0540
+   16 CNST = CNST - (COEN(I) * AVE(J))                                  BSMR0541
+                                                                        BSMR0542
+   17  SUM SQ = VECTOR(NOVAR,NOVAR)*(SIGMA(NOVAR)**2)                   BSMR0543
+       IF (NOSTEP - INDEX(55)) 48,18,18                                 BSMR0544
+   18  SUM SQ = 0.0                                                     BSMR0545
+      WRITE OUTPUT TAPE 6, 19                                           BSMR0546
+   19 FORMAT    (43H1              PREDICTED VS ACTUAL RESULTS  /70H    BSMR0547
+     1      RUN NO.     ACTUAL       PREDICTED     DEVIATION     WEIGHT BSMR0548
+     2  //)                                                             BSMR0549
+                                                                        BSMR0550
+       IF (INDEX (51)) 20,40,20                                         BSMR0551
+                                                                        BSMR0552
+   20  LINE = 0                                                         BSMR0553
+       IF (INDEX (56)) 21,30,21                                         BSMR0554
+                                                                        BSMR0555
+   21  DO 25  N=1,NODATA                                                BSMR0556
+       LINE = LINE + 1                                                  BSMR0557
+       YPRED = CNST                                                     BSMR0558
+       DO 22 I=1,NIN                                                    BSMR0559
+       J = NN(NIN,I)                                                    BSMR0560
+       JJ = NOVAR*(N-1) + J                                             BSMR0561
+       XI = DATUM(JJ)                                                   BSMR0562
+   22  YPRED = YPRED + COEN(I)*XI                                       BSMR0563
+       JJJ = NOVAR*N                                                    BSMR0564
+       Y OBS = DATUM(JJJ)                                               BSMR0565
+       DEV = Y OBS - Y PRED                                             BSMR0566
+       SUM SQ = SUM SQ + (DEV**2)                                       BSMR0567
+       IF (LINE - 50) 25,25,24                                          BSMR0568
+   24  WRITE OUTPUT TAPE 6,19                                           BSMR0569
+       LINE = 0                                                         BSMR0570
+   25  WRITE OUTPUT TAPE 6,45, N,Y OBS,Y PRED,DEV, WHT                  BSMR0571
+                                                                        BSMR0572
+       GO TO 48                                                         BSMR0573
+                                                                        BSMR0574
+   30  LINE = 0                                                         BSMR0575
+                                                                        BSMR0576
+       DO 35  N=1,NODATA                                                BSMR0577
+       LINE = LINE + 1                                                  BSMR0578
+       M = NOVPL*N - 1                                                  BSMR0579
+       Y OBS = DATUM(M)                                                 BSMR0580
+       Y PRED = CNST                                                    BSMR0581
+       MM = N*NOVPL                                                     BSMR0582
+       DO 34  I=1,NIN                                                   BSMR0583
+       J = NN(NIN,I)                                                    BSMR0584
+       JJ = NOVPL*(N-1) + J                                             BSMR0585
+       XI = DATUM(JJ)                                                   BSMR0586
+   34  Y PRED = Y PRED + COEN(I)*XI                                     BSMR0587
+       DEV = Y OBS - Y PRED                                             BSMR0588
+       SUM SQ = SUM SQ + (DEV**2)*DATUM(MM)                             BSMR0589
+       IF (LINE - 50) 35,35,31                                          BSMR0590
+   31  WRITE OUTPUT TAPE 6, 19                                          BSMR0591
+       LINE = 0                                                         BSMR0592
+   35  WRITE OUTPUT TAPE 6,45, N, Y OBS, Y PRED, DEV, DATUM(MM)         BSMR0593
+                                                                        BSMR0594
+       GO TO 48                                                         BSMR0595
+                                                                        BSMR0596
+   40  REWIND 9                                                         BSMR0597
+       LINE = 0                                                         BSMR0598
+       DO 44  N=1,NODATA                                                BSMR0599
+       LINE = LINE + 1                                                  BSMR0600
+       IF (INDEX(56)) 41,410,41                                         BSMR0601
+   41  READ TAPE 9,(DATA(L),L=1,NOVAR)                                  BSMR0602
+       GO TO 42                                                         BSMR0603
+  410  READ TAPE 9, (DATA(L), L=1,NOVAR),WHT                            BSMR0604
+   42  YPRED = CNST                                                     BSMR0605
+       DO 43 I=1,NIN                                                    BSMR0606
+       J = NN(NIN,I)                                                    BSMR0607
+   43  YPRED = YPRED + COEN(I)*DATA(J)                                  BSMR0608
+       DEV = DATA(NOVAR) - YPRED                                        BSMR0609
+       SUM SQ = SUM SQ + (DEV**2)*WHT                                   BSMR0610
+       IF (LINE - 40) 44,44,431                                         BSMR0611
+  431  WRITE OUTPUT TAPE 6, 19                                          BSMR0612
+       LINE = 0                                                         BSMR0613
+   44 WRITE OUTPUT TAPE 6, 45,   N, DATA(NOVAR), YPRED, DEV,WHT         BSMR0614
+                                                                        BSMR0615
+   45  FORMAT (I14,4F14.5)                                              BSMR0616
+                                                                        BSMR0617
+   48  WRITE OUTPUT TAPE 6, 49, NOSTEP, SUM SQ,                         BSMR0618
+     1                           NIN,TEST(NIN),  (NN(NIN,J),J=1,NIN)    BSMR0619
+   49  FORMAT ( 10H1 AT STEP   I3,   32H, THE RESIDUAL SUM OF SQUARES ISBSMR0620
+     1  E14.7,  12H,  AND TEST(  I2,  4H) IS    E14.7, 17H,   FOR VARIABBSMR0621
+     2LES   /1H0/(20I6))                                                BSMR0622
+       VECTOR(NOVAR,NOVAR) = SUM SQ / SIGMA(NOVAR)**2                   BSMR0623
+                                                                        BSMR0624
+   50  XNIN = NIN                                                       BSMR0625
+       DEFR = DEFRM - XNIN                                              BSMR0626
+        IF (DEFR )  60,60,95                                            BSMR0627
+                                                                        BSMR0628
+   60 WRITE OUTPUT TAPE  6, 61, NOSTEP                                  BSMR0629
+   61 FORMAT (1H029H NO MORE DEGREES FREEDOM STEP I 5 )                 BSMR0630
+       WRITE OUTPUT TAPE 6, 69                                          BSMR0631
+   69  FORMAT ( 75H0****************************************************BSMR0632
+     1*******************                  )                            BSMR0633
+   90  SIGY = 1.0                                                       BSMR0634
+       REGRCO = 0.0                                                     BSMR0635
+       SENSE LIGHT 1                                                    BSMR0636
+                                                                        BSMR0637
+       DO 92  J=1,60                                                    BSMR0638
+   92  DATA(J) = 0.0                                                    BSMR0639
+       GO TO 100                                                        BSMR0640
+                                                                        BSMR0641
+   95 SIGY =  SIGMA(NOVAR) * SQRTF (VECTOR(NOVAR,NOVAR)/ DEFR)          BSMR0642
+       REGR CO = SQRTF(1.0 - VECTOR(NOVAR,NOVAR))                       BSMR0643
+  100 WRITE OUTPUT TAPE 6,104, SIGY, REGR CO                            BSMR0644
+       DO 103  J=1,NOVMI                                                BSMR0645
+       IF (VECTOR(J,J) - TOL) 101,101,102                               BSMR0646
+  101  DATA(J) = 0.99E22                                                BSMR0647
+       GO TO 103                                                        BSMR0648
+  102  DATA(J) = VECTOR(J,NOVAR)*VECTOR(NOVAR,J)/VECTOR(J,J)            BSMR0649
+  103  CONTINUE                                                         BSMR0650
+  104  FORMAT (24H0STANDARD ERROR OF Y      F12.6/                      BSMR0651
+     X        24H REGRESSION COEFFICIENT      F12.6//)                  BSMR0652
+                                                                        BSMR0653
+       WRITE OUTPUT TAPE 6,106                                          BSMR0654
+                                                                        BSMR0655
+       DO 105  J=1,60                                                   BSMR0656
+  105  SIGMCO(J) = 0.0                                                  BSMR0657
+                                                                        BSMR0658
+  106  FORMAT (113H0   VAR.       COEF.    STAND. ERROR          DELTA  BSMR0659
+     1       VAR.       COEF.    STAND. ERROR          DELTA       /)   BSMR0660
+                                                                        BSMR0661
+       DO 107  J=1,NIN                                                  BSMR0662
+       I = NN(NIN,J)                                                    BSMR0663
+       A = ABSF(VECTOR(I,I))                                            BSMR0664
+       SIGMCO(J) = SQRTF(A)*SIGY/SIGMA(I)                               BSMR0665
+  107  CONTINUE                                                         BSMR0666
+                                                                        BSMR0667
+       NUMBER = (NIN + 1)/2                                             BSMR0668
+                                                                        BSMR0669
+       DO 110  J=1,NUMBER                                               BSMR0670
+       K = J                                                            BSMR0671
+       L = J+NUMBER                                                     BSMR0672
+       KK = NN(NIN,K)                                                   BSMR0673
+       LL = NN(NIN,L)                                                   BSMR0674
+       WRITE OUTPUT TAPE 6, 111, KK,COEN(K),SIGMCO(K),DATA(KK),         BSMR0675
+     1                           LL,COEN(L),SIGMCO(L),DATA(LL)          BSMR0676
+  110  CONTINUE                                                         BSMR0677
+                                                                        BSMR0678
+  111  FORMAT (I6,3E15.5, I12,3E15.5)                                   BSMR0679
+                                                                        BSMR0680
+       IF (NIN - 2*NUMBER) 114,114,113                                  BSMR0681
+  113  KK = NN(NIN,NIN)                                                 BSMR0682
+       WRITE OUTPUT TAPE 6,111,KK,COEN(NIN),SIGMCO(NIN),DATA(KK)        BSMR0683
+                                                                        BSMR0684
+  114  IF(IFCNST) 129,116,129                                           BSMR0685
+                                                                        BSMR0686
+  116  WRITE OUTPUT TAPE 6,117, CNST                                    BSMR0687
+  117  FORMAT (9H CONSTANT   E16.5)                                     BSMR0688
+                                                                        BSMR0689
+  129  WRITE OUTPUT TAPE 6,130                                          BSMR0690
+  130  FORMAT ( 67H0   REGRESSION OF THE VARIABLE K ON THE SET OF VARIABBSMR0691
+     1LES ABOVE         //)                                             BSMR0692
+                                                                        BSMR0693
+       WRITE OUTPUT TAPE 6,131                                          BSMR0694
+  131  FORMAT(80H0    K  NORMED SUM/SQ          DELTA           K  NORMEBSMR0695
+     XD SUM/SQ          DELTA                       /)                  BSMR0696
+                                                                        BSMR0697
+       NP = 0                                                           BSMR0698
+       DO 160 I=1,NOVMI                                                 BSMR0699
+       IF (NOT(I)) 160,140,160                                          BSMR0700
+  140  IF (NP) 145,142,145                                              BSMR0701
+  142  NI = I                                                           BSMR0702
+       VEC = VECTOR(I,I)                                                BSMR0703
+       DA = DATA(I)                                                     BSMR0704
+       NP = 1                                                           BSMR0705
+       GO TO 160                                                        BSMR0706
+                                                                        BSMR0707
+  145  WRITE OUTPUT TAPE 6,146,NI,VEC,DA,I,VECTOR(I,I),DATA(I)          BSMR0708
+  146  FORMAT (I6,2E15.5, I12,2E15.5)                                   BSMR0709
+       NP = 0                                                           BSMR0710
+  160  CONTINUE                                                         BSMR0711
+                                                                        BSMR0712
+       IF (NP) 170,195,170                                              BSMR0713
+  170  WRITE OUTPUT TAPE 6,146,NI,VEC,DA                                BSMR0714
+  195  CONTINUE                                                         BSMR0715
+                                                                        BSMR0716
+  999  RETURN                                                           BSMR0717
+      END                                                               BSMR0718
+*ID                          SUBROUTINE DELETE (STEPWISE)               BSMR0719
+*     OCTAL LIST                                                        BSMR0720
+*     LABEL                                                             BSMR0721
+       SUBROUTINE DELETE                                                BSMR0722
+                                                                        BSMR0723
+       DIMENSION                                                        BSMR0724
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0725
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0726
+     3 DATUM(2000)                                                      BSMR0727
+                                                                        BSMR0728
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0729
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0730
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0731
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0732
+                                                                        BSMR0733
+       K = 0                                                            BSMR0734
+       N STEP  =  NOSTEP + 1                                            BSMR0735
+       VMIN = -2.0E+30                                                  BSMR0736
+       DO 30 J=1,NIN                                                    BSMR0737
+       I=NN(NIN,J)                                                      BSMR0738
+       IF (VECTOR(I,I) - TOL) 30,30,12                                  BSMR0739
+   12  VAR = VECTOR(I,NOVAR) * VECTOR(NOVAR,I) / VECTOR(I,I)            BSMR0740
+       IF (VAR - VMIN) 30,30,14                                         BSMR0741
+   14  VMIN = VAR                                                       BSMR0742
+       K=I                                                              BSMR0743
+   30  CONTINUE                                                         BSMR0744
+                                                                        BSMR0745
+   32  IF(TEST(NIN-1)+VMIN-VECTOR(NOVAR,NOVAR))35,35,40                 BSMR0746
+                                                                        BSMR0747
+   35  REMARK = 0.0                                                     BSMR0748
+       GO TO 60                                                         BSMR0749
+                                                                        BSMR0750
+C         MAKE COMPARISON                                               BSMR0751
+                                                                        BSMR0752
+   40  DO 41  J=1,NIN                                                   BSMR0753
+       JJ = J                                                           BSMR0754
+       J1=J+1                                                           BSMR0755
+       IF (NN(NIN,J) - K) 41,42,42                                      BSMR0756
+   41  MM(J) = NN(NIN,J)                                                BSMR0757
+                                                                        BSMR0758
+   42  IF (JJ - NIN) 43,45,45                                           BSMR0759
+                                                                        BSMR0760
+   43  DO 44  J=J1,NIN                                                  BSMR0761
+   44  MM(J-1) = NN(NIN,J)                                              BSMR0762
+                                                                        BSMR0763
+   45  NIN1 = NIN - 1                                                   BSMR0764
+                                                                        BSMR0765
+       DO 46  J=1,NIN1                                                  BSMR0766
+       IF (NN(NIN1,J) - MM(J))  48,46,48                                BSMR0767
+   46  CONTINUE                                                         BSMR0768
+       WRITE OUTPUT TAPE 6, 47,K                                        BSMR0769
+   47  FORMAT ( 23H0 DELETION OF VARIABLE I3, 30H, GIVES THE SAME SET ASBSMR0770
+     1 BEFORE   //)                                                     BSMR0771
+       GO TO 35                                                         BSMR0772
+                                                                        BSMR0773
+C      DROP VARIABLE                                                    BSMR0774
+                                                                        BSMR0775
+   48  NIN=NIN-1                                                        BSMR0776
+       TEST (NIN)=-VMIN+VECTOR(NOVAR,NOVAR)                             BSMR0777
+       REMARK = 1.0                                                     BSMR0778
+       DO 50  J=1,NIN                                                   BSMR0779
+   50  NN(NIN,J) = MM(J)                                                BSMR0780
+                                                                        BSMR0781
+       WRITE OUTPUT TAPE 6,55, NSTEP,K                                  BSMR0782
+   55  FORMAT ( 11H0  AT STEP I3, 22H,  DELETED    VARIABLE I3//)       BSMR0783
+                                                                        BSMR0784
+   60  RETURN                                                           BSMR0785
+       END                                                              BSMR0786
+*ID                          SUBROUTINE ADJOIN (STEPWISE)               BSMR0787
+*     OCTAL LIST                                                        BSMR0788
+*     LABEL                                                             BSMR0789
+       SUBROUTINE ADJOIN                                                BSMR0790
+                                                                        BSMR0791
+       DIMENSION                                                        BSMR0792
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0793
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0794
+     3 DATUM(2000)                                                      BSMR0795
+                                                                        BSMR0796
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0797
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0798
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0799
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0800
+                                                                        BSMR0801
+       GO TO 2100                                                       BSMR0802
+                                                                        BSMR0803
+    1  DO 2 J=1,NIN1                                                    BSMR0804
+    2  MM(J) = NN(NIN1,J)                                               BSMR0805
+                                                                        BSMR0806
+       DO 5  J=1,NIN1                                                   BSMR0807
+       IF (MM(J) - K) 5,3,4                                             BSMR0808
+    3  SENSE LIGHT 1                                                    BSMR0809
+       WRITE OUTPUT TAPE 6, 6                                           BSMR0810
+       GO TO 98                                                         BSMR0811
+                                                                        BSMR0812
+    4  JJ = J                                                           BSMR0813
+       GO TO 7                                                          BSMR0814
+    5  CONTINUE                                                         BSMR0815
+    6  FORMAT (90H0  TROUBLE IN ADJOIN WITH NN SET, PROCEED WITH NEXT PRBSMR0816
+     1OBLEM                                           //)               BSMR0817
+                                                                        BSMR0818
+       MM(NIN) = K                                                      BSMR0819
+       GO TO 10                                                         BSMR0820
+                                                                        BSMR0821
+    7  L = NIN - JJ                                                     BSMR0822
+                                                                        BSMR0823
+       DO 9  J=1,L                                                      BSMR0824
+      NR=NIN+1-J                                                        BSMR0825
+      NS=NIN-J                                                          BSMR0826
+    9 MM(NR)=MM(NS)                                                     BSMR0827
+                                                                        BSMR0828
+       MM(JJ) = K                                                       BSMR0829
+                                                                        BSMR0830
+   10  DO 12  J=1,NIN                                                   BSMR0831
+       IF (MM(J) - NN(NIN,J))  14,12,14                                 BSMR0832
+   12  CONTINUE                                                         BSMR0833
+                                                                        BSMR0834
+       WRITE OUTPUT TAPE  6,11, NOSTEP,K,NIN,(NN(NIN,J), J=1,NIN)       BSMR0835
+   11  FORMAT (10H0 AT STEP   I3,   25H, ADJUNCTION OF VARIABLE I2,     BSMR0836
+     1 35H PRODUCES THE SAME VARIABLE SET OF   I2,  20H VARIABLES AS BEFBSMR0837
+     2ORE //(20I6))                                                     BSMR0838
+                                                                        BSMR0839
+       L PATH = 3                                                       BSMR0840
+       GO TO 98                                                         BSMR0841
+                                                                        BSMR0842
+   13  MM(1) = K                                                        BSMR0843
+   14  TEST(NIN) = VECTOR(NOVAR,NOVAR)-VMAX                             BSMR0844
+                                                                        BSMR0845
+   15  DO 16  J=1,NIN                                                   BSMR0846
+   16 NN(NIN,J)=MM(J)                                                   BSMR0847
+                                                                        BSMR0848
+       LPATH = 1                                                        BSMR0849
+       WRITE OUTPUT TAPE 6, 18, N STEP, K                               BSMR0850
+   18  FORMAT ( 11H0  AT STEP I3, 21H,  ADJOINED VARIABLE I3//)         BSMR0851
+   98  RETURN                                                           BSMR0852
+                                                                        BSMR0853
+ 2100  DO 2110  J=1,NOVMI                                               BSMR0854
+ 2110  N OUT(J) = 0                                                     BSMR0855
+       IF (NIN) 2150,2150,2130                                          BSMR0856
+                                                                        BSMR0857
+ 2130  DO 2140 J=1,NIN                                                  BSMR0858
+       N DUMMY = NN(NIN,J)                                              BSMR0859
+ 2140  N OUT (N DUMMY) = 1                                              BSMR0860
+ 2150  VMAX = -1.0                                                      BSMR0861
+                                                                        BSMR0862
+       DO 2195 I=1,NOVMI                                                BSMR0863
+       IF(NOUT(I))2195,2160,2195                                        BSMR0864
+ 2160  IF (VECTOR(I,I)-TOL) 2170,2170,2180                              BSMR0865
+ 2170  WRITE OUTPUT TAPE 6,2173, I, (NN(NIN,J), J=1,NIN)                BSMR0866
+ 2173  FORMAT (10H0 VARIABLE   I4,  33H  IS NEAR-DEPENDENT ON VARIABLES BSMR0867
+     1   / (24I4))                                                      BSMR0868
+ 2174  FORMAT(40H0  NORMALIZED RESIDUAL SUM OF SQUARES IS      E13.5/  )BSMR0869
+       WRITE OUTPUT TAPE 6, 2174, VECTOR(I,I)                           BSMR0870
+       WRITE OUTPUT TAPE 6, 2179                                        BSMR0871
+ 2179  FORMAT ( 75H0***************************** ADJOIN ***************BSMR0872
+     1*******************                  )                            BSMR0873
+       GO TO 2195                                                       BSMR0874
+ 2180 VAR = VECTOR(I,NOVAR) * VECTOR(NOVAR,I) / VECTOR(I,I)             BSMR0875
+       IF (VMAX-VAR) 2190,2195,2195                                     BSMR0876
+ 2190  VMAX=VAR                                                         BSMR0877
+       K=I                                                              BSMR0878
+ 2195  CONTINUE                                                         BSMR0879
+                                                                        BSMR0880
+C            HAVE FOUND OPTIMAL VARIABLE                                BSMR0881
+                                                                        BSMR0882
+       N STEP  =  NOSTEP + 1                                            BSMR0883
+       IF (VMAX) 2200,2210,2210                                         BSMR0884
+ 2200  WRITE OUTPUT TAPE 6, 2208, VMAX                                  BSMR0885
+ 2208  FORMAT (38H0 VMAX IS NEGATIVE AND HAS THE VALUE     E13.5/)      BSMR0886
+       SENSE LIGHT 1                                                    BSMR0887
+       GO TO 98                                                         BSMR0888
+                                                                        BSMR0889
+ 2210  NIN1 = NIN                                                       BSMR0890
+       NIN = NIN + 1                                                    BSMR0891
+       IF (TEST(NIN)-VECTOR(NOVAR,NOVAR)+VMAX) 2220,2220,2290           BSMR0892
+                                                                        BSMR0893
+ 2220  WRITE OUTPUT TAPE 6,22, K,NIN,N STEP                             BSMR0894
+   22  FORMAT ( 21H0 ADJOINING VARIABLE    I4,  30H  PRODUCES NO IMPROVEBSMR0895
+     1MENT FOR    I3,  21H  VARIABLES, AT STEP      I4)                 BSMR0896
+                                                                        BSMR0897
+       DO 2230  I=1,NOVAR                                               BSMR0898
+         DO 2230  J=1,NOVAR                                             BSMR0899
+ 2230  VECTOR(I,J) = SAVE(I,J)                                          BSMR0900
+       LPATH = 2                                                        BSMR0901
+       GO TO 98                                                         BSMR0902
+                                                                        BSMR0903
+ 2290  CONTINUE                                                         BSMR0904
+       IF (NIN1) 13,13,1                                                BSMR0905
+                                                                        BSMR0906
+       END                                                              BSMR0907
+*ID                          SUBROUTINE TRANSF (STEPWISE)               BSMR0908
+*     OCTAL LIST                                                        BSMR0909
+*     LABEL                                                             BSMR0910
+       SUBROUTINE TRANSF                                                BSMR0911
+                                                                        BSMR0912
+       DIMENSION                                                        BSMR0913
+     1  DATA(60),VECTOR(61,61),AVE(60),SIGMA(60),SIGMCO(60),INDEX(60),  BSMR0914
+     2 NN(60,60),TEST(61),N OUT(61),MM(61),SAVE(61,61),COEN(61),NOT(60),BSMR0915
+     3 DATUM(2000)                                                      BSMR0916
+                                                                        BSMR0917
+       COMMON  AVE,CNST,COEN,DATA,DEFRM,DEFR,DUMMY,IFAVE,INDEX,ITEM,    BSMR0918
+     1  JJPATH,K,MM,NN,NIN,NIN1,NO IN, N OUT,NOVAR,NOMAX,NOVPL,NOVMI,   BSMR0919
+     2  NOVM2,NOMIN,NODATA,NOTE,NOPROB,NOSTEP, REMARK,SAVE,SIGMA,       BSMR0920
+     3  SIGMCO,SIGY,TEST,TOL,VECTOR,VMAX,VMIN,LPATH,IFCNST,IFCOEN,DATUM BSMR0921
+                                                                        BSMR0922
+       A = 1.0/VECTOR(K,K)                                              BSMR0923
+                                                                        BSMR0924
+       DO 4 I=1,NOVAR                                                   BSMR0925
+       IF (I-K) 1,4,1                                                   BSMR0926
+    1  DO 3  J=1,NOVAR                                                  BSMR0927
+       IF (J-K) 2,3,2                                                   BSMR0928
+    2  VECTOR(I,J) = VECTOR(I,J) - VECTOR(I,K)*VECTOR(K,J)*A            BSMR0929
+    3  CONTINUE                                                         BSMR0930
+       VECTOR(I,K) = - VECTOR(I,K)*A                                    BSMR0931
+    4  CONTINUE                                                         BSMR0932
+                                                                        BSMR0933
+       DO 6  J=1,NOVAR                                                  BSMR0934
+       IF (J-K) 5,6,5                                                   BSMR0935
+    5  VECTOR(K,J) = VECTOR(K,J)*A                                      BSMR0936
+    6  CONTINUE                                                         BSMR0937
+                                                                        BSMR0938
+       VECTOR(K,K) = A                                                  BSMR0939
+                                                                        BSMR0940
+       IF (NOSTEP - 1) 7,7,8                                            BSMR0941
+                                                                        BSMR0942
+    7  CONTINUE                                                         BSMR0943
+       X = NOVAR - 1                                                    BSMR0944
+       BOUND = 2.0**X                                                   BSMR0945
+                                                                        BSMR0946
+    8  CONTINUE                                                         BSMR0947
+       DUMMY = NOSTEP                                                   BSMR0948
+       IF (DUMMY - BOUND) 11,9,9                                        BSMR0949
+                                                                        BSMR0950
+    9  WRITE OUTPUT TAPE 6, 10 , NOPROB                                 BSMR0951
+   10  FORMAT (40H0 EXCEEDED 2.0**(NOVAR-1) IN PROBLEM         I4///)   BSMR0952
+       GO TO 98                                                         BSMR0953
+                                                                        BSMR0954
+   11  IF (1000 - NOSTEP) 12,99,99                                      BSMR0955
+                                                                        BSMR0956
+   12  WRITE OUTPUT TAPE 6,13, NOPROB                                   BSMR0957
+   13  FORMAT (40H0 EXCEEDED 1000 ITERATIONS IN PROBLEM          I4///) BSMR0958
+   98  SENSE LIGHT 1                                                    BSMR0959
+   99  RETURN                                                           BSMR0960
+       END                                                              BSMR0961

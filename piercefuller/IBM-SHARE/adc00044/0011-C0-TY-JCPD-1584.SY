@@ -1,0 +1,160 @@
+*      FAP    JCPMD(DFCN,DA,P1,P2,...,PN,DB)                            JCPMD000
+       COUNT  159                                                       JCPMD001
+       ENTRY  JCPMD          JCPMD(DFCN,DA,P1,P2,...,PN,DB)             JCPMD002
+ JCPMD SXA    AXT,4                                                     JCPMD003
+       CLA    2,4            FIND DA1  (MOST SIG. PART                  JCPMD004
+       STA    DA1            AND DA2  (LEAST SIG. PART)                 JCPMD005
+       ACL    MASK                                                      JCPMD006
+       STA    DA2            CHANGE        TSX  DA,0     TO             JCPMD007
+       CAL    DBVDZ                        TSX  DZ1,0                   JCPMD008
+       STA    2,4                                                       JCPMD009
+ FINDB CAL    4,4                                                       JCPMD010
+       ORA    MASK                                                      JCPMD011
+       LAS    TSX            FIND          TSX  DB,0                    JCPMD012
+       TRA    *+2                          ...  ...                     JCPMD013
+       TXI    FINDB,4,-1                                                JCPMD014
+       CLA    3,4                                                       JCPMD015
+       STA    DB1                                                       JCPMD016
+       ACL    MASK                                                      JCPMD017
+       STA    DB2                                                       JCPMD018
+       CAL    JCPMD          CHANGE    TSX  DB,0    TO                  JCPMD019
+       STA    3,4                      TSX  AXT,0                       JCPMD020
+       SXA    REMDB,4        REMEMBER WHERE TSX DB,0 WAS.               JCPMD021
+       LXA    AXT,4          CHANGE        TSX  DFCN,0   TO             JCPMD022
+       STT    1,4                          TSX  DFCN,4                  JCPMD023
+       STZ    FA             FA = 0.0                                   JCPMD024
+ SETZB CLA*   DB1                                                       JCPMD025
+       LDQ*   DB2                                                       JCPMD026
+       STO    DZ1            DZ = DB                                    JCPMD027
+       STQ    DZ2                                                       JCPMD028
+       TRA    1,4            CALCULATE DFCN(DZ,P1,P2,...,PN)            JCPMD029
+ AXT   AXT    **,4           RETURN FROM DFCN.  RESTORE XR4.            JCPMD030
+       CLA    FZ             FZ = DFCN(DZ,...)  IN D-P AC.              JCPMD031
+       TNZ    XCA                                                       JCPMD032
+       LDQ    DZ1            EXIT IF DFCN(DZ,...) = 0.0, SETTING        JCPMD033
+       STQ*   DA1            DA = DZ,                                   JCPMD034
+       STQ*   DB1            DB = DZ, AND JCPMD = 0  .                  JCPMD035
+       LDQ    DZ2                                                       JCPMD036
+       STQ*   DA2                                                       JCPMD037
+       STQ*   DB2                                                       JCPMD038
+ EXIT  XCA                   TO SAVE JCPMD                              JCPMD039
+       CAL    DA1                                                       JCPMD040
+       STA    2,4            RESTORE       TSX  DA,0     AND            JCPMD041
+       STT    1,4                          TSX  DFCN,0                  JCPMD042
+ REMDB AXT    **,4           RECALL WHERE TSX DB,0 WAS                  JCPMD043
+       CAL    DB1                                                       JCPMD044
+       STA    3,4            RESTORE       TSX  DB,0                    JCPMD045
+       XCA                   AC = JCPMD(DFCN,DA,P1,...,PN,DB)  .        JCPMD046
+       TRA    4,4            RETURN.                                    JCPMD047
+ XCA   XCA                   FZ = DFCN (DZ,...) IS NON ZERO.            JCPMD048
+       MPY    FA             TEST FA*FZ                                 JCPMD049
+       TMI    RVRSE                                                     JCPMD050
+       TZE    RVRSE                                                     JCPMD051
+       NZT    FB             IF FA*FZ IS POSITIVE, TEST FB.             JCPMD052
+       TRA    EXIT           EXIT WITH POSITIVE JCPMD IF FB = 0.        JCPMD053
+       CLA    FB             OTHERWISE REPLACE FB BY                    JCPMD054
+       NZT    GAMMA           MIN(GAMMA,HALF)*FB                        JCPMD055
+       ACL    HALF                                                      JCPMD056
+       ACL    GAMMA                                                     JCPMD057
+       PBT                   UNLESS IT UNDERFLOWS                       JCPMD058
+       TRA    CLSFZ          IN WHICH CASE SET  FB=-FZ                  JCPMD059
+       STO    FB                                                        JCPMD060
+       CLA    GAMMA                                                     JCPMD061
+       ACL    HALF                                                      JCPMD062
+       STO    GAMMA          NEW GAMMA = 0.5*GAMMA                      JCPMD063
+ CLAFZ CLA    FZ                                                        JCPMD064
+       STO    FA             FA = FZ                                    JCPMD065
+       CLA    DZ1                                                       JCPMD066
+       LDQ    DZ2                                                       JCPMD067
+       STO*   DA1            DA = DZ                                    JCPMD068
+       STQ*   DA2                                                       JCPMD069
+ NEWDZ CLA    FB                                                        JCPMD070
+       TZE    SETZB          IF FB = 0, SET DZ = DB. OTHERWISE          JCPMD071
+       FDH    FA             CALCULATE NEW  DZ                          JCPMD072
+       XCA                                                              JCPMD073
+       FSB    ONE1           AC = FB/FA - 1.0-2.**(-26)                 JCPMD074
+       STO    FZ             = (FB-FA)/FA , IS LESS THAN  -1.           JCPMD075
+       CLA*   DA1                                                       JCPMD076
+ DB1   FSB    **                                                        JCPMD077
+       STO    FZ-1                                                      JCPMD078
+       XCA                                                              JCPMD079
+       UFA*   DA2                                                       JCPMD080
+ DB2   UFS    **                                                        JCPMD081
+       FAD    FZ-1           (AC,MQ) = DA - DB                          JCPMD082
+       FDH    FZ                                                        JCPMD083
+       XCA                   AC=(DA-DB)/((FB-FA)/FA)                    JCPMD084
+ DA1   FAD    **                                                        JCPMD085
+       STO    DZ1                                                       JCPMD086
+       XCA                                                              JCPMD087
+ DA2   UFA    **                                                        JCPMD088
+       FAD    DZ1                                                       JCPMD089
+       STO    DZ1            DZ = DA + (DA-DB)/((FB-FA)/FA),            JCPMD090
+       STQ    DZ2            AND ALWAYS LIES BETWEEN DA AND DB.         JCPMD091
+       SUB*   DA1                                                       JCPMD092
+       TNZ    1,4            IF DZ DIFFERS FROM DA,ITERATE AGAIN.       JCPMD093
+       XCA                                                              JCPMD094
+       SUB*   DA2                                                       JCPMD095
+       TNZ    1,4                                                       JCPMD096
+       CLA*   DA1            IF DZ = DA, CONSIDER NEW DZ = (DA+DB)/2.   JCPMD097
+       LFTM                  SUPPRESS FLOATING PT. OVERFLOW TRAP.       JCPMD098
+       TQO    *+1            CLEAR MQ OVERFLOW INDICATOR.               JCPMD099
+       FAD*   DB1                                                       JCPMD100
+       ACL    HALF           (DA1+DB1)/2. WITHOUT FLOATING PT. OVERFLOW,JCPMD101
+       PBT                   BUT FIXED PT. AC/MQ OVERFLOW MAY OCCUR.    JCPMD102
+       ZAC                   SET UNDERFLOWED DZ1 = 0.0                  JCPMD103
+       STO    DZ1                                                       JCPMD104
+       ZAC                                                              JCPMD105
+       TQO    EFTM           IF MQ UNDERFLOWS, SET DZ2 = 0.0            JCPMD106
+       XCA                                                              JCPMD107
+       UFA*   DA2                                                       JCPMD108
+       UFA*   DB2                                                       JCPMD109
+       ACL    HALF                                                      JCPMD110
+       PBT                                                              JCPMD111
+       ZAC                   CLEAR UNDERFLOW TO 0.0                     JCPMD112
+       XCA                   CLEAR P-BIT                                JCPMD113
+       XCA                                                              JCPMD114
+ EFTM  EFTM                  RESTORE FLOATING PT. OVERFLOW TRAP         JCPMD115
+       FAD    DZ1                                                       JCPMD116
+       STO    DZ1            DZ = (DA+DB)/2.                            JCPMD117
+       STQ    DZ2                                                       JCPMD118
+       SUB*   DA1                                                       JCPMD119
+       TNZ    DBVDZ          IF (DA+DB)/2. = DA, EXIT TO CHS AND        JCPMD120
+       XCA                                                              JCPMD121
+       SUB*   DA2                                                       JCPMD122
+       TNZ    DBVDZ                                                     JCPMD123
+ CHS   CLS    ONE1           SET JCPMD NEGATIVE BEFORE EXIT.            JCPMD124
+       TRA    EXIT                                                      JCPMD125
+ DBVDZ CLA    DZ1                                                       JCPMD126
+       SUB*   DB1                                                       JCPMD127
+       TNZ    CUTFB                                                     JCPMD128
+       CLA    DZ2                                                       JCPMD129
+       SUB*   DB2                                                       JCPMD130
+       TZE    CHS            IF(DA+DB)/2. = DB  EXIT TO CHS,            JCPMD131
+ CUTFB CLA    FB             OTHERWISE SET FB = 0.5*FB.                 JCPMD132
+       ACL    HALF                                                      JCPMD133
+       PBT                   IF FB UNDERFLOWS LEAVE DZ = (DA+DB)/2.,    JCPMD134
+       TRA    1,4            AND ITERATE AGAIN.                         JCPMD135
+       STO    FB                                                        JCPMD136
+       TRA    NEWDZ          OTHERWISE CALCULATE NEW DZ.                JCPMD137
+ CLSFZ CLS    FZ             FB = -FZ                                   JCPMD138
+       TRA    STZ                                                       JCPMD139
+ RVRSE CLA*   DA1            IF FA*FZ IS NOT POSITIVE, SET              JCPMD140
+       LDQ*   DA2                                                       JCPMD141
+       STO*   DB1            DB = DA                                    JCPMD142
+       STQ*   DB2                                                       JCPMD143
+       CLA    FA             FB = FA .                                  JCPMD144
+ STZ   STZ    GAMMA          RESET  GAMMA = 1.0                         JCPMD145
+       STO    FB                                                        JCPMD146
+       TRA    CLAFZ                                                     JCPMD147
+ MASK  OCT    77777                    154 LOCATIONS                    JCPMD148
+ DZ2   PZE    0                                                         JCPMD149
+ DZ1   PZE    0                      THIS PROGRAM ASSUMES THAT          JCPMD150
+ TSX   TSX    32767,0                FLOATING PT. OVER/UNDERFLOW        JCPMD151
+ FA    PZE    0                      WILL BE DEALT WITH BY (FPT),       JCPMD152
+ HALF  OCT    377000000000           AND THAT DA,DB, AND DFCN           JCPMD153
+ ONE1  OCT    201400000001           ARE ALWAYS NORMALIZED.             JCPMD154
+ FB    PZE    0                                                         JCPMD155
+ GAMMA PZE    0                        V.KAHAN  AUG.  1963              JCPMD156
+       COMMON -206                                                      JCPMD157
+ FZ    COMMON 1              D-P AC                                     JCPMD158
+       END                                                              JCPMD159

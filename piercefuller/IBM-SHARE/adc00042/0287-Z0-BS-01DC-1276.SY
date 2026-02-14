@@ -1,0 +1,989 @@
+BS01DC REM 0989 09141                                                   01DC0001
+       REM PR   1  BUILD TREES MODIFIED            HOOD    9/14/61      01DC0002
+       REM BUILD TREES                           JENNINGS  2-1-60       01DC0003
+       REM                                                              01DC0004
+       REM PARAMETER AND CONTROL CARDS READ ON LINE                     01DC0005
+       REM NETWORK DESCRIPTION ON TAPE 2                                01DC0006
+       REM OUTPUT TREES ON TAPE 3 THEN 4, DUPLICATED ON 5 THEN 6        01DC0007
+       REM                                                              01DC0008
+       REM PRINTS SUM OF TREE TIMES IF SENSE SWITCH 4 IS DOWN           01DC0009
+       REM ALL TREE TIMES ON TAPE 10                                    01DC0010
+       REM OUTPUT TAPES DUPLICATED IF SENSE SWITCH 5 IS DOWN            01DC0011
+       REM TREES BUILT TWICE AND CHECKED IF SENSE SWITCH 6 IS DOWN      01DC0012
+       REM                                                              01DC0013
+       ORG 379                                                          01DC0014
+       PZE 380,0,1                         PROGRAM ID WORD(ON TAPE)     01DC0015
+ START TSX BEGIN,4                                                      01DC0016
+       LXA L12,2                                                        01DC0017
+ NEXT  CLA CON+12,2                FIRST WORD                           01DC0018
+       ANA MASKX                   17171717                             01DC0019
+       TZE RAPUP                                                        01DC0020
+       TSX BIN,4                                                        01DC0021
+       ALS 18                                                           01DC0022
+       STO CON1                    FIRST TREE OF GROUP                  01DC0023
+       TNX LAST,2,1                                                     01DC0024
+       CLA CON+12,2                                                     01DC0025
+       CAS BLANK                                                        01DC0026
+       TRA *+3                                                          01DC0027
+       TRA LAST                    NO MORE                              01DC0028
+       TRA LONE                    SINGLE                               01DC0029
+       ANA MASKX                   GROUPED                              01DC0030
+       TIX *+2,2,1                                                      01DC0031
+       SLN 3                                                            01DC0032
+       TSX BIN,4                                                        01DC0033
+       ALS 18                                                           01DC0034
+       STD CON2                    LAST TREE OF GROUP                   01DC0035
+       SUB CON1                                                         01DC0036
+       TMI ERR                                                          01DC0037
+       LXD CON1,1                                                       01DC0038
+       SXD XX2,2                                                        01DC0039
+       REM BEGIN TREE BUILDING                                          01DC0040
+ AAA   SLN 4                                                            01DC0041
+ MB    SXD MEMB,1                                                       01DC0042
+       SXD E,1                                                          01DC0043
+       PXD 0,1                                                          01DC0044
+ MBA   STZ MEMB,1                 SET HOME NODE TO ZERO                 01DC0045
+       TRA FINE+2                                                       01DC0046
+ CSUBA CLA MEMC,6                  REMOVE ENTRY FROM                    01DC0047
+       STZ MEMC,6                  SEQUENCE TABLE                       01DC0048
+       TIX FINE,2,1                CYCLE SEQUENCE INDEX                 01DC0049
+       TXL *+2,2,0                                                      01DC0050
+       TXI FINE,2,-1                                                    01DC0051
+       LXA L31,2                                                        01DC0052
+       TXH *+2,4,3968                                                   01DC0053
+       TXI FINE,4,64                                                    01DC0054
+       LXD ZERO,4                                                       01DC0055
+ FINE  SXD X2,2                   COLUMN                                01DC0056
+       SXD XA4,4                  ROW                                   01DC0057
+       STO TEMP                    ANODE                                01DC0058
+       ALS 2                       LOCATE ANODE                         01DC0059
+       PDX 0,1                                                          01DC0060
+ BBB   LXA THREE,4                 START WITH HIGHEST LINK              01DC0061
+ SIFT  CLA TEMP                   TURN PROHIBITORS                      01DC0062
+       ARS 9,4                    SELECT PROPER DIGIT                   01DC0063
+       LBT                        TEST FOR PERMISSION                   01DC0064
+       TRA OK                     TURN PERMITTED                        01DC0065
+       TRA THIR                   TURN PROHIBITED                       01DC0066
+ OK    CAL MEMA+4,5                GET OUTBOUND LINK FROM ANODE         01DC0067
+       TZE NSAME                   LINKS EXHAUSTED                      01DC0068
+ BBBX  SLW TEMP+1                 STORE SIGN, BNODE, + PROHIBITORS      01DC0069
+       ANA MASKP                  SAVE TIME AND FLAG                    01DC0070
+       STA TEMP+2                 TIME                                  01DC0071
+       STO TEMP+3                 FLAG                                  01DC0072
+       SXD X4,4                                                         01DC0073
+       LXD TEMP,2                  ANODE                                01DC0074
+       LXD TEMP+1,4                BNODE                                01DC0075
+ MBC   CAL MEMB,2                  GET A NODE TREE ENTRY                01DC0076
+       ANA MASKC                  SAVE ELAPSED TIME AND TURN PROHIBITORS01DC0077
+       ADD TEMP+2                  ADD LINK TIME                        01DC0078
+       STO RELAX                  NEW ELAPSED TIME TO BNODE             01DC0079
+ MBE   CAL MEMB,2    TRA HEXA IF TP = ZERO - IS NODE A THE ORIGIN       01DC0080
+       TZE HEXA                   YES IF ZERO                           01DC0081
+       ACL TEMP+1                                                       01DC0082
+       PBT                        WAS A TURN MADE                       01DC0083
+       TRA HEXA                   NO                                    01DC0084
+       CLA RELAX                  YES                                   01DC0085
+       ADD TPENT                  ADD TURN PENALTY                      01DC0086
+       STA RELAX                  TO ELAPSED TIME                       01DC0087
+ HEXA  CLA MEMB,4                 TREE BACK NODE + TIME                 01DC0088
+       PDX 0,2                    BACK NODE                             01DC0089
+       ANA MASKC                  TIME                                  01DC0090
+       CAS RELAX                   COMPARE WITH NEW TIME                01DC0091
+       TRA AHA-1                  OLD TIME GREATER THAN NEW TIME        01DC0092
+       TRA CCC                    OLD TIME EQUAL NEW TIME               01DC0093
+       TRA CCC                    OLD TIME LESS THAN NEW TIME           01DC0094
+       TXL SAME,2,0               FIRST ENTRY IF ZERO                   01DC0095
+ AHA   TXL SAME,4,--              TEST FOR CENTROID                     01DC0096
+       SXD NOD,4                  B NODE                                01DC0097
+       ANA C63                    TIME MOD 64                           01DC0098
+       ALS 6                      X64                                   01DC0099
+       PAX 0,2                                                          01DC0100
+       LXA L31,4                  LOOK FOR                              01DC0101
+ AW    CLA MEMC,6                 SEQUENCE TABLE ENTRY                  01DC0102
+       TZE CLASY                  EMPTY IF ZERO                         01DC0103
+       ANA DMASK                  SAVE NODE IN DECREMENT                01DC0104
+       SUB NOD                    IS IT BNODE                           01DC0105
+       TZE PULL                   YES IF ZERO                           01DC0106
+       TIX AW,4,1                 STEP TO NEXT COLUMN                   01DC0107
+       TXL *+2,4,0                IS IT END OF ROW                      01DC0108
+       TXI AW,4,-1                NO - STEP TO LAST COLUMN              01DC0109
+       TXI *+1,2,64               YES - STEP TO NEXT ROW                01DC0110
+       TXL AW-1,2,4032            IS IT END OF TABLE                    01DC0111
+       TXI AW-1,2,-4096           YES - STEP TO BEGINNING OF TABLE      01DC0112
+ CLASY CLA NTFND                           ACCUMULATE                   01DC0113
+       ADD ONE                             NOT FOUND COUNT              01DC0114
+       STO NTFND                                                        01DC0115
+       TRA SAME-1                                                       01DC0116
+ CRABS CLA OVFLO                           ACCUMULATE                   01DC0117
+       ADD ONE                             OVERFLOW COUNT               01DC0118
+       STO OVFLO                                                        01DC0119
+       TRA THAR+5                                                       01DC0120
+ PULL  CLA SEVNS                  DELETE 2ND                            01DC0121
+       STO MEMC,6                 B NODE ENTRY                          01DC0122
+       LXD NOD,4                                                        01DC0123
+ SAME  CLA TEMP                   PUT BACK NODE                         01DC0124
+ MBF   STD MEMB,4                 IN TREE                               01DC0125
+       CLA RELAX                  PUT ELAPSED TIME                      01DC0126
+ MBG   STA MEMB,4                 IN TREE                               01DC0127
+       CAL TEMP+1    TRA MGJ+1 IF TP=ZERO - PUT SIGN                    01DC0128
+ MBH   STP MEMB,4                 INTO TREE                             01DC0129
+       CAL TEMP+3                 IS LINK                               01DC0130
+       ANA MASKB                  FLAGGED                               01DC0131
+       TZE PLMC-1                 NO IF ZERO                            01DC0132
+ MBI   CLA MEMB,4                 YES,                                  01DC0133
+       CHS                        CHANGE SIGN                           01DC0134
+ MGJ   STO MEMB,4                 OF TREE ENTRY                         01DC0135
+       TXL CCC,4,--                TEST FOR CENTROID                    01DC0136
+ PLMC  CLA TEMP+2                 GET LINK TIME                         01DC0137
+       TNZ *+4                                                          01DC0138
+       LXD X2,4                   ZERO TIME LINK,                       01DC0139
+       LXD XA4,2                  PROCESS                               01DC0140
+       TRA THAR                   IMMEDIATELY                           01DC0141
+       CLA RELAX                  ELAPSED TIME                          01DC0142
+       ANA C63                     MOD 64                               01DC0143
+       ALS 6                      X64                                   01DC0144
+       PAX 0,2                    ROW                                   01DC0145
+       LXA L31,4                  COLUMN. LOOK FOR EMPTY                01DC0146
+ THAR  CLA MEMC,6                  SLOT IN SEQUENCE TABLE               01DC0147
+       TZE STORA                   EMPTY SLOT IF ZERO                   01DC0148
+       TIX THAR,4,1                KEEP LOOKING                         01DC0149
+       TXL CRABS,4,0              ROW OVERFLOW                          01DC0150
+       TXI THAR,4,-1                                                    01DC0151
+       TXI *+1,2,64               SKIP TO NEXT TIME STEP                01DC0152
+       TXL THAR-1,2,4032                                                01DC0153
+       TXI THAR-1,2,-4096                                               01DC0154
+ STORA CLA TEMP+1                  PUT ANODE AND PROHIBITORS            01DC0155
+       SLW MEMC,6                  INTO SEQUENCE TABLE                  01DC0156
+ CCC   LXD X4,4                                                         01DC0157
+ THIR  TIX SIFT,4,1               HAVE ALL LINKS FROM ANODE BEEN TRIED  01DC0158
+       TXL NSAME,4,0               YES IF ZERO                          01DC0159
+       TXI SIFT,4,-1              GO BACK FOR LAST LINK                 01DC0160
+ NSAME LXD XA4,4                   RESTORE SEQUENCE                     01DC0161
+       LXD X2,2                    INDICES                              01DC0162
+       CLA SEVNS             77777                                      01DC0163
+       TRA *+2                                                          01DC0164
+ RING  LXA L31,2                  RESET LINE ENTRY                      01DC0165
+       CAS MEMC,6                 GET ENTRY                             01DC0166
+       TXI RANG,4,64              EMPTY                                 01DC0167
+       TRA SLIDE                  PULLED                                01DC0168
+       TRA CSUBA                  VALID                                 01DC0169
+ RANG  TXL RING,4,4032                                                  01DC0170
+       LXA ZERO,4                  GO TO TOP OF TABLE                   01DC0171
+ DING  LXA L31,2                                                        01DC0172
+       CAS MEMC,6                 GET ENTRY                             01DC0173
+       TXI XA4,4,64               EMPTY                                 01DC0174
+       TRA SLID                   PULLED                                01DC0175
+       TRA CSUBA                  VALID                                 01DC0176
+ SLIDE STZ MEMC,6                 ERASE PULLED ENTRY                    01DC0177
+       TIX RING+1,2,1             STEP INDEX                            01DC0178
+       TXL RING+2,2,0             TEST FOR LAST OF LINE                 01DC0179
+       TXI RING+1,2,-1            GO BACK FOR LAST                      01DC0180
+ SLID  STZ MEMC,6                 ERASE PULLED ENTRY                    01DC0181
+       TIX DING+1,2,1             STEP INDEX                            01DC0182
+       TXL DING+2,2,0             TEST FOR LAST OF LINE                 01DC0183
+       TXI DING+1,2,-1            GO BACK FOR LAST                      01DC0184
+ XA4   TXL DING,4,--              TEST FOR END OF TABLE                 01DC0185
+       REM TREE COMPLETE                                                01DC0186
+ ISTAT CLA OVFLO                           TALLY STATISTICS             01DC0187
+       TNZ BRIIG                           OF OVERFLOW AND              01DC0188
+       CLA NTFND                           NOT FOUND                    01DC0189
+       TNZ BRIIG                                                        01DC0190
+ BRIF  CLA LNN                    LAST NODE NUMBER                      01DC0191
+ BLUR  STA MEMB                                                         01DC0192
+       SWT 6                                                            01DC0193
+       TRA TAPE                                                         01DC0194
+       SLT 4                                                            01DC0195
+       TRA CHECK                                                        01DC0196
+ TAPE  WTS 5                       NOP IF SW 5 OFF AT START             01DC0197
+       WTB 3                       WRITE OUT TREE                       01DC0198
+       LXA ONE,4                                                        01DC0199
+       STZ RELAX                                                        01DC0200
+       STZ TOTEM                                                        01DC0201
+       PXD 0,0                                                          01DC0202
+ MBJ   CAD MEMB                                                         01DC0203
+       SLW CKSUM                  FOR HASH TOTAL                        01DC0204
+       PXD 0,0                                                          01DC0205
+ MBK   CAD MEMB,4                                                       01DC0206
+       STA RELAX                  FOR TIME SUM                          01DC0207
+       ACL CKSUM                  ACCUMULATE HASH TOTAL                 01DC0208
+       SLW CKSUM                                                        01DC0209
+ MAK   TXH ET,4,--                 LAST ZONE NUMBER                     01DC0210
+       CLA RELAX                                                        01DC0211
+       ADD TOTEM                   ACCUMULATE TREE TIME SUM             01DC0212
+       STO TOTEM                                                        01DC0213
+ ET    ETT                                                              01DC0214
+       TRA SWAP                                                         01DC0215
+       TXI *+1,4,1                                                      01DC0216
+ MBKA  TXL MBK-1,4,--                                                   01DC0217
+       IOD                                                              01DC0218
+       CLA E                       ORIGIN ZONE                          01DC0219
+       ARS 18                                                           01DC0220
+       TSX BCD,4                                                        01DC0221
+       ALS 12                                                           01DC0222
+       ORA LOB                                                          01DC0223
+       SLW TEMPO                                                        01DC0224
+       LDQ TOTEM                   CONVERT                              01DC0225
+       MPY LTTP                    TOTAL TIME                           01DC0226
+       DVP L6300                   BACK TO                              01DC0227
+       STQ TOTEM                   MINUTES                              01DC0228
+       ALS 1                                                            01DC0229
+       SUB L6300                                                        01DC0230
+       TMI *+4                                                          01DC0231
+       CLA TOTEM                   ROUND                                01DC0232
+       ADD ONE                                                          01DC0233
+       TRA *+2                                                          01DC0234
+       CLA TOTEM                                                        01DC0235
+       TSX BCD,4                                                        01DC0236
+       SLW TEMPO+1                                                      01DC0237
+ TIMC  CLA *+3                                                          01DC0238
+       STO *-1                                                          01DC0239
+       TRA TIMZ                                                         01DC0240
+       TRA TIMD                                                         01DC0241
+ TIMZ  CLA LINCO                                                        01DC0242
+       SSP                                                              01DC0243
+       STO LINCO                                                        01DC0244
+ TIMO  CLA HEAD                            SETUP NEW PAGE HEADING       01DC0245
+       STO IMAGE                                                        01DC0246
+       CLA HEAD+1                                                       01DC0247
+       STO IMAGE+1                                                      01DC0248
+       LXA SIX,4                                                        01DC0249
+ TIMOA CLA IDEX+6,4                                                     01DC0250
+       STO IMAGE+8,4                                                    01DC0251
+       TIX TIMOA,4,1                                                    01DC0252
+       LXA TEN,4                                                        01DC0253
+       CLA BLANK                                                        01DC0254
+       CLA PAGE                                                         01DC0257
+ TIMOB STO IMAGE+18,4                                                   01DC0255
+       TIX TIMOB,4,1                                                    01DC0256
+       STO IMAGE+18                                                     01DC0258
+       CLA PAGE+1                                                       01DC0259
+       STO IMAGE+19                                                     01DC0260
+       CLA PAGCO                                                        01DC0261
+       ADD ONE                                                          01DC0262
+       STO PAGCO                                                        01DC0263
+       TSX BCD,4                                                        01DC0264
+       SLW PAGE+1                                                       01DC0265
+ TIMR  WTD 10                              WRITE PAGE HEADING           01DC0266
+       ETT                                                              01DC0267
+       TSX EZZX,4                                                       01DC0268
+       LXA TWENT,4                                                      01DC0269
+ TIMRA CPY IMAGE+20,4                                                   01DC0270
+       TIX TIMRA,4,1                                                    01DC0271
+       WTD 10                                                           01DC0272
+       ETT                                                              01DC0273
+       TSX EZZX,4                                                       01DC0274
+       CPY SPACE                                                        01DC0275
+ TIMS  SWT 4                                                            01DC0276
+       TRA TIMP                            OFF                          01DC0277
+       WPR                                 ON                           01DC0278
+       SPR 1                                                            01DC0279
+ TIMSP IOD                                                              01DC0280
+       TSX PRINT,4                         PRINT PAGE HEADING           01DC0281
+       PZE IMAGE,0,20                                                   01DC0282
+       PZE 20                                                           01DC0283
+       WPR                                                              01DC0284
+       SPR 0                                                            01DC0285
+ TIMP  LXA TWENT,1                         RESET COL AND LINE COUNTS    01DC0286
+       SXD COLCO,1                                                      01DC0287
+       LXA FIFTY,2                                                      01DC0288
+       SXD LINCO,2                                                      01DC0289
+ TIMQ  CLA TEMPO                           MAKE ENTRY ON PAGE           01DC0290
+       STO IMAGE+20,1                                                   01DC0291
+       TXI *+1,1,-1                                                     01DC0292
+       CLA TEMPO+1                                                      01DC0293
+       STO IMAGE+20,1                                                   01DC0294
+       TXI *+1,1,-1                                                     01DC0295
+       CLA BLANK                                                        01DC0296
+       STO IMAGE+20,1                                                   01DC0297
+ TIMG  TXI *+1,1,-1                                                     01DC0298
+       SXD COLCO,1                         SAVE COLUMN COUNT            01DC0299
+       TRA DUN                                                          01DC0300
+ TIMX  CLA LINCO                                                        01DC0301
+       SSM                                                              01DC0302
+       STO LINCO                                                        01DC0303
+       TRA TIMK                                                         01DC0304
+ TIMD  LXD COLCO,1                         GET COLUMN COUNT             01DC0305
+ TIME  TXH TIMH,1,20                                                    01DC0306
+       TRA TIMQ                            LINE NOT FULL                01DC0307
+ TIMH  LXD LINCO,2                         LINE FULL                    01DC0308
+ TIMI  TXL TIMX,2,2                                                     01DC0309
+ TIMK  WTD 10                              WRITE ON LINE                01DC0310
+       ETT                                                              01DC0311
+       TSX EZZX,4                                                       01DC0312
+       LXA TWENT,1                                                      01DC0313
+ TIMKA CPY IMAGE+20,1                                                   01DC0314
+       TIX TIMKA,1,1                                                    01DC0315
+ TIML  SWT 4                                                            01DC0316
+       TRA TIMJ                            OFF                          01DC0317
+ TIMLP IOD                                                              01DC0318
+       TSX PRINT,4                         PRINT DATA LINE              01DC0319
+       PZE IMAGE,0,20                                                   01DC0320
+       PZE 20                                                           01DC0321
+ TIMJ  LXA TWENT,1                                                      01DC0322
+       TXI *+1,2,-1                                                     01DC0323
+       SXD LINCO,2                                                      01DC0324
+ TIMY  CLA LINCO                                                        01DC0325
+       TMI TIMZ                                                         01DC0326
+       TRA TIMQ                                                         01DC0327
+ DUN   LXA LNN,4                  RESET TREE                            01DC0328
+       CLA SEVNS                                                        01DC0329
+ PILS  STO MEMB,4                                                       01DC0330
+       TIX *-1,4,1                                                      01DC0331
+       LXA L31,2                                                        01DC0332
+       SXD X2,2                                                         01DC0333
+       LXA ZERO,4                                                       01DC0334
+       SXD XA4,4                                                        01DC0335
+       LXD E,1                                                          01DC0336
+       SWT 6                                                            01DC0337
+       TXI CON2,1,1                                                     01DC0338
+       SLT 2                                                            01DC0339
+       TRA MB                     RE-CALCULATE TREE                     01DC0340
+ TEST  TXI *+1,1,1                                                      01DC0341
+ CON2  TXL AAA,1,--                                                     01DC0342
+       LXD XX2,2                                                        01DC0343
+       SLT 3                                                            01DC0344
+       TRA NEXT                                                         01DC0345
+ RAPUP LXD COLCO,1                                                      01DC0346
+       TXH *+4,1,20                                                     01DC0347
+       CLA BLANK                                                        01DC0348
+       STO IMAGE+20,1                                                   01DC0349
+       TXI *-3,1,-1                                                     01DC0350
+       WTD 10                                                           01DC0351
+       LXA TWENT,1                                                      01DC0352
+       CPY IMAGE+20,1                                                   01DC0353
+       TIX *-1,1,1                                                      01DC0354
+       SWT 4                                                            01DC0355
+       TRA *+5                                                          01DC0356
+       IOD                                                              01DC0357
+       TSX PRINT,4                                                      01DC0358
+       PZE IMAGE,0,20                                                   01DC0359
+       PZE 20                                                           01DC0360
+       WEF 10                                                           01DC0361
+       REW 10                                                           01DC0362
+ WEF   WEF 3                                                            01DC0363
+       WEF 5                                                            01DC0364
+       REW 3                                                            01DC0365
+       REW 5                                                            01DC0366
+       CLA TIMES                                                        01DC0367
+       TZE *+7                                                          01DC0368
+       ARS 18                                                           01DC0369
+       TSX BCD,4                                                        01DC0370
+       SLW FAIL+3                                                       01DC0371
+       TSX PRINT,4                                                      01DC0372
+       PZE FAIL,0,4                                                     01DC0373
+       PZE 4                                                            01DC0374
+       SWT 4                                                            01DC0375
+       TRA *+3                                                          01DC0376
+       WPR                                                              01DC0377
+       SPR 2                                                            01DC0378
+       RTB 1                                                            01DC0379
+       CPY 0                                                            01DC0380
+       CPY 1                                                            01DC0381
+       TRA 0                                                            01DC0382
+ LAST  SLN 3                                                            01DC0383
+ LONE  LXD CON1,1                                                       01DC0384
+       SXD CON2,1                                                       01DC0385
+       TRA AAA-1                                                        01DC0386
+       REM TEST FOR REPEATABILITY                                       01DC0387
+ CHECK LXA LNN,4                                                        01DC0388
+       PXD 0,0                                                          01DC0389
+ MBL   ACL MEMB,4                 GET 2ND HASH TOTAL                    01DC0390
+       TIX *-1,4,1                                                      01DC0391
+ MBM   ACL MEMB                                                         01DC0392
+       SLW TEMP                   2ND HASH TOTAL                        01DC0393
+       SLN 2                                                            01DC0394
+       CLA TEMP                                                         01DC0395
+       SUB CKSUM                                                        01DC0396
+       TNZ *+3                                                          01DC0397
+       STZ CTR                                                          01DC0398
+       TRA DUN                                                          01DC0399
+       CLA WEF                                                          01DC0400
+       STA *+3                                                          01DC0401
+       ADD TWO                                                          01DC0402
+       STA *+2                                                          01DC0403
+       BST --                                                           01DC0404
+ PAIR  BST --                                                           01DC0405
+       LXD TIMES,4                                                      01DC0406
+       TXI *+1,4,1                                                      01DC0407
+       SXD TIMES,4                                                      01DC0408
+       CLA E                                                            01DC0409
+       ARS 18                                                           01DC0410
+       TSX BCD,4                                                        01DC0411
+       SLW TREED+1                                                      01DC0412
+       TSX PRINT,4                                                      01DC0413
+       PZE TREED,0,5                                                    01DC0414
+       PZE 5                                                            01DC0415
+       WPR                                                              01DC0416
+       SPR 2                                                            01DC0417
+       HPR 6                                                            01DC0418
+       SWT 1                                                            01DC0419
+       TRA *+2                    OFF - TRY THIS TREE AGAIN             01DC0420
+       TRA *+3                    ON - SKIP TO NEXT TREE                01DC0421
+ PUSH  SLF                                                              01DC0422
+       SLN 4                                                            01DC0423
+       TRA DUN                                                          01DC0424
+ TREED BCD 5TREE         NOT REPEATABLE                                 01DC0425
+       REM ALTERNATE OUTPUT TAPES                                       01DC0426
+ SWAP  CLA E                       SWAP OUTPUT TAPES                    01DC0427
+       ARS 18                                                           01DC0428
+       IOD                                                              01DC0429
+       TSX BCD,4                                                        01DC0430
+       SLW NEWT+4                                                       01DC0431
+       TSX PRINT,4                                                      01DC0432
+       PZE NEWT,0,5                                                     01DC0433
+       PZE 5                                                            01DC0434
+       CLA NEWT+2                                                       01DC0435
+       ADD HONE                                                         01DC0436
+       STO NEWT+2                                                       01DC0437
+ BUST  BST 3                                                            01DC0438
+       BST 5                                                            01DC0439
+       WEF 3                                                            01DC0440
+       WEF 5                                                            01DC0441
+       REW 3                                                            01DC0442
+       REW 5                                                            01DC0443
+       CLA CONA                                                         01DC0444
+       LDQ CONB                                                         01DC0445
+       STO CONB                                                         01DC0446
+       STQ CONA                                                         01DC0447
+       STA BUST                                                         01DC0448
+       STA BUST+2                                                       01DC0449
+       STA BUST+4                                                       01DC0450
+       STA WEF                                                          01DC0451
+       STA WEF+2                                                        01DC0452
+       STA TAPE+1                                                       01DC0453
+       STA PREP                                                         01DC0454
+       ADD TWO                                                          01DC0455
+       STA BUST+1                                                       01DC0456
+       STA BUST+3                                                       01DC0457
+       STA BUST+5                                                       01DC0458
+       STA WEF+1                                                        01DC0459
+       STA WEF+3                                                        01DC0460
+       STA PREP+1                                                       01DC0461
+       ADD L64                                                          01DC0462
+       STA TAPE                                                         01DC0463
+ PREP  REW **                                                           01DC0464
+       REW **                                                           01DC0465
+       TRA TAPE                                                         01DC0466
+ NEWT  BCD 5BEGAN REEL  2  WITH TREE                                    01DC0467
+ ERR   TSX PRINT,4                                                      01DC0468
+       PZE CERR,0,5                                                     01DC0469
+       PZE 5                                                            01DC0470
+       TSX PRINT,4                                                      01DC0471
+       PZE CON,0,12                                                     01DC0472
+       PZE 12                                                           01DC0473
+       WPR                                                              01DC0474
+       SPR 2                                                            01DC0475
+       HPR 5                                                            01DC0476
+       TRA RECOD                                                        01DC0477
+ CERR  BCD 5TREE SELECT CARD IN ERROR                                   01DC0478
+       HTR START                                                        01DC0479
+ BRIIG SLT 4                                                            01DC0480
+       TRA BRIF                   OFF = SECOND CALCULATION              01DC0481
+       SLN 4                      ON = FIRST CALCULATION                01DC0482
+       CAL E                                                            01DC0483
+       ARS 18                                                           01DC0484
+       TSX BCD,4                                                        01DC0485
+       SLW STATS+3                                                      01DC0486
+       CLA OVFLO                                                        01DC0487
+       TSX BCD,4                                                        01DC0488
+       SLW STATS+5                                                      01DC0489
+       CLA NTFND                                                        01DC0490
+       TSX BCD,4                                                        01DC0491
+       SLW STATS+8                PRINT STATISTICS OF                   01DC0492
+       TSX PRINT,4                TREE ON LINE                          01DC0493
+       PZE STATS,0,11                                                   01DC0494
+       PZE 11                                                           01DC0495
+       STZ OVFLO                                                        01DC0496
+       STZ NTFND                                                        01DC0497
+       TRA BRIF                                                         01DC0498
+ EZZX  SXD ERZT,4                                                       01DC0499
+       OCT 077000000232                    SIMULATE WEF 10              01DC0500
+       OCT 077200000232                    SIMULATE REW 10              01DC0501
+       TSX PRINT,4                                                      01DC0502
+       PZE NDTZ,0,4                                                     01DC0503
+       PZE 4                                                            01DC0504
+       LXD ERZT,4                                                       01DC0505
+       WPR                                                              01DC0506
+       SPR 2                                                            01DC0507
+       HPR 20                                                           01DC0508
+       OCT 077200000232                    SIMULATE REW 10              01DC0509
+       TRA -2,4                                                         01DC0510
+ ERZT  PZE                                                              01DC0511
+ NDTZ  BCD 4TAPE 10 FULL - REPLACE                                      01DC0512
+ FAIL  BCD 4TREE ERROR COUNT..                                          01DC0513
+ TREE  BCD  INPUTS-- TAPE 2      OUTPUTS-- TAPES 3,4,(5,6), AND 10      01DC0514
+ STATS BCD  STATISTICS OF TREE                   OVERFLOW          NOT F01DC0515
+       BCD 1OUND                                                        01DC0516
+ TEMPO BCD 2                                                            01DC0517
+ BLANK BCD 1                                                            01DC0518
+ LOB   BCD 10000                                                        01DC0519
+ HONE  BCD 1100000                                                      01DC0520
+ HEAD  BCD 21TREE TIME                                                  01DC0521
+ PAGE  BCD 2  PAGE     1                                                01DC0522
+ SPACE BCD 10                                                           01DC0523
+ E     PZE                        TREE ORIGIN ZONE                      01DC0524
+ X2    PZE 0,0,63                                                       01DC0525
+ LTIM  PZE                                                              01DC0526
+ LTTP  PZE                                                              01DC0527
+ LZNO  PZE                                 LAST CENTROID NUMBER         01DC0528
+ LNN   PZE                                 LAST NODE NUMBER             01DC0529
+ TPENT PZE                                 TURN PENALTY                 01DC0530
+ LINCO PZE                                                              01DC0531
+ X4    PZE 3,0,0                                                        01DC0532
+ XX2   PZE                                                              01DC0533
+ DMASK PZE 0,0,4095               HIGHEST POSSIBLE NODE NUMBER          01DC0534
+ COLCO PZE                                                              01DC0535
+ OVFLO PZE                                                              01DC0536
+ NTFND PZE                                                              01DC0537
+ WORK  PZE                                                              01DC0538
+ NOD   PZE                                                              01DC0539
+ RELAX PZE                                                              01DC0540
+ CKSUM PZE                                                              01DC0541
+ CTR   PZE                                                              01DC0542
+ TIMES PZE                                                              01DC0543
+ TOTEM PZE                                                              01DC0544
+ TESTW PZE                                                              01DC0545
+ HOLD  PZE                                                              01DC0546
+ XX    PZE                                                              01DC0547
+ ZERO  PZE                                                              01DC0548
+ ONED  PZE 0,0,1                                                        01DC0549
+ D22   PZE 0,0,22                                                       01DC0550
+ CON1  PZE                                                              01DC0551
+ MINE  MZE                                                              01DC0552
+ MASLL OCT 77777777                                                     01DC0553
+ PARMA OCT 17                                                           01DC0554
+ PRO   OCT 100                                                          01DC0555
+       OCT 200                                                          01DC0556
+       OCT 400                                                          01DC0557
+       OCT 1000                                                         01DC0558
+ MASK  OCT 700000                                                       01DC0559
+ MASKA OCT 1000000                                                      01DC0560
+ MASKB OCT 100000                                                       01DC0561
+ MASKC OCT 77777                                                        01DC0562
+ MASKD OCT 400000                                                       01DC0563
+ MASKN OCT -007777101777                                                01DC0564
+ MASKP OCT 360000700077                                                 01DC0565
+ MASKX OCT 17171717                                                     01DC0566
+ NOP   NOP                                                              01DC0567
+ CONA  WTB 4                                                            01DC0568
+ CONB  WTB 3                                                            01DC0569
+ TRAN1 TRA MGJ+1                                                        01DC0570
+ TRANS TRA HEXA                                                         01DC0571
+ PAGCO DEC 1                                                            01DC0572
+ SCORE DEC 3                                                            01DC0573
+ ONE   DEC 1                                                            01DC0574
+ TWO   DEC 2                                                            01DC0575
+ THREE DEC 3                                                            01DC0576
+ FOUR  DEC 4                                                            01DC0577
+ FIVE  DEC 5                                                            01DC0578
+ SIX   DEC 6                                                            01DC0579
+ TEN   DEC 10                                                           01DC0580
+ L12   DEC 12                                                           01DC0581
+ TWENT DEC 20                                                           01DC0582
+ L36   DEC 36                                                           01DC0583
+ FIFTY DEC 50                                                           01DC0584
+ L31   DEC 63                                                           01DC0585
+ C63   DEC 63                                                           01DC0586
+ L64   DEC 64                                                           01DC0587
+ L6300 DEC 6300                                                         01DC0588
+ BEGIN SXD FOXR,4                                                       01DC0589
+       RCD                                                              01DC0590
+       TSX RDBCD,4                                                      01DC0591
+       PZE CON                                                          01DC0592
+       TSX EOFCR,4                CR EOF CONDITION                      01DC0593
+       TSX ILLPU,4                ILLEGAL PUNCH RETURN                  01DC0594
+       IOD                                                              01DC0595
+       CAL CON+11                                                       01DC0596
+       ANA PARMA                                                        01DC0597
+       SUB ONE                                                          01DC0598
+       TNZ ERRLN                                                        01DC0599
+       LXA SIX,4                           STORE IDENTIFICATION         01DC0600
+       CLA CON+6,4                                                      01DC0601
+       STO IDEX+6,4                                                     01DC0602
+       TIX *-2,4,1                                                      01DC0603
+       CAL CON+6                                                        01DC0604
+       ARS 18                                                           01DC0605
+       TSX BIN,4                                                        01DC0606
+       TZE ERRLN                                                        01DC0607
+       ALS 18                                                           01DC0608
+       STO LZNO                            LAST CENTROID NUMBER         01DC0609
+       CLA CON+6                                                        01DC0610
+       LDQ CON+7                                                        01DC0611
+       LGL 12                                                           01DC0612
+       ANA MASLL                  000077777777                          01DC0613
+       TSX BIN,4                                                        01DC0614
+       TZE ERRLN                                                        01DC0615
+       STO LNN                             LAST NODE NUMBER             01DC0616
+       CAL CON+7                                                        01DC0617
+       ANA MASLL                                                        01DC0618
+       TSX BIN,4                                                        01DC0619
+       STO LTIM                            LONGEST TIME                 01DC0620
+       TZE ERRLN                                                        01DC0621
+       CAL CON+8                                                        01DC0622
+       ARS 12                                                           01DC0623
+       TSX BIN,4                                                        01DC0624
+       STO TPENT                           TURN PENALTY                 01DC0625
+       ADD LTIM                                                         01DC0626
+       STO LTTP                            LONGEST TIME + TURN PENALTY  01DC0627
+       CLA TPENT                                                        01DC0628
+       TZE PPOL                                                         01DC0629
+       ALS 6                      X64                                   01DC0630
+       SUB TPENT                                                        01DC0631
+       LRS 35                     MOVE TO MQ                            01DC0632
+       DVH LTTP                                                         01DC0633
+       STQ TPENT                                                        01DC0634
+       ALS 1                      X2                                    01DC0635
+       SUB TPENT                                                        01DC0636
+       TMI PPOL                                                         01DC0637
+       CLA TPENT                                                        01DC0638
+       ADD ONE                                                          01DC0639
+       STO TPENT                  TURN PENALTY IN 63RDS                 01DC0640
+ PPOL  TSX PRINT,4                PRINT PARAMETERS ON LINE              01DC0641
+       PZE CON,0,12                                                     01DC0642
+       PZE 12                                                           01DC0643
+       WPR                                                              01DC0644
+       SPR 0                                                            01DC0645
+       TSX PRINT,4                         PRINT TAPE SETUP ON LINE     01DC0646
+       PZE TREE,0,10                                                    01DC0647
+       PZE 10                                                           01DC0648
+       TSX SWSCK,4                PRINT AND CHECK SENSE SWITCH SETTINGS 01DC0649
+       REW 2                       A-TABLE                              01DC0650
+       REW 3                       OUTPUT                               01DC0651
+       REW 10                                                           01DC0652
+       SLF                                                              01DC0653
+       RTT                                                              01DC0654
+       NOP                                                              01DC0655
+       SWT 5                                                            01DC0656
+       TRA *+2                                                          01DC0657
+       TRA DUPL                                                         01DC0658
+       CLA NOP                                                          01DC0659
+       STO TAPE                                                         01DC0660
+       STO WEF+1                                                        01DC0661
+       STO WEF+3                                                        01DC0662
+       STO BUST+1                                                       01DC0663
+       STO BUST+3                                                       01DC0664
+       STO BUST+5                                                       01DC0665
+       STO PAIR                                                         01DC0666
+       STO PREP+1                                                       01DC0667
+       TRA READ                                                         01DC0668
+ DUPL  REW 5                                                            01DC0669
+       REM READ NETWORK DESCRIPTION                                     01DC0670
+ READ  RTB 2                                                            01DC0671
+       SLF                                                              01DC0672
+       CLA LZNO                    LAST CENTROID NO.                    01DC0673
+       STD MGJ+1                                                        01DC0674
+       STD MAK                                                          01DC0675
+       STD AHA                                                          01DC0676
+       CLA LNN                    LAST NODE NUMBER                      01DC0677
+       ALS 18                                                           01DC0678
+       STD MBKA                                                         01DC0679
+       LXD ZERO,1                                                       01DC0680
+       CPY MEMB                                                         01DC0681
+ COPY  CPY MEMA,1                  MEMA IS NETWORK DESCRIPTION          01DC0682
+       TXI NEST,1,1                                                     01DC0683
+       TRA ERRB                   EOF                                   01DC0684
+       TRA EOR                                                          01DC0685
+ NEST  CAL MEMA+1,1                GET LINK WORD                        01DC0686
+       ANA MASKP                   DROP DISTANCE FROM WORD.             01DC0687
+       STA MEMA+1,1               X                                     01DC0688
+       ARS 25                     MOVE PROHIBITORS TO ADDRESS           01DC0689
+       ORA MEMA+1,1               PUT INTO WORD                         01DC0690
+       ANA MASKN                  DROP JURISDICTION                     01DC0691
+       SLW MEMA+1,1               AND OLD PROHIBITORS.                  01DC0692
+       TRA COPY                    GO BACK FOR NEXT WORD                01DC0693
+ EOR   SXD XX,1                    STORE WORD COUNT                     01DC0694
+       SXD XXX,1                                                        01DC0695
+       REW 2                                                            01DC0696
+       REM REMOVE X-REFERENCING                                         01DC0697
+ CLEAR CLA MEMA+1,1                REMOVE                               01DC0698
+       ANA DMASK                   X-REFERENCING                        01DC0699
+       TNZ *+2                     WHERE PRESENT                        01DC0700
+       STZ MEMA+1,1                IN MEMORY A                          01DC0701
+       TIX CLEAR,1,1               X                                    01DC0702
+       REM PASS TO PROHIBIT U-TURNS                                     01DC0703
+ CHUCK CLA ONED                   START PASS                            01DC0704
+       STO TEMP                   TO PROHIBIT                           01DC0705
+       ALS 2                      U-TURNS ON                            01DC0706
+       PDX 0,1                    TWO-WAY                               01DC0707
+       LXA THREE,2                LINKS.                                01DC0708
+ STEP  CLA MEMA+4,3               OUTBOUND LINK FROM A.                 01DC0709
+       ANA DMASK                  MASK DECREMENT                        01DC0710
+       TZE BUMP                   EMPTY                                 01DC0711
+       ALS 2                      B NODE X4                             01DC0712
+       PDX 0,4                    SET INDEX C                           01DC0713
+       SXD E,2                                                          01DC0714
+       LXA THREE,2                SET FOR HIGHEST LINK                  01DC0715
+ STET  CLA MEMA+4,6               OUTBOUND LINK FROM B.                 01DC0716
+       ANA DMASK                  MASK DECREMENT                        01DC0717
+       TZE OKE                    LINK ONE-WAY A-B                      01DC0718
+       SUB TEMP                   COMPARE TO ANODE                      01DC0719
+       TZE 2WAY                   TWO-WAY LINK A-B                      01DC0720
+       TIX STET,2,1               STEP INDEX FOR NEXT LOWER LINK.       01DC0721
+       TXL OKE,2,0                TEST FOR 4TH LINK                     01DC0722
+       TXI STET,2,-1              PROCESS 4TH LINK                      01DC0723
+ OKE   LXD E,2                                                          01DC0724
+       TRA JOKE                   X                                     01DC0725
+ 2WAY  CLA PRO+3,2                GET TURN PROHIBITOR                   01DC0726
+       LXD E,2                                                          01DC0727
+       ORS MEMA+4,3               PLACE PROHIBITOR IN WORD              01DC0728
+ JOKE  TIX STEP,2,1               TRY NEXT LINK FROM A                  01DC0729
+       TXL BUMP,2,0               TEST FOR 4TH LINK                     01DC0730
+       TXI STEP,2,-1              TRY 4TH LINK                          01DC0731
+ BUMP  CLA TEMP                                                         01DC0732
+       ADD ONED                                                         01DC0733
+       STO TEMP                                                         01DC0734
+       TXI *+1,1,4                STEP INDEX                            01DC0735
+ XXX   TXL STEP-1,1,--            PROCESS NEXT ANODE                    01DC0736
+       RTT                                                              01DC0737
+       TRA ERRB                                                         01DC0738
+       REM HOUSEKEEPING                                                 01DC0739
+       CLS XX                                                           01DC0740
+       ARS 18                                                           01DC0741
+       ADD SEVNS                                                        01DC0742
+       STA SLIP                    INITIALIZE MEMB ADDRESSES            01DC0743
+       STA MB                      MEMB IS TREE TABLE                   01DC0744
+       STA MBA                                                          01DC0745
+       STA MBC                                                          01DC0746
+       STA MBE                                                          01DC0747
+       STA HEXA                                                         01DC0748
+       STA MBF                                                          01DC0749
+       STA MBG                                                          01DC0750
+       STA MBH                                                          01DC0751
+       STA MBI                                                          01DC0752
+       STA MGJ                                                          01DC0753
+       STA BLUR                                                         01DC0754
+       STA MBJ                                                          01DC0755
+       STA MBK                                                          01DC0756
+       STA PILS                                                         01DC0757
+       STA MBL                                                          01DC0758
+       STA MBM                                                          01DC0759
+       SUB LNN                    INITIALIZE MEMC ADDRESSES             01DC0760
+       SUB ONE                                                          01DC0761
+       STA CSUBA                  MEMC IS SEQUENCE TABLE                01DC0762
+       STA CSUBA+1                                                      01DC0763
+       STA AW                                                           01DC0764
+       STA PULL+1                                                       01DC0765
+       STA THAR                                                         01DC0766
+       STA STORA+1                                                      01DC0767
+       STA RING+1                                                       01DC0768
+       STA DING+1                                                       01DC0769
+       STA SLIDE                                                        01DC0770
+       STA SLID                                                         01DC0771
+       CLA TPENT                  IF TPENT                              01DC0772
+       TNZ SLIP-2                 IS ZERO,                              01DC0773
+       CAL TRANS                  SET UP TO                             01DC0774
+       SLW MBE                    SKIP TURN                             01DC0775
+       CAL TRAN1                  PENALTY IN                            01DC0776
+       SLW MBG+1                  TREE BUILDING                         01DC0777
+       LXA LNN,4                  INITIALIZE                            01DC0778
+       CLA SEVNS                   TREE MEMORY                          01DC0779
+ SLIP  STO MEMB,4                  TO MAX TIME                          01DC0780
+       TIX *-1,4,1                 WITH NO BNODE                        01DC0781
+ RECOD RCD                        READ CONTROL CARD                     01DC0782
+       TSX RDBCD,4                                                      01DC0783
+       PZE CON                     CON...CON+11 ARE THE SELECTED TREES  01DC0784
+       TSX EOFCR,4                CR EOF CONDITION                      01DC0785
+       TSX ILLPU,4                ILLEGAL PUNCH RETURN                  01DC0786
+       LXD FOXR,4                                                       01DC0787
+       TRA 1,4                    INITIALIZATION COMPLETE               01DC0788
+ EOFCR SXD CARBO,4                                                      01DC0789
+       TSX PRINT,4                                                      01DC0790
+       PZE BOCR,0,7                                                     01DC0791
+       PZE 7                                                            01DC0792
+       WPR                                                              01DC0793
+       SPR 2                                                            01DC0794
+       LXD CARBO,4                                                      01DC0795
+       HPR 2                                                            01DC0796
+       TRA -3,4                                                         01DC0797
+ BOCR  BCD 7READY CARDS IN READER AND PRESS START.                      01DC0798
+ FOXR  PZE                                                              01DC0799
+ CARBO PZE                                                              01DC0800
+ ILLPU SXD CARBO,4                                                      01DC0801
+       CLA -2,4                                                         01DC0802
+       STA *+5                                                          01DC0803
+       TSX PRINT,4                                                      01DC0804
+       PZE ILCR,0,8                                                     01DC0805
+       PZE 8                                                            01DC0806
+       TSX PRINT,4                                                      01DC0807
+       PZE --,0,12                                                      01DC0808
+       PZE 12                                                           01DC0809
+       LXD CARBO,4                                                      01DC0810
+       WPR                                                              01DC0811
+       SPR 2                                                            01DC0812
+       HPR 3                                                            01DC0813
+       TRA -4,4                                                         01DC0814
+ ILCR  BCD 8ILLEGAL PUNCH IN CARD. CORRECT AND PRESS START.             01DC0815
+ ERRLN TSX PRINT,4                                                      01DC0816
+       PZE ERMES,0,4                                                    01DC0817
+       PZE 4                                                            01DC0818
+       WPR                                                              01DC0819
+       SPR 2                                                            01DC0820
+       HPR 10                                                           01DC0821
+       TRA BEGIN+1                                                      01DC0822
+ ERMES BCD 4PARAMETER CARD IN ERROR.                                    01DC0823
+ ERRB  BST 2                                                            01DC0824
+       CLA SCORE                                                        01DC0825
+       SUB ONE                                                          01DC0826
+       STO SCORE                                                        01DC0827
+       TPL READ                                                         01DC0828
+       IOD                                                              01DC0829
+       TSX PRINT,4                                                      01DC0830
+       PZE REAM,0,5                                                     01DC0831
+       PZE 5                                                            01DC0832
+       CLA THREE                                                        01DC0833
+       STO SCORE                                                        01DC0834
+       REW 2                                                            01DC0835
+       WPR                                                              01DC0836
+       SPR 2                                                            01DC0837
+       HPR 4                                                            01DC0838
+       TRA READ                                                         01DC0839
+ REAM  BCD 5READ ERROR ON TAPE 2                                        01DC0840
+       REM PRINT SENSE SWITCH SETTINGS                                  01DC0841
+       REM   HALTS TO ALLOW SENSE SWITCHES TO BE CHANGED.               01DC0842
+       REM   PRINTS NEW SETTINGS AND HALTS AGAIN IF CHANGED.            01DC0843
+       REM                                                              01DC0844
+       REM   RETURNS TO MAIN PROGRAM IF NOT CHANGED.                    01DC0845
+ SWSCK STO SWSCK+98                        SAVE                      00001DC0846
+       STQ SWSCK+99                        REGISTERS                 00101DC0847
+       SXD SWSCK+100,1                                               00201DC0848
+       SXD SWSCK+101,2                                               00301DC0849
+       SXD SWSCK+102,4                                               00401DC0850
+       LXA SWSCK+109,1                                               00501DC0851
+       TIX SWSCK+11,1,1                                              00601DC0852
+       CLA SWSCK+113                       SET UP                    00701DC0853
+       STO SWSCK+12                        FOR                       00801DC0854
+       STO SWSCK+31                        LAST                      00901DC0855
+       TXI SWSCK+11,1,-1                   SWITCH.                   01001DC0856
+       SWT 6,1                             CHECK NEXT SENSE SWITCH   01101DC0857
+       TRA SWSCK+6        TRASWSCK+32      OFF                       01201DC0858
+       CLM                                 TURN                      01301DC0859
+       SSM                                 SWITCH A ON.              01401DC0860
+       STO SWSCK+105                       (SENSE SWITCH ON)         01501DC0861
+       PXD 0,1                             GET                       01601DC0862
+       ARS 18                              NUMBER                    01701DC0863
+       ADD SWSCK+107                                                 01801DC0864
+       STO SWSCK+103                       OF                        01901DC0865
+       LDQ SWSCK+103                       SENSE                     02001DC0866
+       MPY SWSCK+108                       SWITCH.                   02101DC0867
+       LLS 18                                                        02201DC0868
+       STQ SWSCK+104                       SET                       02301DC0869
+       LXD SWSCK+104,2                     UP                        02401DC0870
+       CLS SWSCK+103                       AND                       02501DC0871
+       ADD SWSCK+110                       STORE                     02601DC0872
+       TSX BCD,4                                                     02701DC0873
+       SLW SWSCK+143,2    SLW SWSCK+185,2  FOR                       02801DC0874
+       CAL SWSCK+157                       PRINTING.                 02901DC0875
+       SLW SWSCK+144,2    SLW SWSCK+186,2                            03001DC0876
+       TRA SWSCK+6        TRA SWSCK+32                               03101DC0877
+       CLA SWSCK+105                       CHECK SW A.               03201DC0878
+       TPL SWSCK+35                        NO SENSE SW ON.           03301DC0879
+       TRA SWSCK+79                        SOME SW IS ON.            03401DC0880
+       CAL SWSCK+158                       ALL SWS OFF.              03501DC0881
+       SLW SWSCK+143      SLW SWSCK+185    SET                       03601DC0882
+       CAL SWSCK+159                       UP                        03701DC0883
+       SLW SWSCK+144      SLW SWSCK+186    FOR                       03801DC0884
+       TRA SWSCK+79                        PRINTING.                 03901DC0885
+       TSX PRINT,4                                                   04001DC0886
+       PZE SWSCK+118,0,3                                             04101DC0887
+       PZE 27                                                        04201DC0888
+       TSX PRINT,4                                                   04301DC0889
+       PZE SWSCK+145,0,12                                            04401DC0890
+       PZE 12                                                        04501DC0891
+       WPR                                 CHECK FOR CORRECT         04601DC0892
+       SPR 2                                                         04701DC0893
+       HPR 1                               SETTINGS.                 04801DC0894
+       CLA SWSCK+111                       SET UP                    04901DC0895
+       STO SWSCK+28                        TO CHECK FOR              05001DC0896
+       CLA SWSCK+112                       CHANGE IN                 05101DC0897
+       STO SWSCK+30                        SWITCH SETTINGS.          05201DC0898
+       CLA SWSCK+114                                                 05301DC0899
+       STO SWSCK+12                                                  05401DC0900
+       STO SWSCK+31                                                  05501DC0901
+       CLA SWSCK+115                                                 05601DC0902
+       STO SWSCK+36                                                  05701DC0903
+       CLA SWSCK+116                                                 05801DC0904
+       STO SWSCK+38                                                  05901DC0905
+       CAL SWSCK+117                                                 06001DC0906
+       SLW SWSCK+143                                                 06101DC0907
+       SLW SWSCK+144                                                 06201DC0908
+       SLW SWSCK+185                                                 06301DC0909
+       SLW SWSCK+186                                                 06401DC0910
+       CLM                                 TURN                      06501DC0911
+       SSP                                 SWITCH A                  06601DC0912
+       STO SWSCK+105                       OFF.                      06701DC0913
+       CLM                                 TURN                      06801DC0914
+       SSM                                 SWITCH B                  06901DC0915
+       STO SWSCK+106                       ON.                       07001DC0916
+       TRA SWSCK+5                                                   07101DC0917
+       LXA SWSCK+108,2                     SENSE                     07201DC0918
+       CLA SWSCK+143,2                     SWITCHES                  07301DC0919
+       SUB SWSCK+185,2                     CHANGED                   07401DC0920
+       TNZ SWSCK+82                                                  07501DC0921
+       TXI *+1,2,3                                                   07601DC0922
+       TXL SWSCK+73,2,18                                             07701DC0923
+       TRA SWSCK+91                        NO                        07801DC0924
+       CLA SWSCK+106      CHECK SWB. (IS THIS RE-CHECK)              07901DC0925
+       TPL SWSCK+40       OFF              (NO)                      08001DC0926
+       TRA SWSCK+72       ON               (YES)                     08101DC0927
+       PXD 0,0                                                       08201DC0928
+       PDX 0,2                             SET UP                    08301DC0929
+       CLA SWSCK+185,2                     TO PRINT                  08401DC0930
+       STO SWSCK+143,2                     NEW                       08501DC0931
+       CLA SWSCK+186,2                     SWITCH                    08601DC0932
+       STO SWSCK+144,2                     SETTINGS                  08701DC0933
+       TXI *+1,2,3                                                   08801DC0934
+       TXL SWSCK+84,2,18                                             08901DC0935
+       TRA SWSCK+40                                                  09001DC0936
+       CLA SWSCK+98                        RESET                     09101DC0937
+       LDQ SWSCK+99                        REGISTERS                 09201DC0938
+       LXD SWSCK+100,1                                               09301DC0939
+       LXD SWSCK+101,2                                               09401DC0940
+       LXD SWSCK+102,4                                               09501DC0941
+       NOP                                                           09601DC0942
+       TRA 1,4                             RETURN TO MAIN PROGRAM.   09701DC0943
+       BSS 9                                                         09801DC0944
+       DEC 1                                                         10701DC0945
+       DEC 3                                                         10801DC0946
+       DEC 6                                                         10901DC0947
+       DEC 7                                                         11001DC0948
+       SLW SWSCK+185,2                                               11101DC0949
+       SLW SWSCK+186,2                                               11201DC0950
+       TRA SWSCK+32                                                  11301DC0951
+       TRA SWSCK+6                                                   11401DC0952
+       SLW SWSCK+185                                                 11501DC0953
+       SLW SWSCK+186                                                 11601DC0954
+       BCD 1                                                         11701DC0955
+       BCD 9   SENSE SWITCHES                                        11801DC0956
+       BCD 9                                                         12701DC0957
+       BCD 9                                                         13601DC0958
+       BCD 6CHANGE SWITCHES IF INCORRECT.                            14501DC0959
+       BCD 6 PRESS START TO RECHECK OR CONTINUE.                     15101DC0960
+       BCD 1 ON                                                      15701DC0961
+       BCD 2ALL OFF                                                  15801DC0962
+       BCD 9                                                         16001DC0963
+       BCD 9                                                         16901DC0964
+       BCD 9                                                         17801DC0965
+       REM END SENSE SWITCH CHECK SUBROUTINE                            01DC0966
+       REM                                                              01DC0967
+ IMAGE BSS 21                                                           01DC0968
+ KEY   BSS 12                                                           01DC0969
+ CON   BSS 12                                                           01DC0970
+ IDEX  BSS 6                                                            01DC0971
+ TEMP  BSS 5                                                            01DC0972
+ MEMA  EQU 32767                                                        01DC0973
+ MEMB  SYN MEMA                                                         01DC0974
+ MEMC  SYN MEMB                                                         01DC0975
+ SEVNS SYN MASKC                                                        01DC0976
+ BIN   EQU 41                                                           01DC0977
+ BCD   EQU 132                                                          01DC0978
+ PRINT EQU 162                                                          01DC0979
+ RDBCD EQU 244                                                          01DC0980
+       REM NETWORK DESCRIPTION DURING TREE BUILDING IN STORAGE          01DC0981
+       REM         S12345678901234567890123456789012345                 01DC0982
+       REM         X                                       SIGN         01DC0983
+       REM               XXXXXXXXXXXX                      B NODE       01DC0984
+       REM                             X                   FLAG IN TAG  01DC0985
+       REM                                   XXXX          PROHIBITORS  01DC0986
+       REM                                       XXXXXX    TIME IN 64THS01DC0987
+       REM         S12345678901234567890123456789012345                 01DC0988
+       END START                                                        01DC0989

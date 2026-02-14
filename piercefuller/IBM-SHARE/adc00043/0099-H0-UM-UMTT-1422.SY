@@ -1,0 +1,1357 @@
+       REM          SOLUTION OF TALL TRANSPORTATION PROBLEMS BY THE     UMMT0001
+       REM                DETAILED METHOD OF OPTIMAL REGIONS            UMMT0002
+       REM                    '' B. A. GALLER                           UMMT0003
+       REM                                                              UMMT0004
+       PGM                                                              UMMT0005
+       ORG 0                                                            UMMT0006
+       PZE     LAST,,START                                              UMMT0007
+       PZE                                                              UMMT0008
+       PZE                                                              UMMT0009
+       PZE START                                                        UMMT0010
+       REL                                                              UMMT0011
+       ORG 0                                                            UMMT0012
+WEFTAP BCD 1WEFTAP                                                      UMMT0013
+SYSTEM BCD 1SYSTEM                                                      UMMT0014
+ERROR  BCD 1ERROR                                                       UMMT0015
+REWTAP BCD 1REWTAP                                                      UMMT0016
+RDSBIN BCD 1RDSBIN                                                      UMMT0017
+1WT    BCD 1SPRINT                                                      UMMT0018
+WRSBIN BCD 1WRSBIN                                                      UMMT0019
+CHEKIO BCD 1CHEKIO                                                      UMMT0020
+SKPREC BCD 1SKPREC                                                      UMMT0021
+BSRTAP BCD 1BSRTAP                                                      UMMT0022
+SCARDS BCD 1SCARDS                                                      UMMT0023
+       REM                                                              UMMT0024
+       REM     TAPE ASSIGNMENTS                                         UMMT0025
+T4     EQU     4                                                        UMMT0026
+T5     EQU     2                                                        UMMT0027
+T6     EQU     3                                                        UMMT0028
+*                                                                       UMMT0029
+*      MACROS  DEFINING I/O CALLING SEQUENCES. SYMBOL LOC IN            UMMT0030
+*      LOCATION FIELD IS NEEDED FOR PRESETTING TAPE NOS.                UMMT0031
+*                                                                       UMMT0032
+RTB    MACRO   TAPE,CH,ETT,EOF,LOC                                      UMMT0033
+       TSX     RDSBIN,4                                                 UMMT0034
+LOC    TIX     ,,TAPE                                                   UMMT0035
+       TIX     CH,,ETT                                                  UMMT0036
+       TXH     EOF,,                                                    UMMT0037
+       END     RTB                                                      UMMT0038
+WTB    MACRO   TAPE,CH,ETT,LOC                                          UMMT0039
+       TSX     WRSBIN,4                                                 UMMT0040
+LOC    TIX     ,,TAPE                                                   UMMT0041
+       TIX     CH,,ETT                                                  UMMT0042
+       PZE                                                              UMMT0043
+       END     WTB                                                      UMMT0044
+DELAY  MACRO   TAPE,LOC                                                 UMMT0045
+       TSX     CHEKIO,4                                                 UMMT0046
+LOC    TIX     ,,TAPE                                                   UMMT0047
+       END     DELAY                                                    UMMT0048
+SKPREC MACRO   NUMB,TAPE,LOC                                            UMMT0049
+       TSX     SKPREC,4                                                 UMMT0050
+LOC    TIX     NUMB,,TAPE                                               UMMT0051
+       END     SKPREC                                                   UMMT0052
+BST    MACRO   TAPE,LOC                                                 UMMT0053
+       TSX     BSRTAP,4                                                 UMMT0054
+LOC    TIX     ,,TAPE                                                   UMMT0055
+       END     BST                                                      UMMT0056
+RDCARD MACRO   WHERE,EOF                                                UMMT0057
+       TSX     SCARDS,4                                                 UMMT0058
+       TIX     WHERE,,EOF                                               UMMT0059
+       END     RDCARD                                                   UMMT0060
+REW    MACRO   TAPE,LOC                                                 UMMT0061
+       TSX     REWTAP,4                                                 UMMT0062
+LOC    TIX     ,,TAPE                                                   UMMT0063
+       END     REW                                                      UMMT0064
+WEF    MACRO   TAPE,,LOC                                                UMMT0065
+       TSX     WEFTAP,4                                                 UMMT0066
+LOC    TIX     ,,TAPE                                                   UMMT0067
+       END     WEF                                                      UMMT0068
+       REM     MAIN PROGRAM                                             UMMT0069
+START  TSX REWALL,4                                                     UMMT0070
+       LXA ZONE,1                                                       UMMT0071
+CLEAN  STZ GATE+1,1     CLEAR TEMPORARIES                               UMMT0072
+       TIX CLEAN,1,1                                                    UMMT0073
+       CLA A3B          SET SWITCHES                                    UMMT0074
+       SLW A3B                                                          UMMT0075
+       CLA CODA                                                         UMMT0076
+       SLW CODA                                                         UMMT0077
+       CLA T4CON                                                        UMMT0078
+       STO TAPE4                                                        UMMT0079
+       CLA T5CON                                                        UMMT0080
+       STO TAPE6                                                        UMMT0081
+       CLA T6CON                                                        UMMT0082
+       STO T6W                                                          UMMT0083
+       LXA FOUR,1                                                       UMMT0084
+       TSX RDCARD,4           READ CONTROL INFORMATION                  UMMT0085
+       TXI     SYSTEM,,COLS                                             UMMT0086
+       CLA COLS                                                         UMMT0087
+       ADD ROWS                                                         UMMT0088
+       PAX 0,1                                                          UMMT0089
+       TSX RDCARD,4           READ FREQUENCIES                          UMMT0090
+       TXI ERROR,,FZONE                                                 UMMT0091
+       SLN 1                                                            UMMT0092
+       LXA ZERO,2       SET UP DIRECTORY                                UMMT0093
+       LXA COLS,1                                                       UMMT0094
+A1C    LXA UNIT,4                                                       UMMT0095
+       PXD 0,4                                                          UMMT0096
+       STD FZONE,2                                                      UMMT0097
+       TXI A1D,2,-1                                                     UMMT0098
+A1D    TXI A1D+1,4,1                                                    UMMT0099
+       TIX A1C+1,1,1                                                    UMMT0100
+       SLT 1                                                            UMMT0101
+       TRA A1B                                                          UMMT0102
+       LXA ROWS,1                                                       UMMT0103
+       TRA A1C                                                          UMMT0104
+A1B    SLF                                                              UMMT0105
+       CLA COLS                                                         UMMT0106
+       STA A1A                                                          UMMT0107
+       CLA UNIT                                                         UMMT0108
+A1A    ALS 0                      (COLS)                                UMMT0109
+       SUB UNIT                                                         UMMT0110
+       ALS 18                                                           UMMT0111
+       STD B5                                                           UMMT0112
+       CLA ROWS                   COMPUTE COLUM                         UMMT0113
+       ADD COLS                                                         UMMT0114
+       STO COLUM                                                        UMMT0115
+       CLA HCON         HZONE + COLUM                                   UMMT0116
+       ADD COLUM                                                        UMMT0117
+       STA J6B                                                          UMMT0118
+       STA J6F                                                          UMMT0119
+       STA OPER+1                                                       UMMT0120
+       STA     J6                                                       UMMT0121
+       CLA COLUM                                                        UMMT0122
+       ADD FCON                   FZONE+COLUM                           UMMT0123
+       STA A1                                                           UMMT0124
+       STA A1M                                                          UMMT0125
+       STA A1P                                                          UMMT0126
+       STA     A1Q                                                      UMMT0127
+       STA A13A                                                         UMMT0128
+       STA D7C                                                          UMMT0129
+       STA B4B                                                          UMMT0130
+       STA     F10L                                                     UMMT0131
+       ADD FCON2                  SZONE+COLUM                           UMMT0132
+       STA D7                                                           UMMT0133
+       STA D7A                                                          UMMT0134
+       STA B2C                                                          UMMT0135
+       STA D3A                                                          UMMT0136
+       CLA     D2CON         DZONE2+COLUM                               UMMT0137
+       ADD     COLUM                                                    UMMT0138
+       STA     A1R                                                      UMMT0139
+       STA     F10K                                                     UMMT0140
+       CLA     ACON          AZONE+COLS                                 UMMT0141
+       ADD     COLS                                                     UMMT0142
+       STA     A1F                                                      UMMT0143
+       CLA FCON                   FZONE + COLS                          UMMT0144
+       ADD COLS                                                         UMMT0145
+       STA A1J                                                          UMMT0146
+       STA A6A                                                          UMMT0147
+       STA E1M                                                          UMMT0148
+       STA E1N                                                          UMMT0149
+       STA E1Q                                                          UMMT0150
+       STA C1D                                                          UMMT0151
+       STA E3B                                                          UMMT0152
+       STA E3C                                                          UMMT0153
+       SUB TWO                                                          UMMT0154
+       STA E3A                                                          UMMT0155
+       STA E5F                                                          UMMT0156
+       STA J3E                                                          UMMT0157
+       ADD FCON2                                                        UMMT0158
+       ADD TWO                                                          UMMT0159
+       STA D6B                                                          UMMT0160
+       STA B2B+1        SZONE + COLS                                    UMMT0161
+       STA J3A                                                          UMMT0162
+       STA J3C                                                          UMMT0163
+       ADD TWO          SZONE + COLS +2                                 UMMT0164
+       STA J3B                                                          UMMT0165
+       STA J3D                                                          UMMT0166
+       CLA ROWS                   SZONE+ROWS                            UMMT0167
+       ADD SCON                                                         UMMT0168
+       STA A14B                                                         UMMT0169
+       STA A14B+1                                                       UMMT0170
+       STA A14C                                                         UMMT0171
+       STA A14C+1                                                       UMMT0172
+       STA     A15                                                      UMMT0173
+       LAC     COLS,1        (-COLS)                                    UMMT0174
+       SXD     A15A,1                                                   UMMT0175
+       SXD     A12,1                                                    UMMT0176
+       SXD     B5A,1                                                    UMMT0177
+       SXD     D3B,1                                                    UMMT0178
+       SXD     H2F,1                                                    UMMT0179
+       LXA     ROWS,1        (ROWS)                                     UMMT0180
+       SXD     H2H,1                                                    UMMT0181
+       CLA VCON         VZONE + COLS                                    UMMT0182
+       ADD COLS                                                         UMMT0183
+       STA H1A                                                          UMMT0184
+       STA H2A                                                          UMMT0185
+       STA H1F                                                          UMMT0186
+       CLA TABCO        TABLE + COLS                                    UMMT0187
+       ADD COLS                                                         UMMT0188
+       STA D3C                                                          UMMT0189
+       STA D6F                                                          UMMT0190
+       STA A1G                                                          UMMT0191
+       CLA COLUM                                                        UMMT0192
+       ADD TWO                                                          UMMT0193
+       STO COLPL                                                        UMMT0194
+       CLA RCON         RZONE+COLPL                                     UMMT0195
+       ADD COLPL                                                        UMMT0196
+       STA J6E                                                          UMMT0197
+       STA J7B                                                          UMMT0198
+       STA J8B                                                          UMMT0199
+       STA J8D                                                          UMMT0200
+       CLA ACON         AZONE + COLPL                                   UMMT0201
+       ADD COLPL                                                        UMMT0202
+       STA J8A                                                          UMMT0203
+       STA J8E                                                          UMMT0204
+       STA J8F                                                          UMMT0205
+       STA J8G                                                          UMMT0206
+       STA J9                                                           UMMT0207
+       STA J13                                                          UMMT0208
+       CLA SCON         SZONE + COLPL                                   UMMT0209
+       ADD COLPL                                                        UMMT0210
+       STA J7A                                                          UMMT0211
+       STA J9B                                                          UMMT0212
+       LXA     COLUM,1       SAVE FREQUENCIES                           UMMT0213
+A1Q    CLA     **,1          (F ZONE + COLUM)                           UMMT0214
+A1R    STO     **,1          (DZONE2 + COLUM)                           UMMT0215
+       TIX     *-2,1,1                                                  UMMT0216
+       LXA COLUM,1                                                      UMMT0217
+A1M    CLA 0,1          (FZONE + COLUM)                                 UMMT0218
+       ANA ADDR                                                         UMMT0219
+       ALS 12                                                           UMMT0220
+A1P    STO 0,1          (FZONE + COLUM)                                 UMMT0221
+       TIX A1M,1,1                                                      UMMT0222
+       LXD     B5,3          SET UP TABLE OF QUOTAS                     UMMT0223
+A1F    STZ FZONE,1                                                      UMMT0224
+       TIX A1F,1,1      CLEAR AZONE                                     UMMT0225
+A1L    STZ COMMON+7                                                     UMMT0226
+       LXA COLS,1                                                       UMMT0227
+A1K    PXD 0,2                                                          UMMT0228
+A1G    ANA 0,1          (TABLE + COLS)                                  UMMT0229
+       TZE A1H                                                          UMMT0230
+A1J    CLA 0,1          (FZONE + COLS)                                  UMMT0231
+       ADD COMMON+7                                                     UMMT0232
+       STO COMMON+7                                                     UMMT0233
+A1H    TIX A1K,1,1                                                      UMMT0234
+       CLA COMMON+7                                                     UMMT0235
+       STO FZONE,2                                                      UMMT0236
+       TIX A1L,2,1                                                      UMMT0237
+       LXD     B5,1          SAVE QUOTAS                                UMMT0238
+       CLA     FZONE,1                                                  UMMT0239
+       STO     DZONE3,1                                                 UMMT0240
+       TIX     *-2,1,1                                                  UMMT0241
+       PXD 0,0                    FIND N                                UMMT0242
+       LXA COLUM,1                                                      UMMT0243
+A1     ADD 0,1                    (FZONE+COLUM)                         UMMT0244
+       TIX A1,1,1                                                       UMMT0245
+       ARS 12                                                           UMMT0246
+       LBT                        CHECK N                               UMMT0247
+       TRA A2                                                           UMMT0248
+       TSX ERROR,4                                                      UMMT0249
+A2     ALS 11                                                           UMMT0250
+       STO N                                                            UMMT0251
+       LDQ ROWS                   COMPUTE TOTAL NUMBER OF COST ELEMENTS UMMT0252
+       MPY COLS                                                         UMMT0253
+       STQ TOTAL                                                        UMMT0254
+       XCA                                                              UMMT0255
+       ALS     18                                                       UMMT0256
+       STD     F2CH2                                                    UMMT0257
+A3B    TXH     A10B,,                                                   UMMT0258
+       CLA     MAX                                                      UMMT0259
+       TZE A3A                                                          UMMT0260
+       CLA CHCON                                                        UMMT0261
+       STO A6                                                           UMMT0262
+       STZ MAX                                                          UMMT0263
+       TRA A4                                                           UMMT0264
+A3A    CLA RECON                                                        UMMT0265
+       STO A6                                                           UMMT0266
+A4     LXA     TOTAL,1                                                  UMMT0267
+       TSX RDCARD,4                                                     UMMT0268
+       TXI ERROR,,RZONE                                                 UMMT0269
+       LXA     TOTAL,1       PACK ORIGINAL MATRIX                       UMMT0270
+       TXI     *+1,1,1                                                  UMMT0271
+       PXA     0,1                                                      UMMT0272
+       ADD     RCON                                                     UMMT0273
+       STA     A4A                                                      UMMT0274
+       ADD     UNIT                                                     UMMT0275
+       STA     A4B                                                      UMMT0276
+       ADD     UNIT                                                     UMMT0277
+       STA     A4C                                                      UMMT0278
+       AXT     0,4                                                      UMMT0279
+A4A    LDQ     **,1          (RZONE + TOTAL + 1)                        UMMT0280
+       RQL     24                                                       UMMT0281
+       LGL     12                                                       UMMT0282
+A4B    LDQ     **,1          (RZONE + TOTAL + 2)                        UMMT0283
+       RQL     24                                                       UMMT0284
+       LGL     12                                                       UMMT0285
+A4C    LDQ     **,1          (RZONE + TOTAL + 3)                        UMMT0286
+       RQL     24                                                       UMMT0287
+       LGL     12                                                       UMMT0288
+       STO     MZONE,4                                                  UMMT0289
+       TXI     *+1,4,1                                                  UMMT0290
+       TIX     A4A,1,3                                                  UMMT0291
+       CLA     COLS                                                     UMMT0292
+       STO     PCOLS                                                    UMMT0293
+       LXA     ROWS,4        COMPUTE ROW DEVIATES                       UMMT0294
+       LXA ZERO,1                                                       UMMT0295
+A5     STZ COMMON+1                                                     UMMT0296
+       LXA COLS,2                                                       UMMT0297
+       SXD COMMON+2,1                                                   UMMT0298
+A6     CLA RZONE,1                CHANGE SIGN FOR MAXIMIZATION PROBLEM  UMMT0299
+       ALS 21                                                           UMMT0300
+       STO RZONE,1                                                      UMMT0301
+       LDQ RZONE,1                                                      UMMT0302
+A6A    MPY 0,2                    (FZONE+COLS)                          UMMT0303
+       LLS 23                                                           UMMT0304
+       ADD COMMON+1                                                     UMMT0305
+       STO COMMON+1                                                     UMMT0306
+       TXI A7,1,-1                                                      UMMT0307
+A7     TIX A6,2,1                                                       UMMT0308
+       PXD 0,0                                                          UMMT0309
+       LDQ COMMON+1                                                     UMMT0310
+       LLS     0                                                        UMMT0311
+       DVP N                                                            UMMT0312
+       LLS 12                                                           UMMT0313
+       STQ COMMON+3                                                     UMMT0314
+       LXD COMMON+2,1                                                   UMMT0315
+       LXA COLS,2                                                       UMMT0316
+A8     CLA RZONE,1                                                      UMMT0317
+       SUB COMMON+3               SUBTRACT ROW MEAN                     UMMT0318
+       STO RZONE,1                                                      UMMT0319
+       TXI A9,1,-1                                                      UMMT0320
+A9     TIX A8,2,1                                                       UMMT0321
+       TIX A5,4,1                                                       UMMT0322
+       REM                                                              UMMT0323
+       REM  SET UP FIRST TRANSFORMATION                                 UMMT0324
+       REM                                                              UMMT0325
+A10B   LXA ZERO,2                                                       UMMT0326
+A10C   SLN     3                                                        UMMT0327
+       LXA TEN,1        CLEAR VZONE                                     UMMT0328
+A10D   STZ COMMON,1                                                     UMMT0329
+       TIX A10D,1,1                                                     UMMT0330
+A10A   SXD COMMON+4,2                                                   UMMT0331
+       LXA ZERO,1                                                       UMMT0332
+       STZ COMMON+6                                                     UMMT0333
+       LXA     ROWS,4                                                   UMMT0334
+A11A   CLA RZONE,2                TRANSFER COLUMN TO SORTING ZONE       UMMT0335
+       STO SZONE,1                                                      UMMT0336
+       TXI A12,1,-1                                                     UMMT0337
+A12    TXI A12+1,2,0              (COLS)                                UMMT0338
+       TIX A11A,4,1                                                     UMMT0339
+       TSX     REWALL,4                                                 UMMT0340
+       LXD COMMON+4,2             TRANSFER FREQUENCIES TO RZONE         UMMT0341
+       LXA ROWS,5                                                       UMMT0342
+A13A   CLA 0,4                    (FZONE+COLUM)                         UMMT0343
+       STO AZONE,4                                                      UMMT0344
+       TIX A13A,4,1                                                     UMMT0345
+A14    PXD 0,1                    SORT COLUMN                           UMMT0346
+       PDX 0,4                                                          UMMT0347
+       CLA AZONE,1                                                      UMMT0348
+       STO COMMON+5                                                     UMMT0349
+A14B   LDQ 0,1                    (SZONE+ROWS)                          UMMT0350
+       CLA 0,4                    (SZONE+ROWS)                          UMMT0351
+       TLQ A14D                                                         UMMT0352
+A14C   STO 0,1                    (SZONE+ROWS)                          UMMT0353
+       STQ 0,4                    (SZONE+ROWS)                          UMMT0354
+       CLA AZONE,4                                                      UMMT0355
+       STO COMMON+5               SAVE FREQUENCY                        UMMT0356
+       LDQ AZONE,1                                                      UMMT0357
+       STO AZONE,1                INTERCHANGE FREQUENCIES               UMMT0358
+       STQ AZONE,4                                                      UMMT0359
+A14D   TIX A14B,4,1                                                     UMMT0360
+       CLA COMMON+6                                                     UMMT0361
+       ADD COMMON+5                                                     UMMT0362
+       STO COMMON+6                                                     UMMT0363
+       SUB FZONE,2                                                      UMMT0364
+       TPL A15                                                          UMMT0365
+       TIX A14,1,1                                                      UMMT0366
+       TSX ERROR,4                                                      UMMT0367
+A15    LDQ     0,1           (SZONE + ROWS)                             UMMT0368
+       STQ     VZONE,2                                                  UMMT0369
+       TXI     A15A,2,-1                                                UMMT0370
+A15A   TXH A10A,2,0               (COLS-1)                              UMMT0371
+       REM                                                              UMMT0372
+       REM  PERFORM FIRST TRANSFORMATION                                UMMT0373
+       REM                                                              UMMT0374
+       CLA VCON                   VZONE+COLS                            UMMT0375
+       ADD COLS                                                         UMMT0376
+       STA A17A                                                         UMMT0377
+       LXA     ROWS,4                                                   UMMT0378
+       LXA ZERO,1                                                       UMMT0379
+A16A   SXD COMMON+7,1                                                   UMMT0380
+       LXA COLS,2                                                       UMMT0381
+       CLA TOP                                                          UMMT0382
+       STO COMMON+8                                                     UMMT0383
+A17    CLA RZONE,1                SUBTRACT COLUMN ELEMENT               UMMT0384
+A17A   SUB 0,2                    (VZONE+COLS)                          UMMT0385
+       STO RZONE,1                                                      UMMT0386
+       CAS COMMON+8               FIND MINIMAL ELEMENT IN ROW           UMMT0387
+       TRA A18                                                          UMMT0388
+       TRA A18                                                          UMMT0389
+       STO COMMON+8                                                     UMMT0390
+A18    TXI A18+1,1,-1                                                   UMMT0391
+       TIX A17,2,1                                                      UMMT0392
+       LXD COMMON+7,1                                                   UMMT0393
+       LXA COLS,2                                                       UMMT0394
+A19    CLA RZONE,1                SUBTRACT MINIMAL ELEMENT FROM ROW     UMMT0395
+       SUB COMMON+8                                                     UMMT0396
+       STO RZONE,1                                                      UMMT0397
+       TXI A19A,1,-1                                                    UMMT0398
+A19A   TIX A19,2,1                                                      UMMT0399
+       TIX A16A,4,1                                                     UMMT0400
+A21B   LXA SCON2,1      CLEAR SZONE                                     UMMT0401
+A21A   STZ VZONE,1                                                      UMMT0402
+       TIX A21A,1,1                                                     UMMT0403
+       REM                                                              UMMT0404
+       REM  ACCUMULATE COUNT OF ZEROS                                   UMMT0405
+       REM                                                              UMMT0406
+B1     LXA     ACON2,1       CLEAR AZONE                                UMMT0407
+B1A    STZ FZONE,1                                                      UMMT0408
+       TIX B1A,1,1                                                      UMMT0409
+       LXA     ROWS,4                                                   UMMT0410
+       LXA ZERO,1                                                       UMMT0411
+B2A    SXD COMMON+3,4                                                   UMMT0412
+       SXD COMMON+4,1                                                   UMMT0413
+       LXA COLS,2                 PERFORM TRANSFORMATION                UMMT0414
+B2B    CLA RZONE,1                                                      UMMT0415
+       SUB 0,2                    (SZONE+COLS)                          UMMT0416
+B2C    ADD 0,4          (SZONE + MAXRO + COLS)                          UMMT0417
+       STO RZONE,1                                                      UMMT0418
+       TXI B2D,1,-1                                                     UMMT0419
+B2D    TIX B2B,2,1                                                      UMMT0420
+       LXA UNIT,2                                                       UMMT0421
+B3     LXD COMMON+4,1                                                   UMMT0422
+       LXA ZERO,4                                                       UMMT0423
+       PXD 0,2                                                          UMMT0424
+B4     ANA TABLE,4      IS THIS COLUMN IN THE COMBINATION               UMMT0425
+       TZE B4A                                                          UMMT0426
+       CLA RZONE,1      TEST ELEMENT FOR ZERO                           UMMT0427
+       TZE B4D                                                          UMMT0428
+B4A    PXD 0,2                                                          UMMT0429
+       CAS TABLE,4      TEST FOR END OF COMBINATION                     UMMT0430
+       TRA B4E                                                          UMMT0431
+       TRA B4C                                                          UMMT0432
+       TRA B4C                                                          UMMT0433
+B4E    TXI B4F,1,-1                                                     UMMT0434
+B4F    TXI B4,4,-1                                                      UMMT0435
+B4D    LXD     COMMON+3,4                                               UMMT0436
+B4B    CLA 0,4          (FZONE + COLUM)                                 UMMT0437
+       ADD FZONE,2                                                      UMMT0438
+       STO FZONE,2                                                      UMMT0439
+B4C    TXI B5,2,1                                                       UMMT0440
+B5     TXL B3,2,0       (COLS)                                          UMMT0441
+       LXD COMMON+3,4                                                   UMMT0442
+       LXD COMMON+4,1                                                   UMMT0443
+B5A    TXI B5B,1,0                (-COLS)                               UMMT0444
+B5B    TIX B2A,4,1                                                      UMMT0445
+       REM                                                              UMMT0446
+       REM  TEST COMBINATIONS OF COLUMN FREQUENCIES                     UMMT0447
+       REM                                                              UMMT0448
+       SLT     3                                                        UMMT0449
+       TRA     C2B                                                      UMMT0450
+       LXA     UNIT,2        TEST SINGLE COLUMNS FIRST                  UMMT0451
+       LXA COLS,1                                                       UMMT0452
+C1C    CLA FZONE,2                                                      UMMT0453
+C1D    SUB 0,1          (FZONE + COLS)                                  UMMT0454
+       TPL C1E                                                          UMMT0455
+       SXD MAX,4                                                        UMMT0456
+       PXD 0,2                                                          UMMT0457
+       LXA ZERO,2                                                       UMMT0458
+       ARS 18                                                           UMMT0459
+C1H    LBT                                                              UMMT0460
+       TRA C1J                                                          UMMT0461
+       TRA A10C                                                         UMMT0462
+C1J    ARS 1                                                            UMMT0463
+       TXI C1H,2,-1                                                     UMMT0464
+C1E    SXD C1F,2                                                        UMMT0465
+C1F    TXI C1G,2,0      SET INDEX 2 TO NEXT COLUMN                      UMMT0466
+C1G    TIX C1C,1,1                                                      UMMT0467
+C2B    LXD     B5,3          RESTORE QUOTAS                             UMMT0468
+       CLA     DZONE3,1                                                 UMMT0469
+       STO     AZONE,1                                                  UMMT0470
+       TIX     *-2,1,1                                                  UMMT0471
+       STZ     COMMON+8                                                 UMMT0472
+       STZ COMMON+14    FIND MAXIMUM DEFICIENCY                         UMMT0473
+C2D    CLA FZONE,2                                                      UMMT0474
+       SUB AZONE,2                                                      UMMT0475
+       CAS COMMON+14                                                    UMMT0476
+       TRA C2C                                                          UMMT0477
+       TRA C2C                                                          UMMT0478
+       STO COMMON+14                                                    UMMT0479
+       SXD COMMON+8,2                                                   UMMT0480
+       CLA AZONE,2                                                      UMMT0481
+       STO COMMON+12                                                    UMMT0482
+       CLA FZONE,2                                                      UMMT0483
+       STO COMMON+13                                                    UMMT0484
+C2C    TIX C2D,2,1                                                      UMMT0485
+       CLA COMMON+14    TEST FOR DEFICIENCY                             UMMT0486
+       TZE CODA                                                         UMMT0487
+       REM                                                              UMMT0488
+       REM              SET UP TRANSFORMATION                           UMMT0489
+       REM                                                              UMMT0490
+       SXD     MAX,4                                                    UMMT0491
+       LXA SCON2,1                CLEAR SZONE                           UMMT0492
+D1     STZ VZONE,1                                                      UMMT0493
+       TIX D1,1,1                                                       UMMT0494
+       CLA TOP                                                          UMMT0495
+       STO COMMON+11                                                    UMMT0496
+       LXA     ROWS,4                                                   UMMT0497
+       LXA ZERO,1                                                       UMMT0498
+D2     SXD COMMON+4,1                                                   UMMT0499
+       CLA TOP                                                          UMMT0500
+       STO COMMON+9                                                     UMMT0501
+       LXA COLS,2                                                       UMMT0502
+D3     CLA COMMON+8     TEST FOR ZERO-FREE ROWS                         UMMT0503
+D3C    ANA 0,2          (TABLE + COLS)                                  UMMT0504
+       TZE D4A                                                          UMMT0505
+       CLA RZONE,1                                                      UMMT0506
+       TNZ D4                                                           UMMT0507
+       CLA TOP                    THIS ROW CONTAINS A ZERO              UMMT0508
+D3A    STO 0,4          (SZONE + COLUM)                                 UMMT0509
+       LXD COMMON+4,1                                                   UMMT0510
+D3B    TXI D5,1,0                 (COLS)                                UMMT0511
+D4     CAS COMMON+9               FIND MINIMAL ELEMENT IN NON-ZERO ROWS UMMT0512
+       TRA D4A                                                          UMMT0513
+       TRA D4A                                                          UMMT0514
+       STO COMMON+9                                                     UMMT0515
+D4A    TXI D4B,1,-1                                                     UMMT0516
+D4B    TIX D3,2,1                                                       UMMT0517
+       CLA COMMON+9                                                     UMMT0518
+       CAS COMMON+11                                                    UMMT0519
+       TRA D5                                                           UMMT0520
+       TRA D5                                                           UMMT0521
+       STO COMMON+11                                                    UMMT0522
+D5     TIX     D2,4,1                                                   UMMT0523
+       LXA COLS,2                                                       UMMT0524
+       LDQ COMMON+11                                                    UMMT0525
+D6A    CLA COMMON+8                                                     UMMT0526
+D6F    ANA 0,2          (TABLE + COLS)                                  UMMT0527
+       TZE D6D                                                          UMMT0528
+D6B    STQ 0,2                    (SZONE+COLS)                          UMMT0529
+D6D    TIX D6A,2,1                                                      UMMT0530
+       LXA ROWS,1                                                       UMMT0531
+D6E    CLA COMMON+11                                                    UMMT0532
+D7     CAS 0,1                    (SZONE+COLUM)                         UMMT0533
+       TRA D7B                                                          UMMT0534
+       TSX ERROR,4                                                      UMMT0535
+D7A    STO 0,1                    (SZONE+COLUM)                         UMMT0536
+D7C    CLS 0,1                    (FZONE+COLUM)                         UMMT0537
+       ADD COMMON+12                                                    UMMT0538
+       STO COMMON+12                                                    UMMT0539
+D7B    TIX D6E,1,1                                                      UMMT0540
+       TRA B1                                                           UMMT0541
+       REM                                                              UMMT0542
+       REM  SET UP SOLUTION                                             UMMT0543
+       REM                                                              UMMT0544
+SOLN   CLA MAX          TEST FOR THE FIRST TIME THROUGH                 UMMT0545
+       TNZ E1C                                                          UMMT0546
+       SXD MAX,4                                                        UMMT0547
+       CLA     RCON                                                     UMMT0548
+       ADD     TOTAL                                                    UMMT0549
+       STA     E1G                                                      UMMT0550
+       STA     E1A                                                      UMMT0551
+       STA     E1B                                                      UMMT0552
+       LXA     TOTAL,4                                                  UMMT0553
+       LXA     UNIT,2        START ROW SEARCH                           UMMT0554
+       LXA COLS,1                                                       UMMT0555
+E1G    CLA     **,4          TEST FOR ZERO   (RZONE + TOTAL)            UMMT0556
+       TZE E1P                                                          UMMT0557
+E1H    LDQ RAND         PERTURB THIS ELEMENT                            UMMT0558
+       MPY     SRAND                                                    UMMT0559
+       STQ RAND                                                         UMMT0560
+       PXD 0,0                                                          UMMT0561
+       LRS 3                                                            UMMT0562
+       DVP N                                                            UMMT0563
+       STQ COMMON                                                       UMMT0564
+E1A    CLA     **,4                          (RZONE + TOTAL)            UMMT0565
+       ADD COMMON                                                       UMMT0566
+E1B    STO     **,4                          (RZONE + TOTAL)            UMMT0567
+E1J    SXD     E1K,2         SET INDEX 2 TO NEXT COLUMN                 UMMT0568
+E1K    TXI E1K+1,2,0                                                    UMMT0569
+       TIX E1L,1,1                                                      UMMT0570
+       LXA UNIT,2                                                       UMMT0571
+       LXA COLS,1                                                       UMMT0572
+       CLA E1M                                                          UMMT0573
+       ADD UNIT                                                         UMMT0574
+       STO E1M                                                          UMMT0575
+       STA E1N                                                          UMMT0576
+E1L    TIX E1G,4,1                                                      UMMT0577
+       TRA     A21B                                                     UMMT0578
+E1P    CLS FZONE,2      TEST FOR SURPLUS OF ZEROS                       UMMT0579
+E1M    ADD 0            (FZONE + COLS)                                  UMMT0580
+E1Q    ADD 0,1          (FZONE + COLS)                                  UMMT0581
+       TPL E1J                                                          UMMT0582
+       CLA FZONE,2                                                      UMMT0583
+E1N    SUB 0            (FZONE + COLS)                                  UMMT0584
+       STO FZONE,2                                                      UMMT0585
+       TRA E1H                                                          UMMT0586
+E1C    STZ     COMMON+14                                                UMMT0587
+       TSX     REWALL,4                                                 UMMT0588
+       TSX     MWRIT,4       WRITE MATRIX ON TAPE 6                     UMMT0589
+       TSX     WEF6,4                                                   UMMT0590
+       TSX     F10J,4                                                   UMMT0591
+       LXA     SCON2,1       CLEAR SZONE                                UMMT0592
+       STZ     VZONE,1                                                  UMMT0593
+       TIX     *-1,1,1                                                  UMMT0594
+       CLA UNIT                                                         UMMT0595
+       STO RCOUNT                                                       UMMT0596
+       TSX BUFFBL,4           CLEAR BUFFER TO BLANKS                    UMMT0597
+       LXA     ROWS,4                                                   UMMT0598
+       LXA ZERO,1                                                       UMMT0599
+E2     SXD COMMON+4,1                                                   UMMT0600
+       SXD COMMON+19,4                                                  UMMT0601
+       LXA COLS,2                                                       UMMT0602
+       SLN 1                                                            UMMT0603
+E2A    CLA RZONE,1                FIND IMMEDIATE ASSIGNMENTS            UMMT0604
+       ARS     15                                                       UMMT0605
+       TZE E4                                                           UMMT0606
+       TXI E3,1,-1                                                      UMMT0607
+E3     TIX E2A,2,1                                                      UMMT0608
+       STZ COMMON                                                       UMMT0609
+       CLA RCOUNT                                                       UMMT0610
+       COM                                                              UMMT0611
+       PAX 0,4                                                          UMMT0612
+E3A    CLA 0,4          (FZONE + COLS-2)                                UMMT0613
+       STA COMMON                                                       UMMT0614
+       ARS 18                                                           UMMT0615
+       STO COMMON+12                                                    UMMT0616
+       STO     AS                                                       UMMT0617
+       TSX BNBCD,4            SET UP BUFFER TO PRINT                    UMMT0618
+       NOP COMMON+12                                                    UMMT0619
+       SLW COMMON+12                                                    UMMT0620
+       LDQ COMMON+12                                                    UMMT0621
+       TSX UNSHFT,4                                                     UMMT0622
+       SLW BUFFER+7                                                     UMMT0623
+       LXD COMMON+13,2                                                  UMMT0624
+E3B    CLA 0,2                    (FZONE+COLS)                          UMMT0625
+       SUB COMMON                                                       UMMT0626
+E3C    STO 0,2                    (FZONE+COLS)                          UMMT0627
+       ARS 18                                                           UMMT0628
+       STO COMMON+12                                                    UMMT0629
+       STO     AS+1                                                     UMMT0630
+       TSX BNBCD,4                                                      UMMT0631
+       NOP COMMON+12                                                    UMMT0632
+       SLW COMMON+12                                                    UMMT0633
+       LDQ COMMON+12                                                    UMMT0634
+       TSX UNSHFT,4                                                     UMMT0635
+       SLW BUFFER+9                                                     UMMT0636
+       CLA     COMMON                                                   UMMT0637
+       STO     AS+2                                                     UMMT0638
+       TSX BNBCD,4                                                      UMMT0639
+       NOP COMMON                                                       UMMT0640
+       SLW COMMON                                                       UMMT0641
+       LDQ COMMON                                                       UMMT0642
+       TSX UNSHFT,4                                                     UMMT0643
+       SLW BUFFER+13                                                    UMMT0644
+       TSX 1WT,4                                                        UMMT0645
+       PZE BUFFER,,14                                                   UMMT0646
+       TSX     ACCUM,4                                                  UMMT0647
+       TRA E6                                                           UMMT0648
+E4     SLT 1                      FIRST ZERO IN ROW                     UMMT0649
+       TRA E5                                                           UMMT0650
+       SXD COMMON+13,2                                                  UMMT0651
+       TXI E3,1,-1                                                      UMMT0652
+E5     LXD COMMON+4,1             SEVERAL ZEROS IN ROW                  UMMT0653
+       LXA COLS,2                                                       UMMT0654
+       CLA COMMON+14                                                    UMMT0655
+       ADD UNIT                                                         UMMT0656
+       STO COMMON+14                                                    UMMT0657
+E5A    LDQ RAND         PERTURB MATRIX                                  UMMT0658
+       MPY     SRAND                                                    UMMT0659
+       STQ RAND                                                         UMMT0660
+       ZAC                                                              UMMT0661
+       LRS 3                                                            UMMT0662
+       DVP N                                                            UMMT0663
+       STQ COMMON                                                       UMMT0664
+       CLA RZONE,1                                                      UMMT0665
+       ADD COMMON                                                       UMMT0666
+       STO RZONE,1                                                      UMMT0667
+       TXI E5B,1,-1                                                     UMMT0668
+E5B    TIX E5A,2,1                                                      UMMT0669
+       LXA     RCOUNT,2      REMEMBER MULTIPLE ZERO ROW IN SZONE        UMMT0670
+       STL     VZONE,2                                                  UMMT0671
+       LXA COMMON+14,2  SAVE ROW FREQUENCY                              UMMT0672
+       CLA RCOUNT                                                       UMMT0673
+       COM                                                              UMMT0674
+       PAX 0,4                                                          UMMT0675
+E5F    CLA 0,4          (FZONE+COLS-2)                                  UMMT0676
+       STO FZONE,2                                                      UMMT0677
+E6     CLA RCOUNT                                                       UMMT0678
+       ADD UNIT                                                         UMMT0679
+       STO RCOUNT                                                       UMMT0680
+       LXD COMMON+19,4                                                  UMMT0681
+       CAS ROWS                                                         UMMT0682
+       TRA SETUP                                                        UMMT0683
+       NOP                                                              UMMT0684
+       TIX E2,4,1                                                       UMMT0685
+       TSX     ERROR,4                                                  UMMT0686
+       REM                                                              UMMT0687
+SETUP  CLA COMMON+14                                                    UMMT0688
+       TZE     J15                                                      UMMT0689
+       SUB ROWS                                                         UMMT0690
+       TZE SOLVE        JUMP TO SOLVE EQUATIONS                         UMMT0691
+       CLA COMMON+14    SET UP NEW ROWS                                 UMMT0692
+       STO ROWS                                                         UMMT0693
+       LXA TEN,1        LOOK FOR COMPLETELY ASSIGNED COLUMNS            UMMT0694
+H1     CLA FZONE+10,1                                                   UMMT0695
+       STO VZONE+10,1   SAVE OLD COLUMN                                 UMMT0696
+       TIX H1,1,1       FREQUENCIES IN VZONE                            UMMT0697
+       LXA COLS,1                                                       UMMT0698
+       SXD COMMON+14,1  SAVE OLD COLS                                   UMMT0699
+       LXA ZERO,2                                                       UMMT0700
+H1A    CLA 0,1          (VZONE+OLD COLS)                                UMMT0701
+       ANA ADDR                                                         UMMT0702
+       TZE H1B                                                          UMMT0703
+H1F    CLA 0,1          (VZONE+OLD COLS)                                UMMT0704
+       STO     FZONE,2                                                  UMMT0705
+       TXI H1B,2,-1                                                     UMMT0706
+H1B    TIX H1A,1,1                                                      UMMT0707
+       PXD 0,2                                                          UMMT0708
+       ARS 18                                                           UMMT0709
+       COM                                                              UMMT0710
+       ADD UNIT                                                         UMMT0711
+       ANA COLMSK                                                       UMMT0712
+       STA COLS         SET UP NEW COLS                                 UMMT0713
+       LXA UNIT,2       TRANSFER ROW FREQUENCIES                        UMMT0714
+       LXA ROWS,1                                                       UMMT0715
+       CLA FCON                                                         UMMT0716
+       ADD ROWS                                                         UMMT0717
+       ADD COLS                                                         UMMT0718
+       STA H1D                                                          UMMT0719
+       CLA FZONE,1                                                      UMMT0720
+H1D    STO 0,2                                                          UMMT0721
+       TXI H1E,2,1                                                      UMMT0722
+H1E    TIX H1D-1,1,1                                                    UMMT0723
+       CAL CODA         SET SWITCH AT A3B                               UMMT0724
+       STP A3B                                                          UMMT0725
+       LXA     REC,3         SET UP SMALLER MATRIX                      UMMT0726
+       AXT     1,4                                                      UMMT0727
+H2     SXA     RCOUNT,4                                                 UMMT0728
+       NZT     VZONE,4       DOES ROW HAVE MULTIPLE ZEROS               UMMT0729
+H2F    TXI     H2G,1,**      (-OLD COLS)                                UMMT0730
+       LXD     COMMON+14,4   MOVE ROW DOWN                              UMMT0731
+H2A    CLA     **,4          (VZONE + OLD COLS)                         UMMT0732
+       ANA     ADDR                                                     UMMT0733
+       TZE     H2C           DO WE STILL WANT THIS COLUMN               UMMT0734
+       CLA     AZONE-1,1                                                UMMT0735
+       STO     AZONE-1,2                                                UMMT0736
+       TXI     *+1,2,-1                                                 UMMT0737
+H2C    TXI     *+1,1,-1      MOVE TO NEXT ELEMENT                       UMMT0738
+       TIX     H2A,4,1                                                  UMMT0739
+H2G    LXA     RCOUNT,4      MOVE TO NEXT ROW                           UMMT0740
+       TXI     *+1,4,1                                                  UMMT0741
+H2H    TXL     H2,4,**       (OLD ROWS)                                 UMMT0742
+       TRA A1B                                                          UMMT0743
+       REM                                                              UMMT0744
+       REM CODA - PRINT FINALLY REDUCED MATRIX                          UMMT0745
+       REM                                                              UMMT0746
+CODA   TXH     SOLN,,                                                   UMMT0747
+       CLS CODA                                                         UMMT0748
+       STO CODA                                                         UMMT0749
+       LXA FOUR,1                                                       UMMT0750
+       LDQ FIVE                                                         UMMT0751
+G1A    STQ RAND                                                         UMMT0752
+       MPY RAND                                                         UMMT0753
+       TIX G1A,1,1                                                      UMMT0754
+       CLA RAND                                                         UMMT0755
+       STO     SRAND                                                    UMMT0756
+       TSX 1WT,4              PRINT MATRIX HEADING                      UMMT0757
+       PZE MHEAD,,6                                                     UMMT0758
+       CLA     TOTAL                                                    UMMT0759
+       ADD     RCON                                                     UMMT0760
+       STA     G4A                                                      UMMT0761
+       CLA COLS                                                         UMMT0762
+       ALS 1                                                            UMMT0763
+       PAX 0,2                                                          UMMT0764
+       ADD BUFCON                                                       UMMT0765
+       STA G4E                                                          UMMT0766
+       ADD UNIT                                                         UMMT0767
+       STA G4C                                                          UMMT0768
+       LXA     TOTAL,1                                                  UMMT0769
+       SXD COMMON,2                                                     UMMT0770
+G4D    LXD COMMON,2                                                     UMMT0771
+       TSX     BUFFBL,4      CLEAR BUFFER TO BLANKS                     UMMT0772
+G4A    CLA **,1                                                         UMMT0773
+       LRS     15                                                       UMMT0774
+       RND                                                              UMMT0775
+       LDQ ZERO                                                         UMMT0776
+       SSP                                                              UMMT0777
+       LRS 6                                                            UMMT0778
+       RQL 7                                                            UMMT0779
+       STQ COMMON+2           SEPARATE INTEGER AND FRACTIONAL PARTS     UMMT0780
+       SLW COMMON+1                                                     UMMT0781
+       TSX BNBCD,4                                                      UMMT0782
+       NOP COMMON+1                                                     UMMT0783
+       SLW COMMON+1                                                     UMMT0784
+       LDQ COMMON+1                                                     UMMT0785
+       TSX UNSHFT,4                                                     UMMT0786
+G4E    SLW **,2                                                         UMMT0787
+       LXA COMMON+2,4         FIND FRACTIONAL PART IN TABLE             UMMT0788
+       CAL BCDTAB,4                                                     UMMT0789
+G4C    SLW **,2                                                         UMMT0790
+       TNX G5,1,1                                                       UMMT0791
+       TIX G4A,2,2                                                      UMMT0792
+G5     LDQ BUFFER             SET CARRIAGE CONTROL                      UMMT0793
+       RQL 6                                                            UMMT0794
+       PXD 0,0                                                          UMMT0795
+       LGL 30                                                           UMMT0796
+       SLW BUFFER                                                       UMMT0797
+       TSX 1WT,4              PRINT LINE                                UMMT0798
+       PZE BUFFER,,20                                                   UMMT0799
+       TXH G4D,1,1                                                      UMMT0800
+       TSX     REWALL,4                                                 UMMT0801
+       TSX 1WT,4              PRINT ASSIGNMENT HEADINGS                 UMMT0802
+       PZE     AHEAD,,16                                                UMMT0803
+       TSX BUFFBL,4                                                     UMMT0804
+       TSX 1WT,4                                                        UMMT0805
+       PZE BUFFER,,1                                                    UMMT0806
+       TRA SOLN                                                         UMMT0807
+       REM                                                              UMMT0808
+       REM     SOLVE SYSTEM OF EQUATIONS                                UMMT0809
+       REM                                                              UMMT0810
+SOLVE  TSX REWALL,4                                                     UMMT0811
+       LXA SCON2,1      CLEAR SZONE                                     UMMT0812
+J1     STZ VZONE,1                                                      UMMT0813
+       TIX J1,1,1                                                       UMMT0814
+       STZ Z                                                            UMMT0815
+       CLA UNIT                                                         UMMT0816
+       STO RCOUNT                                                       UMMT0817
+       TSX     MREAD,4       READ MATRIX FROM TAPE 6                    UMMT0818
+       HTR     TAPE6,,RZONE                                             UMMT0819
+       TSX     ERROR,4                                                  UMMT0820
+       LXA     ROWS,4                                                   UMMT0821
+       LXA ZERO,1                                                       UMMT0822
+J1B    SXD COMMON+2,4                                                   UMMT0823
+       LXA COLS,2                                                       UMMT0824
+J2     CLA RZONE,1      FIND ZEROS                                      UMMT0825
+       TZE J3                                                           UMMT0826
+       TXI J2A,1,-1                                                     UMMT0827
+J2A    TIX J2,2,1                                                       UMMT0828
+       CLA RCOUNT                                                       UMMT0829
+       ADD UNIT                                                         UMMT0830
+       STO RCOUNT                                                       UMMT0831
+       LXD COMMON+2,4                                                   UMMT0832
+       CAS ROWS                                                         UMMT0833
+       TRA J4                                                           UMMT0834
+       TIX J1B,4,1                                                      UMMT0835
+       TIX J1B,4,1                                                      UMMT0836
+       TRA     J4                                                       UMMT0837
+J3     CLA RCOUNT       SET UP AUXILIARY MATRIX                         UMMT0838
+       COM                                                              UMMT0839
+       PAX 0,4                                                          UMMT0840
+J3E    CLA 0,4          (F ZONE+COLS-2                                  UMMT0841
+       ARS 18                                                           UMMT0842
+       STO SZONE                                                        UMMT0843
+       CLA ONE                                                          UMMT0844
+J3A    STO 0,4          (SZONE+COLS)                                    UMMT0845
+J3B    STO 0,2          (SZONE + COLS +2)                               UMMT0846
+       SXD SZONE,2                                                      UMMT0847
+       TSX WRIT4,4      WRITE COLUMN ON TAPE 4                          UMMT0848
+       PZE T4W,0,SZONE                                                  UMMT0849
+       CLA RCOUNT                                                       UMMT0850
+       COM                                                              UMMT0851
+       PAX 0,4                                                          UMMT0852
+J3C    STZ 0,4          (SZONE + COLS)                                  UMMT0853
+J3D    STZ 0,2          (SZONE + COLS +2)                               UMMT0854
+       CLA Z                                                            UMMT0855
+       ADD UNIT                                                         UMMT0856
+       STO Z                                                            UMMT0857
+       TXI J2A,1,-1                                                     UMMT0858
+J4     STZ SZONE                                                        UMMT0859
+       LXA COLUM,1      CLEAR DECREMENT OF FREQUENCIES                  UMMT0860
+       LXA ZERO,2                                                       UMMT0861
+J4A    CLA FZONE,2                                                      UMMT0862
+       ANA ADDR                                                         UMMT0863
+       ALS 12                                                           UMMT0864
+       STO SZONE+2,2                                                    UMMT0865
+       TXI J5A,2,-1                                                     UMMT0866
+J5A    TIX J4A,1,1                                                      UMMT0867
+       TSX WRIT4,4      WRITE FREQUENCIES ON TAPE 4                     UMMT0868
+       PZE T4W,0,SZONE                                                  UMMT0869
+       TSX WEF4,4                                                       UMMT0870
+       TSX REWALL,4                                                     UMMT0871
+       LXA     COLUM,1       CLEAR HZONE                                UMMT0872
+J6     STZ     **,1          (HZONE+COLUM)                              UMMT0873
+       TIX J6,1,1                                                       UMMT0874
+       CLA UNIT                                                         UMMT0875
+       STO ZTEMP                                                        UMMT0876
+       SLF                                                              UMMT0877
+J6C    SLN 1                                                            UMMT0878
+       SLT     1                                                        UMMT0879
+       TRA J7                                                           UMMT0880
+       TSX MREAD,4      READ COLUMN FROM TAPE 4                         UMMT0881
+       HTR TAPE4,0,RZONE                                                UMMT0882
+       TSX ERROR,4                                                      UMMT0883
+       CLA RZONE+1                                                      UMMT0884
+       TZE J6D                                                          UMMT0885
+       CLA ZTEMP                                                        UMMT0886
+       SUB Z                                                            UMMT0887
+       TZE J11A                                                         UMMT0888
+       CLA ZTEMP                                                        UMMT0889
+       ADD UNIT                                                         UMMT0890
+       STO ZTEMP                                                        UMMT0891
+       LXD RZONE+1,1                                                    UMMT0892
+       CLA ONE          ADD TO LOGICAL SUM OF ROWS                      UMMT0893
+J6B    ORS 0,1          (HZONE + COLUM)                                 UMMT0894
+       TRA J6C                                                          UMMT0895
+J6D    LXA COLUM,1      FIND OPERATING ROW                              UMMT0896
+J6E    CLA 0,1          (RZONE + COLPL)                                 UMMT0897
+       TZE J6G                                                          UMMT0898
+J6F    CAL 0,1          (HZONE + COLUM)                                 UMMT0899
+       TZE OPER                                                         UMMT0900
+J6G    TIX J6E,1,1                                                      UMMT0901
+       TSX REWALL,4           PARAMETER COLUMN                          UMMT0902
+       CLA TAPE4                                                        UMMT0903
+       ALS     18                                                       UMMT0904
+       STD     J6H                                                      UMMT0905
+       CLA     ZTEMP                                                    UMMT0906
+       STA     J6H                                                      UMMT0907
+       SKPREC  0,0,J6H       (ZTEMP,TAPE4)                              UMMT0908
+       SLN 4                                                            UMMT0909
+       TRA J10A                                                         UMMT0910
+J7     TSX REWALL,4           BRING IN NEXT COLUMN TO BE CLEARED        UMMT0911
+       LXA COLPL,1                                                      UMMT0912
+J7A    CLA 0,1          (SZONE + COLPL)                                 UMMT0913
+J7B    STO 0,1          (RZONE + COLPL)                                 UMMT0914
+       TIX J7A,1,1                                                      UMMT0915
+       TRA J6D                                                          UMMT0916
+OPER   CLA ONE          ADD TO LOGICAL SUM OF ROWS                      UMMT0917
+       ORS 0,1          (HZONE + COLUM)                                 UMMT0918
+       TSX REWALL,4                                                     UMMT0919
+       SXD RZONE+1,1                                                    UMMT0920
+       CLA ZTEMP                                                        UMMT0921
+       ADD UNIT                                                         UMMT0922
+       PAX 0,2                                                          UMMT0923
+       SLN 3                                                            UMMT0924
+J8     TSX MREAD,4      READ SECONDARY COLUMN FROM TAPE 4               UMMT0925
+       HTR TAPE4,0,AZONE                                                UMMT0926
+       TRA J10                                                          UMMT0927
+       CLA AZONE+1                                                      UMMT0928
+       TNZ J8G+1                                                        UMMT0929
+J8A    CLA 0,1          (AZONE+COLPL)                                   UMMT0930
+       TZE J8G+1                                                        UMMT0931
+       LDQ ZERO                                                         UMMT0932
+       LRS 23                                                           UMMT0933
+J8B    DVP 0,1          (RZONE + COLPL)                                 UMMT0934
+       STQ COMMON                                                       UMMT0935
+       LXA COLUM,4                                                      UMMT0936
+J8C    LDQ COMMON                                                       UMMT0937
+J8D    MPY 0,4          (RZONE + COLPL)                                 UMMT0938
+       LLS 23                                                           UMMT0939
+       CHS                                                              UMMT0940
+J8E    ADD 0,4          (AZONE + COLPL)                                 UMMT0941
+J8F    STO 0,4          (AZONE + COLPL)                                 UMMT0942
+       TIX J8C,4,1                                                      UMMT0943
+       CLA COMMON                                                       UMMT0944
+J8G    STO 0,1          (AZONE + COLPL)                                 UMMT0945
+       TNX J8H,2,1                                                      UMMT0946
+J8J    TSX WRIT4,4      REWRITE SECONDARY COLUMN ON TAPE 4              UMMT0947
+       PZE T4W,0,AZONE                                                  UMMT0948
+       TRA J8                                                           UMMT0949
+J8H    SLT 3                                                            UMMT0950
+       TRA J8J                                                          UMMT0951
+       LXA COLPL,2      SAVE NEXT COLUMN TO BE CLEARED                  UMMT0952
+J9     CLA 0,2          (AZONE + COLPL)                                 UMMT0953
+J9B    STO 0,2          (SZONE + COLPL)                                 UMMT0954
+       TIX J9,2,1                                                       UMMT0955
+       CLA T4W                                                          UMMT0956
+       ALS     18                                                       UMMT0957
+       STD     J9A                                                      UMMT0958
+       BST     0,J9A         (T4W)                                      UMMT0959
+       TSX WRIT4,4                                                      UMMT0960
+       PZE T4W,0,RZONE                                                  UMMT0961
+       TRA J8J                                                          UMMT0962
+J10    TSX WEF4,4                                                       UMMT0963
+J10A   CLA ZTEMP                                                        UMMT0964
+       SUB Z                                                            UMMT0965
+       TZE J11                                                          UMMT0966
+       CLA ZTEMP                                                        UMMT0967
+       ADD UNIT                                                         UMMT0968
+       STO ZTEMP                                                        UMMT0969
+       SLT 4                                                            UMMT0970
+       TRA J6C+1                                                        UMMT0971
+       TRA J6C                                                          UMMT0972
+J11    SLT 4            TEST FOR PREVIOUS PARAMETER COLUMN              UMMT0973
+       TRA J12                                                          UMMT0974
+J11A   TSX MREAD,4      READ FINAL COLUMN FROM TAPE 4                   UMMT0975
+       HTR TAPE4,0,AZONE                                                UMMT0976
+       TSX ERROR,4                                                      UMMT0977
+J12    TSX REWALL,4                                                     UMMT0978
+       TSX BUFFBL,4           BLANK OUT BUFFER                          UMMT0979
+       LXA Z,1                                                          UMMT0980
+J12A   TSX MREAD,4      READ COLUMN FROM TAPE 4                         UMMT0981
+       HTR TAPE4,0,RZONE                                                UMMT0982
+       TSX ERROR,4                                                      UMMT0983
+       CLA RZONE+1                                                      UMMT0984
+       TZE J14                                                          UMMT0985
+       LXD RZONE+1,4                                                    UMMT0986
+J13    CLA 0,4          (AZONE + COLPL)                                 UMMT0987
+       TZE J14                                                          UMMT0988
+       ARS 12                                                           UMMT0989
+       STO COMMON+1                                                     UMMT0990
+       STO     AS+2                                                     UMMT0991
+       STZ COMMON                                                       UMMT0992
+       CLS RZONE                                                        UMMT0993
+       STA COMMON                                                       UMMT0994
+       CLA     COMMON                                                   UMMT0995
+       STO     AS                                                       UMMT0996
+       TSX BNBCD,4            PRINT ASSIGNMENT                          UMMT0997
+       NOP COMMON                                                       UMMT0998
+       SLW COMMON                                                       UMMT0999
+       LDQ COMMON                                                       UMMT1000
+       TSX UNSHFT,4                                                     UMMT1001
+       SLW BUFFER+7                                                     UMMT1002
+       CLS RZONE                                                        UMMT1003
+       ARS 18                                                           UMMT1004
+       ADD COLS                                                         UMMT1005
+       ADD UNIT                                                         UMMT1006
+       STO COMMON                                                       UMMT1007
+       STO     AS+1                                                     UMMT1008
+       TSX BNBCD,4                                                      UMMT1009
+       NOP COMMON                                                       UMMT1010
+       SLW COMMON                                                       UMMT1011
+       LDQ COMMON                                                       UMMT1012
+       TSX UNSHFT,4                                                     UMMT1013
+       SLW BUFFER+9                                                     UMMT1014
+       TSX BNBCD,4                                                      UMMT1015
+       NOP COMMON+1                                                     UMMT1016
+       SLW COMMON                                                       UMMT1017
+       LDQ COMMON                                                       UMMT1018
+       TSX UNSHFT,4                                                     UMMT1019
+       SLW BUFFER+13                                                    UMMT1020
+       TSX 1WT,4                                                        UMMT1021
+       PZE BUFFER,,14                                                   UMMT1022
+       TSX     ACCUM,4                                                  UMMT1023
+J14    TIX J12A,1,1                                                     UMMT1024
+J15    TSX     BNDPRT,4                                                 UMMT1025
+       TRA START                                                        UMMT1026
+       REM                                                              UMMT1027
+       REM              CONSTANTS                                       UMMT1028
+       REM                                                              UMMT1029
+ZONE   HTR GATE-RZONE+1                                                 UMMT1030
+FCON   HTR FZONE                                                        UMMT1031
+RCON   HTR RZONE                                                        UMMT1032
+SIX    DEC 6                                                            UMMT1033
+FIVE   DEC 5                                                            UMMT1034
+FOUR   DEC 4                                                            UMMT1035
+REC    PZE     RECCON                                                   UMMT1036
+ZERO   DEC 0                                                            UMMT1037
+UNIT   DEC 1                                                            UMMT1038
+ACON   HTR AZONE                                                        UMMT1039
+D2CON  HTR     DZONE2                                                   UMMT1040
+RECCON EQU     12600                                                    UMMT1041
+F2CH2  IOBT    RZONE,,**     (TOTAL)                                    UMMT1042
+T4CON  HTR     T4                                                       UMMT1043
+T5CON  HTR T5                                                           UMMT1044
+T6CON  HTR T6                                                           UMMT1045
+ACON2  HTR FZONE-AZONE                                                  UMMT1046
+SCON   HTR SZONE                                                        UMMT1047
+VCON   HTR VZONE                                                        UMMT1048
+HCON   PZE HZONE                                                        UMMT1049
+SCON2  HTR VZONE-SZONE                                                  UMMT1050
+TABCO  HTR TABLE                                                        UMMT1051
+BLANK  OCT 60                                                           UMMT1052
+BLANKS BCD 1                                                            UMMT1053
+BLANK5 BCD 1     0                                                      UMMT1054
+TOP    OCT 377777777777                                                 UMMT1055
+ADDR   OCT 77777                                                        UMMT1056
+COLMSK OCT 17                                                           UMMT1057
+TWO    DEC 2                                                            UMMT1058
+ONE    DEC 1B23                                                         UMMT1059
+TEN    DEC 10                                                           UMMT1060
+TWENTY DEC 20                                                           UMMT1061
+BUFCON PZE BUFFER                                                       UMMT1062
+RECON  CLA RZONE,1                                                      UMMT1063
+CHCON  CLS RZONE,1                                                      UMMT1064
+FCON2  HTR SZONE-FZONE                                                  UMMT1065
+TABLE  DEC 1B17,1B16,1B15,1B14,1B13,1B12,1B11,1B10,1B9,1B8,1B7          UMMT1066
+AHEAD  BCD  1                                             ROW       COLUUMMT1067
+       BCD 6MN                QUANTITY ASSIGNED                         UMMT1068
+BHEAD  BCI     9,1                                                      UMMT1069
+       BCI     3,ASSIGNMENT COST                                        UMMT1070
+MHEAD  BCD 61FINALLY REDUCED MATRIX                                     UMMT1071
+       BCD  .984  .969  .953  .937  .922  .906  .891  .875  .859  .844  UMMT1072
+       BCD  .828  .812  .797  .781  .766  .750  .734  .719  .702  .687  UMMT1073
+       BCD  .671  .656  .644  .625  .609  .593  .578  .562  .547  .531  UMMT1074
+       BCD  .516  .500  .484  .469  .453  .438  .422  .406  .391  .375  UMMT1075
+       BCD  .359  .344  .328  .312  .297  .281  .266  .250  .234  .219  UMMT1076
+       BCD  .203  .188  .172  .156  .141  .125  .109  .094  .078  .062  UMMT1077
+       BCD 3.047  .031  .016                                            UMMT1078
+BCDTAB BCD 1.000                                                        UMMT1079
+       REM                                                              UMMT1080
+       REM                                                              UMMT1081
+       REM          SUBROUTINES                                         UMMT1082
+       REM                                                              UMMT1083
+WEF6   CLA T6W                                                          UMMT1084
+       LDQ TAPE6                                                        UMMT1085
+       STO TAPE6                                                        UMMT1086
+       STQ T6W                                                          UMMT1087
+       ALS     18                                                       UMMT1088
+       STD     WEF6A                                                    UMMT1089
+       SXA     WEF6B,4                                                  UMMT1090
+       WEF     0,WEF6A                                                  UMMT1091
+WEF6B  AXT     **,4                                                     UMMT1092
+       TRA 1,4                                                          UMMT1093
+WEF4   CLA T4W                                                          UMMT1094
+       LDQ TAPE4                                                        UMMT1095
+       STO TAPE4                                                        UMMT1096
+       STQ T4W                                                          UMMT1097
+       ALS     18                                                       UMMT1098
+       STD     WEF4A                                                    UMMT1099
+       SXA     WEF4B,4                                                  UMMT1100
+       WEF     0,WEF4A                                                  UMMT1101
+WEF4B  AXT     **,4                                                     UMMT1102
+       TRA 1,4                                                          UMMT1103
+REWALL SXA     REW1,4                                                   UMMT1104
+       REW     T4                                                       UMMT1105
+       REW T5                                                           UMMT1106
+       REW T6                                                           UMMT1107
+REW1   AXT     **,4                                                     UMMT1108
+       TRA 1,4                                                          UMMT1109
+F10J   LXA     COLUM,1       RESTORE FREQUENCIES                        UMMT1110
+F10K   CLA     **,1          (DZONE2+COLUM)                             UMMT1111
+F10L   STO     **,1          (FZONE+COLUM)                              UMMT1112
+       TIX     *-2,1,1                                                  UMMT1113
+       TRA     1,4                                                      UMMT1114
+SHIFT  SXD COMMON,4           SUBROUTINE TO REMOVE LEADING BLANKS       UMMT1115
+       LXA SIX,4                                                        UMMT1116
+       PXD 0,0                                                          UMMT1117
+SHIFT1 LGL 6                                                            UMMT1118
+       SUB BLANK                                                        UMMT1119
+       TNZ SHIFT2                                                       UMMT1120
+SHIFT3 TIX SHIFT1,4,1                                                   UMMT1121
+       LXD COMMON,4                                                     UMMT1122
+       TRA 1,4                                                          UMMT1123
+SHIFT2 ADD BLANK                                                        UMMT1124
+       TRA SHIFT3                                                       UMMT1125
+RDCARD SXD COMMON+1,4         SUBROUTINE TO READ DATA CARDS, XA=COUNT   UMMT1126
+       CLA 1,4                                                          UMMT1127
+       ARS 18                                                           UMMT1128
+       STA RDC6                                                         UMMT1129
+       LXA ZERO,2                                                       UMMT1130
+RDC1   RDCARD  RDBUF,RDCEOF                                             UMMT1131
+       AXT     12,4                                                     UMMT1132
+RDC5   LDQ     RDBUF+12,4                                               UMMT1133
+       SXA     RDC2,4                                                   UMMT1134
+       TSX SHIFT,4                                                      UMMT1135
+       SLW COMMON                                                       UMMT1136
+       TSX BCDBN,4                                                      UMMT1137
+       NOP COMMON                                                       UMMT1138
+RDC6   SLW **,2                                                         UMMT1139
+       TXI *+1,2,-1                                                     UMMT1140
+RDC2   AXT     **,4                                                     UMMT1141
+       TNX     RDC4,1,1                                                 UMMT1142
+       TNX     RDC1,4,1                                                 UMMT1143
+       TRA     RDC5                                                     UMMT1144
+RDC4   LXD     COMMON+1,4                                               UMMT1145
+       TRA 2,4                                                          UMMT1146
+RDCEOF LXD COMMON+1,4                                                   UMMT1147
+       TRA 1,4                                                          UMMT1148
+BUFFBL SXD BUFF1,4                                                      UMMT1149
+       LXA TWENTY,4                                                     UMMT1150
+       CAL BLANKS                                                       UMMT1151
+       SLW BUFFER+20,4                                                  UMMT1152
+       TIX *-1,4,1                                                      UMMT1153
+       LXD BUFF1,4                                                      UMMT1154
+       TRA 1,4                                                          UMMT1155
+BUFF1                                                                   UMMT1156
+UNSHFT SXD BUFF1,4            SUBROUTINE TO REMOVE LEADING ZEROS        UMMT1157
+       ZAC                                                              UMMT1158
+       LXA SIX,4                                                        UMMT1159
+       LGL 6                                                            UMMT1160
+       TNZ UNSH1                                                        UMMT1161
+       TIX *-2,4,1                                                      UMMT1162
+       ORA BLANKS                                                      AUMMT1163
+UNSH2  LXD BUFF1,4                                                      UMMT1164
+       TRA 1,4                                                          UMMT1165
+UNSH1  ORA BLANK5                                                       UMMT1166
+       TNX UNSH2,4,1                                                    UMMT1167
+       LGL 6                                                            UMMT1168
+       TRA *-2                                                          UMMT1169
+BNDPRT SXD BND1,4                                                       UMMT1170
+       TSX BUFFBL,4                                                     UMMT1171
+       TSX BNBCD,4                                                      UMMT1172
+       NOP     COST                                                     UMMT1173
+       SLW COMMON                                                       UMMT1174
+       LDQ COMMON                                                       UMMT1175
+       TSX UNSHFT,4                                                     UMMT1176
+       SLW BUFFER+10                                                    UMMT1177
+       CAL     *             SET CARRIAGE CONTROL                       UMMT1178
+       STP     BUFFER                                                   UMMT1179
+       TSX 1WT,4                                                        UMMT1180
+       PZE BHEAD,,12                                                    UMMT1181
+       TSX 1WT,4                                                        UMMT1182
+       PZE BUFFER,,11                                                   UMMT1183
+       LXD BND1,4                                                       UMMT1184
+       TRA 1,4                                                          UMMT1185
+BND1                                                                    UMMT1186
+*                                                                       UMMT1187
+*      SUBROUTINE TO WRITE RZONE ON TAPE 6                              UMMT1188
+*                                                                       UMMT1189
+MWRIT  CLA     T6W                                                      UMMT1190
+       ALS     18                                                       UMMT1191
+       STD     MWR                                                      UMMT1192
+       STD     MWR2                                                     UMMT1193
+       SXA     MWR1,4                                                   UMMT1194
+       WTB     0,F2CH2,0,MWR2 (T6W)                                     UMMT1195
+       DELAY   0,MWR                                                    UMMT1196
+MWR1   AXT     **,4                                                     UMMT1197
+       TRA     1,4                                                      UMMT1198
+*                                                                       UMMT1199
+*      SUBROUTINE MREAD TO READ ANY BINARY RECORD                       UMMT1200
+*                                                                       UMMT1201
+MREAD  SXA     MRD1,4                                                   UMMT1202
+       CLA*    1,4                                                      UMMT1203
+       ALS     18                                                       UMMT1204
+       STD     MRD2                                                     UMMT1205
+       STD     MRD3                                                     UMMT1206
+       CLA     1,4                                                      UMMT1207
+       ARS     18                                                       UMMT1208
+       STA     MRDCH                                                    UMMT1209
+       STZ     MRDXX                                                    UMMT1210
+       RTB     0,MRDCH,0,MREOF1,MRD2                                    UMMT1211
+       DELAY   0,MRD3                                                   UMMT1212
+       ZET     MRDXX                                                    UMMT1213
+       TRA     MREOF                                                    UMMT1214
+MRD1   AXT     **,4                                                     UMMT1215
+       TRA     3,4                                                      UMMT1216
+MREOF1 STL     MRDXX                                                    UMMT1217
+       TRA     1,4                                                      UMMT1218
+MREOF  LXA     MRD1,4                                                   UMMT1219
+       TRA     2,4                                                      UMMT1220
+MRDCH  IOBT    **,,-1                                                   UMMT1221
+MRDXX  PZE                                                              UMMT1222
+*                                                                       UMMT1223
+*      SUBROUTINE WRIT4 TO WRITE RECORD ON TAPE                         UMMT1224
+*                                                                       UMMT1225
+WRIT4  SXA     WRT1,4                                                   UMMT1226
+       CLA*    1,4                                                      UMMT1227
+       ALS     18                                                       UMMT1228
+       STD     WRT3                                                     UMMT1229
+       STD     WRT4                                                     UMMT1230
+       CLA     1,4                                                      UMMT1231
+       ARS     18                                                       UMMT1232
+       STA     WRTCH                                                    UMMT1233
+       ADD     UNIT                                                     UMMT1234
+       STA     *+1                                                      UMMT1235
+       ZET     **                                                       UMMT1236
+       TRA     WRT2                                                     UMMT1237
+       CLA     COLPL                                                    UMMT1238
+       TRA     *+2                                                      UMMT1239
+WRT2   CLA     TWO                                                      UMMT1240
+       ALS     18                                                       UMMT1241
+       STD     WRTCH                                                    UMMT1242
+       WTB     0,WRTCH,0,WRT3                                           UMMT1243
+       DELAY   0,WRT4                                                   UMMT1244
+WRT1   AXT     **,4                                                     UMMT1245
+       TRA     2,4                                                      UMMT1246
+WRTCH  IOBT    **,,**                                                   UMMT1247
+*                                                                       UMMT1248
+*              BCD TO BINARY CONVERSION SUBROUTINE                      UMMT1249
+*                                                                       UMMT1250
+*      NORMAL RETURN WITH BINARY INTEGER IN ACCUMULATOR                 UMMT1251
+BCDBN  SXA     IR1,1         SAVE XA                                    UMMT1252
+       LDQ*    1,4           PICK UP BCD                                UMMT1253
+       STZ     NA            INITIALIZE TOTALS                          UMMT1254
+       STZ     10N                                                      UMMT1255
+       AXT     6,1                                                      UMMT1256
+CON    ZAC                                                              UMMT1257
+       LGL     6             GET CHARACTER                              UMMT1258
+       CAS     =O60          CHECK FOR BLANK                            UMMT1259
+       TRA     *+2           NOT BLANK                                  UMMT1260
+       TRA     TIX           BLANK                                      UMMT1261
+       ADD     10N           CONVERT                                    UMMT1262
+       STO     NA            BCD                                        UMMT1263
+       ALS     2             CHARACTERS                                 UMMT1264
+       ADD     NA            TO                                         UMMT1265
+       ALS     1             BINARY                                     UMMT1266
+       STO     10N           INTEGER                                    UMMT1267
+TIX    TIX     CON,1,1       GO FOR NEXT CHARACTER                      UMMT1268
+       CLA     NA            GET RESULT                                 UMMT1269
+IR1    AXT     **,1          RESTORE XA                                 UMMT1270
+       TRA     2,4                                                      UMMT1271
+NA     BSS     1             TOTAL KEPT HERE                            UMMT1272
+10N    BSS     1             10 * TOTAL KEPT HERE                       UMMT1273
+*                                                                       UMMT1274
+*              BINARY TO BCD CONVERSION SUBROUTINE                      UMMT1275
+*                                                                       UMMT1276
+*      NORMAL RETURN WITH BCD IN ACCUMULATOR                            UMMT1277
+BNBCD  SXA     IRA,1         SAVE XA                                    UMMT1278
+       LDQ*    1,4           PICK UP INTEGER                            UMMT1279
+       AXT     36,1                                                     UMMT1280
+       STZ     BCD           INITIALIZE BCD IMAGE                       UMMT1281
+CONA   ZAC                   CONVERT                                    UMMT1282
+       DVP     =10           BINARY                                     UMMT1283
+       ALS     36,1          INTEGER                                    UMMT1284
+       ORS     BCD           TO BCD                                     UMMT1285
+       STQ     ZRSW                                                     UMMT1286
+       ZET     ZRSW          DONE WHEN Q=0                              UMMT1287
+       TIX     CONA,1,6      GO BACK FOR NEXT CHARACTER                 UMMT1288
+       CLA     BCD           BCD INTO ARITHMETIC ACCUMULATOR            UMMT1289
+IRA    AXT     **,1          RESTORE XA                                 UMMT1290
+       TRA     1,4           AND EXIT                                   UMMT1291
+BCD    BSS     1             BCD IMAGE IS BUILT UP HERE                 UMMT1292
+ZRSW   BSS     1             ERASABLE TEST CELL                         UMMT1293
+*                                                                       UMMT1294
+*              ACCUMULATE ASSIGNMENT COST                               UMMT1295
+*                                                                       UMMT1296
+ACCUM  SXA     ACCUM1,4                                                 UMMT1297
+       CLA     AS                                                       UMMT1298
+       SUB     UNIT                                                     UMMT1299
+       XCA                                                              UMMT1300
+       MPY     PCOLS                                                    UMMT1301
+       XCA                                                              UMMT1302
+       ADD     AS+1                                                     UMMT1303
+       SUB     UNIT                                                     UMMT1304
+       XCA                                                              UMMT1305
+       DVP     =3                                                       UMMT1306
+       ADD     UNIT                                                     UMMT1307
+       STO     COMMON                                                   UMMT1308
+       XCA                                                              UMMT1309
+       PAX     0,4                                                      UMMT1310
+       LDQ     MZONE,4                                                  UMMT1311
+       LXA     COMMON,4                                                 UMMT1312
+       ZAC                                                              UMMT1313
+       LGL     12                                                       UMMT1314
+       TIX     *-2,4,1                                                  UMMT1315
+       XCA                                                              UMMT1316
+       MPY     AS+2                                                     UMMT1317
+       XCA                                                              UMMT1318
+       ADD     COST                                                     UMMT1319
+       STO     COST                                                     UMMT1320
+ACCUM1 AXT     **,4                                                     UMMT1321
+       TRA     1,4                                                      UMMT1322
+RZONE  BSS     RECCON+1                                                 UMMT1323
+AZONE  BSS 1203                                                         UMMT1324
+FZONE  BSS 1203                                                         UMMT1325
+SZONE  BSS 1203                                                         UMMT1326
+VZONE  BSS 10                                                           UMMT1327
+COMMON BSS 20                                                           UMMT1328
+BUFFER BSS 20                                                           UMMT1329
+DZONE2 BSS     1203                                                     UMMT1330
+DZONE3 BES     1203                                                     UMMT1331
+HZONE  BSS     1203                                                     UMMT1332
+RDBUF  BSS     14                                                       UMMT1333
+MZONE  BES     RECCON/3                                                 UMMT1334
+       PZE                                                              UMMT1335
+       REM     INPUT DATA                                               UMMT1336
+COLS   BSS     1                                                        UMMT1337
+ROWS   BSS     1                                                        UMMT1338
+MAX    BSS     1                                                        UMMT1339
+Z      BSS 1                                                            UMMT1340
+AS     BSS     3                                                        UMMT1341
+COST   BSS     1                                                        UMMT1342
+N      BSS 1                                                            UMMT1343
+TOTAL  BSS 1                                                            UMMT1344
+RAND   BSS 1                                                            UMMT1345
+SRAND  BSS     1                                                        UMMT1346
+ZTEMP  BSS 1                                                            UMMT1347
+COLUM  BSS 1                                                            UMMT1348
+COLPL  BSS 1                                                            UMMT1349
+RCOUNT BSS 1                                                            UMMT1350
+PCOLS  BSS     1                                                        UMMT1351
+TAPE6  BSS 1                                                            UMMT1352
+T6W    BSS 1                                                            UMMT1353
+T4W    SYN T6W                                                          UMMT1354
+TAPE4  BSS 1                                                            UMMT1355
+GATE   BSS 1                                                            UMMT1356
+LAST   END                                                              UMMT1357

@@ -1,0 +1,99 @@
+*      SIREAD - SMITHSONIAN'S REREAD VERSION OF (TSH).                  READ0000
+       COUNT   124                                                      READ0010
+       LBL     SIREAD,X                                                 READ0020
+       ENTRY  REREAD                                                    READ0030
+       ENTRY   -(TSH)                                                   READ0040
+       ENTRY   -(TSHM)                                                  READ0050
+       BSS -2                                                           READ0060
+BUFSIZ EQU 22                                                           READ0070
+UNIT   BOOL 77726                                                       READ0080
+       COMMON  -206+BUFSIZ                                              READ0090
+ REC   COMMON  +76                                                      READ0100
+COMMON COMMON  1                                                        READ0110
+ 9ROWL SYN     COMMON                                                   READ0120
+SAVED  BSS     22                                                       READ0130
+*                                                                       READ0140
+*        ENTRY TO SET (TSH) AND (TSHM) FOR RESCAN  ON THEIR NEXT ENTRY. READ0150
+REREAD CAL     TRA                                                      READ0160
+       STD     (TSHM)+1       SET UP SWITCH FOR REREAD.                 READ0170
+TRA    TRA     1,4                                                      READ0180
+*      ENTRY TO RESTORE LAST RECORD TO I/O BUFFER.                      READ0190
+RESCAN CAL     NOP            RESET SWITCH TO NOP.                      READ0200
+       STD     (TSHM)+1                                                 READ0210
+ GETIT CAL    *+3            I/O NUMBER FOR TAPE 2, JUST FOR SOMETHING..READ0220
+       LDQ    *+3            IT IS NEVER EXECUTED.                      READ0230
+       TRA*   $(IOH)    *                                               READ0240
+       PZE     ,,6              X                                       READ0250
+NOP    NOP     *+1                                                      READ0260
+*              TYPE                  RETURN FROM INITIALIZING IOH       READ0270
+       SXA    X4R,4                                                     READ0280
+       AXT     22,4           SIMULATE READING LAST RECORD.             READ0290
+       CAL     SAVED+22,4                                               READ0300
+       SLW     REC+22,4                                                 READ0310
+       TIX    *-2,4,1                                                   READ0320
+ X4R   AXT    **,4                                                      READ0330
+       TRA    1,4       *    RETURN (TO IOH)                            READ0340
+       EJECT                                                            READ0350
+*      MODIFIED (TSH), (TSHM) FOR REREAD                                READ0360
+*                                                                       READ0370
+ CODE  PZE     ,,99          TAPE 99 MEANS REREAD NOT EVEN CALLED.      READ0380
+*                                                                       READ0390
+(TSH)  XEC     (TSHM)+1                                                 READ0400
+       LAS    CODE                                                      READ0410
+       TRA    *+2                                                       READ0420
+       TRA    GETIT     IF=CODE, RESTORE                                READ0430
+       LDQ    *+2            NORMAL TSH ENTRY                           READ0440
+       TRA*   $(IOH)    *    INITIALIZE IOH                             READ0450
+NOPTSH NOP    TSH                                                       READ0460
+(TSHM) SXA     CALL,4                SAVE CALLER FOR FORMAT RECOVERY.   READ0470
+       NOP     RESCAN                                                   READ0480
+       LAS    CODE                                                      READ0490
+       TRA    *+2                                                       READ0500
+       TRA    GETIT                                                     READ0510
+       LDQ    NOPTSH                                                    READ0520
+       SLQ    TSHSW              (FOR MONITOR)                          READ0530
+       TRA*   $(IOH)    *    X                                          READ0540
+ TSH   SXA    TSHX,4                                                    READ0550
+       XEC*   $(RDS)         SELECT INPUT UNIT                          READ0560
+*                            CLEAR STORAGE AREA                         READ0570
+       AXT     22,4                                                     READ0580
+       CAL    BLANK                                                     READ0590
+       SLW     REC+22,4                                                 READ0600
+       TIX    *-1,4,1        X                                          READ0610
+       AXC     TSHC,4                                                   READ0620
+       PXA    ,4             INITIALIZE TO                              READ0630
+       STA*   $(RDC)         CHECK READING.                             READ0640
+       XEC*   $(RCH)         READ A RECORD.                             READ0650
+*                  SAVE RECORD.                                         READ0660
+SAVEIT AXC    *+1,4          DELAY CHANNEL                              READ0670
+       XEC*   $(TCO)         X                                          READ0680
+       AXT     22,4                                                     READ0690
+       CAL     REC+22,4       TRANSFER RECORD TO BE SAVED.              READ0700
+       SLW     SAVED+22,4                                               READ0710
+       TIX    *-2,4,1                                                   READ0720
+ TSHX  AXT    --,4           RESTORE X4                                 READ0730
+ TSHSW TRA*   $(RER)    *    EXIT TO CHECK READING, UNLESS              READ0740
+       TCOA   *              IN MONITOR MODE.                           READ0750
+       TEFA    CALL                  EXIT AFTER MESSAGE IF END OF FILE  READ0760
+       TRA*    $(RER)                IS ENCOUNTERED.                    READ0770
+ TSHC  IORT    REC,,BUFSIZ                                              READ0780
+*       THE FOLLOWING CODING WRITES EOF ON INPUT MESSAGE.               READ0790
+ CALL  AXT     **,4                                                     READ0800
+       CLA*    1,4                   PICK UP FIRST WORD OF FORMAT.      READ0810
+       STO     REC+9                                                    READ0820
+       AXT     9,4                                                      READ0830
+D1     CLA     DIAG+9,4              MOVE MESSAGE                       READ0840
+       STO     REC+9,4               TO OUTPUT BUFFER.                  READ0850
+       TIX     *-2,4,1                                                  READ0860
+       CAL     TAPE                                                     READ0870
+       SLW     UNIT                                                     READ0880
+       TSX     $(IOS),4                                                 READ0890
+       AXC     *+2,4                 PREPARE FOR RETURN VIA TRA 2,4.    READ0900
+       LAC     $(STHM),1                                                READ0910
+       TRA     2,1                 * GO WRITE MESSAGE AT STHM+2.        READ0920
+D2     PZE     REC,,10               BUFFER ADDRESS,,WORD COUNT.        READ0930
+       TRA*    $EXIT               * EXIT.                              READ0940
+DIAG   BCI     9,1EXIT CAUSED BY END-OF-FILE READ BY FORMAT BEGINNING   READ0950
+ BLANK BCI    1,                                                        READ0960
+TAPE   PZE     ,,6                                                      READ0970
+       END                                                              READ0980
