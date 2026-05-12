@@ -1,0 +1,322 @@
+** FORT2/FAP SOURCE AND TEST DECKS FOR STU SOLVE, DOT, XXXX.  JOB CARD GOES HERE
+*     XEQ                                                                       
+*     LABEL                                                             SLV20000
+CSOLVE   LINEAR EQUATION SOLVER WITH ITERATIVE IMPROVEMENT   VERSION II SLV20010
+      SUBROUTINE SOLVE(NN,A,B,IN,EPS,ITMAX,X,IT)                        SLV20020
+C     SOLVES AX=B WHERE A IS NXN MATRIX AND B IS NX1 VECTOR             SLV20030
+C     IN=                                                               SLV20040
+C         1 FOR FIRST ENTRY                                             SLV20050
+C         2 FOR SUBSEQUENT ENTRIES WITH NEW B                           SLV20060
+C         3 TO RESTORE A AND B                                          SLV20070
+C     EPS AND ITMAX ARE PARAMETERS IN THE ITERATION                     SLV20080
+C     IT=                                                               SLV20090
+C         -1 IF A IS SINGULAR                                           SLV20100
+C         0 IF NOT CONVERGENT                                           SLV20110
+C         NUMBER OF ITERATIONS IF CONVERGENT                            SLV20120
+C     CALLS FAP SUBROUTINES ILOG2, DOT, SDOT AND DAD                    SLV20130
+C                                                                       SLV20140
+C     TO MODIFY DIMENSIONS, CHANGE THE NEXT 3 (NOT 2 BUT 3) CARDS.      SLV20150
+      DIMENSION A(20,20),B(20),X(20),AA(20,20),DX(20),R(20),            SLV20160
+     *          Z(20),RM(20),IRP(20)                                    SLV20170
+      MA=20                                                             SLV20180
+C     MA MUST = DECLARED DIMENSION OF SYSTEM                            SLV20190
+      EQUIVALENCE(R,DX)                                                 SLV20200
+      GO TO (1000,2000,3000),IN                                         SLV20210
+ 1000 N=NN                                                              SLV20220
+      NM1=N-1                                                           SLV20230
+      NP1=N+1                                                           SLV20240
+C                                                                       SLV20250
+C     EQUILIBRATION                                                     SLV20260
+C                                                                       SLV20270
+      DO 510 I=1,N                                                      SLV20280
+          KTOP=ILOG2(A(I,1))                                            SLV20290
+          DO 503 J=2,N                                                  SLV20300
+  503     KTOP=XMAX0F(KTOP,ILOG2(A(I,J)))                               SLV20310
+          RM(I)=2.0**(-KTOP)                                            SLV20320
+          DO 509 J=1,N                                                  SLV20330
+  509     A(I,J)=A(I,J)*RM(I)                                           SLV20340
+  510 CONTINUE                                                          SLV20350
+C                                                                       SLV20360
+C     SAVE EQUILIBRATED DATA                                            SLV20370
+C                                                                       SLV20380
+      DO 548 I=1,N                                                      SLV20390
+      DO 548 J=1,N                                                      SLV20400
+  548 AA(I,J)=A(I,J)                                                    SLV20410
+C                                                                       SLV20420
+C     GAUSSIAN ELIMINATION WITH PARTIAL PIVOTING                        SLV20430
+C                                                                       SLV20440
+      DO 99 M=1,NM1                                                     SLV20450
+          TOP=ABSF(A(M,M))                                              SLV20460
+          IMAX=M                                                        SLV20470
+          DO 12 I=M,N                                                   SLV20480
+               IF(TOP-ABSF(A(I,M)))10,12,12                             SLV20490
+   10          TOP=ABSF(A(I,M))                                         SLV20500
+               IMAX=I                                                   SLV20510
+   12     CONTINUE                                                      SLV20520
+          IF(TOP)14,13,14                                               SLV20530
+   13     IT=-1                                                         SLV20540
+C         *SINGULAR*                                                    SLV20550
+          RETURN                                                        SLV20560
+   14     IRP(M)=IMAX                                                   SLV20570
+   23     IF(IMAX-M)29,29,24                                            SLV20580
+   24     DO 25 J=1,N                                                   SLV20590
+               TEMP=A(M,J)                                              SLV20600
+               A(M,J)=A(IMAX,J)                                         SLV20610
+   25          A(IMAX,J)=TEMP                                           SLV20620
+   29     MP1=M+1                                                       SLV20630
+          DO 33 I=MP1,N                                                 SLV20640
+               EM=A(I,M)/A(M,M)                                         SLV20650
+               A(I,M)=EM                                                SLV20660
+               IF(EM)31,33,31                                           SLV20670
+   31          DO 32 J=MP1,N                                            SLV20680
+   32          A(I,J)=A(I,J)-A(M,J)*EM                                  SLV20690
+   33     CONTINUE                                                      SLV20700
+   99 CONTINUE                                                          SLV20710
+      IRP(N)=N                                                          SLV20720
+      IF (A(N,N))120,113,120                                            SLV20730
+  113 IT=-1                                                             SLV20740
+      RETURN                                                            SLV20750
+  120 CONTINUE                                                          SLV20760
+C     STORAGE FOR A NOW CONTAINS TRIANGULAR L AND U SO THAT (L+I)*U=A   SLV20770
+C                                                                       SLV20780
+C     DUPLICATE INTERCHANGES IN DATA                                    SLV20790
+C                                                                       SLV20800
+      DO 229 I=1,N                                                      SLV20810
+          IP=IRP(I)                                                     SLV20820
+          IF(I-IP)221,229,221                                           SLV20830
+  221     DO 222 J=1,N                                                  SLV20840
+               TEMP=AA(I,J)                                             SLV20850
+               AA(I,J)=AA(IP,J)                                         SLV20860
+  222          AA(IP,J)=TEMP                                            SLV20870
+  229 CONTINUE                                                          SLV20880
+C                                                                       SLV20890
+C     PROCESS RIGHT HAND SIDE                                           SLV20900
+C                                                                       SLV20910
+ 2000 CONTINUE                                                          SLV20920
+      DO 601 I=1,N                                                      SLV20930
+  601     B(I)=B(I)*RM(I)                                               SLV20940
+      DO 609 I=1,NM1                                                    SLV20950
+          IP=IRP(I)                                                     SLV20960
+          TEMP=B(I)                                                     SLV20970
+          B(I)=B(IP)                                                    SLV20980
+          B(IP)=TEMP                                                    SLV20990
+  609 CONTINUE                                                          SLV21000
+C                                                                       SLV21010
+C     SOLVE FOR FIRST APPROXIMATION TO X                                SLV21020
+C                                                                       SLV21030
+  199 DO 200 I=1,N                                                      SLV21040
+  200 Z(I)=-SDOT(I-1,A(I,1),MA,Z(1),1,-B(I))                            SLV21050
+      DO 201 K=1,N                                                      SLV21060
+      I=NP1-K                                                           SLV21070
+  201 X(I)=-SDOT(N-I,A(I,I+1),MA,X(I+1),1,-Z(I))/A(I,I)                 SLV21080
+C                                                                       SLV21090
+C     ITERATIVE IMPROVEMENT                                             SLV21100
+C                                                                       SLV21110
+      IF(ITMAX)370,370,300                                              SLV21120
+  300 TOP=0.0                                                           SLV21130
+      DO 303 I=1,N                                                      SLV21140
+  303 TOP=MAX1F(TOP,ABSF(X(I)))                                         SLV21150
+      EPSX=EPS*TOP                                                      SLV21160
+      DO 369 IT=1,ITMAX                                                 SLV21170
+C         FIND RESIDUALS                                                SLV21180
+          DO 319 I=1,N                                                  SLV21190
+  319     R(I)=-DOT(N,AA(I,1),MA,X(1),1,-B(I))                          SLV21200
+C         FIND INCREMENT                                                SLV21210
+          DO 329 I=1,N                                                  SLV21220
+  329     Z(I)=-SDOT(I-1,A(I,1),MA,Z(1),1,-R(I))                        SLV21230
+          DO 339 K=1,N                                                  SLV21240
+          I=NP1-K                                                       SLV21250
+  339     DX(I)=-SDOT(N-I,A(I,I+1),MA,DX(I+1),1,-Z(I))/A(I,I)           SLV21260
+C         INCREMENT AND TEST CONVERGENCE                                SLV21270
+          TOP=0.0                                                       SLV21280
+          DO 342 I=1,N                                                  SLV21290
+               TEMP=X(I)                                                SLV21300
+               X(I)=DAD(X(I),DX(I))                                     SLV21310
+               DELX=ABSF(X(I)-TEMP)                                     SLV21320
+               TOP=MAX1F(TOP,DELX)                                      SLV21330
+  342     CONTINUE                                                      SLV21340
+          IF(TOP-EPSX)381,381,369                                       SLV21350
+  369 CONTINUE                                                          SLV21360
+  370 IT=0                                                              SLV21370
+  381 RETURN                                                            SLV21380
+C                                                                       SLV21390
+C     RESTORE A AND B                                                   SLV21400
+C                                                                       SLV21410
+ 3000 CONTINUE                                                          SLV21420
+      DO 709 K=1,N                                                      SLV21430
+          I=NP1-K                                                       SLV21440
+          IP=IRP(I)                                                     SLV21450
+          IF(I-IP)701,709,701                                           SLV21460
+  701     TEMP=B(I)                                                     SLV21470
+          B(I)=B(IP)                                                    SLV21480
+          B(IP)=TEMP                                                    SLV21490
+          DO 702 J=1,N                                                  SLV21500
+               TEMP=AA(I,J)                                             SLV21510
+               AA(I,J)=AA(IP,J)                                         SLV21520
+  702          AA(IP,J)=TEMP                                            SLV21530
+  709 CONTINUE                                                          SLV21540
+      DO 729 I=1,N                                                      SLV21550
+          B(I)=B(I)/RM(I)                                               SLV21560
+          DO 729 J=1,N                                                  SLV21570
+          A(I,J)=AA(I,J)/RM(I)                                          SLV21580
+  729 CONTINUE                                                          SLV21590
+      RETURN                                                            SLV21600
+      END                                                               SLV21610
+*     FAP                                                               DOT20000
+*   DOT AND FRIENDS     ROUTINES FOR USE WITH SOLVE                     DOT20010
+       COUNT   100                                                      DOT20020
+       LBL     DOT                                                      DOT20030
+       ENTRY   DOT (N,A(1),MA,B(1),MB,C)   DOUBLE INNER PRODUCT         DOT20040
+       ENTRY   SDOT (N,A(1),MA,B(1),MB,C)  INNER PRODUCT                DOT20050
+       ENTRY   ILOG2 (A)   FLOATING POINT EXPONENT                      DOT20060
+       ENTRY   DAD (A,B)   ADD WITH ROUND                               DOT20070
+*                                                                       DOT20080
+SNAD   MACRO   M               STD, COMPLEMENTING IF NECESSARY          DOT20090
+       ADD     =1B2                                                     DOT20100
+       STD     M                                                        DOT20110
+       END                                                              DOT20120
+DFAD   MACRO   S                                                        DOT20130
+       STQ     T                                                        DOT20140
+       FAD     S                                                        DOT20150
+       STO     S                                                        DOT20160
+       XCA                                                              DOT20170
+       FAD     S+1                                                      DOT20180
+       FAD     T                                                        DOT20190
+       FAD     S                                                        DOT20200
+       END                                                              DOT20210
+DST    MACRO   S                                                        DOT20220
+       STO     S                                                        DOT20230
+       STQ     S+1                                                      DOT20240
+       END                                                              DOT20250
+SAVE   MACRO   A                                                        DOT20260
+       SXA     A,1                                                      DOT20270
+       SXA     A+1,2                                                    DOT20280
+       SXA     A+2,4                                                    DOT20290
+       END                                                              DOT20300
+RETURN MACRO   A                                                        DOT20310
+       AXT     **,1                                                     DOT20320
+       AXT     **,2                                                     DOT20330
+       AXT     **,4                                                     DOT20340
+       TRA     A,4                                                      DOT20350
+       END                                                              DOT20360
+*                                                                       DOT20370
+DOT    SAVE    RET                                                      DOT20380
+       STZ     S                                                        DOT20390
+       STZ     S+1                                                      DOT20400
+       CLA*    6,4             C                                        DOT20410
+       LDQ     C+1                                                      DOT20420
+       STO     C                                                        DOT20430
+       CLA*    1,4             N                                        DOT20440
+       TZE     NONE            SKIP LOOP IF N = 0                       DOT20450
+       STO     N                                                        DOT20460
+       CLA     2,4             BASE ADDRESS OF A                        DOT20470
+       PAC     ,1              X1=-(BASE OF A)                          DOT20480
+       CLA*    3,4             MA                                       DOT20490
+       SNAD    MA                                                       DOT20500
+       CLA     4,4             BASE ADDRESS OF B                        DOT20510
+       PAC     ,2              X2=-(BASE OF B)                          DOT20520
+       CLA*    5,4             MB                                       DOT20530
+       SNAD    MB                                                       DOT20540
+       LXD     N,4             X4=N                                     DOT20550
+ LOOP  LDQ     0,1             A(I)                                     DOT20560
+       FMP     0,2             B(I)                                     DOT20570
+       DFAD    S                                                        DOT20580
+       DST     S                                                        DOT20590
+ MA    TXI     *+1,1,**        (X1)=(X1)+MA                             DOT20600
+ MB    TXI     *+1,2,**        (X2)=(X2)+MB                             DOT20610
+       TIX     LOOP,4,1        END OF MAIN LOOP                         DOT20620
+NONE   DFAD    C                                                        DOT20630
+       FRN                                                              DOT20640
+RET    RETURN  7                                                        DOT20650
+*                                                                       DOT20660
+SDOT   SAVE    SRET                                                     DOT20670
+       STZ     S                                                        DOT20680
+       CLA*    6,4                                                      DOT20690
+       STO     C                                                        DOT20700
+       CLA*    1,4                                                      DOT20710
+       TZE     SNONE                                                    DOT20720
+       STO     N                                                        DOT20730
+       CLA     2,4                                                      DOT20740
+       PAC     ,1                                                       DOT20750
+       CLA*    3,4                                                      DOT20760
+       SNAD    SMA                                                      DOT20770
+       CLA     4,4                                                      DOT20780
+       PAC     ,2                                                       DOT20790
+       CLA*    5,4                                                      DOT20800
+       SNAD    SMB                                                      DOT20810
+       LXD     N,4                                                      DOT20820
+SLOOP  LDQ     0,1                                                      DOT20830
+       FMP     0,2                                                      DOT20840
+       FAD     S                                                        DOT20850
+       STO     S                                                        DOT20860
+SMA    TXI     *+1,1,**                                                 DOT20870
+SMB    TXI     *+1,2,**                                                 DOT20880
+       TIX     SLOOP,4,1                                                DOT20890
+SNONE  FAD     C                                                        DOT20900
+SRET   RETURN  7                                                        DOT20910
+*                                                                       DOT20920
+ILOG2  CAL*    1,4                                                      DOT20930
+       ANA     =O377000000000                                           DOT20940
+       SUB     =O200000000000                                           DOT20950
+       ARS     9                                                        DOT20960
+       TRA     2,4                                                      DOT20970
+*                                                                       DOT20980
+DAD    CLA*    1,4                                                      DOT20990
+       FAD*    2,4                                                      DOT21000
+       FRN                                                              DOT21010
+       TRA     3,4                                                      DOT21020
+*                                                                       DOT21030
+C      PZE                                                              DOT21040
+       PZE                                                              DOT21050
+S      PZE                                                              DOT21060
+       PZE                                                              DOT21070
+N      PZE                                                              DOT21080
+T      PZE                                                              DOT21090
+       END                                                              DOT21100
+*     LABEL                                                             XXX20000
+CXXXX   FORTRAN II   TEST SOLVE   MAIN PROGRAM                          XXX20010
+C     READS A MATRIX AND INVERTS IT                                     XXX20020
+      DIMENSION A(20,20),X(20,20),B(20),FORM(12)                        XXX20030
+    1 READ INPUT TAPE 5,100,N,EPS,ITMAX,FORM                            XXX20040
+  100 FORMAT(I6,E6.0,I6/12A6)                                           XXX20050
+      READ INPUT TAPE 5,FORM,((A(I,J),J=1,N),I=1,N)                     XXX20060
+      IN=1                                                              XXX20070
+      DO 9 J=1,N                                                        XXX20080
+         DO 3 I=1,N                                                     XXX20090
+    3    B(I)=0.0                                                       XXX20100
+         B(J)=1.0                                                       XXX20110
+        CALL SOLVE(N,A,B,IN,EPS,ITMAX,X(1,J),IT)                        XXX20120
+         IF(IT)13,9,9                                                   XXX20130
+   9     IN=2                                                           XXX20140
+      CALL SOLVE(N,A,B,3,DUMMY,DUMMY,DUMMY,DUMMY)                       XXX20150
+      WRITE OUTPUT TAPE 6,201,N,EPS,ITMAX,IT                            XXX20160
+  201 FORMAT(1H1,2HN=,I3,7H   EPS=,E10.2,9H   ITMAX=,I4,9H   IT(N)=,I4/)XXX20170
+      DO 2 I=1,N                                                        XXX20180
+    2 WRITE OUTPUT TAPE 6,202,(A(I,J),J=1,N)                            XXX20190
+  202 FORMAT(1H ,1P7E17.7)                                              XXX20200
+      WRITE OUTPUT TAPE 6,202                                           XXX20210
+      DO 5 I=1,N                                                        XXX20220
+    5 WRITE OUTPUT TAPE 6,202,(X(I,J),J=1,N)                            XXX20230
+      GO TO 1                                                           XXX20240
+   13 WRITE OUTPUT TAPE 6,213                                           XXX20250
+  213 FORMAT(1H1,14H***SINGULAR***)                                     XXX20260
+      GO TO 1                                                           XXX20270
+      END                                                               XXX20280
+*     DATA                                                                      
+     6   0.0    10                                                              
+(4X,6F10.0)                                                                     
+    36.       -630.     3360.     -7560.    7560.     -2772.                    
+    -630.     14700.    -88200.   211680.   -220500.  83160.                    
+    3360.     -88200.   564480.   -1411200. 1512000.  -582120.                  
+    -7560.    211680.   -1411200. 3628800.  -3969000. 1552320.                  
+    7560.     -220500.  1512000.  -3969000. 4410000.  -1746360.                 
+    -2772.    83160.    -582120.  1552320.  -1746360. 698544.                   
+     7 1.E-8    10                                                              
+  (7F10.0)                                                                      
+        49     -1176      8820    -29400     48510    -38808     12012          
+     -1176     37632   -317520   1128960  -1940400   1596672   -504504          
+      8820   -317520   2857680 -10584000  18711000 -15717240   5045040          
+    -29400   1128960 -10584000  40320000 -72765000  62092800 -20180160          
+     48510  -1940400  18711000 -72765000 133402500-115259760  37837800          
+    -38808   1596672 -15717240  62092800-115259760 100590336 -33297264          
+     12012   -504504   5045040 -20180160  37837800 -33297264  11099088          

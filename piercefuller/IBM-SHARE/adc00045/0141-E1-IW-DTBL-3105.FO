@@ -1,0 +1,75 @@
+$IBFTC DTBL    LIST,DECK                                                DTBL0000
+C     FORTRAN IV DIFFERENCE TABLE SUBROUTINE                            DTBL0001
+      SUBROUTINE  DTBL(F, N, D, ND, NTAPE, NDEC)                        DTBL0002
+      DIMENSION  F(1), D(1), PRINT(6), FMT1(6), FMT2(5)                 DTBL0003
+      INTEGER  CONST1, CONST2, FMT1, FMT2                               DTBL0004
+      DATA  H, CONST1, CONST2, FMT1(1), FMT2(1) / 1HD, 6H F12.0,        DTBL0005
+     1  6HF12.0), 36H(1X 4( F12.X,12X), F12.X, 10X F12.X),              DTBL0006
+     2  30H( 1X 4( 12X  F12.X) 11X F12.X) /                             DTBL0007
+C     SET UP OUTPUT FORMATS                                             DTBL0008
+      FMT1(2) = CONST1 - NDEC                                           DTBL0009
+      FMT1(4) = FMT1(2)                                                 DTBL0010
+      FMT1(6) = CONST2 + 64 * NDEC                                      DTBL0011
+      FMT2(3) = FMT1(2)                                                 DTBL0012
+      FMT2(5) = FMT1(6)                                                 DTBL0013
+  100 NSTAR = 2 * N - 1                                                 DTBL0014
+      NM1 = N - 1                                                       DTBL0015
+C     COMPUTE DIFFERENCES                                               DTBL0016
+      DO 110 J = 1,NM1                                                  DTBL0017
+  110 D(J) = F(J+1) - F(J)                                              DTBL0018
+      IF(ND - 1) 150,150,120                                            DTBL0019
+  120 DO 140 I = 2,ND                                                   DTBL0020
+      LIMIT = N - I                                                     DTBL0021
+      IF(LIMIT) 150,150,130                                             DTBL0022
+  130 DO 140 J = 1,LIMIT                                                DTBL0023
+      IJK = (I - 1) * NM1 + J                                           DTBL0024
+      JKL = (I - 2) * NM1 + J                                           DTBL0025
+  140 D(IJK) = D(JKL+1) - D(JKL)                                        DTBL0026
+C     OUTPUT DIFFERENCE TABLE                                           DTBL0027
+  150 WRITE(NTAPE, 1000) (H, I, I = 1,ND)                               DTBL0028
+      WRITE(NTAPE, 1001)                                                DTBL0029
+      DO 250 LINE = 1,NSTAR                                             DTBL0030
+      LP = (LINE + 1) / 2                                               DTBL0031
+      LQ = MOD(LINE + 1, 2)                                             DTBL0032
+      ITEMS = 1                                                         DTBL0033
+      IF(LQ) 170,160,170                                                DTBL0034
+  160 PRINT(1) = F(LP)                                                  DTBL0035
+      GO TO 180                                                         DTBL0036
+  170 PRINT(1) = D(LP)                                                  DTBL0037
+  180 IF(LP - 1) 220,190,220                                            DTBL0038
+  190 IF(MOD(LINE, 2)) 200,210,200                                      DTBL0039
+  200 WRITE(NTAPE, FMT1)  (PRINT(IP), IP = 1,ITEMS)                     DTBL0040
+      GO TO 250                                                         DTBL0041
+  210 WRITE(NTAPE, FMT2)  (PRINT(IP), IP = 1,ITEMS)                     DTBL0042
+      GO TO 250                                                         DTBL0043
+  220 IF(LQ - ND + 1) 230,190,190                                       DTBL0044
+  230 IF(LQ + LP - N) 240,190,240                                       DTBL0045
+  240 LQ = LQ + 2                                                       DTBL0046
+      LP = LP - 1                                                       DTBL0047
+      ITEMS = ITEMS + 1                                                 DTBL0048
+      IJK = (LQ - 1) * NM1 + LP                                         DTBL0049
+      PRINT(ITEMS) = D(IJK)                                             DTBL0050
+      GO TO 180                                                         DTBL0051
+  250 CONTINUE                                                          DTBL0052
+      RETURN                                                            DTBL0053
+ 1000 FORMAT(1H1 6X 1HF 1X 10(9X A1, I2))                               DTBL0054
+ 1001 FORMAT(1H0)                                                       DTBL0055
+      END                                                               DTBL0056
+$IBFTC TCDTBL  LIST,DECK                                                TCDTBL00
+C     TEST CASE FOR FORTRAN IV SUBROUTINE DTBL                          TCDTBL01
+C     THIS TEST PROGRAM COMPUTES DIFFERENCES FOR VALUES OF THE CHEBYSHEVTCDTBL02
+C     POLYNOMIAL  T7(X) = 64*X**7 - 112*X**5 + 56*X**3 - 7*X  IN ORDER  TCDTBL03
+C     TO DEMONSTRATE THE CAPABILITIES OF SUBROUTINE DTBL.               TCDTBL04
+      DIMENSION  F(21), D(191)                                          TCDTBL05
+      XZERO = -1.                                                       TCDTBL06
+      I1 = 0                                                            TCDTBL07
+      DO 100 I = 1,21                                                   TCDTBL08
+      X = XZERO + .1 * FLOAT(I-1)                                       TCDTBL09
+      X2 = X**2                                                         TCDTBL10
+  100 F(I) = (((64.* X2 - 112.)* X2 + 56.)* X2 - 7.)* X                 TCDTBL11
+      DO 200 ND = 1,10                                                  TCDTBL12
+  200 CALL DTBL(F, 21, D, ND, 6, 7)                                     TCDTBL13
+      DO 300 NDEC = I1,9                                                TCDTBL14
+  300 CALL DTBL(F, 21, D, 10, 6, NDEC)                                  TCDTBL15
+      STOP                                                              TCDTBL16
+      END                                                               TCDTBL17

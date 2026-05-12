@@ -1,0 +1,121 @@
+*     FAP                                                                       
+       LBL     DSCOS                                                    DSCOS000
+       COUNT   110                                                      DSCOS001
+*              UNIV.OF CHGO SINE-COSINE ROUTINE IN DOUBLE PRECISION.    DSCOS002
+*      CALLING SEQUENCE      TSX     $DSIN,4 (OR $DCOS,4)               DSCOS003
+*      ARGUMENT SHOULD BE IN 32767, 32766                               DSCOS004
+*      ANSWER WILL APPEAR IN SAME CELLS                                 DSCOS005
+*      EXEM RETURN IS GIVEN IF ARG IS GREATER THAN 2**50*PI             DSCOS006
+       ENTRY   DSIN                                                     DSCOS007
+       ENTRY   DCOS                                                     DSCOS008
+ DCOS  DLD     4)-1          ENTER HERE FOR COSINE                      DSCOS009
+       XCA                                                              DSCOS010
+       SSM                                                              DSCOS011
+       STI     SVIND                                                    DSCOS012
+       DFAD    PIOV2                                                    DSCOS013
+       TRA     *+4                                                      DSCOS014
+ DSIN  DLD     4)-1          ENTER HERE FOR SINE                        DSCOS015
+       XCA                                                              DSCOS016
+       STI     SVIND                                                    DSCOS017
+       DST     ARG                                                      DSCOS018
+       SXA     SAVE1,1                                                  DSCOS019
+       SXA     SAVE2,2                                                  DSCOS020
+       SSP                                                              DSCOS021
+       DFDP    COEF                                                     DSCOS022
+       DST     MDARG                                                    DSCOS023
+       RQL     9             LINE UP 54 BITS OF MANT, LOGICAL           DSCOS024
+       LGR     9             CHAR IN AC DECR, MANT IN REST OF AC MQ     DSCOS025
+       PDC     ,1                                                       DSCOS026
+       TXL     SMALL,1,0                                                DSCOS027
+       TXH     SMALL,1,-103  IF QUOTIENT SMALLER THAN 2**(-26), SKIP    DSCOS028
+       AXT     0,2                                                      DSCOS029
+       TXH     B,1,-129      IF QUOTIENT SMALLER THAN 1, SKIP           DSCOS030
+       TXL     ERROR,1,-181  IF QUOTIENT BIGGER THAN 2**52, ERROR       DSCOS031
+       ANA     MASK1         REMOVE CHARACTERISTIC                      DSCOS032
+       LGL     -128,1          BRING QUOTIENT TO B17                    DSCOS033
+       ANA     MASK2             RETAIN ONLY 3 LOWER INTEGER BITS       DSCOS034
+       PDX     ,2            LAST 3 INTEGER BITS TO XR2                 DSCOS035
+       ANA     MASK1           THIS TELLS THE OCTANT ARG BELONGED       DSCOS036
+       LGL     9             ISOLATE FRACTION PART                      DSCOS037
+       ORA     CHAR            OF QUOTIENT AND                          DSCOS038
+       RQL     27                FLOAT AND NORMALIZE IT                 DSCOS039
+       DFAD    MASK1                                                    DSCOS040
+       SXD     *+1,2         DOUBLE THE INDEX                           DSCOS041
+       TXI     *+2,2,**                                                 DSCOS042
+ B     DLD     MDARG                                                    DSCOS043
+       SXA     SIGN,2                                                   DSCOS044
+       TXL     *+2,2,6       TAKES CARE OF THE UPPER PLANE.             DSCOS045
+       TXI     *+1,2,-8      FOR THE LOWER HALF PLANE.                  DSCOS046
+       TXL     READY,2,0                                                DSCOS047
+       TXL     MOD,2,2                                                  DSCOS048
+       TXI     *+1,2,-2      FOR FIRST AND THIRD OCTANTS OUR MOD.ARG IS DSCOS049
+       TXL     READY,2,2         THE FRACTIONAL QUOTIENT.               DSCOS050
+       TXI     *+1,2,-4      NOW XR2 IS REDUCED TO 0 OR 2               DSCOS051
+ MOD   CHS                   FOR SECOND AND FOURTH OCTANTS OUR MOD.ARG  DSCOS052
+       DFAD    HALF              IS (1-FRACTION QUOTIENT).   ADD 1      DSCOS053
+       DFAD    HALF              IN 2 STEPS                             DSCOS054
+ READY DST     MDARG                                                    DSCOS055
+*                      ARITHMETIC COMPUTATION STARTS HERE.              DSCOS056
+       SXD     EITHR,2       XR2=0 USE SINE FORMULA, =2 COSINE FORMULA. DSCOS057
+       DFMP    MDARG                                                    DSCOS058
+       DST     SQ                                                       DSCOS059
+       AXT     22,1                                                     DSCOS060
+ EITHR TXI     *+1,1,**      **=0 FOR SINE FORMULA, =2 FOR COSINE FORM. DSCOS061
+       DLD     COEF-2,1                                                 DSCOS062
+ LOOP  DFMP    SQ                                                       DSCOS063
+       DFAD    COEF+2,1                                                 DSCOS064
+       TIX     LOOP,1,4      WHEN OUT OF LOOP XR1 EITHER 2 OR 4         DSCOS065
+       TXH     *+2,1,2                                                  DSCOS066
+       DFMP    MDARG         COMPLETE SINE FORMULA.                     DSCOS067
+       STQ     ARG+1                                                    DSCOS068
+       LDQ     ARG           ADJUSTMENT OF SIGN STARTS HERE.            DSCOS069
+       LLS     0                                                        DSCOS070
+       LDQ     ARG+1                                                    DSCOS071
+ SIGN  AXT     **,2          AT THIS POINT XR2 = 0 OR 2,4,6,8,...OR 14  DSCOS072
+       TXL     *+2,2,6                                                  DSCOS073
+       CHS                   CHANGE SIGN FOR THE LOWER HALF PLANE.      DSCOS074
+       LRS     0                                                        DSCOS075
+ FIN   XCA                                                              DSCOS076
+       DST     4)-1                                                     DSCOS077
+ SAVE2 AXT     **,2                                                     DSCOS078
+ SAVE1 AXT     **,1                                                     DSCOS079
+       LDI     SVIND                                                    DSCOS080
+       TRA     1,4                                                      DSCOS081
+       SPACE                                                            DSCOS082
+ SMALL DLD     ARG           FOR ARG LESS THAN PI*2**(-28)              DSCOS083
+       TRA     FIN             GIVE ARG AS VALUE OF SINE                DSCOS084
+       SPACE                                                            DSCOS085
+ ERROR LXA     SAVE1,1                                                  DSCOS086
+       DLD     4)-1                                                     DSCOS087
+       XCA                                                              DSCOS088
+       LDI     *+2                                                      DSCOS089
+       TTR*    $(EXE)                                                   DSCOS090
+       PZE     0,7,SAVE1+1                                              DSCOS091
+*                      BUFFERS AND CONSTANTS SET UP.                    DSCOS092
+ CHAR  OCT     200000000000                                             DSCOS093
+ SVIND BSS     1                                                        DSCOS094
+       EVEN                                                             DSCOS095
+ MASK1 OCT     777777          THIS MASK IS USED ALSO                   DSCOS096
+ MASK2 OCT     7777777           FOR NORMALING A NUMBER                 DSCOS097
+ ARG   BSS     2                                                        DSCOS098
+ MDARG BSS     2                                                        DSCOS099
+ SQ    BSS     2                                                        DSCOS100
+ PIOV2 OCT     201622077325        =DEC MOST SIGNIFICANT PI/2           DSCOS101
+       OCT     146042055061        =DEC LEAST SIGNIFICANT PI/2          DSCOS102
+       OCT     137763726026,104102620745    C6    1136682051698955E-9   DSCOS103
+       OCT     133743747016,100265505502    S6   .6877360570940358E-11  DSCOS104
+       OCT     -147646623713,-114740433061  C5  -.2460955082796532E-7   DSCOS105
+       OCT     -143743000706,-110575743132  S5  -.1757150074693567E-8   DSCOS106
+       OCT     156741751757,123324334421    C4   .3590859234205475E-5   DSCOS107
+       OCT     153520360277,120320455223    S4   .3133616225433375E-6   DSCOS108
+       OCT     -165525647437,-132344353644  C3  -.3259918865158837E-3   DSCOS109
+       OCT     -162462645463,-127427133062  S3  -.3657620415891387E-4   DSCOS110
+       OCT     173403603702,140015421766    C2   .1585434424375085E-1   DSCOS111
+       OCT     170506327431,135672607757    S2   .2490394570188844E-2   DSCOS112
+       OCT     -177473647462,-144337105501  C1  -.3084251375340389E+0   DSCOS113
+       OCT     -175512567471,-142422676173  S1  -.8074551218828053E-1   DSCOS114
+       OCT     201400000000,146000000000    C0   .1000000000000000E+1   DSCOS115
+ COEF  OCT     200622077325,145042055061    S0   .7853981633974483E+0   DSCOS116
+ HALF  OCT     200400000000,145000000000                                DSCOS117
+ 4)    EQU     -1                                                       DSCOS118
+       END                                                              DSCOS119

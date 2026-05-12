@@ -1,0 +1,295 @@
+$IBMAP SIMEQ   300,M94                                                          
+P      SET    2              SET DOUBLE PRECISION                               
+       PCC    ON                                                                
+       LIST                                                                     
+       DETAIL                                                                   
+       PMC    ON                                                                
+       PCG    ON                                                                
+       IFT    P=1                                                               
+       LBL    ISIMEQ                                                            
+       IFT    P=2                                                               
+       LBL    DSIMEQ                                                            
+       TTL    MACRO DEFINITIONS FOR SIMEQ                                       
+ OP    MACRO  A,B                                                               
+       NULL                                                                     
+       IFT    P=1                                                               
+       A      B                                                                 
+       IFT    P=2                                                               
+       D'A'   B                                                                 
+       ENDM   OP                                                                
+       SPACE  2                                                                 
+ DCLS  OPSYN  DLD                                                               
+       SPACE  2                                                                 
+ DCLA  OPSYN  DLD                                                               
+       SPACE  2                                                                 
+ DLDQ  MACRO  A                                                                 
+       DLD    A                                                                 
+       ENDM   DLDQ                                                              
+       SPACE  2                                                                 
+ DSTO  OPSYN  DST                                                               
+       SPACE  2                                                                 
+ DSTQ  MACRO  A                                                                 
+       DST    A                                                                 
+       ENDM   DSTQ                                                              
+       SPACE  2                                                                 
+ DOPS  MACRO                                                                    
+ 21A   DLD    Z                                                                 
+ 22A   DFMP   **,1           SAME AS 6A                                         
+       DST    Z+2                                                               
+       ENDM   DOPS                                                              
+       SPACE  2                                                                 
+ DCHS  MACRO                                                                    
+       CHS                                                                      
+       LRS    0                                                                 
+       ENDM   DCHS                                                              
+       SPACE  2                                                                 
+*      END OF MACRO DEFINITIONS.                                                
+       IFT    P=1                                                               
+       TTL    SINGLE PRECISION SIMULTANEOUS EQUATIONS - FORTRAN IV.             
+       IFT    P=2                                                               
+       TTL    DOUBLE PRECISION SIMULTANEOUS EQUATIONS - FORTRAN IV.             
+*      FORTRAN CALLING SEQUENCE-CALL DSIMEQ(B,M,N,N1) FOR DOUBLE                
+*      PRECISION OR CALL ISIMEQ(B,M,N,N1) FOR SINGLE PRECISION. B IS A          
+*      MATRIX WITH DIMENSION (M,N3) WHERE N3 IS N+N1 OR GREATER. THE            
+*      COEFFICIENT MATRIX IS STORED IN THE FIRST N ROWS AND COLUMNS OF          
+*      B AND THE CONSTANT VECTOR(S) ARE STORED AT TOP OF COLUMNS N+1,           
+*      N+2,...,N+N1. N CANNOT EXCEED M. N1 IS THE NUMBER OF CONSTANT            
+*      VECTORS. LET A REPRESENT THE LOCATION OF B(1,1). LET I REPRESENT         
+*      A COUNTER INDICATING THE STAGE OF REDUCTION (N STAGES).                  
+       USE    PROL                                                              
+       USE    LOOP                                                              
+       EVEN                                                                     
+*      N. EXECUTED ONCE FOR EACH STAGE OF REDUCTION.                            
+ 1A3   SXA    37A,1          2 SAVE I COUNTER. (COUNTS DOWN).                   
+       TXH    10A,1,P        2 XFER IF NOT LAST REDUCTION STAGE.                
+*      2*N CYCLES.                                                              
+       SPACE  2                                                                 
+*      N MAX, 1 MIN. EXECUTED ONCE FOR EACH STAGE OF REDUCTION FOR              
+*      WHICH MAX ELEMENT IN COLUMN IS ON DIAGONAL.                              
+ 2A    NZT    0,2            2 CHECK MAX ELEMENT.                               
+       TRA    38A            - XFER IF MATRIX IS SINGULAR.                      
+       SXD    4A,3           4 P*M*NUMBER OF STILL ACTIVE COLUMNS.              
+       OP     CLA(FP1)       5 1.0 OF CORRECT PRECISION.                        
+       OP     FDP(0,2)       14+10. DIAGONAL ELEMENT.                           
+ 3A    AXT    **,4           15 P*N, NO CHANGE.                                 
+       OP     STQ(Z)         17+11. INVERSE OF DIAGONAL ELEMENT.                
+ 4A    TXI    6A,1,**        15 (17-2 FROM NEXT LOOP). SAME AS 17A.             
+*      15 (S.P.), 26 (D.P.). EACH CASE OF MAX ON DIAGONAL ADDS 15/26.           
+       SPACE  2                                                                 
+*      N*(N+N1)-N*(N+1)/2 MAX, N1 MIN. EXECUTED LOOP FOR EACH ELEMENT           
+*      RIGHT OF DIAGONAL WHEN MAX ELEMENT WAS ON DIAGONAL.                      
+ 5A    OP     LDQ(Z)         2 INVERSE OF DIAGONAL.                             
+ 6A    OP     FMP(**,1)      6+7 A+P*(M*(N+N1-1)+N), NO CHANGE.                 
+ 7A    OP     STO(**,1)      8+8 SAME AS 6A.                                    
+ 8A    TIX    5A,1,**        8 P*M, NO CHANGE.                                  
+*      8*N1 (S.P.), 16*N1 (D.P). AT EACH STAGE OF REDUCTION (I) WHERE           
+*      MAX ON DIAGONAL ADDS 8*(N+N1-I)/16*(N+N1-I).                             
+       SPACE  2                                                                 
+*      N MAX, 1 MIN. SEE NOTE PRECEEDING 2A.                                    
+       STZ    0,2            2 TO BYPASS PIVOTAL ROW IN REDUCTION.              
+ 9A    TXI    27A,2,**       2 -P*(M+1), NO CHANGE.                             
+*      2. EACH CASE OF MAX ON DIAGONAL ADDS 2.                                  
+       SPACE  2                                                                 
+*      N-1. EXECUTED ONCE FOR EACH STAGE OF REDUCTION BUT LAST.                 
+ 10A   SXA    13A,5          2 ADDRESS OF END OF ACTIVE COLUMN.                 
+       SXA    14A,5          3                                                  
+*      3*(N-1).                                                                 
+       SPACE  2                                                                 
+*      N*(N+1)/2-1 MAX, N-1 MIN. EXECUTED FOR EACH DIAGONAL ELEMENT BUT         
+*      LAST PLUS EACH ELEMENT IN COLUMN WHOSE ABSOLUTE VALUE EXCEEDS            
+*      LAST SUCH ELEMENT IN COLUMN. MODIFICATIONS AS REDUCTIONS PROCEED         
+*      PRECLUDE USING INITIAL MATRIX ELEMENTS TO COUNT THE NUMBER OF            
+*      TIMES THIS OR OTHER VARIABLE SECTIONS WILL BE EXECUTED.                  
+ 11A   SXA    15A,1          2 INDICATOR OF MAX ELEMENT POSITION.               
+ 12A   PXD    **,0           2 A+P*M*(N+N1-1), +P FOR EACH I.                   
+ 13A   ADM    **,1           4 A+P*N, +P*M FOR EACH I.                          
+       TNX    16A,1,P        4 XFER IF END OF COLUMN.                           
+*      4*(N*(N+1)/2-N). EACH ELEMENT BELOW DIAGONAL WHICH IS LESS THAN          
+*      A PREVIOUS ELEMENT IN MAGNITUDE SAVES 4. SEE NOTE 1 BELOW.               
+       SPACE  2                                                                 
+*      (N-1)*(N-2)/2 MAX, N-2 MIN. EXECUTED EACH TIME A NEW MAX NOT IN          
+*      THE LAST ROW IS FOUND.                                                   
+       PAI                   1 SAVE MAX                                         
+*      (N-1)*(N-2)/2. EACH ELEMENT NOT IN LAST ROW LESS THAN MAX SAVES 1        
+       SPACE  2                                                                 
+*      N*(N-1)/2. EXECUTED ONCE FOR EACH ELEMENT BELOW DIAGONAL.                
+ 14A   SBM    **,1           2 SAME AS 13A. NEXT ELEMENT IN COLUMN.             
+       TMI    11A            3 XFER IF NEW MAX FOUND.                           
+*      3*N*(N-1)/2.                                                             
+       SPACE  2                                                                 
+*      N*(N-1)/2 MAX, 0 MIN. EXECUTED ONCE FOR EACH ELEMENT BELOW               
+*      DIAGONAL WHICH IS NOT A NEW MAX.                                         
+       PIA                                                                      
+       TIX    14A,1,P        2                                                  
+* 1    2*(N-1). MAX CYCLES CASE OCCURS WHEN ALL BUT LAST ELEMENT IN             
+*      COLUMN RESULTS IN NEW MAX ELEMENT. EACH NON LAST ROW ELEMENT             
+*      FOR WHICH THIS IS EXCUTED ADDS 2 BUT SKIPS 4 AT 11A.                     
+       SPACE  2                                                                 
+*      N-1 MAX, MIN 0. EXECUTED ONCE FOR EACH COLUMN IN WHICH MAX               
+*      ELEMENT IS NOT IN LAST ROW.                                              
+ 15A   AXT    **,1           1 RESTORE MAX ELEMENT POSITION INDICATOR.          
+       SBM    0,2            3 DIAGONAL                                         
+       TZE    2A             4 XFER IF MAX ON DIAGONAL.                         
+*      4*(N-1). EACH COLUMN BUT LAST WITH MAX IN LAST ROW SAVES 4 HERE          
+*      BUT ADDS 2 FROM ABOVE GIVING NET -2.                                     
+       SPACE  2                                                                 
+*      N-1 MAX, 0 MIN. EXECUTED FOR EACH STAGE WITH MAX OFF DIAGONAL.           
+ 16A   OP     CLA(FP1)       2 1.0 OF CORRECT PRECISION                         
+       OP     FDP*(14A)      10+11 MAX ELEMENT                                  
+       OP     STQ(Z)         12+12 INVERSE OF MAX ELEMENT.                      
+       PXA    ,1             12 POSITION OF MAX                                 
+       SXD    17A,3          14 P*M*NUMBER OF STILL ACTIVE COLUMNS.             
+       ADM    12A            15 TO GET RELATION TO DIAGONAL.                    
+       STA    23A            17 DIAGONAL ROW ELEMENT ADDRESS.                   
+ 17A   TXI    *+1,1,**       17 P*M*(N+N1-2), -P*M FOR EACH I.                  
+       STA    25A            19 DIAGONAL ROW ELEMENT ADDRESS.                   
+       OP     CLA(0,2)       20 DIAGONAL ELEMENT                                
+ 18A   OP     STO(**,1)      22+13 A+P*(M*(N+N1-2)+N), NO CHANGE.               
+ 19A   AXT    **,4           22 P*N, NO CHANGE                                  
+       STZ    0,2            24 TO BYPASS PIVOTAL ROW IN REDUCTION.             
+ 20A   TXI    *+1,2,**       24 -P*(M+1), NO CHANGE.                            
+*      24*(N-1) (S.P.), 36*(N-1) (D.P.). EACH CASE OF MAX ON DIAGONAL           
+*      SAVES 24/36 BUT ADDS 17/28 FROM 3A AND 9A, NET -7/-8.                    
+       SPACE  2                                                                 
+*      N*(N+N1)-N*(N+1)/2-N1 MAX, 0 MIN. EXECUTED LOOP FOR EACH ELEMENT         
+*      RIGHT OF DIAGONAL WHEN MAX ELEMENT WAS OFF DIAGONAL.                     
+       IFT    P=1                                                               
+ 21A   LDQ    **,1           2 SAME AS 6A.                                      
+       IFT    P=2                                                               
+       DOPS                  2+10                                               
+ 23A   OP     CLA(**,1)      3 DIAGONAL ROW ELEMENT.                            
+ 24A   OP     STO(**,1)      5+11 SAME AS 6A.                                   
+       IFT    P=1                                                               
+       FMP    Z              9                                                  
+       IFT    P=2                                                               
+       DLD    Z+2            9+12                                               
+ 25A   OP     STO(**,1)      11+13 SAME AS 23A.                                 
+ 26A   TIX    21A,1,**       11 P*M, NO CHANGE.                                 
+*      11*(N*(N+N1)-N*(N+1)/2-N1) (S.P.),24*... (D.P.). AT EACH STAGE(I)        
+*      OF REDUCTION WHERE MAX ON DIAGONAL SAVES 11*(N+N1-I)/24*(N+N1-I)         
+*      ADDS 8/16 FROM 8A NET -3*(N+N1-I)/-8*(N+N1-I).                           
+       SPACE  2                                                                 
+*      N**2. EXECUTED ONCE FOR EVERY ELEMENT IN COEFFICIENT MATRIX.             
+ 27A   OP     CLS(**,4)      2 SAME AS 13A. ELEMENT TO BE MADE 0.               
+       TZE    36A            3 IF ALREADY 0, BYPASS INNER LOOPS.                
+*      3*N**2.                                                                  
+       SPACE  2                                                                 
+*      N*(N-1) MAX, 0 MIN. EXECUTED ONCE FOR EACH NONZERO OFFDIAGONAL.          
+       IFT    P=2                                                               
+       DCHS                  0+3 DOUBLE PRECISION CHS.                          
+       OP     STO(Z)         2+4                                                
+       PXA    ,4             2 J.                                               
+       SXD    29A,4          4                                                  
+ 28A   AXT    **,1           4 SAME AS 17A.                                     
+       ADM    12A            6 RELATIVE LOCATION OF DIAGONAL.                   
+ 29A   TXI    *+1,1,**       6 J.                                               
+       STA    32A            7 (8-1 FROM NEXT LOOP).                            
+*      7*N*(N-1) (S.P.), 11*N*(N-1) (D.P.). EACH ZERO IN COLUMN -7/-11.         
+       SPACE  2                                                                 
+*      N*(N-1)**2/2+N1*N*(N-1) MAX, 0 MIN. FOR EVERY NON-ZERO NON               
+*      DIAGONAL, EXECUTED ONCE FOR EACH ELEMENT TO THE RIGHT OF CURRENT         
+*      PIVOTAL COLUMN.                                                          
+ 31A   OP     LDQ(Z)         2 NEGATIVE OF PIVOTAL COLUMN ELEMENT.              
+ 32A   OP     FMP(**,1)      7+6 FOR EVERY ZERO HERE AND AT 6A AND 22A          
+*      3 CYCLE SAVED FOR SINGLE PRECISION, 9 FOR DOUBLE.                        
+ 33A   OP     FAD(**,1)      9+8 SAME AS 6A.                                    
+ 34A   OP     STO(**,1)      11+9 SAME AS 6A.                                   
+ 35A   TIX    31A,1,**       11 P*M, NO CHANGE.                                 
+*      11*(N*(N-1)**2/2+N1*N*(N-1)) (S.P.), 20*... (D.P.). EACH ZERO IN         
+*      PIVOTAL COLUMN SAVES 11*(N+N1-I)/20*(N+N1-I).                            
+       SPACE  2                                                                 
+*      N**2. EXECUTED ONCE FOR EACH ELEMENT IN COEFFICIENT MATRIX               
+ 36A   TIX    27A,4,P        1                                                  
+*      N**2.                                                                    
+       SPACE  2                                                                 
+*      N. EXECUTED ONCE FOR EACH STAGE OF REDUCTION.                            
+ 37A   AXT    **,1           1 I.                                               
+       TNX    39A,1,P        2                                                  
+*      2*N.                                                                     
+       SPACE  2                                                                 
+*      N-1. EXECUTED ONCE FOR EACH STAGE OF REDUCTION BUT LAST.                 
+ 1A    TXI    1A1,3,**       1 -P*M, NO CHANGE                                  
+ 1A1   SXA    28A,3          3                                                  
+       TXI    1A4,6,P        3                                                  
+ 1A4   SXA    12A,6          5                                                  
+ 1A2   TXI    1A5,5,**       5 P*M, NO CHANGE.                                  
+ 1A5   SXA    27A,5          7                                                  
+       TRA    1A3            7                                                  
+*      7*(N-1)                                                                  
+       EJECT                                                                    
+ FP1   DEC    1.0                                                               
+       IFT    P=2                                                               
+       DEC    102B8                                                             
+ Z     BSS    1                                                                 
+       IFT    P=2                                                               
+       BSS    3                                                                 
+       SPACE  2                                                                 
+ 38A   CALL   ERROR                                                             
+       ETC    (38AA)                                                            
+ 39A   RETURN SIMEQ                                                             
+ 38AA  BCI    2, SINGULAR                                                       
+       OCT    777777777777                                                      
+       SPACE  2                                                                 
+       USE                                                                      
+ SIMEQ NULL                                                                     
+       IFT    P=1                                                               
+ISIMEQ SAVE   (1,2,3,5,6)I                                                      
+       IFT    P=2                                                               
+DSIMEQ SAVE   (1,2,3,5,6)I                                                      
+       USE    PROL                                                              
+       CAL*   4,4            M                                                  
+       IFF    P=1                                                               
+       ALS    1                                                                 
+       PAX    ,1             P*M                                                
+       STO    Z                                                                 
+       SCD    1A,1                                                              
+       SCD    P1,1                                                              
+       SXD    1A2,1                                                             
+       SXD    8A,1                                                              
+       SXD    26A,1                                                             
+       SXD    35A,1                                                             
+       TXI    *+1,1,P                                                           
+       SCD    9A,1                                                              
+       SCD    20A,1                                                             
+       CAL*   5,4            N                                                  
+       IFF    P=1                                                               
+       ALS    1                                                                 
+       STA    3A                                                                
+       STA    19A                                                               
+       PAX    0,1                                                               
+       ADM    3,4                                                               
+       PAX    ,5                                                                
+       CAL    3,4                                                               
+       PAC    ,2                                                                
+       CAL*   5,4                                                               
+       ADM*   6,4                                                               
+       SUB    =1                                                                
+       XCA                                                                      
+       MPY    Z                                                                 
+       XCA                                                                      
+       PAX    ,3                                                                
+       ADM    3,4                                                               
+       PAX    ,6                                                                
+       SXA    12A,6                                                             
+       ADM*   5,4                                                               
+       IFF    P=1                                                               
+       ADM*   5,4                                                               
+       STA    6A                                                                
+       STA    7A                                                                
+       IFT    P=1                                                               
+       STA    21A                                                               
+       IFT    P=2                                                               
+       STA    22A                                                               
+       STA    24A                                                               
+       STA    33A                                                               
+       STA    34A                                                               
+       SBM    Z                                                                 
+       STA    18A                                                               
+ P1    TXI    *+1,3,**                                                          
+       SXA    28A,3                                                             
+       SXA    27A,5                                                             
+       SPACE  2                                                                 
+       USE    LOOP                                                              
+       LDIR                                                                     
+       LORG                                                                     
+       END                                                                      

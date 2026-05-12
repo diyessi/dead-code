@@ -1,0 +1,67 @@
+*     FAP                                                                       
+       LBL     DFPT                                                     DFPT0000
+       COUNT   50                                                       DFPT0001
+*      U. OF CHICAGO FLOATING POINT TRAP CIRCUIT FOR DOUBLE PRECISION   DFPT0002
+       ENTRY  -(FPT)                                                    DFPT0003
+       ENTRY  -FPTEST                                                   DFPT0004
+       ENTRY  -FPOLD                                                    DFPT0005
+       ENTRY   DPFPT                                                    DFPT0006
+ DPFPT TRA     1,4                                                      DFPT0007
+(FPT)  SXA     XR4,4         SAVE INDEX REGISTER 4                      DFPT0008
+       STI     IND           SAVE INDICATORS                            DFPT0009
+       LDI     0             ACQUIRE ERROR CODE                         DFPT0010
+       LFT     64                                                       DFPT0011
+       TTR     FPT4          IF CONDITION OTHER THAN UNDERFLOW, JUMP    DFPT0012
+FPT1   LFT     2             IF ACC NOT INVOLVED, SKIP                  DFPT0013
+       CLM                                                              DFPT0014
+       LNT     6             IF ACC OVERFLOW, RETURN WITH ALL ONES      DFPT0015
+       COM                   IF ACC UNDERFLOW, RETURN WITH ZERO         DFPT0016
+       COM                   IF ACC NOT INVOLVED, PROCESS SAVES IT.     DFPT0017
+       STO     ACC           SAVE ACC                                   DFPT0018
+       LFT     6             IF OVERFLOW OR ACC INVOLVED, JUMP          DFPT0019
+       TRA     FPT2          OVERFLOW OR ACC JUMP.                      DFPT0020
+       LAC     0,4           PREPARE TO ACQUIRE INSTRUCTION WHICH CAUSEDDFPT0021
+       CAL     -1,4          THE TRAP.  TAKE ADVANTAGE OF FACT THAT ALL DFPT0022
+       ARS     24            DOUBLE PRECISION  OPS ARE ODD EXCEPT ONE.  DFPT0023
+       ERA     =O4240        SINGLE PREC OPS EXCEPT ONE ARE EVEN. TEST  DFPT0024
+       LBT                   FOR EXCEPTIONS.  IF DBL PREC MQ UNDERFLOW  DFPT0025
+       TNZ     FPT2          HAS OCCURED, WE WILL NOT TOUCH MQ          DFPT0026
+       ERA     =O4001        EXCEPTIONS DFDH (-0240) FDP (0241)         DFPT0027
+       TNZ     FPT3          TO FPT3 IF DBL PREC MQ UNDERFLOW           DFPT0028
+FPT2   XCA                   ACQUIRE MQ IF ANY OTHER CASE               DFPT0029
+       LFT     1             SKIP IF MQ NOT INVOLVED                    DFPT0030
+       CLM                   CLEAR MAGNITUDE IF INVOLVED                DFPT0031
+       LNT     5             COM TWICE IF MQ NOT INVOLVED OR UNDERFLOW  DFPT0032
+       COM                   COMPLEMENT ONCE IF MQ OVERFLOW             DFPT0033
+       COM                                                              DFPT0034
+       XCA                   RETURN MQ                                  DFPT0035
+FPT3   CLA     ACC           RESTORE ACCUMULATOR                        DFPT0036
+DCT    LDI     IND           RESTORE INDICATORS                         DFPT0037
+XR4    AXT     **,4          RESTORE INDEX REGISTER 4                   DFPT0038
+       TRA*    0             RETURN                                     DFPT0039
+ FPT4  LFT     20            IF DIVIDE CHECK OCCURRED,                  DFPT0040
+       TTR     DCT           RETURN                                     DFPT0041
+       STI     OVFLOW        ERROR CODE FOR (EXEM)                      DFPT0042
+       LFT     40            IF DOUBLE PRECISION ODD ADDRESS ERROR,     DFPT0043
+       TTR     ODDER         JUMP.                                      DFPT0044
+       LDI     OVFLG         OVERFLOW.   IS IT A FATAL ERROR            DFPT0045
+       LFT     77777         TEST IF FPTEST CASE                        DFPT0046
+       TTR     $(EXE)        NO, GET KICKED OFF.                        DFPT0047
+       LDI     0             IF FPTEST CASE, RESTORE ERROR CODE         DFPT0048
+FPTA1  STI     **            STORE ERROR CODE IF FPTEST CASE            DFPT0049
+       TTR     FPT1          JUMP BACK TO MAIN CIRCUIT                  DFPT0050
+FPTEST CLA     1,4           ACQUIRE ADDRESS OF ERROR CODE CELL         DFPT0051
+       STA     FPTA1         SET ADDRESS FOR CELL.                      DFPT0052
+       ZSD     OVFLG         SET FLAG TO NOT TRANSFER TO (EXE)          DFPT0053
+       TTR     2,4           RETURN                                     DFPT0054
+FPOLD  SXD     OVFLG,4       RESTORE OVERFLOW TO NORMAL STATUS OF       DFPT0055
+       TTR     1,4           FATAL ERROR.  RETURN.                      DFPT0056
+ODDER  LDI     ODFLG         DBL PREC ODD ADDRESS ERROR. SET INDICATORS DFPT0057
+       TTR     $(EXE)        FOR (EXE). TRANSFER.                       DFPT0058
+ODFLG  PZE     6,1                                                      DFPT0059
+OVFLG  PZE     7,4,*         FLAG FOR (EXE)                             DFPT0060
+ACC    BSS     1                                                        DFPT0061
+ IND   BSS     1                                                        DFPT0062
+       COMMON  -1                                                       DFPT0063
+OVFLOW COMMON  1                                                        DFPT0064
+       END                                                              DFPT0065

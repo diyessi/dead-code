@@ -1,0 +1,115 @@
+*     FAP                                                                       
+       LBL     SCOS                                                     SCOS0000
+       COUNT   100                                                      SCOS0001
+*      U. OF CHICAGO SIN-COSINE PROGRAM                                 SCOS0002
+*           1. CALLING SEQUENCE    TSX   $SIN,4   OR   TSX   $COS,4     SCOS0003
+*           2. (EXEM) RETURN IS GIVEN IF MAGNITUDE OF ARGUMENT IS       SCOS0004
+*                GREATER THAN 2**25.                                    SCOS0005
+       SPACE                                                            SCOS0006
+       ENTRY   SIN                                                      SCOS0007
+       ENTRY   COS                                                      SCOS0008
+ COS   STL     FLAG                                                     SCOS0009
+       SSP                                                              SCOS0010
+ SIN   STO     ARG           FLAG IS ZERO FOR SIN ENTRY                 SCOS0011
+       SXA     SAVE1,1                                                  SCOS0012
+       SXA     SAVE2,2                                                  SCOS0013
+       SSP                                                              SCOS0014
+       LDQ     LEAD0                                                    SCOS0015
+       LRS     9                                                        SCOS0016
+       PDX     ,1                                                       SCOS0017
+       TXH     GOOF,1,153    ORIG. ARG. TOO LARGE FOR SIGNIF. RESULTS.  SCOS0018
+       LLS     19                                                       SCOS0019
+       LRS     156,1         THIS RIGHT SHIFT EXPRESSES ARG IN B26      SCOS0020
+       VDP     PIOV4,,26                                                SCOS0021
+       STO     RI            REMAINDER MODULO PI/4                      SCOS0022
+       LLS     32                                                       SCOS0023
+       ZAC                                                              SCOS0024
+       LLS     3                                                        SCOS0025
+       PAX     ,2            XR2 KEEPS TRACK OF THE OCTANT X BELONGED   SCOS0026
+       ZET     FLAG          IF COSINE REQUESTED, ADD PI/2 TO ARG       SCOS0027
+       TXI     MOD1,2,2                                                 SCOS0028
+       TXH     MOD2,1,115                                               SCOS0029
+       CLA     ARG                                                      SCOS0030
+       TRA     SAVE1                                                    SCOS0031
+ MOD1  TXL     MOD2,2,7                                                 SCOS0032
+       TXI     *+1,2,-8                                                 SCOS0033
+ MOD2  SXA     SIGN,2        FOR LATER ADJUSTMENT OF SIGN               SCOS0034
+       TXL     *+2,2,3                                                  SCOS0035
+       TXI     *+1,2,-4      WE NOW CONSIDER ONLY UPPER HALF            SCOS0036
+       TXL     RED2,2,0      DEPENDING ON OCTANT, ADJUST AS FOLLOWS     SCOS0037
+       TXL     RED1,2,1                        MOD.ARG  XR2             SCOS0038
+       TXI     *+1,2,-1            1ST OCTANT     R      0              SCOS0039
+       TXL     RED3,2,1            2ND OCTANT  PI/4-R    1              SCOS0040
+       TXI     *+1,2,-2            3RD OCTANT     R      1              SCOS0041
+ RED1  CLA     PIOV4               4TH OCTANT  PI/4-R    0              SCOS0042
+       SUB     RI                                                       SCOS0043
+       STO     RI                                                       SCOS0044
+       TRA     RED3+1                                                   SCOS0045
+ RED2  CAL     ARG           1ST OCTANT.   IF ABS ARG IS LESS THAN 1,   SCOS0046
+       TXL     RED4,1,128      USE ORIGINAL ABS ARG FOR R2.             SCOS0047
+ RED3  CLA     RI            WE NEED MOD. ARG IN BOTH FIXED POINT       SCOS0048
+       TXH     RED4+1,2,0      AND FLOAT POINT FORMS                    SCOS0049
+       LRS     8                                                        SCOS0050
+       ORA     CHAR                                                     SCOS0051
+       STO     R2                                                       SCOS0052
+       XCA                                                              SCOS0053
+       ARS     8                                                        SCOS0054
+       ORA     CHAR+1                                                   SCOS0055
+       FAD     R2                                                       SCOS0056
+ RED4  STO     R2            R2 IS OUR FLOATING POINT ARGUMENT.         SCOS0057
+*                            ARITHMETIC SECTION BEGINS                  SCOS0058
+       SXD     EITHR,2       XR2=0 FOR SIN SERIES, =1 FOR COS SERIES.   SCOS0059
+       LDQ     RI            RI IS OUR MOD.ARG. IN FX.PT.B0             SCOS0060
+       MPY     RI                                                       SCOS0061
+       STO     SQAR                                                     SCOS0062
+       AXT     6,1                                                      SCOS0063
+ EITHR TXI     *+1,1,**      XR1=6 FOR SIN LOOP, =7 FOR COS LOOP        SCOS0064
+       CLA     CHAR-1,1                                                 SCOS0065
+ LOOP  XCA                   POLYNOMIAL APPROXIMATION.                  SCOS0066
+       MPY     SQAR                                                     SCOS0067
+       ADD     CHAR+1,1                                                 SCOS0068
+       TIX     LOOP,1,2                                                 SCOS0069
+       CAS     CHAR          RESULT IS IN B1,   IF IT IS GREATER        SCOS0070
+       CLA     CHAR            THAN 1, REDUCE IT TO 1 AND               SCOS0071
+       ADD     MASK              ADJUST TO COME OUT WITH FLOAT 1        SCOS0072
+       LRS     7             FLOAT THE RESULT                           SCOS0073
+       ADD     CHAR                                                     SCOS0074
+       RQL     28                                                       SCOS0075
+       FRN                                                              SCOS0076
+       TXL     LAST,1,1      XR1=1 AFTER COS LOOP, =2 AFTER SIN LOOP    SCOS0077
+       XCA                                                              SCOS0078
+       FMP     R2            R2= RI IN FLOATING FORM                    SCOS0079
+       FRN                                                              SCOS0080
+ LAST  LDQ     ARG           HERE ARE PROVISION FOR PROPER SIGN OF ANSWESCOS0081
+       LLS     0                                                        SCOS0082
+ SIGN  AXT     **,2          AT THIS POINT XR2 HAD QUOTIENT OF (X/PI/4) SCOS0083
+       TXL     *+2,2,3             MODULI 8, IF GREATER THAN 3 X WAS IN SCOS0084
+       CHS                         LOWER HALF,WE SHOULD CHANGE SIGN.    SCOS0085
+ SAVE1 AXT     **,1          RESTORE XR1 BEFORE LEAVING                 SCOS0086
+ SAVE2 AXT     **,2          RESTORE XR2 BEFORE LEAVING                 SCOS0087
+       STZ     FLAG                                                     SCOS0088
+       TRA     1,4                                                      SCOS0089
+ GOOF  CLA     ARG           LOAD ARGUMENT BACK INTO AC                 SCOS0090
+       LXA     SAVE1,1       RESTORE XR1 BEFORE ERROR RETURN            SCOS0091
+       LDI     *+2                                                      SCOS0092
+       TTR     $(EXE)                                                   SCOS0093
+       PZE     7,6,SAVE1                                                SCOS0094
+*                      TABLE OF CONSTANTS AND BUFFERS                   SCOS0095
+ LEAD0 OCT     000001462217    .2438663341E-4  B1    C4                 SCOS0096
+       OCT     -000014620331   -.1950390425E-3 B1    S3                 SCOS0097
+       OCT     -000133004045   -.1388671182E-2 B1    C3                 SCOS0098
+       OCT     001042030565    .8332035786E-2  B1    S2                 SCOS0099
+       OCT     005252523632    .4166662099E-1  B1    C2                 SCOS0100
+       OCT     -025252517757   -.1666665067    B1    S1                 SCOS0101
+       OCT     -077777777712   -.4999999969    B1    C1                 SCOS0102
+       OCT     177777777713    .9999999969     B1    S0                 SCOS0103
+ CHAR  OCT     200000000000    1. B1  ALSO USED TO FLOAT NUMBERS        SCOS0104
+       OCT     145000000000                                             SCOS0105
+ MASK  OCT     100000000000                                             SCOS0106
+ PIOV4 OCT     +311037552421       PI/4 AS FIXED POINT NUMBER B0        SCOS0107
+ ARG   BSS     1                                                        SCOS0108
+ RI    BSS     1                                                        SCOS0109
+ R2    BSS     1                                                        SCOS0110
+ SQAR  BSS     1                                                        SCOS0111
+ FLAG  PZE                                                              SCOS0112
+       END                                                              SCOS0113

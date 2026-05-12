@@ -1,0 +1,143 @@
+* L.RUBIN,*** TRAP TECHNIQUE TO ARREST ERRONEOUS TRANSFERS, 7094 ***            
+       LBL     M5000,20                                                         
+       ENTRY   STRAY                                                            
+       ENTRY   LTM                                                              
+ STRAY SLW     SAVAC     P1-35                                                  
+       ARS     2                                                                
+       STO     QP        00(S)QP1-33                                            
+       CLA     0                                                                
+       STO     ZERO                                                             
+       CLA     1                                                                
+       STO     ONE                                                              
+       CLA     TPG                                                              
+       ADD     TTR                                                              
+       STO     1                                                                
+       STZ     0                                                                
+       CLA     QP                                                               
+       ALS     2                                                                
+       ORA     SAVAC                                                            
+       ETM                                                                      
+       TTR     1,4                                                              
+ TRPDG LTM               TRAP DIAGNOSES                                         
+       SXA     XR1,1                                                            
+       SXA     XR4,4                                                            
+       SLW     SAVAC     P1-35                                                  
+       ARS     2                                                                
+       STO     QP        00(S)QP1-33                                            
+       CLA*    0                                                                
+       PAC     0,4                                                              
+       SXA     RC4,4     PRESERVE THE COMPLEMENTED XR4                          
+       ANA     PFX       TEST PREFIX,THIS TYPE CANT BE FLAGGED                  
+       TNZ     RSM  NON 0, TIX TYPE, CANT BE FLAGGED, TAG INSIGNIFICANT         
+       CLA*    0                                                                
+       ANA     TSX                                                              
+       SSP                                                                      
+       SUB     TSX                                                              
+       TZE     RSM                                                              
+ TGTST CLA*    0                                                                
+       STA     TAD           TAG TRANSFER ADDRESS                               
+       STA     TEST                                                             
+       ANA     TAG                                                              
+       TZE     FT            IF0, NO TAG, TEST FOR FLAG                         
+       STT     XXR                                                              
+       XEC     XR4       JUST IN CASE THE TAG IS 4                              
+   XXR SCA     XQ,0      TAG MAY BE ALTERED ON EACH PASS                        
+       XEC     RC4       RESTORE XR4  TO ITS COMPLEMENTED FORM                  
+       LAC     XQ,1      CONVERT TO ORIGINAL  XR CONTENTS                       
+  TEST CLA     **,1                                                             
+       TZE     RESET                                                            
+       CLA     TAD       COMPUTE EFFECTIVE ADDRESS                              
+       ADD     XQ        BY ADDING THE COMPLEMENT(2)                            
+       STA     OK                                                               
+       ANA     ADDR                                                             
+       TZE     XR4                                                              
+       CLA*    0                                                                
+       ANA     FLAG                                                             
+       SSP                                                                      
+       SUB     FLAG                                                             
+       TNZ     FCK       NON0, NO FLAG, GO TO FINAL CHECK                       
+       XEC     TEST                                                             
+       ANA     ADDR                                                             
+       TZE     RESET                                                            
+       XEC     TEST                                                             
+       STA     OK                                                               
+       STA     *+1                                                              
+       CLA     **                                                               
+       ANA     INSTR                                                            
+       TNZ     XR4                                                              
+       TRA     RESET                                                            
+    FT CLA*    0                                                                
+       ANA     FLAG                                                             
+       SSP                                                                      
+       SUB     FLAG                                                             
+       TNZ     RSM                                                              
+       CLA*    0                                                                
+       ANA     ADDR                                                             
+       TZE     XR4       PREVENTS USE OF 00 AND 01 IN                           
+*                        THE EXECUTION OF AN INDIRECT TRA AND                   
+*                        THEREBY ELIMINATING A CLOSED LOOP WHILE IN THE         
+*                        TRAP MODE AS IN THE CASE OF   TRA*  0  .               
+       CLA     0,4                                                              
+       STA     OK                                                               
+       ANA     ADDR                                                             
+       TNZ     CNTU                                                             
+       TRA     RESET                                                            
+  CNTU CLA*    0,4                                                              
+       TRA     RFT                                                              
+   RSM SCA     OK,4                                                             
+       CLA*    0                                                                
+       ANA     ADDR                                                             
+       TZE     XR4                                                              
+       CLA     0,4                                                              
+   RFT ANA     INSTR                                                            
+   XR4 AXT     **,4                                                             
+   XR1 AXT     **,1                                                             
+       TZE     GOOF      CLEAN  UP, TAKE A FORTDP AND CALL EXIT                 
+       CLA     QP                                                               
+       ALS     2                                                                
+       ORA     SAVAC                                                            
+       ETM                                                                      
+    OK TTR     **                                                               
+  GOOF CLA     QP                                                               
+       ALS     2                                                                
+       ORA     SAVAC                                                            
+       SXD     0,4       LAST SETTING OF XR4 TO D(00000)                        
+       EMTM                                                                     
+       CALL    PDUMP,0,32767,THREE                                              
+       WEFA    3                                                                
+       CALL    EXIT                                                             
+   FCK XEC     TEST                                                             
+       ANA     INSTR                                                            
+       TNZ     XR4                                                              
+ RESET XEC     XR4                                                              
+       XEC     XR1                                                              
+       TRA     GOOF                                                             
+   LTM LTM                                                                      
+       SLW     SAVAC     P1-35                                                  
+       ARS     2                                                                
+       STO     QP        00(S)QP1-33                                            
+       CLA     ZERO                                                             
+       STO     0                                                                
+       CLA     ONE                                                              
+       STO     1                                                                
+       CLA     QP                                                               
+       ALS     2                                                                
+       ORA     SAVAC                                                            
+       TRA     1,4                                                              
+ THREE DEC     3B17                                                             
+  ADDR OCT     77776                                                            
+ INSTR OCT     777700000000    TESTS FOR AN INSTRUCTION                         
+   PFX OCT     700000000000    PREFIX MASK                                      
+  FLAG OCT     000060000000                                                     
+   TTR OCT     002100000000                                                     
+    XQ DEC     0         XR QUANTITY                                            
+   TAD DEC     0                                                                
+   TAG PZE     0,7,0                                                            
+   TPG PZE     TRPDG                                                            
+   TSX TSX     **,0                                                             
+   RC4 AXT     **,4                                                             
+   ONE BSS     1         SAVE 00001                                             
+  ZERO BSS     1         SAVE 00000                                             
+ SAVAC BSS     1                                                                
+    QP BSS     1                                                                
+       END                                                                      

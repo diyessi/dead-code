@@ -1,0 +1,1567 @@
+$IBFTC NMR                                                                  0010
+C      NMR MAIN PROGRAM ... (CALLS LINKS AS NEEDED)                         0020
+      COMMON K(700)                                                         0030
+      DO 10 I=1,18                                                          0040
+   10 K(I)=0                                                                0050
+   20 CALL CHAIN(1)                                                         0060
+      CALL CHAIN(2)                                                         0070
+      GO TO 20                                                              0080
+C      FOLLOWING DEFINES FILES ONLY AND IS NOT EXECUTED ...............     0090
+      REWIND 2                                                              0100
+      REWIND 3                                                              0110
+      REWIND 4                                                              0120
+      REWIND 23                                                             0130
+      READ (5,900)                                                          0140
+      WRITE (6,900)                                                         0150
+  900 FORMAT (1H1)                                                          0160
+      END                                                                   0170
+$IBFTC NMRIT   REF                                                          0010
+CNMRIT                                                                      0020
+C        NMR SPECTRAL ANALYSIS BY EQUIVALENCE FACTORING                     0030
+C        NMRIT - HAMILTONIAN, ENERGY LEVELS, ITERATIONS    MAR., 1964       0040
+C                  BY RUBY M. STANLEY                                       0050
+C             FOR R.C.FERGUSON AND D.W.MARQUARDT                            0060
+C                       E.I.DUPONT CO., WILMINGTON, DEL.                    0070
+      COMMON MULT(6),NINC(6),NASET,NOPROB,NTYPE,NIT,NENER,FREQ,             0080
+     1                NSPIN,NN,NTH,NT,ND,KE,KM,NPAR,ERR,IROW,IMROW,MATD,    0090
+     2       NLEV,NTRAN,NINT,RECORD(12),B(6),HB(6,11),A(6,6),AB(6,6,11),    0100
+     3       RE(11),PPM(21),NUCL(6),NSUB(25),INIT(11),IPLR                  0110
+      COMMON    FR1(6),FR2(6),DX(6),SCALE(6),NPLOT                          0120
+      COMMON  /NMR1/ EN(360),DHNN(360),U(75,75),SPIN(25,6),QUANT(75,6),     0130
+     1               PJ(21),LFZ(75),DH(360),IQ(6),TMAT(75,75),HS(20,20),    0140
+     2               S(20,20)                                               0150
+      COMMON BASE(6),BINC(6),ABASE(6,6),NFLAGA,NFLAGB,IEGEN                 0160
+      DIMENSION H(75,75),FZ(75),FZORD(75),MATNO(75),E(480),STAR(480)        0170
+      EQUIVALENCE (U,H)                                                     0180
+C      LEVMAX=MAX. NO. ENERGY LEVELS, NTMAX=MAX. NO. TRANSITIONS            0190
+C      BOTH SHOULD AGREE WITH DIMENSION AND COMMON                          0200
+      LEVMAX=360                                                            0210
+      NTMAX=1500                                                            0220
+      REWIND 2                                                              0230
+      REWIND 4                                                              0240
+      DO 125I=1,NTYPE                                                       0250
+      IF (MULT(I)-NINC(I))122,123,123                                       0260
+  122 MULT(I)=MULT(I)+1                                                     0270
+      GO TO 130                                                             0280
+  123 MULT(I)=0                                                             0290
+  125 CONTINUE                                                              0300
+      NASET=NASET-1                                                         0310
+      IF (NASET)300,300,126                                                 0320
+  126 NFLAGA=2                                                              0330
+      DO 128 I=1,NTYPE                                                      0340
+  128 MULT(I)=0                                                             0350
+  130 NOPROB=NOPROB+100                                                     0360
+      GO TO 500                                                             0370
+  300 READ  (5,9000)IND, NOPROB, NTYPE, NIT, NENER, FREQ,NASET              0380
+      IF ( IND+7 )300,301,300                                               0390
+  301 NFLAGA = 1                                                            0400
+      NFLAGB = 1                                                            0410
+      IEGEN = 0                                                             0420
+      IF (NOPROB -9999) 302, 400, 302                                       0430
+  400 CALL EXIT                                                             0440
+C     RECORD IS AN IDENTIFICATION CARD. ALL COLUMNS 1-72 ARE PRINTED        0450
+  302 READ  (5,9002)(RECORD (I), I= 1,12)                                   0460
+      DO 304  I=1,6                                                         0470
+  304 NUCL(I)=0                                                             0480
+      READ  (5,9001)(NUCL(I), I=1,NTYPE)                                    0490
+      NSPIN=0                                                               0500
+      DO 303 I=1,NTYPE                                                      0510
+  303 NSPIN=NSPIN+NUCL(I)                                                   0520
+      NN=NSPIN-1                                                            0530
+      NTH=2**NN                                                             0540
+      NT = 2**NSPIN                                                         0550
+  308 IF ( NIT -10 )309, 309, 310                                           0560
+  309 ND=1                                                                  0570
+      GO TO 500                                                             0580
+  310 ND=NIT/10                                                             0590
+      NIT=ND*10                                                             0600
+  500 WRITE (6,9004)(RECORD(I), I = 1,12), NOPROB,NSPIN,    NIT,FREQ,NTY    0610
+     1PE,(NUCL(J), J = 1,6)                                                 0620
+      KE=1                                                                  0630
+      KM=0                                                                  0640
+      NPAR = (NTYPE*(NTYPE+1))/2                                            0650
+      DO 311  I=1,NPAR                                                      0660
+  311 PJ(I) = 0.0                                                           0670
+      GO TO (312,313,313), NFLAGA                                           0680
+  312 DO 307  I=1,NTYPE                                                     0690
+      DO 307  J=1,NTYPE                                                     0700
+      ABASE(I,J)=0.0                                                        0710
+  307 CONTINUE                                                              0720
+  313 DO 314 I=1,NENER                                                      0730
+  314 EN(I)=0.0                                                             0740
+  315 GO TO (316,318),NFLAGB                                                0750
+C        READ CHEMICAL SHIFTS AND INCREMENTS                                0760
+  316 NFLAGB=2                                                              0770
+      READ  (5,9005)(BASE(I), BINC(I), NINC(I), I=1,NTYPE)                  0780
+      DO 317 I=1,NTYPE                                                      0790
+  317 MULT (I) = 0                                                          0800
+  318 DO 320 I=1,NTYPE                                                      0810
+      BMULT=MULT(I)                                                         0820
+  320 B(I) = (BASE(I) +BINC(I) * BMULT)                                     0830
+      GO TO (322, 322, 332), NFLAGA                                         0840
+  322 DO 323 I=1,NTYPE                                                      0850
+      DO 323 J=1,NTYPE                                                      0860
+  323 A(I,J)=ABASE(I,J)                                                     0870
+C        READ COMPLETE OR PARTIAL SET OF COUPLING CONSTANTS                 0880
+  324 READ  (5,9006)I, J, AJ                                                0890
+      IF (I-9)325,327,327                                                   0900
+  325 A(I,J)=AJ                                                             0910
+      A(J,I)=AJ                                                             0920
+      GO TO 324                                                             0930
+  327 IPLR=1                                                                0940
+  326 GO TO (328,330,330), NFLAGA                                           0950
+  328 DO 329 I=1,NTYPE                                                      0960
+      DO 329 J=1,NTYPE                                                      0970
+  329 ABASE(I,J)=A(I,J)                                                     0980
+  330 NFLAGA=3                                                              0990
+  332 DO 334 I=1,NTYPE                                                      1000
+  334 HB(I,1)=B(I)                                                          1010
+      NN=NTYPE - 1                                                          1020
+      DO 336 I=1,NN                                                         1030
+      II=I+1                                                                1040
+      DO 336 J=II,NTYPE                                                     1050
+  336 AB(I,J,1)= A(I,J)                                                     1060
+      IF (NIT) 340,340,338                                                  1070
+C        READ ENERGY LEVELS FOR ITERATIVE CALCULATIONS.                     1080
+  338 READ  (5,9007)((E (I),      STAR(I) ) , I=1, NENER)                   1090
+  340 DO 342 I=1,11                                                         1100
+      INIT(I)=0                                                             1110
+  342 RE(I)=0.0                                                             1120
+  350 CONTINUE                                                              1130
+C        GENERATE I-ARRAY                                                   1140
+    2 DO 3 K=1,NTYPE                                                        1150
+      XNUCL=NUCL(K)                                                         1160
+    3 SPIN(1,K)=XNUCL/2.0                                                   1170
+      KK=NTYPE                                                              1180
+      DO 10 J=2,100                                                         1190
+      DO 4 K=1,NTYPE                                                        1200
+    4 SPIN(J,K)=SPIN(J-1,K)                                                 1210
+    5 SPIN (J,KK)=SPIN(J,KK)-1.0                                            1220
+      IF (SPIN (J,KK))6,8,8                                                 1230
+    6 SPIN(J,KK)=SPIN(1,KK)                                                 1240
+      IF(KK-1)12,12,7                                                       1250
+    7 KK=KK-1                                                               1260
+      GO TO 5                                                               1270
+    8 KK=NTYPE                                                              1280
+   10 CONTINUE                                                              1290
+   12 IROW=J-1                                                              1300
+      MATD   = 0                                                            1310
+      IMROW = 75                                                            1320
+      KST = 1                                                               1330
+      KP=1                                                                  1340
+      IST = 1                                                               1350
+      NLEV = 0                                                              1360
+      NTRAN = 0                                                             1370
+      NINT = 0                                                              1380
+      JJ=0                                                                  1390
+   15 IF (JJ-IROW) 16,525,525                                               1400
+   16 DO 17  I = 1,IMROW                                                    1410
+      DO 17  J = 1,IMROW                                                    1420
+   17 H(I,J) = 0.0                                                          1430
+      JJ=JJ+1                                                               1440
+      KK=1                                                                  1450
+   18 FZ(KK)=0.0                                                            1460
+C        GENERATE IM-ARRAY FOR ONE SUBMATRIX                                1470
+      DO 20 K=1,NTYPE                                                       1480
+      QUANT (KK,K)=SPIN(JJ,K)                                               1490
+   20 FZ(KK)=FZ(KK)+QUANT (KK,K)                                            1500
+      KEND=  NTYPE                                                          1510
+   21 KFIN=KEND                                                             1520
+   22 KK=KK+1                                                               1530
+      FZ(KK)=0.0                                                            1540
+   23 DO 25 K=1,KEND                                                        1550
+   25 QUANT(KK,K)=QUANT(KK-1,K)                                             1560
+   26 QUANT(KK,KFIN)=QUANT(KK,KFIN)-1.0                                     1570
+      IF(QUANT(KK,KFIN)+SPIN(JJ,KFIN))32,28,28                              1580
+   28 DO 30 K= 1,KEND                                                       1590
+   30 FZ(KK)=FZ(KK)+QUANT(KK,K)                                             1600
+      GO TO 21                                                              1610
+   32 QUANT (KK,KFIN)=SPIN(JJ,KFIN)                                         1620
+      IF (KFIN-1)  35,35,34                                                 1630
+   34 KFIN=KFIN-1                                                           1640
+      GO TO 26                                                              1650
+   35 IMROW =KK-1                                                           1660
+      MATD   = MATD  +IMROW                                                 1670
+      FMAX=0.0                                                              1680
+      LL = 0                                                                1690
+C        GENERATE SORTED IM-ARRAY                                           1700
+      DO 50 K=1,IMROW                                                       1710
+   36 DO 45 L=1,IMROW                                                       1720
+      IF(FZ(L)+0.0000001)37,45,40                                           1730
+   37 IF (FMAX)38,45,45                                                     1740
+   38 IF(FZ(L)-FMAX)45,45,39                                                1750
+   39 FMAX=FZ(L)                                                            1760
+      LL=L                                                                  1770
+      GO TO 45                                                              1780
+   40 IF(FMAX-FZ(L))42,45,45                                                1790
+   42 FMAX=FZ(L)                                                            1800
+      LL=L                                                                  1810
+   45 CONTINUE                                                              1820
+      IF (LL)  46,46,47                                                     1830
+   46 FMAX = -1000000.0                                                     1840
+      GO TO 36                                                              1850
+   47 FZORD(K)=FMAX                                                         1860
+      LFZ(K)=LL                                                             1870
+      FZ(LL)=-0.0000001                                                     1880
+      IF (FMAX) 48,48,49                                                    1890
+   48 FMAX=-1000000.0                                                       1900
+      GO TO 50                                                              1910
+   49 FMAX=0.0                                                              1920
+      LL = 0                                                                1930
+   50 CONTINUE                                                              1940
+      LST=1                                                                 1950
+      FST=FZORD(1)                                                          1960
+      JK = 1                                                                1970
+      NSUB(JK) = 0                                                          1980
+      KSUB=1                                                                1990
+C        GENERATE HAMILTONIAN                                               2000
+      DO 75 L=1,IMROW                                                       2010
+   51 IF (FST-FZORD(L)) 65,52,65                                            2020
+   52 NSUB(JK) = NSUB(JK)+1                                                 2030
+      H(L,L)=0.0                                                            2040
+      LC=LFZ(L)                                                             2050
+      DO 54 I=1,NTYPE                                                       2060
+      H(L,L)=H(L,L)+B(I)*QUANT(LC,I)                                        2070
+      IF (I-NTYPE)53,56,56                                                  2080
+   53 II=I+1                                                                2090
+      DO 54 IP=II,NTYPE                                                     2100
+      H(L,L)=H(L,L)+A(I,IP)*QUANT(LC,I )*QUANT(LC,IP)                       2110
+   54 CONTINUE                                                              2120
+   56 IF (NSUB(JK)-1)  72,72,55                                             2130
+   55 LL=L-1                                                                2140
+      DO 64 LCC=LST,LL                                                      2150
+      NDIFF=0                                                               2160
+      LP=LFZ(LCC)                                                           2170
+      DO 58 I=1,NTYPE                                                       2180
+      IF (QUANT(LP,I )-QUANT(LC,I )) 57,58,57                               2190
+   57 NDIFF=NDIFF+1                                                         2200
+      IQ(NDIFF)=I                                                           2210
+   58 CONTINUE                                                              2220
+      IF(NDIFF-2)59,60,59                                                   2230
+   59 H(LCC,L)=0.0                                                          2240
+      GO TO 64                                                              2250
+   60 I=IQ(1)                                                               2260
+      IP=IQ(2)                                                              2270
+      IF ((QUANT(LP,I )-QUANT(LC,I ))*(QUANT(LP,IP)-QUANT(LC,IP))+1.0)      2280
+     1   59,62,59                                                           2290
+   62 H(LCC,L)=0.5*A(I,IP)*SQRT((SPIN(JJ,I)*(SPIN(JJ,I)+1.0)-(QUANT(LP,I    2300
+     1 )*QUANT(LC,I )))*(SPIN(JJ,IP)*(SPIN(JJ,IP)+1.0)-(QUANT(LP,IP)*  Q    2310
+     2UANT(LC,IP))))                                                        2320
+   64 CONTINUE                                                              2330
+      GO TO 75                                                              2340
+   65 NJK=NSUB(JK)                                                          2350
+      DO 67 I = 1,NJK                                                       2360
+      LD=I+LST-1                                                            2370
+      HS(I,I)=H(LD,LD)                                                      2380
+      IF (NJK-I) 607,607,66                                                 2390
+   66 II=I+1                                                                2400
+      DO 67J=II,NJK                                                         2410
+      LDD=J+LST-1                                                           2420
+      HS(I,J)=H(LD,LDD)                                                     2430
+   67 CONTINUE                                                              2440
+  607 IF (NJK-1)  68,68,1009                                                2450
+C        DIAGONALIZE SUB-SUBMATRIX OF HAMILTONIAN                           2460
+C     ..................................................................    2470
+ 1009 CALL HDIAG(HS,NJK,IEGEN, S,NR)                                        2480
+C     ..................................................................    2490
+C        FOR ONE HAMILTONIAN SUBMATRIX ASSEMBLE SUB-SUBMATRIX               2500
+C                EIGENVECTORS FOR TRANSITION INTENSITY CALCULATIONS.        2510
+      DO 700 I=1,NJK                                                        2520
+      LD=I+LST-1                                                            2530
+      DH(LD)=HS(I,I)                                                        2540
+      U(LD,LD)= S(I,I)                                                      2550
+      IF (NJK-I) 700,700,69                                                 2560
+   69 II=I+1                                                                2570
+      DO 70J=II,NJK                                                         2580
+      LDD=J+LST-1                                                           2590
+      U(LD,LDD)= S(I,J)                                                     2600
+      U(LDD,LD) = S(J,I)                                                    2610
+   70 CONTINUE                                                              2620
+  700 CONTINUE                                                              2630
+      GO TO 71                                                              2640
+   68 LL = L-1                                                              2650
+      DH(LL) = H(LL,LL)                                                     2660
+      U(LL,LL) = 1.0                                                        2670
+   71 FST=FZORD(L)                                                          2680
+      LST=L                                                                 2690
+      JK=JK+1                                                               2700
+      NSUB(JK)=0                                                            2710
+      GO TO 52                                                              2720
+   72 IF (L-IMROW)75,73,75                                                  2730
+   73 DH(L) = H(L,L)                                                        2740
+      U(L,L)=1.0                                                            2750
+   75 CONTINUE                                                              2760
+  501 IF(NIT)504,504,5000                                                   2770
+C        ADJUST TRACE IF ANY MISSING ENERGY LEVELS.                         2780
+ 5000 NN2=0                                                                 2790
+      TRACE1=0.                                                             2800
+      I1=IST+IMROW-1                                                        2810
+      DO 5004  I=IST,I1                                                     2820
+      IF (STAR(I)) 5001,5001,5002                                           2830
+ 5001 NN2=NN2+1                                                             2840
+      GO TO 5004                                                            2850
+ 5002 TRACE1=TRACE1+E(I)                                                    2860
+ 5004 CONTINUE                                                              2870
+      IF (TRACE1) 5005,5010,5005                                            2880
+ 5005 XN2=NN2                                                               2890
+      C=-(TRACE1/XN2)                                                       2900
+      DO 5008  I=IST,I1                                                     2910
+      IF (STAR(I)) 5006,5006,5007                                           2920
+ 5006 EN(I)=E(I)+C                                                          2930
+      GO TO 5008                                                            2940
+ 5007 EN(I)=E(I)                                                            2950
+ 5008 CONTINUE                                                              2960
+      GO TO 502                                                             2970
+ 5010 DO 5012  I=IST,I1                                                     2980
+ 5012 EN(I) = E(I)                                                          2990
+  502 DO 503I=1,IMROW                                                       3000
+      RE(KE)=(DH(I)-EN(IST))**2+RE(KE)                                      3010
+      IF (STAR(IST) ) 503,503,5003                                          3020
+ 5003 EN(IST)= DH(I)                                                        3030
+      E(IST)=DH(I)                                                          3040
+  503 IST=IST+1                                                             3050
+      IF (NIT-KM)  1010,504,1010                                            3060
+C        ADJUST CHEMICAL SHIFTS AND COUPLING CONSTANTS FOR ITERATIONS.      3070
+C     ..................................................................    3080
+ 1010 CALL ADJAB(KP,JK,JJ)                                                  3090
+C     ..................................................................    3100
+      KP = KP+IMROW                                                         3110
+      GO TO 15                                                              3120
+C        EDIT ENERGY LEVELS, ETC. FROM LAST ITERATION.                      3130
+  504 IF (JJ-1)  511,511,505                                                3140
+  511 WRITE (6,9008)KM                                                      3150
+  505 WRITE (6,9009)JJ                                                      3160
+      J=0                                                                   3170
+      DO 506 I=1,JK                                                         3180
+      KEND=NSUB(I)                                                          3190
+      DO 506 K=1,KEND                                                       3200
+      J=J+1                                                                 3210
+  506 MATNO(J)=I                                                            3220
+      KK=KST                                                                3230
+      NEND=IMROW/2                                                          3240
+      IF (NEND)  518,518,509                                                   0
+  509 DO 516I=1,NEND                                                        3250
+      IF (IMROW-2*NEND)  507,508,507                                        3260
+  507 K=KK+NEND+1                                                           3270
+      II=I+NEND+1                                                           3280
+      GO TO 510                                                             3290
+  508 K=KK+NEND                                                             3300
+      II=I+NEND                                                             3310
+  510 IF (NIT)512,512,514                                                   3320
+  512 WRITE (6,9010)MATNO(I),KK,DH(I),MATNO(II),K,DH(II)                    3330
+      GO TO 515                                                             3340
+  514 YY=EN(KK)-DH(I)                                                       3350
+      ZZ=EN(K)-DH(II)                                                       3360
+      WRITE (6,9011)MATNO(I),KK,EN(KK),DH(I),YY,             MATNO(II),K    3370
+     1,EN(K),DH(II),ZZ                                                      3380
+  515 KK=KK+1                                                               3390
+  516 CONTINUE                                                              3400
+      KST=K+1                                                               3410
+      IF (IMROW-2*NEND)  518,521,518                                        3420
+  518 I=NEND+1                                                              3430
+      IF (NIT)519,519,520                                                   3440
+  519 WRITE (6,9010)MATNO(I),KK,DH(I)                                       3450
+      GO TO 76                                                              3460
+  520 YY=EN(KK)-DH(I)                                                       3470
+      WRITE (6,9011)MATNO(I),KK,EN(KK),DH(I),YY                             3480
+  521 IF (NIT) 76,76,522                                                    3490
+  522 WRITE (6,9012)RE(KE)                                                  3500
+C        CALCULATE TRANSITION FREQUENCIES AND INTENSITIES.                  3510
+C     ..................................................................    3520
+   76 CALL XTCALC(JK,JJ)                                                    3530
+C     ..................................................................    3540
+      NLEV = NLEV+IMROW                                                     3550
+      IF (NTRAN.LE.NTMAX) GO TO 524                                         3560
+      WRITE (6,9013) IROW                                                   3570
+      STOP                                                                  3580
+  524 IF (NLEV.LE.LEVMAX) GO TO 15                                          3590
+      WRITE (6,9014) IROW                                                   3600
+      STOP                                                                  3610
+C        ACCUMULATE INTERMEDIATE PARAMETER VALUES FOR PRINTING IN           3620
+C                                                ITERATIVE CASE.            3630
+  525 IF (NIT-KM)540,540,526                                                3640
+  526 CONTINUE                                                              3650
+      JJ=0                                                                  3660
+      KP=1                                                                  3670
+      KST=1                                                                 3680
+      IST=1                                                                 3690
+      MATD = 0                                                              3700
+      IMROW = 75                                                            3710
+      DO 528I=1,NTYPE                                                       3720
+      B(I)=PJ(I)                                                            3730
+      IF (MOD(KM+1,ND)) 528,527,528                                         3740
+  527 HB(I,KE+1) = B(I)                                                     3750
+  528 CONTINUE                                                              3760
+      NN=NTYPE-1                                                            3770
+      IPJ=NTYPE+1                                                           3780
+      DO 530 I=1,NN                                                         3790
+      II=I+1                                                                3800
+      DO 530J=II,NTYPE                                                      3810
+      A(I,J)=PJ(IPJ)                                                        3820
+      IPJ = IPJ+1                                                           3830
+      IF (MOD(KM+1,ND)) 530,529,530                                         3840
+  529 AB(I,J,KE+1)=A(I,J)                                                   3850
+  530 CONTINUE                                                              3860
+      DO 535 I=1,NPAR                                                       3870
+  535 PJ(I)=0.0                                                             3880
+      IF (MOD(KM+1,ND)) 537,536,537                                         3890
+  536 KE=KE+1                                                               3900
+      INIT(KE)=KM+1                                                         3910
+  537 KM=KM+1                                                               3920
+      RE(KE)=0.0                                                            3930
+      GO TO 15                                                              3940
+  540 CONTINUE                                                              3950
+      REWIND 4                                                              3960
+      CALL CHNXIT                                                           3970
+ 9000  FORMAT (5I4, F12.5, I4)                                              3980
+ 9001  FORMAT  ( 12I4 )                                                     3990
+ 9002 FORMAT (12A6)                                                         4000
+ 9004 FORMAT  ( 1H1 12A6 / 13H0 PROBLEM NO. I5, 20H     NUMBER OF SPINS     4010
+     1I3, 25H     NUMBER OF ITERATIONS I3, 16H     RADIO FREQ. F10.5,       4020
+     27H MC/SEC /1H0 20X,15HNUMBER OF TYPES I3,20H     (P,Q,R,...)=(        4030
+     35(I2,1H,),I2,1H)    )                                                 4040
+ 9005  FORMAT   (2F12.6, I6 )                                               4050
+ 9006  FORMAT ( 2I1, F10.6)                                                 4060
+ 9007 FORMAT (F12.6,F13.0)                                                  4070
+ 9008  FORMAT  ( 30H0 ENERGY LEVELS, ITERATION NO.   I5 )                   4080
+ 9009  FORMAT  (1H0 16X, 14HSUBMATRIX NO.  I4  /   104H0   MATRIX   NO.     4090
+     1 OBS. LEVELS CALC. LEVELS     DIFF.    MATRIX   NO.  OBS LEVELS  C    4100
+     2ALC. LEVELS     DIFF. )                                               4110
+ 9010  FORMAT  (1H  2I7,F26.5,12X, 2I7,F26.5 )                              4120
+ 9011  FORMAT  (1H   2(2I7, 2F13.5,F12.5))                                  4130
+ 9012  FORMAT  (29H0 SUM OF SQUARES OF RESIDUALS   F15.6)                   4140
+ 9013 FORMAT (43H0 TOO MANY TRANSITIONS AFTER SUBMATRIX ... I5)             4150
+ 9014 FORMAT (45H0 TOO MANY ENERGY LEVELS AFTER SUBMATRIX ... I5)           4160
+      END                                                                   4170
+$IBFTC ADJAB   REF                                                          0010
+CADJAB                                                                      0020
+      SUBROUTINE ADJAB(KP,JK,JJ)                                            0030
+C        CALLED BY NMRIT WHEN ADJUSTING CHEMICAL SHIFTS                     0040
+C                                       AND COUPLING CONSTANTS.             0050
+      COMMON MULT(6),NINC(6),NASET,NOPROB,NTYPE,NIT,NENER,FREQ,             0060
+     1                NSPIN,NN,NTH,NT,ND,KE,KM,NPAR,ERR,IROW,IMROW,MATD,    0070
+     2       NLEV,NTRAN,NINT,RECORD(12),B(6),HB(6,11),A(6,6),AB(6,6,11),    0080
+     3       RE(11),PPM(21),NUCL(6),NSUB(25),INIT(11),IPLR                  0090
+      COMMON    FR1(6),FR2(6),DX(6),SCALE(6),NPLOT                          0100
+      COMMON BASE(6),BINC(6),ABASE(6,6),NFLAGA,NFLAGB,IEGEN                 0110
+      COMMON  /NMR1/ EN(360),DHNN(360),U(75,75),SPIN(25,6),QUANT(75,6),     0120
+     1               PJ(21),LFZ(75),DH(360),IQ(6),TMAT(75,75),HS(20,20),    0130
+     2               S(20,20)                                               0140
+      DIMENSION EE(75),EMJ(21),EMS(21,75),DMJ(21)                           0150
+      EQUIVALENCE (TMAT,EMS)                                                0160
+      K1=KP                                                                 0170
+      K2=KP+IMROW-1                                                         0180
+      K3=0                                                                  0190
+      DO 10  KK=K1,K2                                                       0200
+      K3=K3+1                                                               0210
+   10 EE(K3)=EN(KK)                                                         0220
+      IF (KM)  16,11,16                                                     0230
+   11 IF (JJ-1) 12,12,14                                                    0240
+   12 DO 13  I=1,NPAR                                                       0250
+   13 DMJ(I)=0.0                                                            0260
+   14 DO 15  I=1,NPAR                                                       0270
+      DO 15  J=K1,K2                                                        0280
+   15 EMS(I,J)=0.0                                                          0290
+   16 KST=1                                                                 0300
+      KD=KP                                                                 0310
+C        CALCULATE NEW DIAGONAL ELEMENTS                                    0320
+      DO 24  I=1,JK                                                         0330
+      KEND=KST+NSUB(I)-1                                                    0340
+      DO 20  KK=KST,KEND                                                    0350
+      DHNN(KD)=0.0                                                          0360
+      DO 18  K4=KST,KEND                                                    0370
+   18 DHNN(KD)=DHNN(KD)+(U(KK,K4)**2)*EE(K4)                                0380
+   20 KD=KD+1                                                               0390
+      KST=KEND+1                                                            0400
+   24 CONTINUE                                                              0410
+      IF (KM)  31,25,31                                                     0420
+   25 KK=K1                                                                 0430
+      DO 30  I=1,IMROW                                                      0440
+      LJ=LFZ(I)                                                             0450
+      DO 27  J=1,NTYPE                                                      0460
+   27 EMS(J,KK)=QUANT(LJ,J)                                                 0470
+      J1=NTYPE+1                                                            0480
+      J2=NTYPE-1                                                            0490
+      DO 28  J=1,J2                                                         0500
+      J3=J+1                                                                0510
+      DO 28  J4=J3,NTYPE                                                    0520
+      IF (A(J,J4)) 208,207,208                                              0530
+  207 EMS(J1,KK)=0.0                                                        0540
+      GO TO 28                                                              0550
+  208 EMS(J1,KK)=QUANT(LJ,J)*QUANT(LJ,J4)                                   0560
+   28 J1=J1+1                                                               0570
+      DO 29  J=1,NPAR                                                       0580
+   29 DMJ(J)=DMJ(J)+EMS(J,KK)**2                                            0590
+   30 KK=KK+1                                                               0600
+   31 IF (NIT-KM-1)  35,32,35                                               0610
+   32 DO 34  I=1,IMROW                                                      0620
+      DO 33  J=1,NPAR                                                       0630
+      EMJ(J)=0.0                                                            0640
+      K4=K1-1                                                               0650
+      DO 33  K=1,IMROW                                                      0660
+      K4=K4+1                                                               0670
+   33 EMJ(J)=EMJ(J)+EMS(J,K4)*U(K,I)**2                                     0680
+      WRITE (2)(EMJ(J), J=1,NPAR)                                           0690
+   34 CONTINUE                                                              0700
+   35 IF (JJ-IROW)  40,36,36                                                0710
+   36 IF (KM)  309,307,309                                                  0720
+  307 DO 37  J=1,NPAR                                                       0730
+      IF (DMJ(J)) 37,308,37                                                 0740
+  308 DMJ(J)=1.0                                                            0750
+   37 DMJ(J)=1.0/DMJ(J)                                                     0760
+C        CALCULATE NEW PARAMETER ESTIMATES FROM LEAST-SQUARES EQUATIONS     0770
+      DO 38  I=1,NENER                                                      0780
+      DO 38  J=1,NPAR                                                       0790
+   38 EMS(J,I)=EMS(J,I)*DMJ(J)                                              0800
+  309 DO 39  I=1,NENER                                                      0810
+      DO 39  J=1,NPAR                                                       0820
+   39 PJ(J)=PJ(J)+EMS(J,I)*DHNN(I)                                          0830
+   40 CONTINUE                                                              0840
+      RETURN                                                                0850
+      END                                                                   0860
+$IBFTC HDIAG   REF                                                          0010
+CHDIAG                                                                      0020
+C     MIHDI3, FORTAN II DIAGONALIZATION OF A REAL SYMMETRIC MATRIX BY       0030
+C     THE JACOBI METHOD.                                                    0040
+C     CALLING SEQUENCE FOR DIAGONALIZATION                                  0050
+C     CALL HDIAG( H, N, IEGEN, U, NR)                                       0060
+C     WHERE H IS THE ARRAY TO BE DIAGONALIZED.                              0070
+C     N IS THE ORDER OF THE MATRIX, H.                                      0080
+C     IEGEN MUST BE SET UNEQUAL TO ZERO IF ONLY EIGENVALUES ARE TO BE       0090
+C     COMPUTED.                                                             0100
+C     IEGEN MUST BE SET EQUAL TO ZERO IF EIGENVALUES AND EIGENVECTORS       0110
+C     ARE TO BE COMPUTED.                                                   0120
+C     U IS THE UNITARY MATRIX USED FOR FORMATION OF THE EIGENVECTORS.       0130
+C     NR IS THE NUMBER OF ROTATIONS.                                        0140
+C     A DIMENSION STATEMENT MUST BE INSERTED IN THE SUBROUTINE.             0150
+C     DIMENSION H(N,N), U(N,N), X(N), IQ(N)                                 0160
+C     COMPUTER MUST OPERATE IN FLOATING TRAP MODE                           0170
+C     THE SUBROUTINE OPERATES ONLY ON THE ELEMENTS OF H THAT ARE TO THE     0180
+C     RIGHT OF THE MAIN DIAGONAL. THUS, ONLY A TRIANGULAR                   0190
+C     SECTION NEED BE STORED IN THE ARRAY H.                                0200
+      SUBROUTINE  HDIAG (H,N,IEGEN,U,NR)                                    0210
+      DIMENSION H(20,20),U(20,20),X(20),IQ(20)                              0220
+C     DIMENSION H(20,20),U(20,20),X(20),IQ(20)                              0230
+      IF (IEGEN) 15,10,15                                                   0240
+   10 DO 14 I=1,N                                                           0250
+      DO 14 J=1,N                                                           0260
+      IF(I-J)12,11,12                                                       0270
+   11 U(I,J)=1.0                                                            0280
+      GO TO 14                                                              0290
+   12 U(I,J)=0.0                                                            0300
+   14 CONTINUE                                                              0310
+   15 NR = 0                                                                0320
+      IF (N-1) 1000,1000,17                                                 0330
+C     SCAN FOR LARGEST OFF DIAGONAL ELEMENT IN EACH ROW                     0340
+C     X(I) CONTAINS LARGEST ELEMENT IN  ITH ROW                             0350
+C     IQ(I) HOLDS SECOND SUBSCRIPT DEFINING POSITION OF ELEMENT             0360
+   17 NMI1=N-1                                                              0370
+      DO 30 I=1,NMI1                                                        0380
+      X(I) = 0.0                                                            0390
+      IPL1=I+1                                                              0400
+      DO 30 J=IPL1,N                                                        0410
+      IF(X(I)-ABS( H(I,J))) 20,20,30                                        0420
+   20 X(I)=ABS(H(I,J))                                                      0430
+      IQ(I)=J                                                               0440
+   30 CONTINUE                                                              0450
+C     SET INDICATOR FOR SHUT-OFF.RAP=2**-27,NR=NO.OF ROTATIONS              0460
+      RAP=.745058059E-08                                                    0470
+      HDTEST=1.0E38                                                         0480
+C     FIND MAXIMUM OF X(I) S FOR PIVOT ELEMENT AND                          0490
+C     TEST FOR END OF PROBLEM                                               0500
+   40 DO 70  I=1,NMI1                                                       0510
+      IF (I-1) 60,60,45                                                     0520
+   45 IF(XMAX-X(I)) 60,70,70                                                0530
+   60 XMAX=X(I)                                                             0540
+      IPIV=I                                                                0550
+      JPIV=IQ(I)                                                            0560
+   70 CONTINUE                                                              0570
+C     IS MAX. X(I) EQUAL TO ZERO, IF LESS THAN HDTEST,REVISE HDTEST         0580
+      IF (XMAX) 1000,1000,80                                                0590
+   80 IF( HDTEST) 90,90,85                                                  0600
+   85 IF (XMAX - HDTEST) 90,90,148                                          0610
+   90 HDIMIN = ABS( H (1,1) )                                               0620
+      DO 110  I=2,N                                                         0630
+      IF (HDIMIN - ABS( H (I,I))) 110,110,100                               0640
+  100 HDIMIN=ABS(H(I,I))                                                    0650
+  110 CONTINUE                                                              0660
+      HDTEST = HDIMIN*RAP                                                   0670
+C     RETURN IF MAX.H(I,J)LESS THAN(2**-27)ABSF(H(K,K)-MIN)                 0680
+      IF (HDTEST-XMAX) 148,1000,1000                                        0690
+  148 NR= NR+1                                                              0700
+C     COMPUTE TANGENT, SINE AND COSINE,H(I,I),H(J,J)                        0710
+  150 TANG=SIGN(2.0,(H(IPIV,IPIV)-H(JPIV,JPIV)))*H(IPIV,JPIV)/(ABS(H(IPI    0720
+     1V,IPIV)-H(JPIV,JPIV))+SQRT((H(IPIV,IPIV)-H(JPIV,JPIV))**2+4.0*H(IP    0730
+     2IV,JPIV)**2))                                                         0740
+      COSINE=1.0/SQRT(1.0+TANG**2)                                          0750
+      SINE=TANG*COSINE                                                      0760
+      HII=H(IPIV,IPIV)                                                      0770
+      H(IPIV,IPIV)=COSINE**2*(HII+TANG*(2.0*H(IPIV,JPIV)+TANG*H(JPIV,JPI    0780
+     1V)))                                                                  0790
+      H(JPIV,JPIV)=COSINE**2*(H(JPIV,JPIV)-TANG*(2.0*H(IPIV,JPIV)-TANG*H    0800
+     1 II))                                                                 0810
+      H(IPIV,JPIV)=0.0                                                      0820
+C     PSEUDO RANK THE EIGENVALUES                                           0830
+C     ADJUST SINE AND COS FOR COMPUTATION OF H(IK) AND U(IK)                0840
+      IF ( H(IPIV,IPIV) - H(JPIV,JPIV)) 152,153,153                         0850
+  152 HTEMP = H(IPIV,IPIV)                                                  0860
+      H(IPIV,IPIV) = H(JPIV,JPIV)                                           0870
+      H(JPIV,JPIV) =HTEMP                                                   0880
+C     RECOMPUTE SINE AND COS                                                0890
+      HTEMP = SIGN(1.0, -SINE) * COSINE                                     0900
+      COSINE =ABS(SINE)                                                     0910
+      SINE =HTEMP                                                           0920
+  153 CONTINUE                                                              0930
+C     INSPECT THE IQS BETWEEN I+1 AND N-1 TO DETERMINE                      0940
+C     WHETHER A NEW MAXIUM VALUE SHOULD BE COMPUTE   SINCE                  0950
+C     THE PRESENT MAXIMUM IS IN THE I OR J ROW.                             0960
+      DO 350 I=1,NMI1                                                       0970
+      IF(I-IPIV)210,350,200                                                 0980
+  200 IF (I-JPIV) 210,350,210                                               0990
+  210 IF(IQ(I)-IPIV) 230,240,230                                            1000
+  230 IF(IQ(I)-JPIV) 350,240,350                                            1010
+  240 K=IQ(I)                                                               1020
+  250 HTEMP=H(I,K)                                                          1030
+      H(I,K)=0.0                                                            1040
+      IPL1=I+1                                                              1050
+      X(I) =0.0                                                             1060
+C     SEARCH IN DEPLETED ROW FOR NEW MAXIMUM                                1070
+      DO 320 J=IPL1,N                                                       1080
+      IF ( X(I) -ABS( H(I,J)) ) 300,300,320                                 1090
+  300 X(I) = ABS(H(I,J))                                                    1100
+      IQ(I)=J                                                               1110
+  320 CONTINUE                                                              1120
+      H(I,K)=HTEMP                                                          1130
+  350 CONTINUE                                                              1140
+      X(IPIV) =0.0                                                          1150
+      X(JPIV) =0.0                                                          1160
+C     CHANGE THE ORDER ELEMENTS OF H                                        1170
+      DO 530 I=1,N                                                          1180
+      IF (I-IPIV) 370,530,420                                               1190
+  370 HTEMP = H(I,IPIV)                                                     1200
+      H(I,IPIV)= COSINE*HTEMP + SINE*H(I,JPIV)                              1210
+      IF ( X(I) - ABS( H(I,IPIV)) )380,390,390                              1220
+  380 X(I) = ABS(H(I,IPIV))                                                 1230
+      IQ(I) = IPIV                                                          1240
+  390 H(I,JPIV) = - SINE*HTEMP + COSINE*H(I,JPIV)                           1250
+      IF ( X(I) - ABS( H(I,JPIV)) ) 400,530,530                             1260
+  400 X(I) = ABS(H(I,JPIV))                                                 1270
+      IQ(I) = JPIV                                                          1280
+      GO TO 530                                                             1290
+  420 IF(I-JPIV) 430,530,480                                                1300
+  430 HTEMP = H(IPIV,I)                                                     1310
+      H(IPIV,I) = COSINE*HTEMP + SINE*H(I,JPIV)                             1320
+      IF ( X(IPIV) - ABS(H(IPIV,I)) ) 440,450,450                           1330
+  440 X(IPIV) = ABS(H(IPIV,I))                                              1340
+      IQ(IPIV) = I                                                          1350
+  450 H(I,JPIV) = - SINE*HTEMP + COSINE*H(I,JPIV)                           1360
+      IF (X(I) - ABS( H(I,JPIV)) ) 400,530,530                              1370
+  480 HTEMP = H(IPIV,I)                                                     1380
+      H(IPIV,I) = COSINE*HTEMP + SINE*H(JPIV,I)                             1390
+      IF ( X(IPIV) - ABS( H(IPIV,I)) ) 490,500,500                          1400
+  490 X(IPIV) = ABS(H(IPIV,I))                                              1410
+      IQ(IPIV) = I                                                          1420
+  500 H(JPIV,I) = - SINE*HTEMP + COSINE*H(JPIV,I)                           1430
+      IF ( X(JPIV) - ABS( H(JPIV,I)) )510,530,530                           1440
+  510 X(JPIV) = ABS(H(JPIV,I))                                              1450
+      IQ(JPIV) = I                                                          1460
+  530 CONTINUE                                                              1470
+C     TEST FOR COMPUTATION OF EIGENVECTORS                                  1480
+      IF(IEGEN) 40,540,40                                                   1490
+  540 DO 550 I=1,N                                                          1500
+      HTEMP=U(I,IPIV)                                                       1510
+      U(I,IPIV)=COSINE*HTEMP+SINE*U(I,JPIV)                                 1520
+  550 U(I,JPIV)= -SINE*HTEMP+COSINE*U(I,JPIV)                               1530
+      GO TO 40                                                              1540
+ 1000 RETURN                                                                1550
+      END                                                                   1560
+$IBFTC XTCALC  REF                                                          0010
+CXTCALC                                                                     0020
+      SUBROUTINE XTCALC(JK,JJ)                                              0030
+C        CALCULATES TRANSITION FREQUENCIES AND INTENSITIES                  0040
+      COMMON MULT(6),NINC(6),NASET,NOPROB,NTYPE,NIT,NENER,FREQ,             0050
+     1                NSPIN,NN,NTH,NT,ND,KE,KM,NPAR,ERR,IROW,IMROW,MATD,    0060
+     2       NLEV,NTRAN,NINT,RECORD(12),B(6),HB(6,11),A(6,6),AB(6,6,11),    0070
+     3       RE(11),PPM(21),NUCL(6),NSUB(25),INIT(11),IPLR                  0080
+      COMMON    FR1(6),FR2(6),DX(6),SCALE(6),NPLOT                          0090
+      COMMON BASE(6),BINC(6),ABASE(6,6),NFLAGA,NFLAGB,IEGEN                 0100
+      COMMON  /NMR1/ EN(360),DHNN(360),U(75,75),SPIN(25,6),QUANT(75,6),     0110
+     1               PJ(21),LFZ(75),DH(360),IQ(6),TMAT(75,75),HS(20,20),    0120
+     2               S(20,20)                                               0130
+      DIMENSION UTT(40,40),UTTU(40,40),X(400),LEV1(400),LEV2(400),T(400)    0140
+C        CALCULATE WEIGHTING COEFFICIENTS FOR INTENSITIES                   0150
+      DO 77J=1,IMROW                                                        0160
+      DO 77K=1,IMROW                                                        0170
+   77 TMAT(J,K)=0.0                                                         0180
+      OMEGA=1.0                                                             0190
+      DO 78I=1,NTYPE                                                        0200
+      XNUCL = NUCL(I)                                                       0210
+      IARG1 = XNUCL/2.0-SPIN(JJ,I)                                          0220
+      IARG2=IARG1-1                                                         0230
+      IF (IARG1)  78,78,1000                                                0240
+ 1000 XMN=1                                                                 0250
+      N=NUCL(I)                                                             0260
+      DO 1001  II=1,N                                                       0270
+      XI=II                                                                 0280
+ 1001 XMN=XMN*XI                                                            0290
+      XMR=1                                                                 0300
+ 1002 DO 1003  II=1,IARG1                                                   0310
+      XI=II                                                                 0320
+ 1003 XMR=XMR*XI                                                            0330
+      K=N-IARG1                                                             0340
+      XMNR=1                                                                0350
+      DO 1004  II=1,K                                                       0360
+      XI=II                                                                 0370
+ 1004 XMNR=XMNR*XI                                                          0380
+      XNB1=XMN/(XMR*XMNR)                                                   0390
+      XMR=1                                                                 0400
+      DO 1005  II=1,IARG2                                                   0410
+      XI=II                                                                 0420
+ 1005 XMR=XMR*XI                                                            0430
+      K=N-IARG2                                                             0440
+      XMNR=1                                                                0450
+      DO 1006  II = 1,K                                                     0460
+      XI=II                                                                 0470
+ 1006 XMNR=XMNR*XI                                                          0480
+      XNB2=XMN/(XMR*XMNR)                                                   0490
+      XOMEG=XNB1-XNB2                                                       0500
+      OMEGA=OMEGA*XOMEG                                                     0510
+   78 CONTINUE                                                              0520
+      JSUB=JK-1                                                             0530
+      J1=1                                                                  0540
+      DO 90 L=1,JSUB                                                        0550
+      JWJW=0                                                                0560
+      JRMK=0                                                                0570
+      LL=L+1                                                                0580
+      IF (L-1)80,80,79                                                      0590
+   79 J1=J1+NSUB(L-1)                                                       0600
+   80 J2=J1+NSUB(L)-1                                                       0610
+      J3=J2+1                                                               0620
+      J4=J3+NSUB(LL)-1                                                      0630
+      DO 85J=J1,J2                                                          0640
+      DO 85K=J3,J4                                                          0650
+      NTRAN=NTRAN+1                                                         0660
+      JWJW=JWJW+1                                                           0670
+      X(JWJW)=DH(J)-DH(K)                                                   0680
+      LEV1(JWJW)=J+NLEV                                                     0690
+      LEV2(JWJW)=K+NLEV                                                     0700
+      JL = LFZ(J)                                                           0710
+      KL = LFZ(K)                                                           0720
+      NDIFF=0                                                               0730
+      IQ(1) = 0                                                             0740
+C      CALCULATE TRANSFORMATION MATRIX, T                                   0750
+      DO 82I=1,NTYPE                                                        0760
+      IF (QUANT(JL,I )-QUANT(KL,I ))  800,82,800                            0770
+  800 NDIFF = NDIFF+1                                                       0780
+      IF (QUANT(JL,I )-QUANT(KL,I )-1.0)  82,81,82                          0790
+   81 IQ(NDIFF)=I                                                           0800
+   82 CONTINUE                                                              0810
+      IF (NDIFF-1)83,84,83                                                  0820
+   83 TMAT(J,K)=0.0                                                         0830
+      GO TO 85                                                              0840
+   84 IF (IQ(1)) 83,83,804                                                  0850
+  804 I=IQ(1)                                                               0860
+      TMAT(J,K)=SQRT((SPIN(JJ,I)+QUANT(JL,I ))*(SPIN(JJ,I)-QUANT(KL,I ))    0870
+     1)                                                                     0880
+      TMAT(K,J)=TMAT(J,K)                                                   0890
+   85 CONTINUE                                                              0900
+      II=0                                                                  0910
+      DO 86J=J1,J4                                                          0920
+      II=II+1                                                               0930
+      KK=0                                                                  0940
+      DO 86K=J1,J4                                                          0950
+      KK=KK+1                                                               0960
+      UTT(II,KK)=0.0                                                        0970
+      DO 86 IN =J1,J4                                                       0980
+   86 UTT(II,KK)=UTT(II,KK)+U(IN,J)*TMAT(IN,K)                              0990
+      JEND=J4-J1+1                                                          1000
+      DO 87J=1,JEND                                                         1010
+      DO 87K=J,JEND                                                         1020
+      KK=J1+K-1                                                             1030
+      UTTU(J,K)=0.0                                                         1040
+      DO 87 IN =1,JEND                                                      1050
+      II = J1+IN-1                                                          1060
+   87 UTTU(J,K)=UTTU(J,K)+UTT(J,IN)*U(II,KK)                                1070
+C        UTTU CONTAINS UNWEIGHTED TRANSITION INTENSITIES                    1080
+      IEND=NSUB(L)                                                          1090
+      IIEND=NSUB(LL)                                                        1100
+      DO 88I=1,IEND                                                         1110
+      DO 88II=1,IIEND                                                       1120
+      IIST=NSUB(L)+II                                                       1130
+      NINT=NINT+1                                                           1140
+      JRMK=JRMK+1                                                           1150
+   88 T(JRMK)=OMEGA*(UTTU(I,IIST)**2)                                       1160
+C        WEIGHTED TRANSITIONS                                               1170
+      DO 89 I=1,JRMK                                                        1180
+   89 WRITE (4) LEV1(I),LEV2(I),X(I),T(I)                                   1190
+   90 CONTINUE                                                              1200
+      RETURN                                                                1210
+      END                                                                   1220
+$IBFTC NMRXT   REF                                                          0010
+CNMRXT                                                                      0020
+C        NMR SPECTRAL ANALYSIS BY EQUIVALENCE FACTORING                     0030
+C        NMRXT - TRANSITIONS, PLOTS    MAR., 1964                           0040
+C                  BY RUBY M. STANLEY                                       0050
+C             FOR R.C.FERGUSON AND D.W.MARQUARDT                            0060
+C                       E.I.DUPONT CO., WILMINGTON, DEL.                    0070
+C     PLOT OF CALC. INTENSITY OVER CALC FREQUENCY FROM NMRIT                0080
+      COMMON MULT(6),NINC(6),NASET,NOPROB,NTYPE,NIT,NENER,FREQ,             0090
+     1                NSPIN,NN,NTH,NT,ND,KE,KM,NPAR,ERR,IROW,IMROW,MATD,    0100
+     2       NLEV,NTRAN,NINT,RECORD(12),B(6),HB(6,11),A(6,6),AB(6,6,11),    0110
+     3       RE(11),PPM(21),NUCL(6),NSUB(25),INIT(11),IPLR                  0120
+      COMMON    FR1(6),FR2(6),DX(6),SCALE(6),NPLOT                          0130
+      COMMON BASE(6),BINC(6),ABASE(6,6),NFLAGA,NFLAGB,IEGEN                 0140
+      COMMON /NMR2/  DMAT(21,360),CP(21,21),DCP(21)                         0150
+      DIMENSION NRO(1500),NCO(1500),XO(1500),X(1500),T(1500),LEV1(1500)     0160
+      DIMENSION LEV2(1500),XX(1500),TT(1500),XINT(1000),TSUM(1000)          0170
+      DIMENSION LINE(1000),IINT(1000),XOVER(100),NSYM(100)                  0180
+      EQUIVALENCE (DMAT(1),NRO),(DMAT(1501),NCO),(DMAT(3001),XO)            0190
+      EQUIVALENCE (DMAT(1),XINT),(DMAT(1001),TSUM),(DMAT(2001),LINE)        0200
+      EQUIVALENCE (DMAT(3001),IINT),(DMAT(4001),XOVER),(DMAT(4101),NSYM)    0210
+      REWIND 2                                                              0220
+      REWIND 3                                                              0230
+      REWIND 4                                                              0240
+  540 IF (NIT)543,543,541                                                   0250
+C        EDIT CHEMICAL SHIFTS AND COUPLING CONSTANTS                        0260
+  541 DO 542I=1,NTYPE                                                       0270
+  542 PPM(I)=HB(I,KE)/FREQ                                                  0280
+  543 WRITE (6,9004)(RECORD(I),I=1,12),NOPROB,NSPIN,NIT,     FREQ, NTYPE    0290
+     1, (NUCL(J),J=1,6)                                                     0300
+      WRITE (6,9013)(INIT(I),I=1,KE)                                        0310
+      WRITE (6,9014)                                                        0320
+      DO 544 I=1,NTYPE                                                      0330
+  544 WRITE (6,9015)I,(HB(I,J),J=1,KE),I                                    0340
+      WRITE (6,9016)                                                        0350
+      DO 545I=1,NN                                                          0360
+      II=I+1                                                                0370
+      DO 545J=II,NTYPE                                                      0380
+  545 WRITE (6,9017)I,J,(AB(I,J,K),K=1,KE),I,J                              0390
+      IF (NIT)590,590,546                                                   0400
+  546 WRITE (6,9018)(RE(I),I=1,KE)                                          0410
+C        CALCULATE VARIANCE-COVARIANCE MATRIX OF PARAMETERS                 0420
+C     ..................................................................    0430
+      CALL CPCALC                                                           0440
+C     ..................................................................    0450
+      WRITE (6,9022)                                                        0460
+      WRITE (6,9023)((I,HB(I,KE),PPM(I),B(I)),I=1,NTYPE)                    0470
+      WRITE (6,9024)                                                        0480
+      DO 548 I=1,NN                                                         0490
+      II=I+1                                                                0500
+      DO 548 J=II,NTYPE                                                     0510
+  548 WRITE (6,9026)I,J,AB(I,J,KE),A(I,J)                                   0520
+      NZ = NTYPE+1                                                          0530
+  550 WRITE (6,9029)NTYPE,NZ,NPAR                                           0540
+  552 DO 555  I=1,NPAR                                                      0550
+      IF (I-8)  554,553,553                                                 0560
+  553 IEND =8                                                               0570
+      GO TO 555                                                             0580
+  554 IEND = I                                                              0590
+  555 WRITE (6,9030)(CP(I,J), J=1,IEND)                                     0600
+      IF (NPAR-8)  565,565,556                                              0610
+  556 WRITE (6,9029)NTYPE,NZ,NPAR                                           0620
+C        EDIT TRANSITION FREQUENCY AND INTENSITY TABLE                      0630
+      DO 559  I=9,NPAR                                                      0640
+      IF (I-16)  558,557,557                                                0650
+  557 IEND = 16                                                             0660
+      GO TO 559                                                             0670
+  558 IEND = I                                                              0680
+  559 WRITE (6,9030)(CP(I,J), J=9,IEND)                                     0690
+  560 IF (NPAR-16)  565,565,561                                             0700
+  561 WRITE (6,9029)NTYPE,NZ,NPAR                                           0710
+      DO 564  I=17,NPAR                                                     0720
+  564 WRITE (6,9030)(CP(I,J), J=17,I)                                       0730
+  565 DO 566  I=1,NPAR                                                      0740
+      CP(I,I) = 1.0                                                         0750
+      IF (I-NPAR)  563,569,569                                              0760
+  563 N1=I+1                                                                0770
+      DO 566  J=N1,NPAR                                                     0780
+      CP(I,J)=CP(I,J)/(DCP(I)*DCP(J))                                       0790
+  566 CP(J,I)=CP(I,J)                                                       0800
+  569 WRITE (6,9031)NTYPE,NZ,NPAR                                           0810
+      DO 570  I=1,NPAR                                                      0820
+      IF (I-8)  568,567,567                                                 0830
+  567 IEND = 8                                                              0840
+      GO TO 570                                                             0850
+  568 IEND = I                                                              0860
+  570 WRITE (6,9032)(CP(I,J), J=1,IEND)                                     0870
+      IF (NPAR-8)  592,592,571                                              0880
+  571 WRITE (6,9031)NTYPE,NZ,NPAR                                           0890
+      DO 575  I=9,NPAR                                                      0900
+      IF (I-16)  573,572,572                                                0910
+  572 IEND = 16                                                             0920
+      GO TO 575                                                             0930
+  573 IEND = I                                                              0940
+  575 WRITE (6,9032)(CP(I,J), J=9,IEND)                                     0950
+      IF (NPAR-16 )  592,592,576                                            0960
+  576 WRITE (6,9031)NTYPE,NZ,NPAR                                           0970
+      DO 580  I=17,NPAR                                                     0980
+  580 WRITE (6,9032)(CP(I,J), J=17,I)                                       0990
+      GO TO 592                                                             1000
+  590 WT=1.0                                                                1010
+      LIST=1                                                                1020
+  592 WRITE (6,9004)(RECORD(I),I=1,12),NOPROB,NSPIN,         NIT,FREQ,NT    1030
+     1YPE,(NUCL(J),J=1,6)                                                   1040
+      WRITE (6,9027)                                                        1050
+  100 IF (NTRAN-NINT)101,101,102                                            1060
+  101 NTOT=NTRAN                                                            1070
+      GO TO 104                                                             1080
+  102 NTOT=NINT                                                             1090
+  104 SUMT=0.0                                                              1100
+      DO 105I=1,NTOT                                                        1110
+      READ (4) LEV1(I),LEV2(I),X(I),T(I)                                    1120
+  105 SUMT=SUMT+T(I)                                                        1130
+      TNTH=NSPIN*NTH                                                        1140
+      TMULT=TNTH/SUMT                                                       1150
+      DO 106 I=1,NTOT                                                       1160
+  106 T(I)=T(I)*TMULT                                                       1170
+      IN = 1                                                                1180
+      IF (NIT)  365,365,360                                                 1190
+  360 READ  (5,9003)NRO(IN),NCO(IN),XO(IN)                                  1200
+      IF (NRO(IN))  365,365,362                                             1210
+  362 IN = IN+1                                                             1220
+      GO TO 360                                                             1230
+  365 IN = IN-1                                                             1240
+      ERR=0.0                                                               1250
+      K=0                                                                   1260
+      KS=1                                                                  1270
+      LPT = 1                                                               1280
+      LCT=1                                                                 1290
+      DO 120L=1,NTOT                                                        1300
+      XMAX=1000000.0                                                        1310
+      DO 108I=1,NTOT                                                        1320
+      IF (XMAX-X(I))108,108,107                                             1330
+  107 XMAX=X(I)                                                             1340
+      II=I                                                                  1350
+  108 CONTINUE                                                              1360
+      T(II)=T(II)+0.005                                                     1370
+      IF(T(II)-0.01 )120,110,110                                            1380
+  110 KN=LEV1(II)                                                           1390
+      KM=LEV2(II)                                                           1400
+      XX(KS)=XMAX                                                           1410
+      DO 115I=1,IN                                                          1420
+      IF (KN-NRO(I))115,112,115                                             1430
+  112 IF (KM-NCO(I))115,114,115                                             1440
+  114 XP=XO(I)                                                              1450
+      YY=XP-XX(KS)                                                          1460
+      ERR=ABS(YY)+ERR                                                       1470
+      K=K+1                                                                 1480
+      GO TO 116                                                             1490
+  115 CONTINUE                                                              1500
+      XP=0.0                                                                1510
+      YY=0.0                                                                1520
+  116 WRITE (6,9025)LCT,KN,KM,XP,XX(KS),YY,T(II)                            1530
+      LCT=LCT+1                                                             1540
+      TT(KS)=T(II)                                                          1550
+      KS=KS+1                                                               1560
+  120 X(II)=1000000.0                                                       1570
+      KS=KS-1                                                               1580
+  121 AJ=K                                                                  1590
+      ERR=ERR/AJ                                                            1600
+      WRITE (6,9028)ERR                                                     1610
+C     BEGIN PLOTTING   .................................................    1620
+      IF (IPLR.EQ.0) GO TO 6                                                1630
+      IPLR=0                                                                1640
+    1 READ (5,9003) NPLOT                                                   1650
+      IF ( NPLOT.LE.0) GO TO 90                                             1660
+      DO 4 I=1,NPLOT                                                        1670
+    2 READ (5,910) FR1(I),FR2(I),DX(I),SCALE(I)                             1680
+      IF (DX(I)) 3,3,4                                                      1690
+    3 DX(I)=0.5                                                             1700
+    4 CONTINUE                                                              1710
+      IF (WT) 5,5,6                                                         1720
+    5 WT = 1.0                                                              1730
+    6 IF (NPLOT.EQ.0) GO TO 90                                              1740
+      DO 50 IPL=1,NPLOT                                                     1750
+      NN=(FR2(IPL)-FR1(IPL))/DX(IPL)+1.                                     1760
+      NN=MIN0(NN,1000)                                                      1770
+      DO 7 I=1,NN                                                           1780
+      XINT(I)=0.0                                                           1790
+      TSUM(I)=0.0                                                           1800
+    7 LINE(I)=0                                                             1810
+      NINT = 0                                                              1820
+    8 I1 = 1                                                                1830
+      I2=2                                                                  1840
+      XINT(I1) = FR1(IPL)                                                   1850
+      DO 20 I=1, KS                                                         1860
+      IF (XX(I)-XINT(I1)) 20, 9, 12                                         1870
+    9 IF (I1-1) 11, 11, 10                                                  1880
+   10 I1 = I2                                                               1890
+      I2 = I2+1                                                             1900
+   11 LINE(I1) = LINE(I1)+1                                                 1910
+      TSUM(I1) = TSUM(I1)+TT(I)*WT                                          1920
+      GO TO 20                                                              1930
+   12 IF (XINT(I1)-FR2(IPL)) 14,21,21                                       1940
+   14 XINT(I2) = XINT(I1)+DX(IPL)                                           1950
+      IF (XINT(I2)-FR2(IPL)) 16,16,15                                       1960
+   15 XINT(I2) = FR2(IPL)                                                   1970
+   16 IF(XX(I)-XINT(I2)) 17, 17, 18                                         1980
+   17 LINE(I1) = LINE(I1) + 1                                               1990
+      TSUM(I1) = TSUM(I1) +TT(I)*WT                                         2000
+      GO TO 20                                                              2010
+   18 I1=I2                                                                 2020
+      I2=I2+1                                                               2030
+      GO TO 12                                                              2040
+   20 CONTINUE                                                              2050
+   21 NINT = I1                                                             2060
+      SCS=SCALE(IPL)                                                        2070
+   24 IF (SCALE(IPL)) 25,25,29                                              2080
+   25 TMAX = 0.0                                                            2090
+      DO 28 I = 1, NINT                                                     2100
+      IF (TMAX-TSUM(I)) 26, 28, 28                                          2110
+   26 TMAX=TSUM(I)                                                          2120
+   28 CONTINUE                                                              2130
+      DT = TMAX/100.0                                                       2140
+      GO TO 30                                                              2150
+   29 DT = SCALE(IPL)                                                       2160
+   30 DO 32 I = 1,NN                                                        2170
+   32 IINT(I) = TSUM(I)/DT+0.5                                              2180
+      WRITE (6,900)(RECORD(I),I=1,12), NOPROB                               2190
+      WRITE (6,901) NSPIN,DT,FR1(IPL),FR2(IPL),DX(IPL)                      2200
+      IY = 0                                                                2210
+      DO 40  I = 1,NN                                                       2220
+C     SET VARIABLE Q000CT TO 676060606060                                   2230
+      CALL HOLOCT (Q000CT,12H676060606060)                                  2240
+      SYM =Q000CT                                                           2250
+      II = IINT(I)                                                          2260
+      IF (II-100)34,34,33                                                   2270
+   33 II = 100                                                              2280
+C     SET VARIABLE Q001CT TO 706060606060                                   2290
+      CALL HOLOCT (Q001CT,12H706060606060)                                  2300
+      SYM =Q001CT                                                           2310
+      IY = IY+1                                                             2320
+      XOVER(IY) = XINT(I)                                                   2330
+      NSYM(IY) = IINT(I)                                                    2340
+      GO TO 37                                                              2350
+   34 IF (I-NINT) 36,36,35                                                  2360
+   35 XINT(I) = XINT(I-1)+DX(IPL)                                           2370
+   36 XPRNT=XINT(I)+DX(IPL)/2.                                              2380
+      IF (II) 38,38,37                                                      2390
+   37 WRITE (6,902)  XPRNT, LINE(I), (SYM, J = 1,II)                        2400
+      GO TO 40                                                              2410
+   38 WRITE (6,902)  XPRNT, LINE(I)                                         2420
+   40 CONTINUE                                                              2430
+      IF (IY)  45,45,42                                                     2440
+   42 WRITE (6,905)                                                         2450
+      WRITE (6,906)(XOVER(I), NSYM(I),I = 1,IY)                             2460
+   45 IF (SCS  )  48,50,50                                                  2470
+   48 SCS   = ABS(SCS  )                                                    2480
+      DT = DT/SCS                                                           2490
+      GO TO 30                                                              2500
+   50 CONTINUE                                                              2510
+   90 CALL CHNXIT                                                           2520
+ 9003  FORMAT  ( 2I4,F12.4 )                                                2530
+ 9004 FORMAT  ( 1H1 12A6 / 13H0 PROBLEM NO. I5, 20H     NUMBER OF SPINS     2540
+     1I3, 25H     NUMBER OF ITERATIONS I3, 16H     RADIO FREQ. F10.5,       2550
+     27H MC/SEC /1H0 20X,15HNUMBER OF TYPES I3,20H     (P,Q,R,...)=(        2560
+     35(I2,1H,),I2,1H)    )                                                 2570
+ 9013  FORMAT  ( 1H 11I10 )                                                 2580
+ 9014  FORMAT  ( 31H0 CHEMICAL SHIELDING PARAMETERS  )                      2590
+ 9015  FORMAT (1H  I1,F14.5, 10F10.5, I3 )                                  2600
+ 9016  FORMAT  ( 1H0/30H0 SPIN SPIN COUPLING CONSTANTS  )                   2610
+ 9017  FORMAT (1H 2I1,F13.5, 10F10.5, I3, I1 )                              2620
+ 9018  FORMAT  (1H0/ 29H0 SUM OF SQUARES OF RESIDUALS /1 H  5X, 11F10.5)    2630
+ 9020  FORMAT (F12.6)                                                       2640
+ 9021  FORMAT (2I1,F10.6)                                                   2650
+ 9022 FORMAT (54H0        NO. CHEMICAL SHIELDING         PPM      ERROR)    2660
+ 9023 FORMAT (1H I10,2F17.5,F10.5)                                          2670
+ 9024  FORMAT (37H0        NO. COUPLING CONSTANT  ERROR )                   2680
+ 9025  FORMAT  ( 2H   I4,I9,2H - I3,4F19.3)                                 2690
+ 9026  FORMAT  (1H I9, I1, F17.5, F10.5)                                    2700
+ 9027  FORMAT ( 97H0  LINE     TRANSITION         OBS FREQ.        CALC.    2710
+     1 FREQ.           O - C          CALC. INT.    )                       2720
+ 9028  FORMAT ( 1H0  45X 20HAVERAGE DEVIATION IS   F11.3 )                  2730
+ 9029 FORMAT (1H1 38X, 42HVARIANCE-COVARIANCE OF PARAMETER ESTIMATES  /     2740
+     1        1H0 28X,20HSHIFTS ... COLS 1 TO  I2, 13X, 17HCOUPLING ...     2750
+     2COLS   I2, 4H TO   I2 //)                                             2760
+ 9030 FORMAT (1H0 8E14.4)                                                   2770
+ 9031 FORMAT (1H1 41X, 35HCORRELATIONS OF PARAMETER ESTIMATES   /           2780
+     1        1H0 28X,20HSHIFTS ... COLS 1 TO  I2, 13X, 17HCOUPLING ...     2790
+     2COLS   I2, 4H TO   I2 //)                                             2800
+ 9032 FORMAT (1H0 8F12.4)                                                   2810
+C     PLOT FORMATS  ....................................................    2820
+  900 FORMAT (1H1 12X, 12A6, 15H   PROBLEM NO.   I5)                        2830
+  901 FORMAT (1H0 / 10X, 10HNO. SPINS  I2,58X,21HINTENSITY PER SYMBOL       2840
+     1F8.3/10X,18HLOWER FREQ. LIMIT  F10.3,7X,18HUPPER FREQ. LIMIT          2850
+     2F10.3,7X,19HFREQUENCY INTERVAL F8.3//13X,3HNO./                       2860
+     328H FREQUENCY  COMB  .INTENSITY  )                                    2870
+  902 FORMAT (1X,F9.3,2X,1H( I3,3H) . 100A1 )                               2880
+  903 FORMAT (2I5,5F10.0,I5)                                                2890
+  905 FORMAT (////37X, 46HTABLE OF LINES WHICH EXCEEDED 100 PLOTTED PTS.    2900
+     1  //48X, 9HFREQUENCY  6X, 10HNO. POINTS  /)                           2910
+  906 FORMAT ( 48X,F9.3,8X,I5)                                              2920
+  910 FORMAT (4F10.0)                                                       2930
+      END                                                                   2940
+$IBFTC CPCLC   REF                                                          0010
+      SUBROUTINE CPCALC                                                     0020
+C     CALCULATES VARIANCE-COVARIANCE MATRIX, CP, OF PARAMETER ESTIMATES     0030
+      COMMON MULT(6),NINC(6),NASET,NOPROB,NTYPE,NIT,NENER,FREQ,             0040
+     1                NSPIN,NN,NTH,NT,ND,KE,KM,NPAR,ERR,IROW,IMROW,MATD,    0050
+     2       NLEV,NTRAN,NINT,RECORD(12),B(6),HB(6,11),A(6,6),AB(6,6,11),    0060
+     3       RE(11),PPM(21),NUCL(6),NSUB(25),INIT(11),IPLR                  0070
+      COMMON    FR1(6),FR2(6),DX(6),SCALE(6),NPLOT                          0080
+      COMMON BASE(6),BINC(6),ABASE(6,6),NFLAGA,NFLAGB,IEGEN                 0090
+      COMMON /NMR2/  DMAT(21,360),CP(21,21),DCP(21)                         0100
+      DIMENSION CE(360),DCE(360)                                            0110
+      REWIND 2                                                              0120
+      REWIND 3                                                              0130
+      DO 2  I=1,NENER                                                       0140
+    2 READ  (2)(DMAT(J,I), J=1,NPAR)                                        0150
+      DO 25  I=1,NPAR                                                       0160
+      DO 10  J=1,NENER                                                      0170
+      READ  (23)   (CE(K), K=1,NENER)                                       0180
+      DCE(J)=0.0                                                            0190
+      DO 5  K=1,NENER                                                       0200
+    5 DCE(J)=DCE(J)+DMAT(I,K)*CE(K)                                         0210
+   10 CONTINUE                                                              0220
+      REWIND 3                                                              0230
+      DO 20  J=1,NPAR                                                       0240
+      CP(I,J)=0.0                                                           0250
+      DO 15  K=1,NENER                                                      0260
+   15 CP(I,J)=CP(I,J)+DCE(K)*DMAT(J,K)                                      0270
+   20 CONTINUE                                                              0280
+   25 CONTINUE                                                              0290
+      DO 30  I=1,NPAR                                                       0300
+   30 DCP(I)=SQRT(CP(I,I))                                                  0310
+      DO 35  I=1,NTYPE                                                      0320
+   35 B(I)=DCP(I)                                                           0330
+      N2=NTYPE+1                                                            0340
+      N1=NTYPE-1                                                            0350
+      DO 40  I=1,N1                                                         0360
+      I1=I+1                                                                0370
+      DO 40  J=I1,NTYPE                                                     0380
+      A(I,J)=DCP(N2)                                                        0390
+      N2=N2+1                                                               0400
+   40 CONTINUE                                                              0410
+      RETURN                                                                0420
+      END                                                                   0430
+$IBFTC NMREN                                                                0010
+CNMREN                                                                      0020
+C        NMR SPECTRAL ANALYSIS BY EQUIVALENCE FACTORING                     0030
+C        NMREN - NMR ENERGY LEVEL REFINEMENT, MAR., 1964                    0040
+C                  BY RUBY M. STANLEY                                       0050
+C             FOR R.C.FERGUSON AND D.W.MARQUARDT                            0060
+C                       E.I.DUPONT CO., WILMINGTON, DEL.                    0070
+C     THIS PROGRAM IS A MODIFICATION OF ...                                 0080
+C     NMREN2 - NMR ENERGY LEVEL PROGRAM BY J. D. SWALEN, NOV., 1961         0090
+C     ENERGY LEVELS ARE CALCULATED BY LEAST SQUARES                         0100
+C     PROGRAM FOR 100 ENERGY LEVELS AND 600 TRANSITIONS OR LESS             0110
+C     IND = -7 FIRST CARD OF EACH DATA SET                                  0120
+C     NOPROB IS NUMBER OF PROBLEM                                           0130
+C     N NUMBER OF ENERGY LEVELS                                             0140
+C     NZ IS NO. OF ENERGY LEVEL SET TO ZERO. IF NZ = 0, THEN TRACE = 0      0150
+C     SECOND CARD OF EACH DATA SET  IDENTIFICATION CARD,CONTENTS PRINTED    0160
+C     LAST CARD IND -7, NOPROB (NUMBER OF PROBLEM) 999                      0170
+      DIMENSION A( 75, 75),B( 75),BB( 75, 75),G(600),           X( 75),     0180
+     1       BC(600),KW( 75),NR(600),NC(600),OC(600),RECORD(12),EI( 75),    0190
+     2CE( 75),NROW(75)                                                      0200
+C     DIMENSION A( 75, 75),B( 75),BB( 75, 75),G(600),U( 75, 75),X( 75),     0210
+C    1E( 75),BC(600),KW( 75),NR(600),NC(600),OC(600),RECORD(12),EI( 75),    0220
+C    2CE( 75),NROW(75)                                                      0230
+C     TRANSITION STORAGE - NR,NC LABELS, G FREQ.,BC CALC FREQ, OC DIFF.     0240
+C     ENERGY LEVEL STORAGE - KW LABEL, X LEVELS, EI ERRORS                  0250
+      EQUIVALENCE (A,BB)                                                    0260
+      REWIND 3                                                              0270
+      NWRT=1                                                                0280
+      NTOT=0                                                                0290
+      REESUM=0.                                                             0300
+    1 READ  (5,101)IND,NOPROB,N,NZ,MATD,NSUB,NOMIT,NFLAG,IEDIT,VAR          0310
+      IF(IND+7)1,2,1                                                        0320
+    2 IF (NOPROB-9999)  3,400,3                                             0330
+  400 CALL EXIT                                                             0340
+    3 IF (NOMIT)  8,8,7                                                     0350
+    7 READ  (5,118)(NROW(I), I=1,NOMIT)                                     0360
+    8 READ  (5,102)(RECORD(I),I=1,12)                                       0370
+      WRITE (6,103)NOPROB,(RECORD(I),I=1,12)                                0380
+      L=1                                                                   0390
+    4 READ  (5,104)(NR(L),NC(L),G(L))                                       0400
+C     TRANSITIONS READ HERE WITH THEIR LABELLING                            0410
+C     LABELLING OF TRANSITIONS CAN BE ARBITRARY                             0420
+      IF(NR(L)+9)5,6,5                                                      0430
+    5 L=L+1                                                                 0440
+      GO TO 4                                                               0450
+    6 KW(N+1)=0                                                             0460
+      X(N+1)=0.0                                                            0470
+      EI(N+1)=0.0                                                           0480
+      NC(L)=0                                                               0490
+      NR(L)=0                                                               0500
+      G(L)=0.0                                                              0510
+      BC(L)=0.0                                                             0520
+      OC(L)=0.0                                                             0530
+      S=L-N                                                                 0540
+      L=L-1                                                                 0550
+      XN=N                                                                  0560
+      IF (VAR.NE..0) GO TO 9                                                0570
+      VAR=0.1                                                               0580
+    9 DO 18 I=1,N                                                           0590
+      KW(I)=4096                                                            0600
+      DO 13 J=1,L                                                           0610
+      IF(NR(J)-KW(I))10,11,11                                               0620
+   10 KW(I)=NR(J)                                                           0630
+   11 IF(NC(J)-KW(I))12,13,13                                               0640
+   12 KW(I)=NC(J)                                                           0650
+   13 CONTINUE                                                              0660
+      DO 17 J=1,L                                                           0670
+      IF(NR(J)-KW(I))15,14,15                                               0680
+   14 NR(J)=I+4096                                                          0690
+   15 IF(NC(J)-KW(I))17,16,17                                               0700
+   16 NC(J)=I+4096                                                          0710
+   17 CONTINUE                                                              0720
+   18 CONTINUE                                                              0730
+      DO 19 I=1,L                                                           0740
+      NR(I)=NR(I)-4096                                                      0750
+   19 NC(I)=NC(I)-4096                                                      0760
+C        SET UP COEFFICIENT MATRIX FOR LEAST-SQUARES EQUATIONS              0770
+      DO 22 I=1,N                                                           0780
+      B(I)=0.0                                                              0790
+      DO 22 J=1,N                                                           0800
+      IF(NZ)20,20,21                                                        0810
+   20 A(I,J)=1.0                                                            0820
+      GO TO 22                                                              0830
+   21 A(I,J)=0.0                                                            0840
+   22 CONTINUE                                                              0850
+      DO 28 J=1,N                                                           0860
+      AL=0.0                                                                0870
+      DO 27 I=1,L                                                           0880
+      IF(NR(I)-J)25,26,25                                                   0890
+   25 IF(NC(I)-J)27,26,27                                                   0900
+   26 AL=AL+1.0                                                             0910
+   27 CONTINUE                                                              0920
+   28 A(J,J)=AL+A(J,J)                                                      0930
+      IF(NZ)32,32,29                                                        0940
+   29 DO 31 I=1,N                                                           0950
+      IF(NZ-KW(I))31,30,31                                                  0960
+   30 KZ=I                                                                  0970
+   31 CONTINUE                                                              0980
+      A(KZ,KZ)=A(KZ,KZ)+1.0                                                 0990
+   32 DO 33 I=1,L                                                           1000
+      II=NR(I)                                                              1010
+      JJ=NC(I)                                                              1020
+      A(II,JJ)=A(II,JJ)-1.0                                                 1030
+   33 A(JJ,II)=A(II,JJ)                                                     1040
+      DO 37 J=1,N                                                           1050
+      B(J)=0.0                                                              1060
+      DO 37 I=1,L                                                           1070
+      IF(NR(I)-J)35,34,35                                                   1080
+   34 B(J)=G(I)+B(J)                                                        1090
+   35 IF(NC(I)-J)37,36,37                                                   1100
+   36 B(J)=B(J)-G(I)                                                        1110
+   37 CONTINUE                                                              1120
+C        INVERT COEFFICIENT MATRIX                                          1130
+C     ..................................................................    1140
+      CALL CHOLT (M,A,N)                                                    1150
+C     ..................................................................    1160
+      GO TO (42,40,41),M                                                    1170
+   40 CONTINUE                                                              1180
+   41 WRITE (6,106)                                                         1190
+      GO TO 1                                                               1200
+C        SOLVE FOR ENERGY LEVELS                                            1210
+   42 DO 45 I=1,N                                                           1220
+      X(I)=0.0                                                              1230
+      DO 45 J=1,N                                                           1240
+   45 X(I)=BB(I,J)*B(J)+X(I)                                                1250
+      DO 46 I=1,L                                                           1260
+      II=NR(I)                                                              1270
+      JJ=NC(I)                                                              1280
+      BC(I)=X(II)-X(JJ)                                                     1290
+   46 OC(I)=G(I)-BC(I)                                                      1300
+      RE=0.0                                                                1310
+      DO 47 I=1,L                                                           1320
+   47 RE=OC(I)**2+RE                                                        1330
+      IF (S.GT..0) GO TO 408                                                1340
+      DO 407 I=1,N                                                          1350
+  407 EI(I)=SQRT(VAR)                                                       1360
+      REE=XN*VAR                                                            1370
+      GO TO 409                                                             1380
+  408 REE=0.0                                                               1390
+      DO 48 I=1,N                                                           1400
+      EI(I)=RE*BB(I,I)/S                                                    1410
+      REE=EI(I)+REE                                                         1420
+   48 EI(I)=SQRT(EI(I))                                                     1430
+  409 WRITE (6,107)                                                         1440
+      NT=(N+1)/2                                                            1450
+      DO 49 I=1,NT                                                          1460
+      K=I+NT                                                                1470
+   49 WRITE (6,108)KW(I),X(I),EI(I),KW(K),X(K),EI(K)                        1480
+      TR=0.0                                                                1490
+      DO 53 I=1,N                                                           1500
+   53 TR=X(I)+TR                                                            1510
+      WRITE (6,115)TR                                                       1520
+      IF(N-20)51,51,50                                                      1530
+   50 WRITE (6,103)NOPROB,(RECORD(I),I=1,12)                                1540
+   51 WRITE (6,109)                                                         1550
+      LH=(L+1)/2                                                            1560
+      DO 52 I=1,LH                                                          1570
+      K=I+LH                                                                1580
+      II=NR(I)                                                              1590
+      JJ=NC(I)                                                              1600
+      KI=NR(K)                                                              1610
+      KJ=NC(K)                                                              1620
+   52 WRITE (6,110)KW(II),KW(JJ),G(I),BC(I),OC(I),KW(KI),    KW(KJ),G(K)    1630
+     1,BC(K),OC(K)                                                          1640
+      IF (S.GT..0) GO TO 502                                                1650
+      SE=0.                                                                 1660
+      GO TO 507                                                             1670
+  502 CMULT = RE/S                                                          1680
+      SE = SQRT(CMULT)                                                      1690
+  507 WRITE (6,111)RE,SE                                                    1700
+      WRITE (7,112)((X(I),      KW(I)),I=1,N)                               1710
+      IF (S.GT..0) GO TO 503                                                1720
+      WRITE (6,117)                                                         1730
+C        ASSEMBLE CE MATRIX                                                 1740
+      DO 505 I=1,N                                                          1750
+      DO 504 J=1,N                                                          1760
+  504 BB(I,J)=0.                                                            1770
+  505 BB(I,I)=VAR                                                           1780
+      GO TO 506                                                             1790
+  503 DO 54 I = 1,N                                                         1800
+      DO 54 J = 1,N                                                         1810
+      BB(I,J) = BB(I,J)*CMULT                                               1820
+   54 CONTINUE                                                              1830
+  506 IF(IEDIT) 56,56,55                                                    1840
+   55 JST=1                                                                 1850
+      DO 559 J=1,N,8                                                        1860
+      JSTOP= MIN0(J+7,N)                                                    1870
+      WRITE (6,113)                                                         1880
+      DO 557  I=J,N                                                         1890
+      IF (I-JSTOP) 554,554,555                                              1900
+  554 JEND=I                                                                1910
+      GO TO 556                                                             1920
+  555 JEND=JSTOP                                                            1930
+  556 WRITE (6,114)(BB(I,K),K=JST,JEND)                                     1940
+  557 CONTINUE                                                              1950
+      IF(JSTOP-N) 558,56,56                                                 1960
+  558 JST=JST+8                                                             1970
+  559 CONTINUE                                                              1980
+   56 WRITE (6,113)                                                         1990
+      WRITE (6,115)REE                                                      2000
+      REESUM=REESUM+REE                                                     2010
+      DO 57  I=1,MATD                                                       2020
+   57 CE(I)=0.0                                                             2030
+      IF (NOMIT) 58,58,62                                                   2040
+   58 DO 60  I=1,NSUB                                                       2050
+      N1=NWRT                                                               2060
+      DO 59  J=1,NSUB                                                       2070
+      CE(N1)=BB(I,J)                                                        2080
+   59 N1=N1+1                                                               2090
+      WRITE (23)   (CE(K), K=1,MATD)                                        2100
+      NTOT=NTOT+1                                                           2110
+   60 CONTINUE                                                              2120
+      GO TO 80                                                              2130
+   62 NST=1                                                                 2140
+      DO 76  I=1,NSUB                                                       2150
+      IF (I-NROW(NST))  64,71,64                                            2160
+   64 MST=1                                                                 2170
+      N1=NWRT                                                               2180
+      DO 70  J=1,NSUB                                                       2190
+      IF (J-NROW(MST))  68,65,68                                            2200
+   65 IF (J-I)  67,66,67                                                    2210
+   66 CE(N1)=0.0                                                            2220
+      MST=MST+1                                                             2230
+      GO TO 70                                                              2240
+   67 CE(N1)=0.0                                                            2250
+      MST=MST+1                                                             2260
+      GO TO 70                                                              2270
+   68 CE(N1)=BB(I,J)                                                        2280
+   70 N1=N1+1                                                               2290
+      GO TO 75                                                              2300
+   71 N1=NWRT                                                               2310
+      NST=NST+1                                                             2320
+      DO 74  J=1,NSUB                                                       2330
+      IF (J-I)  73,72,73                                                    2340
+   72 CE(N1)=0.0                                                            2350
+      GO TO 74                                                              2360
+   73 CE(N1)=0.0                                                            2370
+   74 N1=N1+1                                                               2380
+   75 WRITE (23)   (CE(K), K=1,MATD)                                        2390
+   76 NTOT=NTOT+1                                                           2400
+   80 IF (NFLAG)  82,82,84                                                  2410
+   82 NWRT=NWRT+NSUB                                                        2420
+      GO TO 1                                                               2430
+   84 IF (NTOT-MATD)  85,90,90                                              2440
+   85 N2=MATD-NTOT                                                          2450
+      DO 88  I=1,N2                                                         2460
+      DO 86  K=1,MATD                                                       2470
+   86 CE(K)=0.0                                                             2480
+      II=I+NTOT                                                             2490
+      CE(II)=0.0                                                            2500
+   88 WRITE (23)   (CE(K), K=1,MATD)                                        2510
+   90 NWRT=1                                                                2520
+      NTOT=0                                                                2530
+      WRITE (6,119) REESUM                                                  2540
+      REESUM=0.                                                             2550
+      END FILE 3                                                            2560
+      REWIND 3                                                              2570
+      PAUSE 333                                                             2580
+      GO TO 1                                                               2590
+  101 FORMAT (9I4,4X,F10.0)                                                 2600
+  102 FORMAT (12A6)                                                         2610
+  103 FORMAT (13H1 PROBLEM NO.I5/1H 12A6)                                   2620
+  104 FORMAT (2I4,F12.4)                                                    2630
+  106 FORMAT (14H A IS SINGULAR)                                            2640
+  107 FORMAT (88H0         NO.  ENERGY LEVELS   STD. ERROR                  2650
+     1  NO.  ENERGY LEVELS   STD. ERROR)                                    2660
+  108 FORMAT (1H I10,F15.4,F12.4,I20,F15.4,F12.4)                           2670
+  109 FORMAT (107H0TRANSITION      OBS.          CALC.      O-C             2680
+     1        TRANSITION       OBS.          CALC.      O-C)                2690
+  110 FORMAT (1H 2I4,2F14.4,F10.4,I20,I4,2F14.4,F10.4)                      2700
+  111 FORMAT (40H0 SUM OF SQUARES OF TRANSITION RESIDUALSF15.5/30H  STAN    2710
+     1DARD ERROR OF ESTIMATE   F25.5)                                       2720
+  112 FORMAT (F12.6,12X,I36)                                                2730
+  113 FORMAT (45H1 VARIANCE-COVARIANCE MATRIX OF ENERGY LEVELS   )          2740
+  114 FORMAT (1H0 8E14.4)                                                   2750
+  115 FORMAT (20H0          TRACE IS F20.4)                                 2760
+  116 FORMAT (6E12.5)                                                       2770
+  117 FORMAT (//66H ZERO DEGREES OF FREEDOM. ENERGY LEVEL ERRORS SUPPLIE    2780
+     1D FROM INPUT.   )                                                     2790
+  118 FORMAT (20I4)                                                         2800
+  119 FORMAT (//11X,15HTOTAL TRACE IS F20.4)                                2810
+      END                                                                   2820
+$IBFTC CHOLT   LIST,REF                                                     0010
+      SUBROUTINE CHOLT(MMM,A,MX)                                            0020
+C     CHOLESKI (REDUCE XTX TO T AND INVERT) ... GENERAL                     0030
+C     DUPONT ... MARCH, 1964 ... RUBY M. STANLEY                            0040
+      DIMENSION R(2850),TP(2850),U(2850),RI(2850),EYE(2850),C(2850),        0050
+     1          UU(75),A(75,75)                                             0060
+      EQUIVALENCE (R,EYE,C),(TP,RI)                                         0070
+      K=0                                                                   0080
+      DO 5 I=1,MX                                                           0090
+      DO 4 J=1,I                                                            0100
+      K=K+1                                                                 0110
+    4 R(K)=A(I,J)                                                           0120
+    5 CONTINUE                                                              0130
+      MAX = ((MX+1)*MX)/2                                                   0140
+C       REDUCE XTX TO T MATRIX AND INVERT T                                 0150
+   10   MM1 = MX-1                                                          0160
+        TP(1) = SQRT(R(1))                                                  0170
+        U(1) = 1.0/TP(1)                                                    0180
+        KK2 = 1                                                             0190
+        K1 = 1                                                              0200
+        DO 12  I = 1,MM1                                                    0210
+        K1 = K1+1                                                           0220
+        TP(K1) = R(K1)                                                      0230
+        K3 = 0                                                              0240
+        K4 = 0                                                              0250
+        DO 11  J = 1,I                                                      0260
+        K3 = K3+1                                                           0270
+        TP(K1) = TP(K1)/TP(K3)                                              0280
+        U(K1) = 0.0                                                         0290
+        K1 = K1+1                                                           0300
+        K2 = KK2                                                            0310
+        TP(K1) = R(K1)                                                      0320
+        DO 11  K = 1,J                                                      0330
+        K2 = K2+1                                                           0340
+        K3 = K3+1                                                           0350
+        K4 = K4+1                                                           0360
+        KK = K1-1                                                           0370
+        U(K2) = U(K2)-TP(KK)*U(K4)                                          0380
+   11   TP(K1) = TP(K1)-TP(K2)*TP(K3)                                       0390
+        TP(K1) = SQRT(TP(K1))                                               0400
+   18   KK2 = KK2+1                                                         0410
+        IF (KK2-K1) 17,15,17                                                0420
+   17   U(KK2) = U(KK2)/TP(K1)                                              0430
+        GO TO 18                                                            0440
+   15   U(KK2) = 1.0/TP(KK2)                                                0450
+   12   CONTINUE                                                            0460
+C     GENERATE IDENTITY TO CHECK ACCURACY OF T INVERSE                      0470
+   28 NPASS=0                                                               0480
+   29 ITER=0                                                                0490
+      JJ = 1                                                                0500
+      DO 40  K = 1,MX                                                       0510
+      J2ST = 1                                                              0520
+      J2ADD = 2                                                             0530
+      KK = K+1                                                              0540
+      DO 38  J = 1,K                                                        0550
+      J2 = J2ST                                                             0560
+      J1 = JJ                                                               0570
+      JADD = J2ADD-1                                                        0580
+      KK = KK-1                                                             0590
+      EYE(JJ) = 0.0                                                         0600
+      DO 30  JK = 1,KK                                                      0610
+      EYE(JJ) = EYE(JJ) + TP(J1)*U(J2)                                      0620
+      J1 = J1+1                                                             0630
+      J2 = J2+JADD                                                          0640
+   30 JADD = JADD+1                                                         0650
+      IF (J-K)  31,32,32                                                    0660
+   31 CRIT = 0.0                                                            0670
+      GO TO 33                                                              0680
+   32 CRIT = 1.0                                                            0690
+   33 CRIT1 = CRIT+0.000005                                                 0700
+      CRIT2 = CRIT-0.000005                                                 0710
+      IF (CRIT1-EYE(JJ))  35,35,34                                          0720
+   34 IF (EYE(JJ)-CRIT2)  35,36,36                                          0730
+   35 ITER = ITER+1                                                         0740
+   36 JJ = JJ+1                                                             0750
+      J2ST = J2ST+J2ADD                                                     0760
+   38 J2ADD = J2ADD+1                                                       0770
+   40 CONTINUE                                                              0780
+      IF (ITER) 58,58,41                                                    0790
+   41 IF (NPASS-5) 42,80,80                                                 0800
+C     ITERATE TO IMPROVE INVERSE T                                          0810
+   42 DO 43 K=1,MAX                                                         0820
+   43 C(K)=-EYE(K)                                                          0830
+      K=1                                                                   0840
+      KA=2                                                                  0850
+      DO 44 I=1,MX                                                          0860
+      C(K)=2.0+C(K)                                                         0870
+      K=K+KA                                                                0880
+   44 KA=KA+1                                                               0890
+      NEW=1                                                                 0900
+      DO 55 MWRT=1,MX                                                       0910
+      KK=1                                                                  0920
+      K1ST=NEW                                                              0930
+      K2ST=1                                                                0940
+      KADD=2                                                                0950
+      DO 52 I=1,MWRT                                                        0960
+      UU(KK)=0.0                                                            0970
+      K2=K2ST                                                               0980
+      K1=K1ST                                                               0990
+      KA1=1                                                                 1000
+      KA2=KADD-2                                                            1010
+      JK=MWRT+1-I                                                           1020
+      DO 48 J=1,JK                                                          1030
+      UU(KK)=UU(KK)+U(K1)*C(K2)                                             1040
+   46 K1=K1+KA1                                                             1050
+   47 KA2=KA2+1                                                             1060
+   48 K2=K2+KA2                                                             1070
+      K1ST=K1ST+1                                                           1080
+   50 K2ST=K2ST+KADD                                                        1090
+      KADD=KADD+1                                                           1100
+   52 KK=KK+1                                                               1110
+      DO 54 II=1,MWRT                                                       1120
+      U(NEW)=UU(II)                                                         1130
+   54 NEW=NEW+1                                                             1140
+   55 CONTINUE                                                              1150
+      NPASS=NPASS+1                                                         1160
+      GO TO 29                                                              1170
+C     GENERATE XTX INVERSE FROM T INVERSE                                   1180
+   58 KST=1                                                                 1190
+      KAST=1                                                                1200
+      DO 68 I=1,MX                                                          1210
+      K=KST                                                                 1220
+      KA2=0                                                                 1230
+      KA=KAST                                                               1240
+      DO 65 L=I,MX                                                          1250
+      K1=K                                                                  1260
+      K2=K+KA2                                                              1270
+      RI(K)=0.0                                                             1280
+      DO 62 J=L,MX                                                          1290
+      RI(K)=RI(K)+U(K1)*U(K2)                                               1300
+      K1=K1+J                                                               1310
+   62 K2=K2+J                                                               1320
+   64 K=K+KA                                                                1330
+      KA=KA+1                                                               1340
+   65 KA2=KA2+1                                                             1350
+      KAST=KAST+1                                                           1360
+   68 KST=KST+KAST                                                          1370
+   70 MMM=1                                                                 1380
+      K=0                                                                   1390
+   72 DO 75 I=1,MX                                                          1400
+      DO 74 J=1,I                                                           1410
+      K=K+1                                                                 1420
+      A(I,J)=RI(K)                                                          1430
+   74 A(J,I)=A(I,J)                                                         1440
+   75 CONTINUE                                                              1450
+      GO TO 90                                                              1460
+   80 MMM=3                                                                 1470
+   90 RETURN                                                                1480
+      END                                                                   1490

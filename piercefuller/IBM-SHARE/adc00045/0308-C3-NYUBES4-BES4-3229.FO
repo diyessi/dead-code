@@ -1,0 +1,382 @@
+CBES401  FORTRAN COMPLEX BESSEL SUBROUTINE       PART 1 OF 16 382 CARDS BES40010
+C        THIS ROUTINE MAKES NO USE OF FORTRAN COMPLEX ARITHMETIC        BES40020
+      SUBROUTINE COMBES(X,Y,ALPHA,BETA,N,BJRE,BJIM,YRE,YIM)             BES40030
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES40040
+      CALL START(X,Y,N,K,R)                                             BES40050
+      CALL JRECUR(X,Y,ALPHA,BETA,K,R,BJRE,BJIM)                         BES40060
+      CALL JSUM(ALPHA,BETA,K,BJRE,BJIM,SUMRA,SUMIA)                     BES40070
+      CALL FACTOR(X,Y,ALPHA,BETA,Q,R)                                   BES40080
+      CALL JNORM(K,Q,R,SUMRA,SUMIA,BJRE,BJIM)                           BES40090
+ 7    CALL YSUM (X,Y,ALPHA,BETA,K,BJRE,BJIM,ASUMR,ASUMI)                BES40100
+ 8    CALL YGNU (X,Y,ALPHA,BETA,Q,R,ASUMR,ASUMI,BJRE,BJIM,YRE,YIM)      BES40110
+ 9    CALL WRONSK (X,Y,BJRE,BJIM,YRE,YIM)                               BES40120
+       BJSQ=BJRE(1)**2+BJIM(1)**2                                       BES40130
+       IF(BJSQ-.00000005) 14,14,15                                      BES40140
+  14  CALL YSUMP(X,Y,ALPHA,BETA,K,BJRE,BJIM,ASUMR,ASUMI)                BES40150
+      CALL YGNUP(X,Y,ALPHA,BETA,Q,R,ASUMR,ASUMI,BJRE,BJIM,YRE,YIM)      BES40160
+ 15   IF (N-1)10,12,11                                                  BES40170
+ 10   IF (N)13,12,12                                                    BES40180
+ 13   CALL NEGN (X,Y,ALPHA,BETA,N,BJRE,BJIM,YRE,YIM)                    BES40190
+      GO TO 12                                                          BES40200
+   11 CALL YRECUR(X,Y,N,BJRE,BJIM,YRE,YIM)                              BES40210
+ 12   RETURN                                                            BES40220
+       END                                                              BES40230
+CBES402  START SUBROUTINE                        PART 2 OF 16           BES40240
+      SUBROUTINE START(X,Y,N,K,R)                                       BES40250
+      SSQ=X**2+Y**2                                                     BES40260
+      KTEN=SQRTF(SSQ)+20.0                                              BES40270
+      NTEN=XABSF(N)+10                                                  BES40280
+      M=XMAX0F(KTEN,NTEN) /2                                            BES40290
+      K=2*M+1                                                           BES40300
+          R = K + 1                                                     BES40310
+      RETURN                                                            BES40320
+      END                                                               BES40330
+CBES403  JRECUR SUBROUTINE                       PART 3 OF 16           BES40340
+      SUBROUTINE JRECUR(X,Y,ALPHA,BETA,K,R,BJRE,BJIM)                   BES40350
+      DIMENSION BJRE(100),BJIM(100)                                     BES40360
+      RALPHA=R+ALPHA                                                    BES40370
+      SSQ=X**2+Y**2                                                     BES40380
+      BJRE(K+2)=0                                                       BES40390
+      BJIM(K+2)=0                                                       BES40400
+      BJRE(K+1)=1.0E-37                                                 BES40410
+      BJIM(K+1)=0.0                                                     BES40420
+      DO4I=1,K                                                          BES40430
+      L1=K+1-I                                                          BES40440
+      RALPHA=RALPHA-1.0                                                 BES40450
+      A=((2.0*X*RALPHA)+(2.0*BETA*Y))/SSQ                               BES40460
+      B=((-2.0*Y*RALPHA)+(2.0*BETA*X))/SSQ                              BES40470
+      BJRE(L1)=(A*BJRE(L1+1))-(B*BJIM(L1+1))-BJRE(L1+2)                 BES40480
+ 4    BJIM(L1)=(B*BJRE(L1+1))+(A*BJIM(L1+1))-BJIM(L1+2)                 BES40490
+      RETURN                                                            BES40500
+      END                                                               BES40510
+CBES404  JSUM SUBROUTINE                         PART 4 OF 16           BES40520
+      SUBROUTINE JSUM(ALPHA,BETA,K,BJRE,BJIM,SUMRA,SUMIA)               BES40530
+      DIMENSION BJRE(100),BJIM(100)                                     BES40540
+ 801  SUMRA=(BJRE(3)*(ALPHA+2.0))-(BJIM(3)*BETA)                        BES40550
+      SUMIA=(BETA*BJRE(3))+((ALPHA+2.0)*BJIM(3))                        BES40560
+      GRE=1.0                                                           BES40570
+      GIM=0                                                             BES40580
+      S=1.0                                                             BES40590
+      DO6I=5,K,2                                                        BES40600
+      S=S+1.0                                                           BES40610
+      GREN=((GRE*(ALPHA+S-1.0))-(BETA*GIM))/S                           BES40620
+      GIM=((GIM*(ALPHA+S-1.0))+(BETA*GRE))/S                            BES40630
+      GRE=GREN                                                          BES40640
+      ALPTS=ALPHA+2.0*S                                                 BES40650
+      GJR=GRE*BJRE(I)                                                   BES40660
+      GJI=GIM*BJIM(I)                                                   BES40670
+      GJRI=GRE*BJIM(I)                                                  BES40680
+      GJIR=GIM*BJRE(I)                                                  BES40690
+      SUMRB=ALPTS*(GJR-GJI)-BETA*(GJIR+GJRI)+SUMRA                      BES40700
+      SUMIB=ALPTS*(GJIR+GJRI)-BETA*(GJI-GJR)+SUMIA                      BES40710
+      IF(ABSF((SUMRB/SUMRA)-1.0)-.00000005)21,21,10                     BES40720
+ 21   IF(SUMIA)20,11,20                                                 BES40730
+ 20   IF(ABSF((SUMIB/SUMIA)-1.0)-.00000005)11,11,10                     BES40740
+ 10   SUMRA=SUMRB                                                       BES40750
+ 6    SUMIA=SUMIB                                                       BES40760
+   11 RETURN                                                            BES40770
+       END                                                              BES40780
+CBES405  FACTOR SUBROUTINE                       PART 5 OF 16           BES40790
+      SUBROUTINE FACTOR(X,Y,ALPHA,BETA,Q,R)                             BES40800
+      CALL LOGGAM(ALPHA+1.0,BETA,U,V)                                   BES40810
+      CALL COMLOG(X,Y,A1,B1)                                            BES40820
+      A2=ALPHA*A1-BETA*B1                                               BES40830
+      B2=BETA*A1+ALPHA*B1                                               BES40840
+      A2=-A2                                                            BES40850
+      B2=-B2                                                            BES40860
+      CALL COMEXP(A2,B2,A3,B3)                                          BES40870
+      A4=.6931471806*ALPHA                                              BES40880
+      B4=.6931471806*BETA                                               BES40890
+      CALL COMEXP(A4,B4,A5,B5)                                          BES40900
+      A6=A3*A5-B3*B5                                                    BES40910
+      B6=B3*A5+A3*B5                                                    BES40920
+      CALL COMEXP(U,V,A7,B7)                                            BES40930
+      Q=A6*A7-B6*B7                                                     BES40940
+      R=B6*A7+A6*B7                                                     BES40950
+      RETURN                                                            BES40960
+       END                                                              BES40970
+CBES406  COMLOG SUBROUTINE                       PART 6 OF 16           BES40980
+C     COMPLEX LOGARITHM - BRANCH CUT ON NEGATIVE REAL AXIS              BES40990
+      SUBROUTINE COMLOG(X,Y,A,B)                                        BES41000
+      PI=3.141592654                                                    BES41010
+      A=.5*LOGF(X*X+Y*Y)                                                BES41020
+      IF(X)5,1,4                                                        BES41030
+ 1    B=.5*PI                                                           BES41040
+      IF(Y)2,3,8                                                        BES41050
+ 2    B=-B                                                              BES41060
+      GO TO 8                                                           BES41070
+ 3    B=0.                                                              BES41080
+      GO TO 8                                                           BES41090
+ 4    B=ATANF(Y/X)                                                      BES41100
+      GO TO 8                                                           BES41110
+ 5    B=ATANF(Y/X)                                                      BES41120
+      IF(Y)6,7,7                                                        BES41130
+ 6    B=B-PI                                                            BES41140
+      GO TO 8                                                           BES41150
+ 7    B=B+PI                                                            BES41160
+ 8    RETURN                                                            BES41170
+       END                                                              BES41180
+CBES407  COMEXP SUBROUTINE                       PART 7 OF 16           BES41190
+      SUBROUTINE COMEXP(X,Y,A,B)                                        BES41200
+      C=EXPF(X)                                                         BES41210
+      A=C*COSF(Y)                                                       BES41220
+      B=C*SINF(Y)                                                       BES41230
+      RETURN                                                            BES41240
+       END                                                              BES41250
+CBES408  JNORM SUBROUTINE                        PART 8 OF 16           BES41260
+      SUBROUTINE JNORM(K,Q,R,SUMRA,SUMIA,BJRE,BJIM)                     BES41270
+      DIMENSION BJRE(100),BJIM(100)                                     BES41280
+      S=((SUMRA+BJRE(1))*Q)-((SUMIA+BJIM(1))*R)                         BES41290
+      T=((SUMIA+BJIM(1))*Q)+((SUMRA+BJRE(1))*R)                         BES41300
+      IF(ABSF(S)-ABSF(T))100,101,101                                    BES41310
+ 101  TS=T/S                                                            BES41320
+      TSSQ=S*(1.0+(TS**2))                                              BES41330
+ 12   DO13I=1,K                                                         BES41340
+      BJREN=(BJRE(I)+BJIM(I)*TS)/TSSQ                                   BES41350
+      BJIM(I)=(BJIM(I)-BJRE(I)*TS)/TSSQ                                 BES41360
+ 13   BJRE(I)=BJREN                                                     BES41370
+      GO  TO  14                                                        BES41380
+ 100  ST=S/T                                                            BES41390
+      STSQ=T*((ST**2)+1.0)                                              BES41400
+ 102  DO103I=1,K                                                        BES41410
+      BJREN=(BJRE(I)*ST+BJIM(I))/STSQ                                   BES41420
+      BJIM(I)=(BJIM(I)*ST-BJRE(I))/STSQ                                 BES41430
+ 103  BJRE(I)=BJREN                                                     BES41440
+   14 RETURN                                                            BES41450
+       END                                                              BES41460
+CBES409  YSUM SUBROUTINE                         PART 9 OF 16           BES41470
+      SUBROUTINE YSUM (X,Y,ALPHA,BETA,K,BJRE,BJIM,ASUMR,ASUMI)          BES41480
+      DIMENSION BJRE(100),BJIM(100)                                     BES41490
+      A1=ALPHA-1.0                                                      BES41500
+      A2=A1-1.0                                                         BES41510
+      A3=A1+ALPHA                                                       BES41520
+      A4=BETA**2                                                        BES41530
+      A5=2.0*A4                                                         BES41540
+      ABSQ=(-A1)**2+A4                                                  BES41550
+      GAMRE=((2.0+ALPHA)*(-A1)-A4)/ABSQ                                 BES41560
+      GAMIM=(BETA*3.0)/ABSQ                                             BES41570
+      ASUMR=GAMRE*BJRE(3)-GAMIM*BJIM(3)                                 BES41580
+      ASUMI=GAMIM*BJRE(3)+GAMRE*BJIM(3)                                 BES41590
+      T=1.0                                                             BES41600
+      DO 500 I=5,K,2                                                    BES41610
+      T=T+1.0                                                           BES41620
+      B1=2.0*T                                                          BES41630
+      F1=B1+ALPHA                                                       BES41640
+      F2=A3+T                                                           BES41650
+      F3=A1+T                                                           BES41660
+      F5=T-ALPHA                                                        BES41670
+      F6=A2+B1                                                          BES41680
+      G1=F1*F2-A5                                                       BES41690
+      G2=(F2+2.0*F1)*BETA                                               BES41700
+      H1=G1*F3-G2*BETA                                                  BES41710
+      H2=G2*F3+G1*BETA                                                  BES41720
+      P1=F5*F6+A4                                                       BES41730
+      P2=(F5-F6)*BETA                                                   BES41740
+      P3=P1**2+P2**2                                                    BES41750
+      CRE=((H1*P1+H2*P2)/P3)/T                                          BES41760
+      CIM=((H2*P1-H1*P2)/P3)/T                                          BES41770
+      TEMP=-(CRE*GAMRE-CIM*GAMIM)                                       BES41780
+      GAMIM=-(CIM*GAMRE+CRE*GAMIM)                                      BES41790
+      GAMRE=TEMP                                                        BES41800
+      BSUMR=GAMRE*BJRE(I)-GAMIM*BJIM(I)+ASUMR                           BES41810
+      BSUMI=GAMIM*BJRE(I)+GAMRE*BJIM(I)+ASUMI                           BES41820
+      IF(ABSF((BSUMR/ASUMR)-1.0)-.00000005)521,521,510                  BES41830
+ 521  IF(ASUMI)520,511,520                                              BES41840
+ 520  IF(ABSF((BSUMI/ASUMI)-1.0)-.00000005)511,511,510                  BES41850
+ 510  ASUMR=BSUMR                                                       BES41860
+ 500  ASUMI=BSUMI                                                       BES41870
+ 511  RETURN                                                            BES41880
+       END                                                              BES41890
+CBES410  YGNU SUBROUTINE                         PART 10 OF 16          BES41900
+      SUBROUTINE YGNU(X,Y,ALPHA,BETA,Q,R,ASUMR,ASUMI,BJRE,BJIM,YRE,YIM) BES41910
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES41920
+      PI=3.141592654                                                    BES41930
+      TPI=2.0/PI                                                        BES41940
+      QRE=TPI*(Q**2-R**2)                                               BES41950
+      QIM=TPI*2.0*Q*R                                                   BES41960
+      DRE=QRE*ASUMR-QIM*ASUMI                                           BES41970
+      DIM=QIM*ASUMR+QRE*ASUMI                                           BES41980
+      IF(ALPHA)1,2,1                                                    BES41990
+ 2    IF(BETA)1,3,1                                                     BES42000
+ 3    CALL YZERO(X,Y,ALPRE,ALPIM)                                       BES42010
+      GO TO 720                                                         BES42020
+ 1    PALPHA=PI*ALPHA                                                   BES42030
+      COX=COSF(PALPHA)                                                  BES42040
+      SIX=SINF(PALPHA)                                                  BES42050
+      EXY=EXPF(PI*BETA)                                                 BES42060
+      EXY1=1.0/EXY                                                      BES42070
+      COSH=.5*(EXY+EXY1)                                                BES42080
+      SINH=.5*(EXY-EXY1)                                                BES42090
+      DEN=(SIX*COSH)**2+(COX*SINH)**2                                   BES42100
+      ERE=(SIX*COX)/DEN                                                 BES42110
+      EIM=(-COSH*SINH)/DEN                                              BES42120
+      ABSQ3=2.0*(ALPHA**2+BETA**2)                                      BES42130
+      ALPRE=ERE-((QRE*ALPHA+BETA*QIM)/ABSQ3)                            BES42140
+      ALPIM=EIM-((QIM*ALPHA-BETA*QRE)/ABSQ3)                            BES42150
+ 720  YRE(1)=ALPRE*BJRE(1)-ALPIM*BJIM(1)+DRE                            BES42160
+      YIM(1)=ALPIM*BJRE(1)+ALPRE*BJIM(1)+DIM                            BES42170
+      RETURN                                                            BES42180
+       END                                                              BES42190
+CBES411  YZERO SUBROUTINE                        PART 11 OF 16          BES42200
+      SUBROUTINE YZERO(X,Y,ALPRE,ALPIM)                                 BES42210
+      TPI=2.0/3.141592654                                               BES42220
+      CALL COMLOG(X,Y,A,B)                                              BES42230
+      ALPRE=TPI*(-.1159315157+A)                                        BES42240
+      ALPIM=TPI*B                                                       BES42250
+      RETURN                                                            BES42260
+       END                                                              BES42270
+CBES412  WRONSK SUBROUTINE                       PART 12 OF 16          BES42280
+      SUBROUTINE WRONSK(X,Y,BJRE,BJIM,YRE,YIM)                          BES42290
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES42300
+      SSQ=X**2+Y**2                                                     BES42310
+      TPI=2.0/3.141592654                                               BES42320
+      AZRE=TPI*X/SSQ                                                    BES42330
+      AZIM=-TPI*Y/SSQ                                                   BES42340
+      ZRE=BJRE(2)*YRE(1)-BJIM(2)*YIM(1)                                 BES42350
+      ZIM=BJIM(2)*YRE(1)+BJRE(2)*YIM(1)                                 BES42360
+      BZRE=ZRE-AZRE                                                     BES42370
+      BZIM=ZIM-AZIM                                                     BES42380
+      BJSQ=BJRE(1)**2+BJIM(1)**2                                        BES42390
+      CZRE=BJRE(1)/BJSQ                                                 BES42400
+      CZIM=(-BJIM(1))/BJSQ                                              BES42410
+      YRE(2)=BZRE*CZRE-BZIM*CZIM                                        BES42420
+      YIM(2)=BZIM*CZRE+BZRE*CZIM                                        BES42430
+      RETURN                                                            BES42440
+       END                                                              BES42450
+CBES413  NEGN SUBROUTINE                         PART 13 OF 16          BES42460
+      SUBROUTINE NEGN(X,Y,ALPHA,BETA,N,BJRE,BJIM,YRE,YIM)               BES42470
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES42480
+      L=XABSF(N)+1                                                      BES42490
+      SSQ=X**2+Y**2                                                     BES42500
+      TX=2.0*X                                                          BES42510
+      TY=2.0*Y                                                          BES42520
+      RALPHA=ALPHA                                                      BES42530
+      A=(TX*RALPHA+TY*BETA)/SSQ                                         BES42540
+      B=(-TY*RALPHA+TX*BETA)/SSQ                                        BES42550
+      BJRE(2)=A*BJRE(1)-B*BJIM(1)-BJRE(2)                               BES42560
+      BJIM(2)=B*BJRE(1)+A*BJIM(1)-BJIM(2)                               BES42570
+      YRE(2)=A*YRE(1)-B*YIM(1)-YRE(2)                                   BES42580
+      YIM(2)=B*YRE(1)+A*YIM(1)-YIM(2)                                   BES42590
+      DO 1 I=3,L                                                        BES42600
+      RALPHA=RALPHA-1.0                                                 BES42610
+      A=(TX*RALPHA+TY*BETA)/SSQ                                         BES42620
+      B=(-TY*RALPHA+TX*BETA)/SSQ                                        BES42630
+      BJRE(I)=A*BJRE(I-1)-B*BJIM(I-1)-BJRE(I-2)                         BES42640
+      BJIM(I)=B*BJRE(I-1)+A*BJIM(I-1)-BJIM(I-2)                         BES42650
+      YRE(I)=A*YRE(I-1)-B*YIM(I-1)-YRE(I-2)                             BES42660
+ 1    YIM(I)=B*YRE(I-1)+A*YIM(I-1)-YIM(I-2)                             BES42670
+      RETURN                                                            BES42680
+       END                                                              BES42690
+CBES414  YRECUR SUBROUTINE                       PART 14 OF 16          BES42700
+      SUBROUTINE YRECUR(X,Y,N,BJRE,BJIM,YRE,YIM)                        BES42710
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES42720
+      SSQ=X**2+Y**2                                                     BES42730
+      TPI=2.0/3.141592654                                               BES42740
+      AZRE=TPI*X/SSQ                                                    BES42750
+      AZIM=-TPI*Y/SSQ                                                   BES42760
+      L=N+1                                                             BES42770
+      DO 1 I=3,L                                                        BES42780
+      ZRE=BJRE(I)*YRE(I-1)-BJIM(I)*YIM(I-1)                             BES42790
+      ZIM=BJIM(I)*YRE(I-1)+BJRE(I)*YIM(I-1)                             BES42800
+      BZRE=ZRE-AZRE                                                     BES42810
+      BZIM=ZIM-AZIM                                                     BES42820
+      BJSQ=BJRE(I-1)**2+BJIM(I-1)**2                                    BES42830
+      CZRE=BJRE(I-1)/BJSQ                                               BES42840
+      CZIM=(-BJIM(I-1))/BJSQ                                            BES42850
+      YRE(I)=BZRE*CZRE-BZIM*CZIM                                        BES42860
+    1 YIM(I)=BZIM*CZRE+BZRE*CZIM                                        BES42870
+      RETURN                                                            BES42880
+       END                                                              BES42890
+CBES415  YGNUP SUBROUTINE                        PART 15 OF 16          BES42900
+      SUBROUTINE YGNUP(X,Y,ALPHA,BETA,Q,R,ASUMR,ASUMI,BJRE,BJIM,YRE,YIM)BES42910
+      DIMENSION BJRE(100),BJIM(100),YRE(50),YIM(50)                     BES42920
+      PI=3.141592654                                                    BES42930
+      TPI=2.0/PI                                                        BES42940
+      QRE=TPI*(Q**2-R**2)                                               BES42950
+      QIM=TPI*2.0*Q*R                                                   BES42960
+      DRE=QRE*ASUMR-QIM*ASUMI                                           BES42970
+      DIM=QIM*ASUMR+QRE*ASUMI                                           BES42980
+      IF(ALPHA)1,2,1                                                    BES42990
+ 2    IF(BETA)1,3,1                                                     BES43000
+ 3    CALL YZERO(X,Y,ALPRE,ALPIM)                                       BES43010
+      GO TO 720                                                         BES43020
+ 1    PALPHA=PI*ALPHA                                                   BES43030
+      COX=COSF(PALPHA)                                                  BES43040
+      SIX=SINF(PALPHA)                                                  BES43050
+      EXY=EXPF(PI*BETA)                                                 BES43060
+      EXY1=1.0/EXY                                                      BES43070
+      COSH=.5*(EXY+EXY1)                                                BES43080
+      SINH=.5*(EXY-EXY1)                                                BES43090
+      DEN=(SIX*COSH)**2+(COX*SINH)**2                                   BES43100
+      ERE=(SIX*COX)/DEN                                                 BES43110
+      EIM=(-COSH*SINH)/DEN                                              BES43120
+      ABSQ3=2.0*(ALPHA**2+BETA**2)                                      BES43130
+      ALPRE=ERE-((QRE*ALPHA+BETA*QIM)/ABSQ3)                            BES43140
+      ALPIM=EIM-((QIM*ALPHA-BETA*QRE)/ABSQ3)                            BES43150
+ 720  TRE=ALPRE*BJRE(2)-ALPIM*BJIM(2)+DRE                               BES43160
+      TIM=ALPIM*BJRE(2)+ALPRE*BJIM(2)+DIM                               BES43170
+      ALPRE=-(Q*X+R*Y)/(X**2+Y**2)                                      BES43180
+      ALPIM=-(X*R-Q*Y)/(X**2+Y**2)                                      BES43190
+      YRE(2)=ALPRE*BJRE(1)-ALPIM*BJIM(1)+TRE                            BES43200
+      YIM(2)=ALPIM*BJRE(1)+ALPRE*BJIM(1)+TIM                            BES43210
+      RETURN                                                            BES43220
+       END                                                              BES43230
+CBES416  YSUMP SUBROUTINE                        PART 16 OF 16          BES43240
+      SUBROUTINE YSUMP(X,Y,ALPHA,BETA,K,BJRE,BJIM,ASUMR,ASUMI)          BES43250
+      DIMENSION BJRE(100),BJIM(100)                                     BES43260
+      A1=ALPHA-1.0                                                      BES43270
+      A2=A1-1.0                                                         BES43280
+      A3=A1+ALPHA                                                       BES43290
+      A4=BETA**2                                                        BES43300
+      A5=2.0*A4                                                         BES43310
+      ABSQ=(-A1)**2+A4                                                  BES43320
+      ROLDRE=((2.0+ALPHA)*(-A1)-A4)/ABSQ                                BES43330
+      ROLDIM=(BETA*3.0)/ABSQ                                            BES43340
+      RES1=-ROLDRE/2.0                                                  BES43350
+      VMS1=-ROLDIM/2.0                                                  BES43360
+      STORE=3.*(ALPHA*X+BETA*Y)/(X**2+Y**2)                             BES43370
+      STOIM=3.*(X*BETA-ALPHA*Y)/(X**2+Y**2)                             BES43380
+      RES2=(ROLDRE*STORE-ROLDIM*STOIM)                                  BES43390
+      VMS2=(ROLDRE*STOIM+ROLDIM*STORE)                                  BES43400
+      ASUMR=RES1*BJRE(2)-VMS1*BJIM(2)                                   BES43410
+      ASUMR=ASUMR+RES2*BJRE(3)-VMS2*BJIM(3)                             BES43420
+      ASUMI=VMS1*BJRE(2)+RES1*BJIM(2)                                   BES43430
+      ASUMI=ASUMI+VMS2*BJRE(3)+RES2*BJIM(3)                             BES43440
+      T=1.0                                                             BES43450
+      DO 500 I=3,K,2                                                    BES43460
+      T=T+1.0                                                           BES43470
+      B1=2.0*T                                                          BES43480
+      F1=B1+ALPHA                                                       BES43490
+      F2=A3+T                                                           BES43500
+      F3=A1+T                                                           BES43510
+      F5=T-ALPHA                                                        BES43520
+      F6=A2+B1                                                          BES43530
+      G1=F1*F2-A5                                                       BES43540
+      G2=(F2+2.0*F1)*BETA                                               BES43550
+      H1=G1*F3-G2*BETA                                                  BES43560
+      H2=G2*F3+G1*BETA                                                  BES43570
+      P1=F5*F6+A4                                                       BES43580
+      P2=(F5-F6)*BETA                                                   BES43590
+      P3=P1**2+P2**2                                                    BES43600
+      CRE=((H1*P1+H2*P2)/P3)/T                                          BES43610
+      CIM=((H2*P1-H1*P2)/P3)/T                                          BES43620
+      TEMP=-(CRE*ROLDRE-CIM*ROLDIM)                                     BES43630
+      RNEWIM=-(CIM*ROLDRE+CRE*ROLDIM)                                   BES43640
+      RNEWRE=TEMP                                                       BES43650
+      RES1=(ROLDRE-RNEWRE)/2.0                                          BES43660
+      VMS1=(ROLDIM-RNEWIM)/2.0                                          BES43670
+      RES2=(RNEWRE*STORE-RNEWIM*STOIM)                                  BES43680
+      VMS2=(RNEWRE*STOIM+RNEWIM*STORE)                                  BES43690
+      BSUMR=RES1*BJRE(I+1)-VMS1*BJIM(I+1)+ASUMR                         BES43700
+      BSUMI=VMS1*BJRE(I+1)+RES1*BJIM(I+1)+ASUMI                         BES43710
+      BSUMR=RES2*BJRE(I+2)-VMS2*BJIM(I+2)+BSUMR                         BES43720
+      BSUMI=VMS2*BJRE(I+2)+RES2*BJIM(I+2)+BSUMI                         BES43730
+      IF(ABSF((BSUMR/ASUMR)-1.0)-.00000005)521,521,510                  BES43740
+ 521  IF(ASUMI)520,511,520                                              BES43750
+ 520  IF(ABSF((BSUMI/ASUMI)-1.0)-.00000005)511,511,510                  BES43760
+ 510  ASUMR=BSUMR                                                       BES43770
+      ASUMI=BSUMI                                                       BES43780
+      ROLDIM=RNEWIM                                                     BES43790
+ 500  ROLDRE=RNEWRE                                                     BES43800
+ 511  RETURN                                                            BES43810
+       END                                                              BES43820

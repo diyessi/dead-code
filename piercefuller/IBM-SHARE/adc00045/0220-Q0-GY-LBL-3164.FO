@@ -1,0 +1,203 @@
+*     FAP                                                                       
+*      LABEL AND SEQUENCE BINARY DECKS. READ T-5 WRITE T-7.                     
+       REM     R.L. PRICE, GE-TEMPO, FEB. 1964                                  
+       REM                                                                      
+       SXD     CNTR,,                                                           
+       CAL     ZRPHTN                                                           
+       SLW     TENSBT                                                           
+ READ  LXD     ZERO,2                                                           
+       RTB     5                                                                
+ (A8)  CPY     REC-1,2                                                          
+       TXI     (A8),2,1                                                         
+       TSX     $EXIT,4                                                          
+       IOD                                                                      
+       RTT                                                                      
+       TRA     TSINPT         TEST INPUT                                        
+       TXI     *+1,2,-1                                                         
+ NEXT1 SXD     (A10),2                                                          
+       TRA     SEQNCE                                                           
+ WRITE WTB     7                                                                
+       LXD     ZERO,2                                                           
+ (A9)  CPY     REC-1,2                                                          
+       TXI     (A10),2,1                                                        
+ (A10) TXL     (A9),2,**                                                        
+       CPY     COL75                                                            
+       CPY     COL78                                                            
+       CPY     COL81                                                            
+       IOD                                                                      
+       TRA     READ                                                             
+       REM                                                                      
+SEQNCE SYN     *                                                                
+       CAL     REC-1          THE NINE LEFT WORD                                
+       ANA     FOR            TEST FOR A PROGRAM CARD                           
+       TZE     COUNT                                                            
+LABEL  SYN     *                                                                
+       TSX     RESET,2                                                          
+       LXA     NEG24,2                                                          
+       SXD     COLNO,2                                                          
+       CAL     *+2                                                              
+       STA     ORS                                                              
+       STZ     BINHOL                                                           
+       STZ     BINHOL+1                                                         
+       LDQ     REC-5          BCD NAME                                          
+ START PXD     ,,                                                               
+       STA     ZRS                                                              
+       STA     NRS                                                              
+       LGL     6                                                                
+       TZE     TSMAIN         MAIN IF ZERO                                      
+       SUB     LPAREN         TEST FOR THE THREE SPECIAL                        
+       TZE     SLPREN         CHARACTERS (,) ,AND BLANK,                        
+       REM                    AND STORE THE CORRESPONDING                       
+       ADD     LPAREN         BITS                                              
+       SUB     BLANK                                                            
+       TZE     SBLNK                                                            
+       ADD     BLANK                                                            
+       SUB     RPAREN                                                           
+       TZE     SRPREN                                                           
+       ADD     RPAREN                                                           
+       STA     CHAR                                                             
+       REM     THE CHARACTER IS BROKEN INTO 2 BITS FOR                          
+       REM     THE ZONE AND 4 BITS FOR THE NUMBERS.                             
+       REM     THE ZONE IS ANALYZED FIRST.                                      
+       ARS     4              SHIFT OFF NUMBER BITS.                            
+       STA     ZRS            ZONE BITS ARE ALL THATS LEFT.                     
+       TNZ     *+2                                                              
+ (3)   TXL     NUMBER,,3      NO ZONE BITS, IT MUST BE A NUMBER.                
+       CAL     ONEBIT         A ONE IN AC POS. 23                               
+ ZRS   ARS     **             ZONE RIGHT SHIFT                                  
+ STOR  LXD     COLNO,2        COLNO=-24 FOR 1ST COLUMN,                         
+       ALS     ,2             -12 FOR 2ND COLUMN AND                            
+ ORS   ORS     **             0 FOR THE 3RD COLUMN.                             
+       LXA     ZRS,2          DID WE COME FROM NUMBERS OR                       
+       TXH     NUMBER,2,      ZONES.                                            
+NXTCHR LXD     COLNO,2        NEXT CHARACTER IF COLNO IS                        
+       TXI     *+1,2,12       MORE THAN ZERO.                                   
+       SXD     COLNO,2                                                          
+       TNX     START,2,       TO GET LAST COLUMN OF EACH WORD.                  
+       TXH     START,2,18                                                       
+       LXA     ORS,2                                                            
+       TXI     *+1,2,1                                                          
+       TXH     LBLDON,2,BINHOL+1 HAVE WE DONE BOTH WDS.                         
+       PXD     ,2             NO, SET UP FOR SECOND.                            
+       ARS     18                                                               
+       STA     ORS                                                              
+       LXA     NEG24,2        RESET COLUMN COUNTER.                             
+       SXD     COLNO,2                                                          
+ COLNO TXL     START,,**                                                        
+NUMBER SYN     *                                                                
+       PXD     ,,             SET SWITCH FOR NEXT                               
+       STA     ZRS            CHARACTER                                         
+       CAL     CHAR                                                             
+       ANA     NUMASK         MASK FOR NUMBERS ONLY.                            
+       TZE     TSMAIN                                                           
+       STA     NRS                                                              
+       CAL     ZERBIT         ZERBIT = 1 IN AC. POS. 26                         
+ NRS   ARS     **             NUMBERS RIGHT SHIFT.                              
+ (6)   TXL     STOR,,6                                                          
+       REM                                                                      
+TSMAIN CAL     REC-5          TEST ENTIRE WORD                                  
+       TZE     STMAIN         STORE MAIN IF ZERO.                               
+       CAL     ZERBIT                                                           
+       TXL     STOR,,                                                           
+SLPREN STA     ZRS                                                              
+       CAL     BIN(                                                             
+       TXL     STOR,,                                                           
+SRPREN STA     ZRS                                                              
+       CAL     BIN)                                                             
+ SBLNK STA     ZRS                                                              
+       TXL     STOR,,                                                           
+STMAIN CAL     BNMAIN                                                           
+BHOLAD SLW     BINHOL                                                           
+       SLW     BINHOL+1                                                         
+LBLDON SYN     *              LABEL CONVERTED TO BINARY.                        
+       SPACE   3                                                                
+       REM     THIS SUBROUTINE SEQUENCES THE BINARY                             
+       REM     DECK IN COLUMNS 79 AND 80.  IT STARTS                            
+       REM     WITH 00 FOR THE PROGRAM CARD AND INCRE-                          
+       REM     MENTS BY 1 FOR EACH CARD FOLLOWING.                              
+       REM     A NEW PROGRAM CARD RESETS SEQUENCING                             
+       REM     TO 00.  AT 99, SEQUENCING IS RESET TO 00.                        
+       REM                                                                      
+       REM     COMMENCE SEQUENCING                                              
+       REM                                                                      
+       REM     INDEX REGISTER TWO KEEPS THE UNITS COUNT.                        
+ COUNT LXD     CNTR,2                                                           
+       CAL     NINBIT         NINBIT = PZE8 10000, A 9 PUNCH.                   
+       ALS     9,2                                                              
+       ORA     TENSBT         TENSBT ORIGINALLY = TXI,,INSTR.                   
+       SLW     COL81          ENTER COLUMNS 79, 80 AND 81.                      
+       REM                                                                      
+       REM     THE PREVIOUSLY FORMED HOLLERITH CARD IMAGE                       
+       REM     CONVERTED TO-COLUMN BINARY- IS USED                              
+       REM     FOR LABELLING IN COLUMNS 73 THROUGH 78.                          
+       REM                                                                      
+       CAL     BINHOL+1                                                         
+       SLW     COL78          ENTER COLUMNS 76, 77 AND 78                       
+       CAL     BINHOL                                                           
+       SLW     COL75          ENTER COLUMNS 73, 74 AND 75                       
+       REM                                                                      
+       TXI     *+1,2,1                                                          
+ SAVE  SXD     CNTR,2                                                           
+       TXL     WRITE,2,9      AFTER THE UNITS REACH 9                           
+       SXD     CNTR,,        RESET  UNITS AND                                   
+       CAL     TENSBT         INCREMENT TENS BY ONE.                            
+       ARS     1                                                                
+       SLW     TENSBT         BUT DO NOT EXCEED NINE                            
+       ANA     NINES          NINES = PZE8  ,,77 OVER 99.                       
+       TZE     WRITE                                                            
+       TSX     RESET,2                                                          
+       TRA     WRITE                                                            
+ RESET CAL     ZRPHTN         ZRPHTN = TXI = A ZERO PUNCH.                      
+       SLW     TENSBT                                                           
+       SXD     CNTR,,                                                           
+       TRA     1,2                                                              
+TSINPT CAL     REC-1                                                            
+       SUB     PLUSES                                                           
+       TZE     $EXIT                                                            
+       CLA     NOP                                                              
+SWITCH LXD     (3),2                                                            
+       STO     *-1                                                              
+       BST     5                                                                
+       TIX     READ,2,1                                                         
+       WTD     6                                                                
+       CLA     LXD2                                                             
+       STO     SWITCH                                                           
+       LXD     (6),2                                                            
+       CPY     ERMSG+6,2                                                        
+       TIX     *-1,2,1                                                          
+       TSX     $EXIT,4                                                          
+       REM                                                                      
+       REM     TABLE OF CONSTANTS                                               
+       REM                                                                      
+ FOR   FOR                                                                      
+ZRPHTN TXI     ,,                                                               
+ NINES PZE     ,,63                                                             
+NINBIT PZE     4096                                                             
+TENSBT PZE     ,,                                                               
+ CNTR  PZE     ,,             USES ONLY THE DECREMENT                           
+ ZERO  PZE     ,,                                                               
+BINHOL PZE     ,,                                                               
+       PZE     ,,                                                               
+ NOP   NOP                                                                      
+ LXD2  LXD     (3),2                                                            
+PLUSES BCI     1,++++++                                                         
+ ERMSG BCI     6,1TAPE 5 READ 3 TIMES UNSUCCESSFULLY.                           
+       REM                                                                      
+ CHAR  OCT                                                                      
+RPAREN OCT     34                                                               
+ BLANK OCT     60                                                               
+LPAREN OCT     74                                                               
+NUMASK OCT     17                                                               
+ONEBIT OCT     10000                                                            
+ZERBIT OCT     1000                                                             
+ BIN(  OCT     1042                                                             
+ BIN)  OCT     4042                                                             
+BNMAIN OCT     100010001000   ALL ZERO PUNCHES FOR MAIN.                        
+ NEG24 OCT     77750                                                            
+       BSS     2              LEAVE SPACE FOR LOOK-AHEAD BITS.                  
+       DUP     1,27                                                             
+ COL81 PZE     ,,                                                               
+ REC   SYN     *                                                                
+ COL78 SYN     COL81+1                                                          
+ COL75 SYN     COL78+1                                                          
+       END                                                                      

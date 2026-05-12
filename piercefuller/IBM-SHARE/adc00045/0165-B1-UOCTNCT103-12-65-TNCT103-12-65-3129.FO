@@ -1,0 +1,120 @@
+*     FAP                                                               TANCT000
+       LBL     TANCT000                                                 TANCT001
+       COUNT   105                                                      TANCT002
+*              UNIVERSITY OF CHICAGO TANGENT-COTANGENT PROGRAM          TANCT003
+*                            CALLING SEQUENCE  TSX  $TAN,4  ($COTAN,4)  TANCT004
+*                            ENTRY $CRIT IS FOR CONTROL OF ERROR        TANCT005
+*                            ARG GREATER THAN 2**20 IN ABSOLUTE VALUE ORTANCT006
+*                              IN CRITICAL NEIGHBORHOOD OF SINGULARITIESTANCT007
+*                              ARE REJECTED AS ERROR, AND THE CASE IS   TANCT008
+*                              HANDLED BY (EXEM)                        TANCT009
+*                            MIN ACCURACY GUARANTEE NEAR SING. IS 1/3   TANCT010
+       ENTRY   TAN                                                      TANCT011
+       ENTRY   COTAN                                                    TANCT012
+       ENTRY   CRIT                                                     TANCT013
+ COTAN STL     FLAG          COTANGENT ENTRY                            TANCT014
+ TAN   STO     ARG           TANGENT ENTRY                              TANCT015
+       SXA     SAVE1,1                                                  TANCT016
+       SXA     SAVE2,2                                                  TANCT017
+       SSP                   ASSUME POSITIVE DURING REDUCTION           TANCT018
+       LDQ     MASK1         CLEAR HIGH PART MQ                         TANCT019
+       LRS     9                                                        TANCT020
+       PDX     ,1            CHARACTERISTIC TO XR1                      TANCT021
+       TXH     ERROR,1,148   IF MAGNITUDE GREATER THAN 2**20, ERROR     TANCT022
+       LLS     19                                                       TANCT023
+       LRS     151,1         ARG IN FIXED POINT B21                     TANCT024
+       VDP     PIOV4,,21     X=(PI/4)Q+R   R IN AC B0, Q IN MQ B35      TANCT025
+       STO     BUFF          SAVE REMAINDER                             TANCT026
+       XCA                                                              TANCT027
+       ANA     MASK1         LEAVE LAST 2 BITS OF QUOTIENT              TANCT028
+       PAC     ,2            OCTANT 0, 1, 2, OR 3 TO -XR2               TANCT029
+       ZET     FLAG          FOR TANGENT, CASE NUMBER = OCTANT NUMBER   TANCT030
+       ERA     MASK2         FOR COTANGENT, CASE0=OCTANT1, CASE1=OCT0   TANCT031
+       STO     FLAG              CASE2=OCT3, CASE3=OCT2                 TANCT032
+       TIX     *+1,2,-3      IF OCTANT0 OR OCTANT2,                     TANCT033
+       TXL     TEST1,2,1         REMAINDER IS REDUCED ARGUMENT          TANCT034
+       CLA     PIOV4         IF OCTANT1 OR OCTANT3, TAKE COMPLEMENT     TANCT035
+       SUB     BUFF              OF REMAINDER FOR REDUCED ARGUMENT      TANCT036
+       STO     BUFF                                                     TANCT037
+ TEST1 LXA     FLAG,2        CASE NUMBER TO XR1 (OCTANT FOR TANGENT)    TANCT038
+       TXH     TEST2,1,127   IF ORIGINAL ARG MORE THAN 1/2, SKIP        TANCT039
+       TXH     COMP,1,114    IF LESS THAN 1/2, NO SCREENING IS GIVEN    TANCT040
+       CLA     FLONE           IF MORE THAN 2**-14, SKIP FLOATING AND   TANCT041
+       TXH     READY,1,2         PROCEED TO COMPUTE FACTOR              TANCT042
+       TXL     READY,2,0       IF LESS THAN 2**-126 FOR COTAN ARG, ERRORTANCT043
+       TRA     ERROR           OTHERWISE, FACTOR=1, SKIP FLOATING       TANCT044
+ TEST2 CLA     BUFF                                                     TANCT045
+       TXL     FLOAT,2,0     IF CASE0 OR CASE3, NO SCREENING IS GIVEN   TANCT046
+       TXH     FLOAT,2,2         SKIP                                   TANCT047
+       LDQ     CRIT          SCREEN OUT NEIGHBORHOOD OF SINGULARITIES   TANCT048
+       SXA     *+1,1           DO THIS BY TESTING REDUCED ARGUMENT      TANCT049
+       AXC     **,1              AGAINST 2**(P-26) WHERE P IS EXPONENT  TANCT050
+       RQL     -119,1              OF ORIGINAL ARGUMENT                 TANCT051
+       TLQ     *+2                                                      TANCT052
+       TRA     ERROR                                                    TANCT053
+ FLOAT LRS     8             FLOAT THE REDUCED ARGUMENT                 TANCT054
+       ORA     CHAR                                                     TANCT055
+       STO     BUFF                                                     TANCT056
+       XCA                                                              TANCT057
+       ARS     8                                                        TANCT058
+       ORA     LCHAR                                                    TANCT059
+       FAD     BUFF                                                     TANCT060
+       FRN                                                              TANCT061
+       LDQ     ARG           PRE-ADJUST SIGN OF REDUCED ARGUMENT        TANCT062
+       LLS     0                 SO THAT THE ANSWER COMES OUT WITH      TANCT063
+       TXL     *+2,2,1               CORRECT SIGN                       TANCT064
+       CHS                                                              TANCT065
+       STO     ARG                                                      TANCT066
+ COMP  LDQ     ARG           COMPUTE FACTOR BY                          TANCT067
+       FMP     ARG                        13.946SQ-313.11               TANCT068
+       STO     SQ                FACTOR=1+----------------              TANCT069
+       CLA     D                          SQ-104.46+939.33              TANCT070
+       FDP     SQ                                   ------              TANCT071
+       XCA                                            SQ                TANCT072
+       FAD     SQ                                                       TANCT073
+       FSB     C                                                        TANCT074
+       STO     BUFF                                                     TANCT075
+       LDQ     A                                                        TANCT076
+       FMP     SQ                                                       TANCT077
+       FSB     B                                                        TANCT078
+       FDP     BUFF                                                     TANCT079
+       XCA                                                              TANCT080
+       FAD     FLONE                                                    TANCT081
+       FRN                                                              TANCT082
+ READY TXL     *+4,2,0       NOW BOTH REDUCED ARG AND FACTOR ARE READY  TANCT083
+       TXH     *+3,2,2                                                  TANCT084
+       FDP     ARG           FOR CASE1 AND CASE2,                       TANCT085
+       TRA     *+4               ANSWER = FACTOR/ARGUMENT               TANCT086
+       STO     BUFF          FOR CASE0 AND CASE3                        TANCT087
+       CLA     ARG               ANSWER = ARGUMENT/FACTOR               TANCT088
+       FDP     BUFF                                                     TANCT089
+       XCA                                                              TANCT090
+       FRN                                                              TANCT091
+ SAVE1 AXT     **,1                                                     TANCT092
+ SAVE2 AXT     **,2                                                     TANCT093
+       STZ     FLAG                                                     TANCT094
+       TRA     1,4           RETURN                                     TANCT095
+       SPACE                                                            TANCT096
+ ERROR LXA     SAVE1,1                                                  TANCT097
+       LXA     SAVE2,2                                                  TANCT098
+       CLA     ARG                                                      TANCT099
+       LDI     *+2                                                      TANCT100
+       TRA     $(EXEM)                                                  TANCT101
+       PZE     3,6,SAVE1                                                TANCT102
+       SPACE                                                            TANCT103
+ FLAG  PZE                                                              TANCT104
+ ARG   BSS     1                                                        TANCT105
+ BUFF  BSS     1                                                        TANCT106
+ SQ    BSS     1                                                        TANCT107
+ CRIT  PZE     1             BIT TO TEST CLOSENESS TO SINGULARITIES     TANCT108
+ MASK1 OCT     3                                                        TANCT109
+ MASK2 OCT     1                                                        TANCT110
+ CHAR  OCT     200000000000                                             TANCT111
+ LCHAR OCT     145000000000                                             TANCT112
+ FLONE OCT     201400000000                                             TANCT113
+ PIOV4 OCT     +311037552421       =PI/4 AS FIXED POINT NUMBER IN B0    TANCT114
+ A     OCT     204676213207                                             TANCT115
+ B     OCT     211471070244                                             TANCT116
+ C     OCT     207641656051                                             TANCT117
+ D     OCT     212725524366                                             TANCT118
+       END                                                              TANCT119

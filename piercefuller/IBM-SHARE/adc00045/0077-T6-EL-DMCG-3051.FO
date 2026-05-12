@@ -1,0 +1,486 @@
+*     LABEL                                                                     
+CMAIN                                                                           
+      DIMENSION PTS(2000,2),NSDR(2000),NDIP(2),LP(2),LC(2),IP(2000)             
+      DIMENSION IDIR(7000),IC(7000),A(20),IPTS(2000,2),SAV(130)                 
+      DIMENSION  SSAV(4000)                                                     
+      DIMENSION  B(20)                                                          
+      EQUIVALENCE (SSAV,PTS)                                                    
+      EQUIVALENCE (NSDR,IP)                                                     
+C     IF NREAD IS ZERO, DATA PTS COMPUTED IN SUBROUTINE COMP                    
+C     IF NREAD IS NON ZERO, NREAD DATA PTS. ARE READ IN                         
+      WRITE OUTPUT TAPE 6,200                                                   
+  200 FORMAT(1H1)                                                               
+      READ INPUT TAPE 5,201                                                     
+  201 FORMAT(72H                                                                
+     1                )                                                         
+      WRITE OUTPUT TAPE 6,201                                                   
+      JFCNT=0                                                                   
+      REWIND 16                                                                 
+      READ INPUT TAPE 5,100,NREAD                                               
+  100 FORMAT(I5)                                                                
+      NZERO=0                                                                   
+      IF(NREAD) 101,103,101                                                     
+C                             READ DATA PTS FROM DATA CARDS                     
+  101 READ INPUT TAPE 5,102,(PTS(I,1),PTS(I,2),NSDR(I),I=1,NREAD)               
+  102 FORMAT(4(2F7.4,I1))                                                       
+      GO TO 104                                                                 
+C                                 CALCULATE PTS VIA COMP                        
+  103 CALL COMP(PTS,NSDR,NREAD)                                                 
+C                                FIND SUBSCRIPT OF FIRST HOLE TO BE DRILLED     
+  104 DO 3000 I=1,NREAD                                                         
+      IF(NSDR(I))  3001,3000,3001                                               
+ 3001 JIN=I                                                                     
+      GO TO 3002                                                                
+ 3000 CONTINUE                                                                  
+ 3002 CONTINUE                                                                  
+C                                    ROUND AND CHANGE ALL PTS TO INTEGERS       
+      DO 110 I=1,NREAD                                                          
+      TEMP1=(PTS(I,1)/0.005)                                                    
+      TEMP2=(PTS(I,2)/0.005)                                                    
+      NT1=TEMP1                                                                 
+      NT2=TEMP2                                                                 
+      FNT1=NT1                                                                  
+      FNT2=NT2                                                                  
+      IF(TEMP1-FNT1-0.5)    106,105,105                                         
+  105 IPTS(I,1)=(NT1+1)*5                                                       
+      GO TO 107                                                                 
+  106 IPTS(I,1)=(NT1*5)                                                         
+  107 IF(TEMP2-FNT2-0.5)      109,108,108                                       
+  108 IPTS(I,2)=(NT2+1)*5                                                       
+      GO TO 110                                                                 
+  109 IPTS(I,2)=(NT2*5)                                                         
+  110 CONTINUE                                                                  
+C                           ASSUME ALL POINTS TO BE ROUNDED                     
+      NJFLT=1                                                                   
+      NOPTS=NREAD                                                               
+C                                SET UP COMMANDS TO MOVE AWAY FROM ORIGIN       
+B     WDBK=606060606060                                                         
+      DO  900   J=1,120                                                         
+      SAV(J)=WDBK                                                               
+  900 CONTINUE                                                                  
+B     SAV(1)=444130226360                                                       
+B     SAV(2)=413022636060                                                       
+B     SAV(3)=453142606060                                                       
+      IF(IPTS(1,1)-IPTS(1,2))  752,750,750                                      
+  750 NHOLD=IPTS(1,2)                                                           
+      GO TO 751                                                                 
+  752 NHOLD=IPTS(1,1)                                                           
+  751 MINT=NHOLD/100                                                            
+      DO 753 I=1,MINT                                                           
+B     SAV(I+3)=636060606060                                                     
+  753 CONTINUE                                                                  
+B     SAV(MINT+4)=236060606060                                                  
+C                                       INITIALIZE LAST POSITION                
+C                                          AND LAST COMMAND                     
+      LP(1)=MINT*100                                                            
+      LP(2)=LP(1)                                                               
+      LC(1)=100                                                                 
+      LC(2)=100                                                                 
+      NCT=0                                                                     
+C                                   START PROCESSING HOLES                      
+C                                   WORK WITH NUMERICAL COMMANDS INSTEAD        
+C                                   OF ALPHABETIC, 5,10,15,20,.....,100         
+      DO    37     NN=1,NOPTS                                                   
+   34 NDIP(1)=IPTS(NN,1)-LP(1)                                                  
+      NDIP(2)=IPTS(NN,2)-LP(2)                                                  
+      NCTR=0                                                                    
+C                                     COMPARE X-DISTANCE AND Y-DISTANCE         
+C                                      TO NEXT HOLE                             
+    1 IF(XABSF(NDIP(1))-XABSF(NDIP(2)))          3,2,2                          
+    2 J=1                                                                       
+      GO TO 4                                                                   
+    3 J=2                                                                       
+    4 NCTR=NCTR+1                                                               
+      IF(NDIP(J))  5,23,6                                                       
+    5 I=-1                                                                      
+      GO TO 7                                                                   
+    6 I=1                                                                       
+    7 IF(XABSF(NDIP(J))-100)  8,24,24                                           
+    8 IF(I) 9,9,12                                                              
+    9 IF(LC(J)) 10,11,11                                                        
+C                          SCREW WILL TRAVEL IN SAME DIRECTION AS PREVIOUS      
+   10 LPT=LC(J)                                                                 
+      GO TO 13                                                                  
+C                                    SCREW WILL CHANGE DIRECTION                
+   11 LPT=LC(J)+(I*100)                                                         
+      IF(LPT)  13,500,13                                                        
+  500 LPT=I*100                                                                 
+      GO TO 13                                                                  
+   12 IF(LC(J)) 11,11,10                                                        
+   13 NTEMP=XABSF(LPT)+XABSF(NDIP(J))                                           
+      NCT=NCT+1                                                                 
+C                              CALCULATE NUMERICAL COMMAND                      
+      IC(NCT)=I*XMODF(NTEMP,100)                                                
+      IF(IC(NCT))   61,60,61                                                    
+   60 IC(NCT)=I*100                                                             
+C                                 STORE SCREW (X OR Y) INDICATOR                
+   61 IDIR(NCT)=J                                                               
+C                                   UPDATE LAST POSITION AND LAST COMMAND       
+      LC(J)=IC(NCT)                                                             
+      LP(J)=NDIP(J)+LP(J)                                                       
+   23 IF(NCTR-2)  14,17,14                                                      
+   14 IF(J-1)  15,16,15                                                         
+   15 J=1                                                                       
+      GO TO 4                                                                   
+   16 J=2                                                                       
+      GO TO 4                                                                   
+   17 IF(NSDR(NN))  18,37,18                                                    
+   18 IF(NJFLT-NSDR(NN))  20,19,20                                              
+   19 NCT=NCT+1                                                                 
+      IC(NCT)=500                                                               
+      GO TO 37                                                                  
+   20 NJFLT=NSDR(NN)                                                            
+      NCT=NCT+1                                                                 
+      IC(NCT)=600                                                               
+      GO TO 19                                                                  
+   24 IF(I)  25,28,28                                                           
+   25 IF(LC(J)) 26,27,27                                                        
+C                          SCREW WILL TRAVEL IN SAME DIRECTION AS PREVIOUS      
+   26 LPT=LC(J)                                                                 
+      GO TO 29                                                                  
+C                                    SCREW WILL CHANGE DIRECTION                
+   27 LPT=LC(J)+(I*100)                                                         
+      IF(LPT)  29,501,29                                                        
+  501 LPT=I*100                                                                 
+      GO TO 29                                                                  
+   28 IF(LC(J)) 27,27,26                                                        
+   29 IF(XABSF(NDIP(J))-199)  4060,4060,4061                                    
+ 4060 NCT=NCT+1                                                                 
+      IC(NCT)=LPT+(I*5000)                                                      
+      LC(J)=LPT                                                                 
+      IDIR(NCT)=J                                                               
+      LP(J)=LP(J)+(I*100)                                                       
+      GO TO 34                                                                  
+ 4061 NT1=I*65                                                                  
+      NT2=I*95                                                                  
+      IF(NT2-NT1)  30,30,31                                                     
+   30 NT=NT1                                                                    
+      NT1=NT2                                                                   
+      NT2=NT                                                                    
+   31 IF(NT2-LPT)    33,32,32                                                   
+   32 IF(LPT-NT1)    33,35,35                                                   
+C                       LPT NOT IN CLOSED INTERVAL (I*65,I*95)                  
+C                              DERIVE MULTIPLE CODE                             
+   33 NINT=XABSF(NDIP(J)/100)                                                   
+      NCT=NCT+1                                                                 
+      IC(NCT)=I*(1000+NINT)                                                     
+      IDIR(NCT)=J                                                               
+      LC(J)=I*100                                                               
+      LPT=XMODF(XABSF(LPT),100)                                                 
+      NDIST=(100-XABSF(LPT))+(100*(NINT-1))                                     
+      LP(J)=LP(J)     +(I*NDIST)                                                
+   36 IDIR(NCT)=J                                                               
+      GO TO 34                                                                  
+C                    LPT IN CLOSED INTERVAL (I*65,I*95)                         
+C                                    ADVANCE SCREW                              
+   35 NCT=NCT+1                                                                 
+      IC(NCT)=I*100                                                             
+      LC(J)=IC(NCT)                                                             
+      LP(J)=LP(J)+(I*(100-XABSF(LPT)))                                          
+      GO TO 36                                                                  
+   37 CONTINUE                                                                  
+C                               HAVE COMPLETED PROCESSING OF HOLES              
+C                                INITIALIZE ALPHABETIC CONVERSION               
+B     A(1)=413022636060                                                  JHBT   
+B     A(2)=417022636060                                                  JYBT   
+B     A(3)=412722636060                                                  JGBT   
+B     A(4)=416722636060                                                  JXBT   
+B     A(5)=412622636060                                                  JFBT   
+B     A(6)=416622636060                                                  JWBT   
+B     A(7)=412522636060                                                  JEBT   
+B     A(8)=416522636060                                                  JVBT   
+B     A(9)=412422636060                                                  JDBT   
+B     A(10)=317122636060                                                 IZBT   
+B     A(11)=313022636060                                                 IHBT   
+B     A(12)=317022636060                                                 IYBT   
+B     A(13)=312722636060                                                 IGBT   
+B     A(14)=316722636060                                                 IXBT   
+B     A(15)=312622636060                                                 IFBT   
+B     A(16)=316622636060                                                 IWBT   
+B     A(17)=312522636060                                                 IEBT   
+B     A(18)=316522636060                                                 IVBT   
+B     A(19)=312422636060                                                 IDBT   
+B     A(20)=417122636060                                                 JZBT   
+B     B(1)=412230636060                                                  JBHT   
+B     B(2)=412270636060                                                  JBYT   
+B     B(3)=412227636060                                                  JBGT   
+B     B(4)=412267636060                                                  JBXT   
+B     B(5)=412226636060                                                  JBFT   
+B     B(6)=412266636060                                                  JBWT   
+B     B(7)=412225636060                                                  JBET   
+B     B(8)=412265636060                                                  JBVT   
+B     B(9)=412224636060                                                  JBDT   
+B     B(10)=312271636060                                                 IBZT   
+B     B(11)=312230636060                                                 IBHT   
+B     B(12)=312270636060                                                 IBYT   
+B     B(13)=312227636060                                                 IBGT   
+B     B(14)=312267636060                                                 IBXT   
+B     B(15)=312226636060                                                 IBFT   
+B     B(16)=312266636060                                                 IBWT   
+B     B(17)=312225636060                                                 IBET   
+B     B(18)=312265636060                                                 IBVT   
+B     B(19)=312224636060                                                 IBDT   
+B     B(20)=412271636060                                                 JBZT   
+      JIN=0                                                                     
+      NW=120                                                                    
+      NWORDS=MINT+4                                                             
+      NCTR=13+MINT                                                              
+C                                 BEGIN  ALPHABETIC CONVERSION                  
+      DO  81  I=1,NCT                                                           
+      NJTEST=0                                                                  
+C                               DOES NUMERIC COMMAND IMPLY DRILL(500)           
+      IF(XABSF(IC( I ))-500)     45,40,42                                       
+   40 JIN=JIN+1                                                                 
+      IF(JIN-1)  3009,3004,3009                                                 
+B3004 BEGN=636060606060                                                         
+      NBG=1                                                                     
+      NTEES=78-NCTR                                                             
+      DO 3008 J=1,NTEES                                                         
+      NWORDS=NWORDS+1                                                           
+      NCTR=NCTR+NBG                                                             
+      JFD=120-NCTR                                                              
+      IF(JFD)  3005,3007,3007                                                   
+ 3005 CALL NDBLNK(SAV,SAV,NW)                                                   
+C                          WRITE OUT JOB SET-UP ALPHABETIC COMMANDS             
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+      NCTR=NBG                                                                  
+      NWORDS=1                                                                  
+      DO 3006 JJ=1,120                                                          
+      SAV(JJ)=WDBK                                                              
+ 3006 CONTINUE                                                                  
+ 3007 SAV(NWORDS)=BEGN                                                          
+ 3008 CONTINUE                                                                  
+B3009 BEGN=476060606060                                                         
+      NBG=1                                                                     
+      GO TO 901                                                                 
+C                          DOES NUMERIC COMMAND IMPLY CHANGE OF DRILL(600)      
+   42 IF(XABSF(IC(I))-600)  43,43,4050                                          
+B  43 BEGN=636060606060                                                         
+      NBG=1                                                                     
+  901 NWORDS=NWORDS+1                                                           
+      NCTR=NCTR+NBG                                                             
+      JFD=120-NCTR                                                              
+      IF(JFD)   902,905,905                                                     
+  902 CALL NDBLNK(SAV,SAV,NW)                                                   
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+  903 FORMAT(20A6)                                                              
+      NCTR=NBG                                                                  
+      NWORDS=1                                                                  
+      DO   904   J=1,120                                                        
+      SAV(J)=WDBK                                                               
+  904 CONTINUE                                                                  
+  905 SAV(NWORDS)=BEGN                                                          
+      GO TO 81                                                                  
+   45 IF(IC( I ))    47 ,46,46                                                  
+   46 NTEMP=XMODF(XABSF(IC(I)),100)                                             
+      GO TO 48                                                                  
+   47 NTEMP=100+IC( I )                                                         
+   48 NINT=(NTEMP/5)+1                                                          
+      IF(NJTEST)  4056,4055,4056                                                
+ 4055 OUT=A(NINT)                                                               
+      GO TO 4057                                                                
+ 4056 OUT=B(NINT)                                                               
+ 4057 IF(IDIR(I)-1)  49,49,54                                                   
+   49 IF(IC(I))    50,50,52                                                     
+C                            -X DIRECTION                                       
+B  50 BEGN=216060606060                                                         
+      NBG=1                                                                     
+      GO TO 906                                                                 
+   52 BEGN=OUT                                                                  
+      NBG=4                                                                     
+      GO TO 901                                                                 
+   54 IF(IC(I))  55,55,57                                                       
+B  55 BEGN=434460606060                                                         
+      NBG=2                                                                     
+      GO TO 906                                                                 
+B  57 BEGN=446060606060                                                         
+      NBG=1                                                                     
+  906 NWORDS=NWORDS+2                                                           
+      NCTR=NCTR+NBG+4                                                           
+      JFD=120-NCTR                                                              
+      IF(JFD)  907,909,909                                                      
+  907 CALL NDBLNK(SAV,SAV,NW)                                                   
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+      NCTR=NBG+4                                                                
+      NWORDS=2                                                                  
+      DO  908   J=1,120                                                         
+      SAV(J)=WDBK                                                               
+  908 CONTINUE                                                                  
+  909 SAV(NWORDS-1)=BEGN                                                        
+      SAV(NWORDS)=OUT                                                           
+      GO TO 81                                                                  
+C                          DOES NUMERIC COMMAND IMPLY MULTIPLE REVOLUTION       
+ 4050 IF(XABSF(IC(I))-5000)  70,4051,4051                                       
+ 4051 NJTEST=1                                                                  
+      IF(IC(I))   4052,4053,4053                                                
+ 4052 IC(I)=IC(I)+5000                                                          
+      GO TO 4054                                                                
+ 4053 IC(I)=IC(I)-5000                                                          
+ 4054 GO TO 45                                                                  
+   70 NINT=XABSF(IC(I))-1000                                                    
+      IF(IDIR(I)-1)     71,71,76                                                
+   71 IF(IC(I))  72,72,74                                                       
+B  72 BEGN=214541226060                                                         
+      NBG=4                                                                     
+      GO TO 910                                                                 
+B  74 BEGN=453122606060                                                         
+      NBG=3                                                                     
+      GO TO 910                                                                 
+   76 IF(IC(I))  77,77,79                                                       
+B  77 BEGN=434544412260                                                         
+      NBG=5                                                                     
+      GO TO 910                                                                 
+B  79 BEGN=454431226060                                                         
+      NBG=4                                                                     
+  910 NWORDS=NWORDS+1                                                           
+      NCTR=NCTR+NBG                                                             
+      JFD=120-NCTR                                                              
+      IF(JFD)  911,913,913                                                      
+  911 CALL  NDBLNK(SAV,SAV,NW)                                                  
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+      NCTR=NBG                                                                  
+      NWORDS=1                                                                  
+      DO   912   J=1,120                                                        
+      SAV(J)=WDBK                                                               
+  912 CONTINUE                                                                  
+  913 SAV(NWORDS)=BEGN                                                          
+  801 DO 803 KK=1,NINT                                                          
+B 802 BEGN=636060606060                                                         
+      NBG=1                                                                     
+      NWORDS=NWORDS+1                                                           
+      NCTR=NCTR+NBG                                                             
+      JFD=120-NCTR                                                              
+      IF(JFD) 914,916,916                                                       
+  914 CALL NDBLNK(SAV,SAV,NW)                                                   
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+      NCTR=NBG                                                                  
+      NWORDS=1                                                                  
+      DO  915  J=1,120                                                          
+      SAV(J)=WDBK                                                               
+  915 CONTINUE                                                                  
+  916 SAV(NWORDS)=BEGN                                                          
+  803 CONTINUE                                                                  
+B 804 BEGN=236060606060                                                         
+      NBG=1                                                                     
+      GO TO 901                                                                 
+   81 CONTINUE                                                                  
+      CALL NDBLNK(SAV,SAV,NW)                                                   
+      WRITE OUTPUT TAPE 16,903,(SAV(L),L=1,20)                                  
+      JFCNT=JFCNT+1                                                             
+      END FILE 16                                                               
+      REWIND 16                                                                 
+C                              ALL CONVERSION COMPLETED                         
+C                          READ RESULTS FROM INTERMEDIATE TAPE                  
+      DO 2000 J=1,JFCNT                                                         
+      I2=(J*20)                                                                 
+      I1=I2-19                                                                  
+      READ INPUT TAPE 16,903,(SSAV(I),I=I1,I2)                                  
+ 2000 CONTINUE                                                                  
+      REWIND 16                                                                 
+      CALL NDBLNK(SSAV,SSAV,I2)                                                 
+C                           WRITE OUT ON ANSWER TAPE                            
+      WRITE OUTPUT TAPE 6,2001,(SSAV(J),J=1,I2)                                 
+ 2001 FORMAT(2X,13A6)                                                           
+      WRITE OUTPUT TAPE  6,2002,(SSAV(J),J=1,I2)                                
+ 2002 FORMAT(1HP,2X,13A6)                                                       
+      REWIND 16                                                                 
+      CALL EXIT                                                                 
+      END                                                                       
+*      FAP                                                              PL022000
+*PL022      DEBLANKING ROUTINE                                          PL022001
+       COUNT   50                                                       PL022002
+       LBL     PL022,X                                                  PL022003
+*      NCH = NDBLNK(BCD, STRING, NWI)                                   PL022004
+*      NCH IS NUMBER OF NON-BLANK CHARACTERS                            PL022005
+*      BCD IS BCD ARRAY TO BE DEBLANKED                                 PL022006
+*      STRING IS LOCATION OF DEBLANKED RESULT (MAY = BCD)               PL022007
+*      NWI IS NUMBER OF WORDS TO BE DEBLANKED                           PL022008
+*                                                                       PL022009
+       ENTRY   NDBLNK                                                   PL022010
+NDBLNK SXA     XR1,1                                                    PL022011
+       SXA     XR2,2                                                    PL022012
+       SXA     XR4,4                                                    PL022013
+       CLA     *+1                                                      PL022014
+       ADD     1,4          INPUT LOCATION + 1                          PL022015
+       STA     A1                                                       PL022016
+       CLA     *-2                                                      PL022017
+       ADD     2,4          OUTPUT LOCATION + 1                         PL022018
+       STA     A4                                                       PL022019
+       STA     B2                                                       PL022020
+       CAL*    3,4          NO. OF WORDS TO BE DEBLANKED                PL022021
+       STD     A9                                                       PL022022
+       STD     B3                                                       PL022023
+       AXT     ,7                                                       PL022024
+       TXI     A5,2,1                                                   PL022025
+A1     CAL     **,2         NEXT INPUT WORD                             PL022026
+       ERA     =H                                                       PL022027
+       TNZ     *+2          NOT ALL BLANK                               PL022028
+       TXI     A9,2,1                                                   PL022029
+       TXI     *+1,2,20481                                              PL022030
+       XCL                                                              PL022031
+       ZAC                                                              PL022032
+A2     LGL     6                                                        PL022033
+       TZE     A8           BLANK CHARACTER                             PL022034
+       OAI                                                              PL022035
+A3     TIX     A6,1,4096    DEBLANKED WORD NOT FULL                     PL022036
+       IIS     =H                                                       PL022037
+A4     STI     **,1         STORE NEXT OUTPUT WORD                      PL022038
+       TXI     *+1,4,6      INCREASE CHARACTER COUNT                    PL022039
+A5     LDI     =0           CLEAR INDICATORS                            PL022040
+       TXI     A7,1,20481                                               PL022041
+A6     PIA                                                              PL022042
+       ALS     6                                                        PL022043
+       PAI                                                              PL022044
+A7     ZAC                                                              PL022045
+A8     TIX     A2,2,4096    INPUT WORD NOT EMPTY                        PL022046
+A9     TXL     A1,2,**      MORE INPUT WORDS                            PL022047
+       TXH     B1,1,20480   INDICATORS CONTAIN NO CHARACTERS            PL022048
+       TXI     A3,4,-1      DECREASE CHARACTER COUNT BY 1               PL022049
+B1     CAL     =H           STORE REMAINING WORDS AS ALL BLANK          PL022050
+       TXI     B3,1,-20480                                              PL022051
+B2     SLW     **,1         OUTPUT LOCATION                             PL022052
+       TXI     *+1,1,1                                                  PL022053
+B3     TXL     B2,1,**      MORE BLANKS TO BE STORED                    PL022054
+       PXD     ,4                                                       PL022055
+XR1    AXT     **,1                                                     PL022056
+XR2    AXT     **,2                                                     PL022057
+XR4    AXT     **,4                                                     PL022058
+       TRA     4,4                                                      PL022059
+       END                                                              PL022060
+*     LIST                                                                      
+*     LABEL                                                                     
+CCOMP                                                                           
+      SUBROUTINE COMP(PTS,NSDR,NREAD)                                           
+      DIMENSION PTS(2000,2),NSDR(2000)                                          
+C                                       THIS IS A DUMMY COMP ROUTINE            
+C                                       WHICH DOES NOTHING.THIS MAY             
+C                                       BE INCLUDED (ALTHOUGH NEVER             
+C                                       USED) WITH THE MAIN PROGRAM             
+C                                       WHEN POINTS ARE READ FROM               
+C                                       DATA CARDS                              
+      PTS(1,1)=PTS(1,1)                                                         
+      NSDR(1)=NSDR(1)                                                           
+      NREAD=NREAD                                                               
+      RETURN                                                                    
+      END                                                                       
+*     DATA                                                                      
+                          SAMPLE PROBLEM OUTPUT                                 
+   49                                                                           
+ 0.5    0.5   0 1.0    1.5   1 3.0    1.5   1 5.0    1.5   1                    
+ 0.75   2.0   1 1.0    2.0   1 3.0    2.0   1 5.0    2.0   1                    
+ 0.75   2.5   1 1.0    2.5   1 3.0    2.5   1 5.0    2.5   1                    
+ 0.75   3.0   1 1.0    3.0   1 3.0    3.0   1 5.0    3.0   1                    
+ 0.75   3.5   1 1.0    3.5   1 3.0    3.5   1 5.0    3.5   1                    
+ 0.75   4.0   1 1.0    4.0   1 3.0    4.0   1 5.0    4.0   1                    
+ 0.75   4.5   1 1.0    4.5   1 3.0    4.5   1 5.0    4.5   1                    
+ 2.0    2.0   2 4.0    2.0   2 6.0    2.0   2 8.0    2.0   2                    
+ 2.0    2.5   2 4.0    2.5   2 6.0    2.5   2 8.0    2.5   2                    
+ 2.0    3.0   2 4.0    3.0   2 6.0    3.0   2 8.0    3.0   2                    
+ 2.0    3.5   2 4.0    3.5   2 6.0    3.5   2 8.0    3.5   2                    
+ 2.0    4.0   2 4.0    4.0   2 6.0    4.0   2 8.0    4.0   2                    
+ 1.0    1.5   0                                                                 

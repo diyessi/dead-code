@@ -1,0 +1,306 @@
+*IW DKF4  7090-1301 DISK PACKAGE FOR FORTRAN IV OPERATING UNDER IBJOB   DKF40001
+*CHARLES K. FENDALL  GPD, IBM  SAN JOSE  03/09/64                       DKF40002
+* PARAMETERS FOR INSTALLATION MODIFICATION                              DKF40003
+ ACC   SET     1          ACCESS ARMS PER MODULE (LIMIT 2)              DKF40004
+ MOD   SET     2          MODULES ON 7909 (LIMIT 10)                    DKF40005
+*                                                                       DKF40006
+* SEEK SUBR TO SET BINARY TRACK ADDRESS IN UCW4,FLAG                    DKF40007
+* CONVERSION AND REQUEST SEEK. USE BEFORE IO IS OPTIONAL.               DKF40008
+* CALL DSEEK (IUNIT,ITRAK)                                              DKF40009
+ DSEEK SAVE    1,2,I                                                    DKF40010
+       TSX     UNIT,1                                                   DKF40011
+       TSX     TRACK,1                                                  DKF40012
+       ENB     ZERO       STOP TRAPS                                    DKF40013
+       STO     3,2        TRACK NO. TO UCW4                             DKF40014
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKF40015
+       SSM                                                              DKF40016
+       STO     2,2                                                      DKF40017
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKF40018
+       TSX     .ACTV,4    START ACTION                                  DKF40019
+       PZE     UCB                                                      DKF40020
+       RETURN  DSEEK                                                    DKF40021
+*                                                                       DKF40022
+* WRITE SUBR TO SET UP UCB AND START WRITE.                             DKF40023
+* CALL DPUT (IUNIT,ITRAK,2HXX,DATA,NWDS)                                DKF40024
+ DPUT  SAVE    1,2,I                                                    DKF40025
+       TSX     IOACT,1                                                  DKF40026
+       CLS     SEL        FLAG WRITE IN UCW2                            DKF40027
+       STO     1,2                                                      DKF40028
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKF40029
+       TSX     .ACTV,4    START ACTION                                  DKF40030
+       PZE     UCB                                                      DKF40031
+       RETURN  DPUT                                                     DKF40032
+*                                                                       DKF40033
+* READ SUBR TO SET UP UCB AND START READ.                               DKF40034
+* CALL DTAKE (IUNIT,ITRAK,2HXX,DATA,NWDS)                               DKF40035
+ DTAKE SAVE    1,2,I                                                    DKF40036
+       TSX     IOACT,1                                                  DKF40037
+       CLA     SEL        FLAG READ IN UCW2                             DKF40038
+       STO     1,2                                                      DKF40039
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKF40040
+       TSX     .ACTV,4    START ACTION                                  DKF40041
+       PZE     UCB                                                      DKF40042
+       RETURN  DTAKE                                                    DKF40043
+*                                                                       DKF40044
+* CHECK SUBR TO CHECK READ OR WRITE FOR SUCCESSFUL                      DKF40045
+* COMPLETION AND SET IBUSY FLAG FOR USER TEST.                          DKF40046
+* CALL DCHEK (IUNIT,IBUSY,ERROR)                                        DKF40047
+ DCHEK SAVE    1,2,I                                                    DKF40048
+       TSX     UNIT,1                                                   DKF40049
+       NZT*    4,4        TEST IBUSY FOR ZERO                           DKF40050
+       TRA     HANG       YES                                           DKF40051
+       NZT     1,2        CHECK FOR DONE (UCW2)                         DKF40052
+       TRA     ETEST      YES                                           DKF40053
+       CLA     1A         1 TO IBUSY                                    DKF40054
+       TRA     OK                                                       DKF40055
+ HANG  ZET     1,2        WAIT FOR DONE                                 DKF40056
+       TRA     *-1                                                      DKF40057
+ ETEST LDC     ACCES,1    GET TABLE INDEX                               DKF40058
+       CLA     ERR,1      TEST FOR ERROR                                DKF40059
+       TZE     OK         NO                                            DKF40060
+       STO*    5,4        STORE BITS IN ERROR PARAMETER                 DKF40061
+       CLS     1A         -1 TO IBUSY                                   DKF40062
+ OK    STO*    4,4        RESET IBUSY                                   DKF40063
+       RETURN  DCHEK                                                    DKF40064
+*                                                                       DKF40065
+* INNER SUBR TO SAVE REGISTERS, GET UCB LOC AND TEST FOR ATTACHMENT     DKF40066
+* OF ACCESS AND MODULE. USED BY ALL MAIN SUBRS. EXITS WITH -UCB IN X2.  DKF40067
+* CALL TSX     UNIT,1                                                   DKF40068
+*      RETURN                                                           DKF40069
+ UNIT  SXA     X4,4       FINISH SAVING REGS                            DKF40070
+       LDQ*    3,4                                                      DKF40071
+       ZET     DAVAL      TEST FOR 1ST ENTRY                            DKF40072
+       TRA     DACC       NO                                            DKF40073
+       LXD     SYSUBC,2   YES, GET CHANNEL COUNT                        DKF40074
+       LAC     SYSUBC,4   1ST CHANNEL POINTER                           DKF40075
+ AVCHN LDI*    0,4        UCW1                                          DKF40076
+       LFT     20000      7909 TEST                                     DKF40077
+       TRA     HIT        YES                                           DKF40078
+       TNX     NODSK,2,1  END OF CHAIN, NO DISK                         DKF40079
+       TXI     AVCHN,4,-1 TO NEXT CHANNEL                               DKF40080
+ HIT   CLA     0,4                                                      DKF40081
+       STO     DAVAL      1ST UCB LOC IN 7909 CHAIN                     DKF40082
+ DACC  XCA                GET ACCESS AND MODULE                         DKF40083
+       PAX     0,2                                                      DKF40084
+       SXD     ACCES,2                                                  DKF40085
+       SXD     ACMSK,2                                                  DKF40086
+       TXH     NOTACH,2,19 NON-EXISTENT                                 DKF40087
+       TXL     SCAN,2,9   ACCESS 0, SKIP ADJUSTMENTS                    DKF40088
+       TXI     *+1,2,6    ACCESS 1, SPREAD LIKE UCW1                    DKF40089
+       SXD     ACMSK,2                                                  DKF40090
+       TXI     *+1,2,MOD-16 FORM TABLE INDEX                            DKF40091
+       SXD     ACCES,2                                                  DKF40092
+ SCAN  LAC     DAVAL,2    START SCAN                                    DKF40093
+       LXD     DAVAL,4    UCB COUNT FOR CHANNEL                         DKF40094
+ MDCHK LDI     0,2        UCW1                                          DKF40095
+       IIL     100        DISK BIT                                      DKF40096
+       LFT     700        TEST FOR DISK                                 DKF40097
+       TXI     CHAIN,2,-4 NO                                            DKF40098
+       IIS     ACMSK      YES, TEST ACCESS AND MODULE                   DKF40099
+       LFT     37                                                       DKF40100
+       TXI     CHAIN,2,-4 NO                                            DKF40101
+       CLA     0,2        SUGAR-COAT FOR IOEX                           DKF40102
+       SLW     0,2                                                      DKF40103
+       SXA     *+1,2      SAVE UCB LOC FOR .ACTV                        DKF40104
+       AXC     **,4                                                     DKF40105
+       SXA     UCB,4                                                    DKF40106
+       LXA     X4,4                                                     DKF40107
+       TRA     1,1                                                      DKF40108
+ CHAIN TIX     MDCHK,4,1   TO NEXT UCB IN CHAIN                         DKF40109
+       TRA     NOTACH     NOT FOUND IN CHAIN                            DKF40110
+*                                                                       DKF40111
+* INNER SUBR TO GET TRACK NO. AND HANG UNTIL UNIT INACTIVE.             DKF40112
+* USED BY DSEEK, DPUT, DTAKE. EXITS WITH TRACK NO. IN ACC               DKF40113
+* ADDRESS                                                               DKF40114
+* CALL TSX     TRACK,1                                                  DKF40115
+*      RETURN                                                           DKF40116
+ TRACK ZET     1,2        HANG ON UCW2                                  DKF40117
+       TRA     *-1                                                      DKF40118
+       CAL     APMSK                                                    DKF40119
+       ANA     2,2        HANG TIL AF - PF FLAGS CLEAR                  DKF40120
+       TNZ     *-2                                                      DKF40121
+       CLA*    4,4        GET TRACK NUMBER                              DKF40122
+       TRA     1,1                                                      DKF40123
+*                                                                       DKF40124
+* INNER SUBR TO DO DPUT AND DTAKE COMMON CHORES. STORES INFO            DKF40125
+* IN SEL UNIT TABLES AND FLAGS SEEK IN UCW3.                            DKF40126
+* CALL TSX     IOACT,1                                                  DKF40127
+*      RETURN                                                           DKF40128
+ IOACT SXA     SV1,1      SAVE X1                                       DKF40129
+       TSX     UNIT,1                                                   DKF40130
+       CAL*    5,4        GET HA2                                       DKF40131
+       ANA     HAMSK      CLEAR GARBAGE                                 DKF40132
+       AXT     TBEND-HATAB-1,1 NO. OF HA TABLE ENTRIES                  DKF40133
+       LAS     TBEND,1                                                  DKF40134
+       TRA     *+2                                                      DKF40135
+       TRA     BADHA      ILLEGAL HA2                                   DKF40136
+       TIX     *-3,1,1                                                  DKF40137
+       XCL                                                              DKF40138
+       TSX     TRACK,1                                                  DKF40139
+       STO     HATAB      SAVE TRACK NO.                                DKF40140
+       AXT     2,1                                                      DKF40141
+       PXD     0,0                                                      DKF40142
+       LGL     6           00 TO 12                                     DKF40143
+       TNZ     *+2                                                      DKF40144
+       CAL     12A                                                      DKF40145
+       LGR     6                                                        DKF40146
+       RQL     6                                                        DKF40147
+       TIX     *-5,1,1                                                  DKF40148
+       RQL     24          READY TO PASS TO SEL                         DKF40149
+       LDC     ACCES,1    GET TABLE INDEX                               DKF40150
+       STQ     SELTB1,1   HA2 TO DECR 1                                 DKF40151
+       STZ     ERR,1      CLEAR ERROR BITS                              DKF40152
+       CLA     6,4        GET DATA ADDRESS                              DKF40153
+       ALS     18                                                       DKF40154
+       STD     SELTB2,1   TO DECR 2                                     DKF40155
+       CLA*    7,4        GET NUMBER OF WORDS                           DKF40156
+       STA     SELTB1,1   WORD COUNT TO ADDR 1                          DKF40157
+       CLA     HATAB                                                    DKF40158
+       ENB     ZERO                                                     DKF40159
+       STO     3,2        NEW TRACK TO UCW4                             DKF40160
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKF40161
+       SSM                                                              DKF40162
+       STO     2,2                                                      DKF40163
+ SV1   AXT     **,1       RETURN                                        DKF40164
+       TRA     1,1                                                      DKF40165
+*                                                                       DKF40166
+* SELECT ROUTINE                                                        DKF40167
+DSEL   SXA     DSV1,1     SAVE REGISTERS                                DKF40168
+       PAC     0,2        -UCB TO X2                                    DKF40169
+       LRS     0          SAVE SEL + OR-FLAG                            DKF40170
+       CLA     0,2        UCW1                                          DKF40171
+       ANA     TBEND      ACCESS AND MODULE BITS                        DKF40172
+       PDC     0,1        FORM UNIT TABLE INDEX                         DKF40173
+       TXL     *+3,1,0                                                  DKF40174
+       TXH     *+2,1,-16                                                DKF40175
+       TXI     *+1,1,16-MOD                                             DKF40176
+       TQP     DSELP      TO SEL +                                      DKF40177
+       PIA                                                              DKF40178
+       LFT     7100       TEST FOR ERROR                                DKF40179
+       ORS     ERR,1      STORE FOR DCHEK                               DKF40180
+       CLA     AMASK                                                    DKF40181
+       ANA     ERAS       GET COUNT                                     DKF40182
+       TZE     TERM       NO OVERFLOW                                   DKF40183
+       CLA     AMASK                                                    DKF40184
+       ANA     3,2        GET TRACK FROM UCW4                           DKF40185
+       ADD     40A        FORM 1ST TRACK                                DKF40186
+       LRS     35         OF NEXT CYL                                   DKF40187
+       DVP     40A                                                      DKF40188
+       MPY     40A                                                      DKF40189
+       STQ     3,2         SET IN UCW4                                  DKF40190
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKF40191
+       SSM                                                              DKF40192
+       STO     2,2                                                      DKF40193
+       CLA     ERAS                                                     DKF40194
+       STA     SELTB1,1   SET NEW COUNT                                 DKF40195
+       STD     SELTB2,1   SET NEW DATA LOCATION                         DKF40196
+       TRA     DSV1                                                     DKF40197
+ TERM  STZ     1,2        CLEAR UCW2                                    DKF40198
+ DSV1  AXT     **,1                                                     DKF40199
+ SOUT  TOV     *+1                                                      DKF40200
+       TRA     1,4        RETURN                                        DKF40201
+ DSELP CAL     2,2         SEEK ORDER- WD 1                             DKF40202
+       SUB     CYL         MAKE CYL VERIFY                              DKF40203
+       LDQ     3,2         SEEK ORDER- WD 2                             DKF40204
+       LGR     12                                                       DKF40205
+       CRQ     DKCDZ,,6    00 TO 12                                     DKF40206
+       LGL     12                                                       DKF40207
+       STO     ORDER       ORDER- WD 1                                  DKF40208
+       LGL     12                                                       DKF40209
+       LDQ     SELTB1,1    HA2                                          DKF40210
+       LGR     12                                                       DKF40211
+       STQ     ORDER+1     ORDER- WD 2                                  DKF40212
+       CLA     AMASK                                                    DKF40213
+       ANA     3,2        GET TRACK NO.                                 DKF40214
+       LRS     35                                                       DKF40215
+       DVP     40A                                                      DKF40216
+       SUB     40A        NO. OF TRACKS LEFT ON CYL                     DKF40217
+       XCL                                                              DKF40218
+       MPY     465A       NO. OF WDS LEFT ON CYL                        DKF40219
+       STQ     ERAS                                                     DKF40220
+       CAL     SELTB1,1                                                 DKF40221
+       ANA     AMASK                                                    DKF40222
+       SUB     ERAS       TEST FOR CYL OVERFLOW                         DKF40223
+       TPL     OVFLO      YES                                           DKF40224
+       PXD     0,0        NO-MAKE OVFLO COUNT ZERO                      DKF40225
+ OVFLO STO     ERAS       SAVE OVERFLOW COUNT                           DKF40226
+       SBM     SELTB1,1   FORM COUNT FOR CPYD                           DKF40227
+       LDQ     SELTB2,1   DATA LOC                                      DKF40228
+       LGL     18                                                       DKF40229
+       ORA     CPYD       CPYD DATA,,COUNT                              DKF40230
+       SLW     CPYD1                                                    DKF40231
+       SLW     CPYD2                                                    DKF40232
+       ACL     SELTB2,1   DATA + COUNT                                  DKF40233
+       STD     ERAS       DATA LOC FOR OVERFLOW                         DKF40234
+       LDQ     1,2        UCW2                                          DKF40235
+       CLA     CRCOM      READ COMMAND LOC                              DKF40236
+       TQP     *+2                                                      DKF40237
+       CLA     CWCOM      WRITE COMMAND LOC                             DKF40238
+       LXA     DSV1,1     -CHANNEL TO X1                                DKF40239
+       STA*    .RCHX      SET COMMAND LOC                               DKF40240
+       XEC*    .RCHX      START CHANNEL                                 DKF40241
+       TRA     SOUT       TO EXIT                                       DKF40242
+ RCOM  SMS     6          READ SEQUENCE                                 DKF40243
+       CTLR    ORDER                                                    DKF40244
+ CPYD1 CPYD    **,,**     READ DATA                                     DKF40245
+       TCH     SYSTWT     DONE                                          DKF40246
+ WCOM  SMS     6                                                        DKF40247
+       CTLW    ORDER                                                    DKF40248
+ CPYD2 CPYD    **,,**     WRITE DATA                                    DKF40249
+       TCH     SYSTWT     DONE                                          DKF40250
+*                                                                       DKF40251
+* CATASTROPHIC ERROR ROUTINES                                           DKF40252
+ NODSK AXT     12,1       NO 7909                                       DKF40253
+       TRA     PRINT                                                    DKF40254
+NOTACH AXT     6,1        NO ACCESS/MODULE                              DKF40255
+       TRA     PRINT                                                    DKF40256
+ BADHA AXT     0,1        ILLEGAL HA2                                   DKF40257
+       ORA     BLNKS      FILL IN BLANKS                                DKF40258
+       SLW     MESG                                                     DKF40259
+ PRINT TSX     .MWR,4     PRINT ON-LINE DIAGNOSTIC                      DKF40260
+       PZE     2                                                        DKF40261
+       PZE     MESG,1,6                                                 DKF40262
+       PZE     FINI,,3                                                  DKF40263
+       TRA     .LXERR     TOSS JOB OFF                                  DKF40264
+*                                                                       DKF40265
+* CONSTANTS AND STORAGE                                                 DKF40266
+ HATAB PZE     0          TRACK NO. (ADDR)                              DKF40267
+* THIS BCI TABLE MAY BE REMOVED,CHANGED,OR EXTENDED, AT THE             DKF40268
+* DISCRETION OF THE USER INSTALLATION                                   DKF40269
+       BCI   1,BM0000     ILLEGAL HA TABLE (BETW HATAB AND TBEND)       DKF40270
+ TBEND OCT     37000000   MASK FOR ACCESS AND MODULE                    DKF40271
+ 1A    PZE     1                                                        DKF40272
+ 12A   OCT     12                                                       DKF40273
+ 40A   PZE     40                                                       DKF40274
+ 465A  PZE     465                                                      DKF40275
+ AMASK OCT     77777      ADDRESS MASK                                  DKF40276
+ HAMSK OCT     777700000000                                             DKF40277
+ BLNKS BCI   1,00                                                       DKF40278
+ APMSK TNX     0,,0                                                     DKF40279
+ CYL   OCT     000500000000                                             DKF40280
+ CPYD  MON     0          COMMAND CODE                                  DKF40281
+ SEL   PZE     0,,DSEL    ADDRESS OF SELECT ROUTINE                     DKF40282
+ CRCOM PZE     RCOM       COMMAND LOC FOR CHANNEL-READ                  DKF40283
+ CWCOM PZE     WCOM       DITTO-WRITE                                   DKF40284
+ DKCDZ VFD     6/10,30/DKCDZ                                            DKF40285
+       DUP     1,10                                                     DKF40286
+       VFD     6/*-DKCDZ,30/DKCDZ                                       DKF40287
+ ACCES PZE     0,,**      TABLE INDEX                                   DKF40288
+ X4    PZE     **         FOOL-PROOF X4 ACCESS                          DKF40289
+ DAVAL PZE     **         1ST UCB IN 7909 CHAIN                         DKF40290
+ ACMSK PZE     0,,**      SPREAD ACCESS AND MODULE                      DKF40291
+ UCB   PZE     0          UCB LOC (ADDR)                                DKF40292
+ ZERO  PZE     0          DISABLE TRAPS                                 DKF40293
+ ERAS  PZE     0                                                        DKF40294
+       BCI   6,7909 UNIT IS NOT AVAILABLE TO IBSYS                      DKF40295
+       BCI   6,ACCESS/MODULE NOT AVAILABLE TO IBSYS                     DKF40296
+ MESG  BCI   6,      HOME ADDRESS 2 IS NOT ALLOWED                      DKF40297
+ FINI  BCI   3,JOB TERMINATED                                           DKF40298
+ ERR   DUP     1,ACC*MOD   EXPANDABLE UNIT TABLES                       DKF40299
+       PZE     0                                                        DKF40300
+SELTB1 DUP     1,ACC*MOD                                                DKF40301
+       PZE     0                                                        DKF40302
+SELTB2 DUP     1,ACC*MOD                                                DKF40303
+       PZE     0                                                        DKF40304
+ ORDER BSS     2          SET-UP AREA FOR DISK ORDER                    DKF40305
+       END                                                              DKF40306

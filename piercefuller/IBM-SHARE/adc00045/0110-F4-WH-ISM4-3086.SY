@@ -1,0 +1,228 @@
+$IBMAP ISIMEQ  230,M94                                                          
+       PCC    OFF                                                               
+       LIST                                                                     
+       DETAIL                                                                   
+       PCG    ON                                                                
+       TTL    SINGLE PRECISION SIMULTANEOUS EQUATIONS - F IV - 7094 I           
+       EVEN                                                                     
+*      1. ONCE TO INITIALIZE PROGRAM.                                           
+       STI    51A6           2 ENTRY PROCEDURE.                                 
+       SXA    LK.DR,4        3 O                                                
+       SXA    SYSLOC,4       5                                                  
+       SXA    51A5,4         6 O                                                
+       SXA    51A4,1         8                                                  
+       SXA    51A3,2         9 O                                                
+       SXA    51A2,3         11                                                 
+       SXA    51A1,5         13 O                                               
+       SXA    51A,6          15 END ENTRY PROCEDURE.                            
+       CAL*   4,4            17 O 2ND ARGUMENT, MAX 1ST DIMENSION, M.           
+       STO    48A            19 M                                               
+       PAX    ,6             19 O M                                             
+ 1R    SXD    14A,6          21 M                                               
+ 2R    SXD    31A,6          22 O M                                             
+ 3R    SXD    46A,6          24 M                                               
+       CAL*   5,4            26 O 3RD ARGUMENT, NUMBER OF EQUATIONS, N.         
+ 4R    SXD    36A,6          28 M                                               
+ 5R    STA    42A            29 O N                                             
+ 6R    SCD    43A,6          31 -M                                              
+       PAX    ,1             31 O N, INITIALIZE XR1                             
+       ADM*   6,4            34 4TH ARGUMENT, NUMBER OF VECTORS, N1.            
+       SBM    49A            35 O FIXED POINT 2.                                
+ 7R    SCD    39A,6          37 -M                                              
+       XCA                   37 O                                               
+ 8R    SXA    9A,1           39 N                                               
+       VLM    48A,,17        41 O M                                             
+ 9R    SXA    25A,1          43 N                                               
+       XCA                   43 O                                               
+ 10R   STD    34A            45 M*(N+N1-2)                                      
+       PDX    ,3             45 O M*(N+N1-2), INITIALIZE XR3.                   
+ 11R   SXD    4A,6           47 M                                               
+       CAL    3,4            48 O 1ST ARGUMENT,OOCATION OF MATRIX, A.           
+ 12R   SXD    2A,3           50 M*(N+N1-2)                                      
+       PAC    ,2             50 O -A,INITIALIZE XR2.                            
+       ADM    9A             52 N                                               
+       TXI    1A,6,1         52 O M+1                                           
+ 1A    SCD    15A,6          54 -M-1                                            
+       PAX    ,5             54 O A+N, INITIALIZE XR5.                          
+ 13R   SCD    26A,6          56 -M-1                                            
+       PAX    ,6             56 O A+N                                           
+ 14R   SXA    33A,5          58 A+N                                             
+ 2A    TXI    3A,6,**        58 O M*(N+N1-2) FROM 12R                           
+ 3A    SXA    24A,6          60 A+M*(N+N1-2)+N                                  
+ 4A    TXI    5A,6,**        60 O M FROM 11R, A+M*(N+N1-1)+N                    
+ 5A    SCD    6A,1           62 -N                                              
+ 15R   SXA    38A,6          63 O A+M*(N+N1-1)+N                                
+ 16R   SXA    35A,6          65   A+M*(N+N1-1)+N                                
+ 17R   SXA    29A,6          66 O A+M*(N+N1-1)+N                                
+ 18R   SXA    27A,6          68   A+M*(N+N1-1)+N                                
+ 19R   SXA    13A,6          69 O A+M*(N+N1-1)+N                                
+ 21R   SXA    12A,6          71   A+M*(N+N1-1)+N                                
+ 6A    TXI    16A,6,**       71 O -N FROM 5A, A+M*(N+N1-1) INIT XR6.            
+*      71 CYCLES.                                                               
+       EJECT                                                                    
+*      N-1 MAX, N-1 MIN, N-1 EXPECTED. ONCE FOR EACH STAGE BUT FIRST.           
+ 7A    SXA    42A,1          2 STAGE COUNTER (N,1,1)                            
+       TXH    16A,1,1        2 O XFER IF NOT LAST REDUCTION STAGE.              
+*      2*(N-1) CYCLES.                                                          
+       SPACE  2                                                                 
+*      N,1,1. ONCE FOR EACH STAGE WITH COLUMN MAX ELEMENT ON DIAGONAL.          
+ 8A    NZT    0,2            2 CHECK DIAGONAL.                                  
+       TRA    50A            - XFER IF MATRIX SINGULAR.                         
+ 20R   SXD    10A,3          4 M*(N+N1-2),-M,XR3.                               
+ 9A    AXT    **,4           4 O N FROM 8R.                                     
+       CLA    44A            6 FLOATING POINT 1.                                
+       FDP    0,2            14 O DIAGONAL ELEMENT.                             
+       STQ    48A            16 INVERSE OF DIAGONAL ELEMENT.                    
+ 10A   TXI    12A,1,**       16 O M*(N+N1-2),-M,XR3 FROM 20R.                   
+*                            14 -1 FROM NEXT LOOP.                              
+*      15 CYCLES. EACH MAX ON DIAGONAL ADDS 15 HERE, SAVES ELSEWHERE.           
+       SPACE  2                                                                 
+*      N*(N+N1)-N*(N+1)/2,N1,N1. ONCE FOR EACH ELEMENT RIGHT OF DIAGONAL        
+*      WHEN MAX ELEMENT ON DIAGONAL.                                            
+ 11A   LDQ    48A            2 INVERSE OF DIAGONAL ELEMENT.                     
+ 12A   FMP    **,1           6 O A+M*(N+N1-1)+N FROM 21R.                       
+ 13A   STO    **,1           8   A+M*(N+N1-1)+N FORM 19R.                       
+ 14A   TIX    11A,1,**       8 O M FORM 1R.                                     
+*      8*N1. AT EACH STAGE I WITH MAX ON DIAGONAL ADD 8*(N+N1-I).               
+       SPACE  2                                                                 
+*      N,1,1 ONCE FOR EACH STAGE WITH COLUMN MAX ELEMENT ON DIAGONAL.           
+       STZ    0,2            2 TO SKIP PIVOTAL ROW IN ELIMINATION.              
+ 15A   TXI    32A,2,**       2 O -M-1 FROM 1A.                                  
+*      2 CYCLES. EACH CASE OF MAX ON DIAGONAL ADDS 2.                           
+       EJECT                                                                    
+*      FIND MAX ELEMENT IN COLUMN.                                              
+*      N-1,N-1,N-1. ONCE FOR EACH STAGE BUT LAST.                               
+ 16A   SXA    18A,5          2 A+N,+M,IR5.                                      
+ 22R   SXA    19A,5          3 O APN,+N,IR5.                                    
+*      3*(N-1)                                                                  
+       SPACE  2                                                                 
+*      N*(N+1)/2-1,N-1,N*(N+1)/2-N. ONCE FOR EACH DIAGONAL ELEMENT BUT          
+*      LAST PLUS EACH ELEMENT IN COLUMN WHOSE ABS VAL EXCEEDS LAST SUCH         
+*      ELEMENT IN COLUMN. MODIFICATIONS AS REDUCTIONS PROCEED PRECLUDE          
+*      USING INITIAL MATRIX ELEMENTS TO COUNT THE NUMBER OF TIMES THIS          
+*      OR OTHER VARIABLE SECTIONS WILL BE EXECUTED.                             
+ 17A   SXA    20A,1          2 MAX ELEMENT POSITION.                            
+       ZAC                   2 O                                                
+ 18A   ADM    **,1           4 A+N,+M,IR5 FROM 16A. MAGNITUDE OF MAX.           
+       TNX    21A,1,1        4 O                                                
+*      4*N*(N+1)/2-4*N. EACH ELEMENT BELOW DIAGONAL WHICH IS LESS THAN          
+*      A PREVIOUS ELEMENT IN MAGNITUDE SAVES 4 CYCLES.                          
+       SPACE  2                                                                 
+*      (N-1)*(N-2)/2,N-2,(N-1)*(N-2)/2. ONCE FOR EACH TIME A NEW MAX            
+*      NOT IN LAST ROW IS FOUND.                                                
+       PAI                   1 SAVE CURRENT MAX.                                
+*      (N-1)*(N-2)/2 EACH NOT IN LAST ROW LESS THAN MAX SAVES 1.                
+       SPACE  2                                                                 
+*      N*(N-1)/2. ONCE FOR EACH ELEMENT BELOW DIAGONAL.                         
+ 19A   SBM    **,1           2 X A+N,+M,IR5 FROM 22R. TRY NEXT ELEMENT.         
+       TMI    17A            3 XFER IF NEW MAX FOUND.                           
+*      3*N*(N-1)/2.                                                             
+       SPACE  2                                                                 
+*      N*(N-1)/2,0,(N-1). ONCE FOR EACH ELEMENT BELOW DIAGONAL WHICH IS         
+*      NOT A NEW MAX.                                                           
+       PIA                   1 X RESTORE MAX.                                   
+       TIX    19A,1,1        2                                                  
+*      2*(N-1). MAX CYCLES CASE OCCURS WHEN ALL BUT LAST ELEMENT IN             
+*      COLUMN IS NEW MAX.                                                       
+       SPACE  2                                                                 
+*      N-1,0,N-1. ONCE FOR EACH COL WHEN MAX NOT IN LAST ROW.                   
+ 20A   AXT    **,1           1 X FROM 17A. MAX ELEMENT POSITION. I/.            
+       SBM    0,2            3 COMPARE MAX WITH DIAGONAL ELEMENT.               
+       TZE    8A             4 X XFER IF MAX ON DIAGONAL.                       
+*      4*(N-1).                                                                 
+       SPACE  2                                                                 
+*      N-1,0,N-1. ONCE FOR EACH STAGE WITH MAX OFF DIAGONAL.                    
+ 21A   CLA    44A            2 FLOATING POINT 1.                                
+       FDP*   19A            11 O MAX ELEMENT.                                  
+       STQ    48A            13 INVERSE OF MAX ELEMENT.                         
+       PXA    ,6             13 O A+M*(M+N1-1),+P,IR6                           
+ 23R   SXD    22A,3          15 M*(N+N1-2),-M,IR3                               
+       ADM    20A            16 O MAX ELEMENT POSITION.                         
+ 24R   STA    28A            18 DIAGONAL ROW RELATIVE TO MAX EL ROW.            
+ 22A   TXI    23A,1,**       18 O M*(N+N1-2),-M,IR3 FROM 23R.                   
+ 23A   STA    30A            20 DIAGONAL ROW RELATIVE TO MAX EL ROW.            
+       CLA    0,2            21 O DIAGONAL ELEMENT.                             
+ 24A   STO    **,1           23 A+M*(N+N1-2)+N FROM 3A.                         
+ 25A   AXT    **,4           23 O N FROM 9R.                                    
+       STZ    0,2            25 TO SKIP PIVOTAL ROW IN ELIMINATION.             
+ 26A   TXI    27A,2,**       25 O -M-1 FROM 13R.                                
+*      25*(N-1).                                                                
+       SPACE  2                                                                 
+*      N*(N+N1)-N*(N+1)/2-N1,0,N*(N+N1)-N*(N+1)/2-N1. ONCE FOR EACH             
+*      ELEMENT RIGHT OF DIAGONAL WHEN MAX OFF DIAGONAL.                         
+ 27A   LDQ    **,1           2 A+M*(N+N1-1)+N FROM 18R.                         
+ 28A   CLA    **,1           3 O A+7*(N+N1-1)+I1 FROM 24R.                      
+ 29A   STO    **,1           5   A+7*(N+N1-1)+N FROM 17R.                       
+       FMP    48A            9 O INVERSE OF MAX ELEMENT.                        
+ 30A   STO    **,1           11 A+M*(N+N1-1)+I1 FROM 23A.                       
+ 31A   TIX    27A,1,**       11 O M FROM 2R.                                    
+*      11*(N*(N+N1)-N*(N+1)/2-N1)                                               
+       SPACE  2                                                                 
+*      N,N,N. ONCE FOR EACH STAGE.                                              
+ 32A   SXA    40A,2          1(2-1) SAVE DIAGONAL LOCATION.                     
+*      N CYCLES                                                                 
+       SPACE  2                                                                 
+*      N**2,N**2,N**2. ONCE FOR EACH ELEMENT IN COEFFICIENT MATRIX.             
+ 33A   CLS    **,4           2 OX A+N,+M FROM 14R+47A. EL TO BE 0.              
+       TZE    41A            3 XFER IF ALREADY 0.                               
+*      3*N**2.                                                                  
+       SPACE  2                                                                 
+*      N*(N-1),0,N*(N-1). ONCE FOR EACH NON-ZERO EL OF COEF MATRIX.             
+       XCA                                                                      
+       STQ    48A            3 SAVE PIVOTAL ELEMENT NEGATIVE.                   
+ 34A   TXI    37A,4,**       2(3-2) O. M*(N+N1-2),-M FROM 10R+45A.              
+*      2*N*(N-1)                                                                
+       SPACE  2                                                                 
+*      N*(N-1)**2/2+N1*N*(N-1),0,REP. THIS IS THE INNER LOOP.                   
+ 35A   STO    **,4           2 A+M*(N+N1-1)+N FROM 16R.                         
+ 36A   TNX    40A,4,**       2 M FROM 4R.                                       
+       LDQ    48A            4 NEGATIVE OF PIVOTAL ELEMENT.                     
+ 37A   FMP    -1,2           8 O DIAGONAL RON ELEMENT.                          
+ 38A   FAD    **,4           11 A+M*(N+N1-1)+N FROM 15R.                        
+ 39A   TXI    35A,2,**       11 O -M FROM 7R.                                   
+*      11*(N*(N-1)**2/2+N1*N*(N-1))                                             
+       SPACE  2                                                                 
+*      N*(N-1) ONCE FOR EACH NON-ZERO OFF DIAGONAL ELEMENT.                     
+ 40A   AXT    **,2           1 -A-M-1,-M-1 FROM 32A.                            
+*      N*(N-1)                                                                  
+       SPACE  2                                                                 
+*      N**2. ONCE FOR EVERY ELEMENT OF COEFFICIENT MATRIX.                      
+ 41A   TIX    33A,4,1        1 X                                                
+*      N**2.                                                                    
+       SPACE  2                                                                 
+*      N. ONCE FOR EACH STAGE OF REDUCTION.                                     
+ 42A   AXT    **,1           1 N,-1 FROM 5R AND 7A.                             
+       TNX    51A,1,1        2 X XFER IF COMPLETE.                              
+*      2*N.                                                                     
+       SPACE  2                                                                 
+*      N-1. ONCE FOR EACH STAGE BUT LAST.                                       
+ 43A   TXI    45A,3,**       1 -M FROM 6R.                                      
+ 44A   DEC    1.0            X                                                  
+ 45A   SXD    34A,3          3                                                  
+ 46A   TXI    47A,5,**       3 O M FROM 3R.                                     
+ 47A   SXA    33A,5          5                                                  
+       TXI    7A,6,1         5 O                                                
+*      5*(N-1).                                                                 
+       SPACE  2                                                                 
+ 48A   DEC    0.                                                                
+ 49A   DEC    2                                                                 
+       SPACE  2                                                                 
+ 50A   CALL   ERROR                                                             
+       ETC    (52A)                                                             
+       SPACE  2                                                                 
+*      1 ONCE TO RETURN                                                         
+ 51A   AXT    **,6           1                                                  
+ 51A1  AXT    **,5           2                                                  
+ 51A2  AXT    **,3           3                                                  
+ 51A3  AXT    **,2           4                                                  
+ 51A4  AXT    **,1           5                                                  
+ 51A5  AXT    **,4           6                                                  
+       LDI    51A6           8                                                  
+       TRA    1,4            9                                                  
+*      9 CYCLES.                                                                
+       SPACE  2                                                                 
+ 51A6  DEC    0.                                                                
+ 52A   BCI    2, SINGULAR                                                       
+       OCT    777777777777                                                      
+LK.DR  LDIR                                                                     
+       END                                                                      

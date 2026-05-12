@@ -1,0 +1,192 @@
+$IBMAP 3K02    152                                                      3K020010
+       REM     TAPE DUMP SUBROUTINE                                     3K020020
+       REM     J. HALLE   12/18/63                                      3K020030
+       REM     CALL TDUMP                                               3K020040
+       REM     PZE LOGICAL TAPE                                         3K020050
+       REM     PZE IFILE-NUMBER OF FILES TO SKIP BEFORE DUMP            3K020060
+       REM     PZE NFILE-NO. OF FILES TO DUMP                           3K020070
+       REM                        -IF=0 ONE FILES                       3K020080
+       REM     PZE NREC-NO OF RECORDS TO DUMP PER FILE                  3K020090
+       REM                        -IF=0 ALL RECORDS                     3K020100
+ TDUMP SAVE    (1,2,3)I                                                 3K020110
+       STZ     MODE1                                                    3K020120
+       STZ     MODE                                                     3K020130
+       STZ     REDUN                                                    3K020140
+       CLA*    4,4                PICK UP IFILE                         3K020150
+       STA     IFILE                                                    3K020160
+       CLA*    5,4                PICK UP N FILES                       3K020170
+       STA     NFILE                                                    3K020180
+       CLA*    6,4                PICK UP N RECORDS                     3K020190
+       STA     NREC                                                     3K020200
+       CLA*    3,4                PICK UP LOGICAL TAPE                  3K020210
+       STA     ITAPE                                                    3K020220
+       TSX     .IOU.F,4                                                 3K020230
+       TZE     ERROR              NO UNIT                               3K020240
+       REM                        FIRST WORD OF FILE CONTROL BLOCK      3K020250
+       STA     CLS1               STORE IN IOCS                         3K020260
+       STA     OPN1               CALLING SEQUENCE                      3K020270
+       STA     READ1                                                    3K020280
+       STA     SKP1A                                                    3K020290
+       STA     SKP2A                                                    3K020300
+       PAC     0,1                EXAMINE THIRD WORD                    3K020310
+       LDI     2,1                IN FILE CONTROL BLOCK                 3K020320
+       LFT     200000             FOR MONITOR CONTROL BITS              3K020330
+       TRA     ERROR              MONITOR TAPE                          3K020340
+       LDI     1,1                GET SECOND WORD IN FCB                3K020350
+       LFT     400000             TEST MIXED MODE                       3K020360
+       TRA     BIN                YES-WRITE IN BINARY                   3K020370
+       LNT     004000             TEST BIN OR BCD                       3K020380
+       TRA     DEC                BCD                                   3K020390
+ BIN   CLA     LFMT4              BINARY TAPE                           3K020400
+       STL     MODE               SET MODE SWITCH                       3K020410
+       STA     WRIT3+4                                                  3K020420
+       CLA     FMT7                                                     3K020430
+       LDQ     FMT7+1                                                   3K020440
+       TRA     DEC1                                                     3K020450
+ DEC   CLA     LFMT5              BCD TAPE                              3K020460
+       STL     MODE1              SET REDUNDANCY MODE SWITCH            3K020470
+       STA     WRIT3+4                                                  3K020480
+       CLA     FMT8                                                     3K020490
+       LDQ     FMT8+1                                                   3K020500
+ DEC1  STO     FMT2A                                                    3K020510
+       STQ     FMT2A+1                                                  3K020520
+       TSX     CLS,2              CLOSE FILE                            3K020530
+       LDI     1,1                                                      3K020540
+       RIL     003000             SET BITS IN FCB                       3K020550
+       STI     1,1                FOR INPUT                             3K020560
+       TSX     .OPEN,4            OPEN FILE                             3K020570
+ OPN1  MON     **                                                       3K020580
+       REM                        SKIP IFILES ON DUMP TAPE              3K020590
+       LXA     IFILE,1            SET NUMBER OF FILES TO SKIP           3K020600
+       TXL     MREC,1,0           TEST FOR SKIPPING                     3K020610
+ SKP1  TSX     .READ,4                                                  3K020620
+ SKP1A PZE     **,,SKP1                                                 3K020630
+       PZE     SKP1B,,SKP1                                              3K020640
+       IORPN   **,,1                                                    3K020650
+       TCH     *-1                                                      3K020660
+ SKP1B TIX     SKP1,1,1                                                 3K020670
+ MREC  AXT     1,3                ONE FILES ON DUMP TAPE                3K020680
+       ZET     NFILE              DUMP FULL TAPE                        3K020690
+       LXA     NFILE,3                                                  3K020700
+       REM                        PRINT DUMP TITLE                      3K020710
+       CALL    .FWRD.(.UN06.,FMT1)                                      3K020720
+       CLA     ITAPE                                                    3K020730
+       TSX     .FCNV.,4                                                 3K020740
+       TSX     .FFIL.,4                                                 3K020750
+       AXT     -1,2               SET FOR FULL FILE                     3K020760
+       ZET     NREC               TEST IF FULL FILE                     3K020770
+       LXA     NREC,2             YES, SET FULL FILE                    3K020780
+       SXA     NREC1,2                                                  3K020790
+ NREC1 AXT     **,2               SET NO. OF REC/FILE                   3K020800
+       STZ     IREC                                                     3K020810
+       CLA     IFILE                                                    3K020820
+       ADD     =1                                                       3K020830
+       STO     IFILE                                                    3K020840
+ PRNTD CLA     IREC                                                     3K020850
+       ADD     =1                                                       3K020860
+       STO     IREC                                                     3K020870
+ READ  TSX     .READ,4                                                  3K020880
+ READ1 PZE     **,,READ                                                 3K020890
+       PZE     EOF,,ERR                                                 3K020900
+ READ2 IORTN   **,,**                                                   3K020910
+       LXA     READ2,1                                                  3K020920
+       SXA     BUFF,1                                                   3K020930
+       LXD     READ2,1                                                  3K020940
+       SXA     COUNT,1                                                  3K020950
+       REM                        PRINT(FILE,REC)                       3K020960
+       CALL    .FWRD.(.UN06.,FMT2)                                      3K020970
+       CLA     IFILE                                                    3K020980
+       TSX     .FCNV.,4                                                 3K020990
+       CLA     IREC                                                     3K021000
+       TSX     .FCNV.,4                                                 3K021010
+       PXA     0,1                                                      3K021020
+       TSX     .FCNV.,4                                                 3K021030
+       TSX     .FFIL.,4                                                 3K021040
+       NZT     MODE1              TEST MODE                             3K021050
+       TRA     BUFF               BINARY                                3K021060
+       CALL    .FWRD.(.UN06.,FMT9)  BCD                                 3K021070
+       TSX     .FFIL.,4                                                 3K021080
+ BUFF  AXT     **,1               PICK UP LOCATION OF DATA              3K021090
+       TXI     *+1,1,-1                                                 3K021100
+       SXA     WRIT4,1                                                  3K021110
+ COUNT AXC     **,4               PICK UP COUNT OF DATA                 3K021120
+       TXI     *+1,4,-1                                                 3K021130
+       SXD     WRIT5,4                                                  3K021140
+ WRIT3 CALL    .FWRD.(.UN06.,**)   FORMAT                               3K021150
+       AXC     1,1                                                      3K021160
+ WRIT4 CLA     **,1                                                     3K021170
+       TSX     .FCNV.,4           DATA                                  3K021180
+       TXI     *+1,1,-1                                                 3K021190
+ WRIT5 TXH     WRIT4,1,**                                               3K021200
+       TSX     .FFIL.,4                                                 3K021210
+       ZET     REDUN              REDUNDANCY TEST                       3K021220
+       TRA     RPRNT              RESET REDUNDANCY                      3K021230
+ CONT3 TIX     PRNTD,2,1          TEST N RECORDS                        3K021240
+ SKP2  TSX     .READ,4            SKIP ONE FILE                         3K021250
+ SKP2A PZE     **,,SKP2                                                 3K021260
+       PZE     CONT2,,SKP2                                              3K021270
+       IORPN   **,,-1                                                   3K021280
+       TCH     *-1                                                      3K021290
+ CONT2 TIX     NREC1,3,1          TEST NFILES                           3K021300
+       TSX     CLS,2              CLOSE FILE                            3K021310
+       RETURN  TDUMP                                                    3K021320
+ CLS   TSX     .CLOSE,4           CLOSE WITH REWIND                     3K021330
+ CLS1  PTW     **                                                       3K021340
+       TRA     1,2                                                      3K021350
+ IREC  PZE     0                  NO OF I RECORD-COUNT                  3K021360
+ IFILE PZE     0                  NO. OF IFILES-COUNT                   3K021370
+ NREC  PZE     0                  NO. OF N REC---                       3K021380
+ NFILE PZE     0                  NO OF N FILES                         3K021390
+ ITAPE PZE     0                                                        3K021400
+ REDUN PZE     0                  REDUNDANCY TEST                       3K021410
+ MODE  PZE     0                  REDUNDANCY MODE SWITCH                3K021420
+ MODE1 PZE     0                  REDUNDENCY MODE SWITCH                3K021430
+ ERROR LXA     ITAPE,4                                                  3K021440
+       SXD     CODE,4                                                   3K021450
+       CALL    .FXEM.(CODE)                                             3K021460
+       CALL    EXIT               OPTIONAL EXIT                         3K021470
+ CODE  PZE     47                                                       3K021480
+ EOF   CALL    .FWRD.(.UN06.,FMT3)                                      3K021490
+       TSX     .FFIL.,4                                                 3K021500
+       TRA     CONT2                                                    3K021510
+ ERR   STL     REDUN                                                    3K021520
+       CLA     FMT6               SWITCH OUTPUT FOR                     3K021530
+       LDQ     FMT6+1             REDUNDANCY PRINT                      3K021540
+       STO     FMT2A                                                    3K021550
+       STQ     FMT2A+1                                                  3K021560
+       ZET     MODE               TEST IF BINARY                        3K021570
+       TRA     READ               YES                                   3K021580
+       CLA     LFMT4              NO                                    3K021590
+       STA     WRIT3+4                                                  3K021600
+       STZ     MODE1                                                    3K021610
+       TRA     READ                                                     3K021620
+       REM     REDUNDANCY                                               3K021630
+ RPRNT NZT     MODE               TEST REDUNDANCY                       3K021640
+       TRA     RPRNT2             BCD                                   3K021650
+       CLA     FMT7               BINARY                                3K021660
+       LDQ     FMT7+1                                                   3K021670
+RPRNT1 STO     FMT2A                                                    3K021680
+       STQ     FMT2A+1                                                  3K021690
+       STZ     REDUN                                                    3K021700
+       TRA     CONT3              BINARY                                3K021710
+RPRNT2 CLA     LFMT5                                                    3K021720
+       STA     WRIT3+4                                                  3K021730
+       CLA     FMT8                                                     3K021740
+       LDQ     FMT8+1                                                   3K021750
+       STL     MODE1                                                    3K021760
+       TRA     RPRNT1                                                   3K021770
+ LFMT4 PZE     FMT4                                                     3K021780
+ LFMT5 PZE     FMT5                                                     3K021790
+ FMT1  BCI 7,(26H1TAPE DUMP OF LOGICAL TAPE,2X,I2)                      3K021800
+ FMT2  BCI ,(5H0FILE,2X,I3,10X,7H RECORD,2X,I3,10X,11H WORD COUNT,2X,I3 3K021810
+       BCI 3,,10X,19H RECORD                                            3K021820
+ FMT2A BCI 2,                                                           3K021830
+ FMT3  BCI 4,(12H END OF FILE/1H1)                                      3K021840
+ FMT4  BCI 1,(8O16)                                                     3K021850
+ FMT5  BCI 2,(1X,15A6)                                                  3K021860
+ FMT6  BCI 2,REDUNDANT)                                                 3K021870
+ FMT7  BCI 2,BIN      )                                                 3K021880
+ FMT8  BCI 2,BCD      )                                                 3K021890
+ FMT9  BCI ,(91H /  1  /  2  /  3  /  4  /  5  /  6  /  7  /  8  /  9  /3K021900
+       BCI 7, 10  / 11  / 12  / 13  / 14  / 15  //)                     3K021910
+       END                                                              3K021920

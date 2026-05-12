@@ -1,0 +1,122 @@
+$IBMAP 2I01    60                                                       RDTPE000
+*      RDTPE PROVIDES A MEANS FOR READING A BINARY RECORD IN            RDTPE010
+*      FORTRAN IV WHICH HAS BEEN WRITTEN WITHOUT THE FORTRAN            RDTPE020
+*      LABEL                                                            RDTPE030
+*              USE..                                                    RDTPE040
+*     CALL     RDTPE (NTAPE, ARRAY, NWORDS)                             RDTPE050
+*      WHERE                                                            RDTPE060
+*      NTAPE = A LOGICAL TAPE NUMBER                                    RDTPE070
+*     ARRAY = THE FIRST WORD INTO WHICH THE DATA IS TO BE READ          RDTPE080
+*      NWORDS = THE NUMBER OF ITEMS TO READ                             RDTPE090
+       SPACE   5                                                        RDTPE100
+ RDTPE SAVE    I                                                        RDTPE110
+       CLA     4,4                GET ARRAY ADDRESS                     RDTPE120
+       STA     IOCM               STORE IN IO COMMAND                   RDTPE130
+       CLA*    5,4                GET NUMBER OF WORDS                   RDTPE140
+       ALS     18                 AND STORE IN DECREMENT                RDTPE150
+       STD     IOCM               OF IO COMMAND                         RDTPE160
+       CLA*    3,4                PICK UP LOGICAL TAPE NUMBER.          RDTPE170
+       CAS     LAST               IS THIS REQUEST THE SAME AS LAST ONE  RDTPE180
+       TRA     *+2                NO.                                   RDTPE190
+       TRA     ALLOK              YES, NO CHECK OR INITIALIZATION       RDTPE200
+       PAX     ,4                 PUT TAPE NO. IN XR4                   RDTPE210
+       SXD     CODE,4             INTO ERROR CODE8 IF REQUIRED          RDTPE220
+       SXA     LAST,4                                                   RDTPE230
+       CALL    .IOU.F             GO FIND FILE CONTROL BLOCK            RDTPE240
+       TZE     NTAPE              TO NTAPE ON NO CUCH TAPE              RDTPE250
+       STA     FILE               STORE ADDRESS AND INITIALIZE          RDTPE260
+       STA     OPNF               FILE ADDRESS, OPEN COMMAND,           RDTPE270
+       STO     FLBLK              AND A COUPLE OF OTHERS                RDTPE280
+       STA     CLOP                                                     RDTPE290
+ ALLOK LAC     FLBLK,4            PUT FILE BLOCK LOCATION IN XR4        RDTPE300
+       LDI     1,4                GET 2ND WORD  OF FCB                  RDTPE310
+       LNT     040000             IS THE FILE OPEN                      RDTPE320
+       TRA     GTSET              NO. GO TO SET FOR INPUT AND OPEN      RDTPE330
+       LFT     003000             YES.  IS FILE INPUT...                RDTPE340
+       TRA     GTSEU              NO.  CLOSE AND SET TO INPUT           RDTPE350
+*    FILE IS OPEN AND OUTPUT      THEREFORE READY TO READ               RDTPE360
+ REED  TSX     .READ,4                                                  RDTPE370
+  FILE PZE     **,,EOB                                                  RDTPE380
+       PZE     EOF,,ERR                                                 RDTPE390
+  IOCM IORT    **,,**                                                   RDTPE400
+       RETURN  RDTPE                                                    RDTPE410
+ GTSEU TSX     .CLOSE,4           CLOSE                                 RDTPE420
+  CLOP MON     **                                                       RDTPE430
+       LAC     FLBLK,4            RESET XR4                             RDTPE440
+ GTSET RIL     003000             SET TO INPUT                          RDTPE450
+       STI     1,4            AND SET FCB WORD 2 TO NEW CONFIGURATION   RDTPE460
+       TSX     .OPEN,4            OPEN                                  RDTPE470
+  OPNF MON     **                                                       RDTPE480
+       TRA     REED                                                     RDTPE490
+       SPACE   5                                                        RDTPE500
+   ERR CALL    .FXEM.(=42)                                              RDTPE510
+       TRA     REED                                                     RDTPE520
+   EOF CALL    .FXEM.(=41)                                              RDTPE530
+       TRA     REED                                                     RDTPE540
+   EOB CALL    .FXEM.(=43)                                              RDTPE550
+   OUT CALL    EXIT                                                     RDTPE560
+ NTAPE CALL    .FXEM.(CODE)                                             RDTPE570
+       TRA     OUT                                                      RDTPE580
+  CODE PZE     47,,**                                                   RDTPE590
+  LAST PZE                                                              RDTPE600
+ FLBLK PZE                                                              RDTPE610
+       END                                                              RDTPE620
+$IBMAP 2J01    50                                                       WRTPE000
+*      WRTPE PROVIDES A MEANS FOR WRITING A BINARY RECORD FROM A        WRTPE010
+*              FORTRAN IV PROGRAM WITHOUT THE FORTRAN BINARY LABEL      WRTPE020
+*                                                                       WRTPE030
+*      USAGE                                                            WRTPE040
+*      CALL    WRTPE (NTAPE, ARRAY, NWORDS)                             WRTPE050
+*              WHERE                                                    WRTPE060
+*      NTAPE = A LOGICAL TAPE NUMBER                                    WRTPE070
+*      ARRAY = THE FIRST WORD OF AN ARRAY TO BE WRITTEN                 WRTPE080
+*      NWORDS = THE NUMBER OF ITEMS TO WRITE (STARTING WITH ARRAY)      WRTPE090
+       SPACE   3                                                        WRTPE100
+ WRTPE SAVE    (4)I                                                     WRTPE110
+       CLA     4,4                GET ARRAY ADDRESS                     WRTPE120
+       STA     IOCM               AND STORE IN IO COMMAND               WRTPE130
+       CLA*    5,4                GET NUMBER OF WORDS                   WRTPE140
+       ALS     18                 MOVE TO DECREMENT                     WRTPE150
+       STD     IOCM               AND STORE IN IO COMMAND               WRTPE160
+       CLA*    3,4                NOW PICK UP LOGICAL TAPE NO.          WRTPE170
+       CAS     LAST               IS IT THE SAME AS THE LAST REQUEST    WRTPE180
+       TRA     *+2                NO.                                   WRTPE190
+       TRA     ALLOK              YES, NO CHECK OR INITIALIZATION       WRTPE200
+       PAX     ,4                 PUT TAPE NO. IN XR4                   WRTPE210
+       SXD     CODE,4             AND IN CODE IF REQUIRED               WRTPE220
+       SXA     LAST,4             AND INITIALIZE 'LAST'                 WRTPE230
+       CALL    .IOU.F             GO FIND FILE CONTROL BLOCK            WRTPE240
+       TZE     NTAPE              TO NTAPE ON NO SUCH TAPE              WRTPE250
+       STA     FILE               STORE ADDRESS AND INITIALIZE          WRTPE260
+       STA     OPNF               FILE ADDRESS, OPEN COMMAND            WRTPE270
+       STA     CLOP                                                     WRTPE280
+       STO     FLBLK              AND A COUPLE OF OTHERS                WRTPE290
+ ALLOK LAC     FLBLK,4            PUT FILE BLOCK LOCATION IN XR4        WRTPE300
+       LDI     1,4                GET 2ND WORD FCB                      WRTPE310
+       LNT     040000             IS THE FILE OPEN                      WRTPE320
+       TRA     OPN                NO. GO TO SET IT AND OPEN IT          WRTPE330
+       LFT     003000             YES. IS IT INPUT                      WRTPE340
+       TRA     RITE               NO. OK                                WRTPE350
+       TRA     CLS                YES. GO AND CLOSE THE FILE            WRTPE360
+  RITE TSX     .WRITE,4           OPEN AND OUTPUT, GO WRITE             WRTPE370
+  FILE PZE     **,,EOB                                                  WRTPE380
+  IOCM IORT    **,,**             .WRITE IO COMMAND                     WRTPE390
+       RETURN  WRTPE              AND RETURN                            WRTPE400
+   CLS TSX     .CLOSE,4           CLOSE THE FILE                        WRTPE410
+  CLOP MON     **                 NO REWIND, NO EOF                     WRTPE420
+       LAC     FLBLK,4                                                  WRTPE430
+       LDI     1,4                                                      WRTPE440
+   OPN SIL     001000             SET BITS FOR OUTPUT                   WRTPE450
+       RIL     002000                                                   WRTPE460
+       STI     1,4                                                      WRTPE470
+       TSX     .OPEN,4            OPEN THE FILE                         WRTPE480
+  OPNF MON     **                 WITH NO REWIND                        WRTPE490
+       TRA     RITE                                                     WRTPE500
+  LAST PZE                        THIS IS LAST LOGICAL TAPE NUMBER      WRTPE510
+ FLBLK PZE                        THIS IS LAST FILEBLOCK                WRTPE520
+ NTAPE CALL    .FXEM.(CODE)       NO SUCH TAPE ERROR CALL               WRTPE530
+       TRA     OUT                                                      WRTPE540
+   EOB CALL    .FXEM.(=37)                                              WRTPE550
+   OUT CALL    EXIT                                                     WRTPE560
+  CODE PZE     47                                                       WRTPE570
+       END                                                              WRTPE580

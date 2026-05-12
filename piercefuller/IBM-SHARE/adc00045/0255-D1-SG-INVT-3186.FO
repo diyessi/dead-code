@@ -1,0 +1,731 @@
+*SGINV                                                                  SGINV000
+*HALLEY OREN BRADFORD, JR.                       SEPTEMBER 26,1963      SGINV001
+*COMPUTATION AND ANALYSIS DIVISION, MANNED SPACECRAFT CENTER            SGINV002
+*NATIONAL AERONAUTICS AND SPACE ADMINISTRATION, HOUSTON,TEXAS           SGINV003
+*      THIS SUBROUTINE INVERTS THE LAPLACE TRANSFORM FROM LAPLACE SPACE SGINV004
+*      TO THE REAL-TIME DOMAIN BY USING A GENERALIZATION OF THE GAUSSIANSGINV005
+*      QUADRATURE TECHNIQUE OF INTEGRATION ON A FOURIER TRANSFORM       SGINV006
+*      INTEGRAL THAT IS ANALYTICALLY RESOLVED FROM THE COMPLEX INVERSIONSGINV007
+*      INTEGRAL WHICH ESTABLISHES THE RELATIONSHIP OF F(S) TO F(T)      SGINV008
+*                                                                       SGINV009
+*                                                                       SGINV010
+*                                                                       SGINV011
+*                                                                       SGINV012
+*      CALLING SEQUENCE                                                 SGINV013
+*                                                                       SGINV014
+*      TSX     GAUSS,4                                                  SGINV015
+*      TSX     NPT                                                      SGINV016
+*      TSX     M                                                        SGINV017
+*      TSX     N                                                        SGINV018
+*      TSX     B                                                        SGINV019
+*      TSX     C                                                        SGINV020
+*      TSX     A                                                        SGINV021
+*      TSX     TOL                                                      SGINV022
+*      TSX     I                                                        SGINV023
+*      TSX     NT                                                       SGINV024
+*      TSX     T                                                        SGINV025
+*      TSX     FT                                                       SGINV026
+*      TSX     IEROR                                                    SGINV027
+*                                                                       SGINV028
+*      WHERE THE CALLING ARGUEMENTS ARE DEFINED TO BE THE FOLLOWING -   SGINV029
+*      NPT=NUMBER OF INTEGRATION POINTS                                 SGINV030
+*      M=DEGREE OF THE POLYNOMIAL IN THE NUMERATOR                      SGINV031
+*      N=DEGREE OF THE POLYNOMIAL IN THE DENOMINATOR                    SGINV032
+*      B=ARRAY OF COEFFICIENTS OF POLYNOMIAL IN THE NUMERATOR           SGINV033
+*      C=ARRAY OF COEFFICIENTS OF POLYNOMIAL IN THE DENOMINATOR         SGINV034
+*      A=TRANSLATION IN RE(S) DUE TO SINGULARITIES IN THE RIGHT-HAND    SGINV035
+*      PLANE, RE(S) GREATER THAN 0 (IE. A=0 IF ALL THE SINGULARITIES    SGINV036
+*      ARE IN THE LEFT-HAND PLANE)                                      SGINV037
+*      TOL=CONVERGENCE CRITERIA FOR INFINITE SERIES                     SGINV038
+*      I=0 OR 1 DEPENDING IF THE INTEGRAL TO BE EVALUATED IS THAT       SGINV039
+*      OF THE FOURIER SINE OR FOURIER COSINE                            SGINV040
+*      NT=NUMBER OF TIME VALUES                                         SGINV041
+*      T=ARRAY OF TIME VALUES                                           SGINV042
+*      FT=ARRAY OF F(T) CORRESPONDING TO T                              SGINV043
+*      IEROR=ERROR CONTROL...1 IF M IS GREATER THAN OR EQUAL TO N...    SGINV044
+*      2 IF THE MAXIMUM NUMBER OF ITERATIONS IS REACHED AND CONVERGENCE SGINV045
+*      IS IMPOSSIBLE...CONTAINS 0 IF THERE IS NO ERROR                  SGINV046
+*                                                                       SGINV047
+*                                                                       SGINV048
+*                                                                       SGINV049
+*GAUSS                                                                  SGINV050
+       ENTRY   GAUSS                                                    SGINV051
+ GAUSS SXA     RSTOR4,4                                                 SGINV052
+       CLA     12,4            IEROR ADDRESS                            SGINV053
+       STA     DAD                                                      SGINV054
+       CLA     ZERO                                                     SGINV055
+       STD*    DAD                                                      SGINV056
+       CLA*    1,4             NUMBER OF POINTS                         SGINV057
+       STD     TEST11                                                   SGINV058
+       STD     TEST22                                                   SGINV059
+       STD     TEST3                                                    SGINV060
+       STD     NPTS            SUBROUTINE ARGUE                         SGINV061
+       STD     CHECK                                                    SGINV062
+       STD     COLT            SUBROUTINE AMAT                          SGINV063
+       STD     ROWT                                                     SGINV064
+       STD     ENDGAM                                                   SGINV065
+       ARS     18                                                       SGINV066
+       STA     N                                                        SGINV067
+       ALS     18                                                       SGINV068
+       STD     NHOLD           SUBROUTINE PHI                           SGINV069
+       STD     SUMPHI                                                   SGINV070
+       STD     DIVPHI                                                   SGINV071
+       STD     DONE+1                                                   SGINV072
+       SUB     DECONE                                                   SGINV073
+       STD     SUMSX+2                                                  SGINV074
+       STD     TESTG                                                    SGINV075
+       CLA     2,4                                                      SGINV076
+       STA     SAVE41                                                   SGINV077
+       STA     DIVPHI+1                                                 SGINV078
+       STA     DEGREE                                                   SGINV079
+       CLA     3,4                                                      SGINV080
+       STA     POWQ                                                     SGINV081
+       STA     *+2                                                      SGINV082
+DEGREE CLA     **              DEGREE OF NUMERATOR                      SGINV083
+       SUB     **              DEGREE OF DENOMINATOR                    SGINV084
+       TZE     *+1                                                      SGINV085
+       TMI     DEGOK           M IS LESS THAN N                         SGINV086
+       CLA     UNO             SET FLAG FOR DEGREE OF NUMERATOR         SGINV087
+       STD*    DAD             GREATER THAN OR EQUAL TO THAT OF         SGINV088
+       TRA     RSTOR4          THE DENOMINATOR                          SGINV089
+DEGOK  CLA     4,4                                                      SGINV090
+       STA     P(X)                                                     SGINV091
+       CLA     5,4                                                      SGINV092
+       STA     Q(X)                                                     SGINV093
+       CLA     NAUGHT                                                   SGINV094
+       STO     FIXN                                                     SGINV095
+       STO     FIXNM1                                                   SGINV096
+       STO     TCNT                                                     SGINV097
+       CLA     6,4                                                      SGINV098
+       STA     STOREA                                                   SGINV099
+       CLA     7,4                                                      SGINV100
+       STA     STOREP                                                   SGINV101
+       CLA*    8,4                                                      SGINV102
+       STO     COTEST                                                   SGINV103
+       TZE     *+3             INTEGRAL IS THE FOURIER SINE             SGINV104
+       CLA     POON            INTEGRAL IS THE FOURIER COSINE           SGINV105
+       STO     SICOS                                                    SGINV106
+       CLA*    9,4                                                      SGINV107
+       ARS     18                                                       SGINV108
+       STO     NUMTS                                                    SGINV109
+       CLA     10,4                                                     SGINV110
+       STA     TVAL                                                     SGINV111
+       STA     DIVT                                                     SGINV112
+       STA     MULTYT                                                   SGINV113
+       STA     MORET                                                    SGINV114
+       CLA     11,4                                                     SGINV115
+       STA     F(T)                                                     SGINV116
+       STA     FTEAT                                                    SGINV117
+       STA     FTEAT+1                                                  SGINV118
+       STA     ACE1                                                     SGINV119
+       STA     ACE2                                                     SGINV120
+       TSX     GAMMA,4                                                  SGINV121
+       TSX     ARGUE,4                                                  SGINV122
+       TSX     AMAT,4                                                   SGINV123
+       TSX     $MATS,4                                                  SGINV124
+       PZE     A                                                        SGINV125
+       PZE     X                                                        SGINV126
+       PZE     NPTS                                                     SGINV127
+       PZE     UNO                                                      SGINV128
+       TSX     PHI,4                                                    SGINV129
+       TSX     INVERT,4                                                 SGINV130
+       TRA     *-2                                                      SGINV131
+       CLA     HIT                                                      SGINV132
+       STO     SICOS                                                    SGINV133
+RSTOR4 AXT     **,4                                                     SGINV134
+       TRA     13,4            RETURN TO MAIN PROGRAM WITH F(T)         SGINV135
+     X BES     40                                                       SGINV136
+       BSS     1                                                        SGINV137
+ TCNT  BSS     1                                                        SGINV138
+ UNO   OCT     000001000000                                             SGINV139
+ NPTS  BSS     1                                                        SGINV140
+ FIXN  BSS     1                                                        SGINV141
+FIXNM1 BSS     1                                                        SGINV142
+ DAD   BSS     1                                                        SGINV143
+ HIT   FAD     HALF                                                     SGINV144
+COTEST PZE     0                                                        SGINV145
+* THE FOLLOWING SUBROUTINE CALCULATES GAMMA(N+1/2)/SQRT(PI)GAMMA(N+1)   SGINV146
+*      = (1)(3)(5)...(2N-1)/(2)(4)(6)...2N  N=1,2,3,...                 SGINV147
+* THESE ARE THE DEPENDENT VARIABLES OF THE SIMULTANEOUS EQUATIONS WHICH SGINV148
+*  WILL BE USED TO FIND THE VALUE OF THE WEIGHT FUNCTIONS               SGINV149
+GAMMA  SXA     KEEP1,1         SAVE INDEX REGISTERS                     SGINV150
+       SXA     KEEP2,2                                                  SGINV151
+       AXT     1,1             BEGIN CALCULATING DENOMINATOR            SGINV152
+       LDQ     FLONE                                                    SGINV153
+       STQ     HOLDIT                                                   SGINV154
+ AGAIN CLA     TEMP                                                     SGINV155
+       FAD     FLTWO                                                    SGINV156
+       STO     CLASP                                                    SGINV157
+       LDQ     HOLDIT                                                   SGINV158
+       FMP     TEMP                                                     SGINV159
+       STO     DENOM+1,1                                                SGINV160
+       STO     HOLDIT                                                   SGINV161
+       CLA     CLASP                                                    SGINV162
+       STO     TEMP                                                     SGINV163
+       TXI     *+1,1,1                                                  SGINV164
+TEST11 TXL     AGAIN,1,**                                               SGINV165
+       AXT     1,1             BEGIN CALCULATING NUMERATOR              SGINV166
+       LDQ     FLONE                                                    SGINV167
+       STQ     HOLDIT                                                   SGINV168
+ MORE  CLA     TEMP+1                                                   SGINV169
+       FAD     FLTWO                                                    SGINV170
+       STO     CLASP                                                    SGINV171
+       LDQ     HOLDIT                                                   SGINV172
+       FMP     TEMP+1                                                   SGINV173
+       STO     NUM+1,1                                                  SGINV174
+       STO     HOLDIT                                                   SGINV175
+       CLA     CLASP                                                    SGINV176
+       STO     TEMP+1                                                   SGINV177
+       TXI     *+1,1,1                                                  SGINV178
+TEST22 TXL     MORE,1,**                                                SGINV179
+       AXT     1,2             BEGIN CALCULATING QUOTIENT               SGINV180
+ CONT  CLA     NUM+1,2                                                  SGINV181
+       FDP     DENOM+1,2                                                SGINV182
+ CONT1 STQ     GAM+1,2         STORE DEPENDENT VARIABLE                 SGINV183
+       TXI     *+1,2,1                                                  SGINV184
+ TEST3 TXL     CONT,2,**                                                SGINV185
+       CLA     FLONE                                                    SGINV186
+       STO     TEMP+1                                                   SGINV187
+       CLA     FLTWO                                                    SGINV188
+       STO     TEMP                                                     SGINV189
+ KEEP1 AXT     **,1                                                     SGINV190
+ KEEP2 AXT     **,2                                                     SGINV191
+       TRA     1,4                                                      SGINV192
+ FLONE DEC     1.                                                       SGINV193
+ TEMP  DEC     2.                                                       SGINV194
+       DEC     1.                                                       SGINV195
+ FLTWO DEC     2.                                                       SGINV196
+HOLDIT BSS     1                                                        SGINV197
+ CLASP BSS     1                                                        SGINV198
+ NUM   BES     40                                                       SGINV199
+ DENOM BES     40                                                       SGINV200
+ GAM   BES     40                                                       SGINV201
+       BSS     1                                                        SGINV202
+* THE FOLLOWING SUBROUTINE CALCULATES THE ZEROS OF A 2N-1TH DEGREE      SGINV203
+* POLYNOMIAL IN COS((PI)Y)**2                                           SGINV204
+ ARGUE SXA     SAVE1,1         SAVE INDEX REGISTERS                     SGINV205
+       SXA     SAVE2,2                                                  SGINV206
+       CLA     J               INITIALLY J=1                            SGINV207
+       STO     HOLDJ           HOLD J TO INITIALIZE LATER               SGINV208
+       CLA     NPTS            NUMBER OF POINTS                         SGINV209
+       ARS     18              FLOAT                                    SGINV210
+       ORA     =O233000000000       N                                   SGINV211
+       FAD     =0                    AND                                SGINV212
+       STO     NFLOAT                   STORE                           SGINV213
+       XCA                                                              SGINV214
+       FMP     (2)             2N                                       SGINV215
+       FAD     (1)             2N+1                                     SGINV216
+       XCA                                                              SGINV217
+       FMP     (2)             2(2N+1)                                  SGINV218
+       STO     DEN             DENOMINATOR=2(2N+1)                      SGINV219
+       AXT     1,1                                                      SGINV220
+       LDQ     J               J=1,2,3,...,N                            SGINV221
+ GO    FMP     (2)             2J                                       SGINV222
+       FSB     (1)             2J-1                                     SGINV223
+       FDP     DEN             2J-1/2(2N+1)                             SGINV224
+       FMP     PI              (2J-1)PI/2(2N+1)                         SGINV225
+       STO     ARG+1,1         STORE IN ARG ARRAY                       SGINV226
+       TXI     *+1,1,1                                                  SGINV227
+       CLA     J                                                        SGINV228
+       FAD     (1)             J=J+1                                    SGINV229
+       STO     J               SAVE J=J+1                               SGINV230
+       XCA                                                              SGINV231
+ CHECK TXL     GO,1,**                                                  SGINV232
+       CLA     HOLDJ                                                    SGINV233
+       STO     J               INITIALIZE J                             SGINV234
+ SAVE1 AXT     **,1            RESTORE INDEX REGISTERS                  SGINV235
+ SAVE2 AXT     **,2                                                     SGINV236
+       TRA     1,4             RETURN                                   SGINV237
+ (1)   DEC     1.                                                       SGINV238
+ (2)   DEC     2.                                                       SGINV239
+ PI    DEC     3.1415926536                                             SGINV240
+ CON   DEC     1                                                        SGINV241
+ J     OCT     201400000000                                             SGINV242
+ DEN   BSS     1                                                        SGINV243
+ HOLDJ BSS     1                                                        SGINV244
+ ARG   BES     40                                                       SGINV245
+       BSS     1                                                        SGINV246
+NFLOAT BSS     1                                                        SGINV247
+ AMAT  SXA     XR1,1                                                    SGINV248
+       SXA     XR2,2                                                    SGINV249
+       SXA     XR4,4                                                    SGINV250
+       AXT     1,1             IR1=ITH ROW                              SGINV251
+       AXT     1,2             IR2=JTH COLUMN                           SGINV252
+       CLA     IHOLD           IHOLD=1                                  SGINV253
+       STO     I               INITIALIZE I                             SGINV254
+ UPROW LDQ     I               I=ROW COUNT                              SGINV255
+       MPY     FXTWO                                                    SGINV256
+       XCA                                                              SGINV257
+       SUB     FXTWO           2I-2=POWER OF COS(ARG(J))                SGINV258
+       TZE     ABSENT          TRANSFER IF ZERO POWER                   SGINV259
+       STA     POWCOS          POWER OF COS TO BE COMPUTED              SGINV260
+MATRIX CLA     FXTWO                                                    SGINV261
+       STA     ((2))           INITIALIZE ((2))                         SGINV262
+       CLA     ARG+1,2                                                  SGINV263
+       TSX     $COS,4                                                   SGINV264
+       STO     TRIG            COS(ARG(J)), J=1,2,...,N                 SGINV265
+       LDQ     TRIG                                                     SGINV266
+       FMP     TRIG                                                     SGINV267
+       STO     HOLD            COS(ARG(J)), J=1,2,...,N                 SGINV268
+       STO     TRIGSQ          COS(ARG(J)), J=1,2,...,N                 SGINV269
+ TEST  CLA     POWCOS          POWER OF COS                             SGINV270
+       SUB     ((2))                                                    SGINV271
+       TZE     IROW-3          GO TO STORE AREA                         SGINV272
+       LDQ     HOLD            PRESENT POWER OF COS                     SGINV273
+       FMP     TRIGSQ          COS SQUARED                              SGINV274
+       STO     HOLD            PAST POWER OF COS PLUS 2                 SGINV275
+       CLA     ((2))                                                    SGINV276
+       ADD     FXTWO                                                    SGINV277
+       STO     ((2))                                                    SGINV278
+       TRA     TEST            TEST POWER AGAIN FOR OUT                 SGINV279
+*THE FOLLOWING PART OF THE PROGRAM ALLOCATES A CERTAIN AREA FOR         SGINV280
+* STORAGE THAT WILL BE COMPATABLE WITH THE SUBROUTINE MATS FOR THE      SGINV281
+* ARRAY A                                                               SGINV282
+       LDQ     HOLD            FINAL POWER OF COSINE                    SGINV283
+       FMP     FLOAT2                                                   SGINV284
+       STO     HOLD            FINAL COSINE                             SGINV285
+ IROW  AXT     **,1            ROW I, I=1,2,...,N                       SGINV286
+ RET   SXA     PQ,2                                                     SGINV287
+       SXA     PR,1                                                     SGINV288
+ JT    CLA     PQ              COLUMN NUMBER                            SGINV289
+       SUB     FXONE                                                    SGINV290
+       XCA                                                              SGINV291
+       MPY     FORTY           MAXIMUM DIMENSION OF A ARRAY             SGINV292
+       XCA                                                              SGINV293
+ LT    ADD     PR              ROW NUMBER                               SGINV294
+       SUB     FXONE                                                    SGINV295
+       STA     AX              A(1,1)+(J-1)*MAX.DIM.(40) OF A + I - 1   SGINV296
+ AX    AXT     **,4            LOCATION FOR ELEMENT IN MATRIX A         SGINV297
+       CLA     HOLD            ELEMENT TO BE STORED IN MATRIX A         SGINV298
+       STO     A,4             STORE ELEMENT IN ARRAY A                 SGINV299
+       TXI     *+1,2,1         INCREMENT COLUMN                         SGINV300
+ COLT  TXH     GOROW,2,**      COLUMN CHECK                             SGINV301
+       SXA     NTEST,1         TEST TO SEE IF WE ARE THRU WITH          SGINV302
+       CLA     NTEST           THE FIRST ROW...IF NOT, WE WANT TO       SGINV303
+       CAS     ROW1            TRANSFER AND BRING IN THE NEXT ARGUMENT  SGINV304
+       TRA     MATRIX          GREATER THAN                             SGINV305
+       TRA     ABSENT          EQUAL TO                                 SGINV306
+       TRA     ABSENT          LESS THAN                                SGINV307
+ GOROW TXI     *+1,1,1         INCREMENT ROW                            SGINV308
+ ROWT  TXH     CMAT,1,**       ROW CHECK..TEST IF LAST ROW, LAST COLUMN SGINV309
+       CLA     I                                                        SGINV310
+       ADD     FXONE                                                    SGINV311
+       STA     I                                                        SGINV312
+       STA     IROW                                                     SGINV313
+       AXT     1,2                                                      SGINV314
+       TRA     UPROW                                                    SGINV315
+ABSENT CLA     FLOAT2                                                   SGINV316
+       STO     HOLD                                                     SGINV317
+       TRA     RET                                                      SGINV318
+ CMAT  CLA     NORD                                                     SGINV319
+       SUB     FXONE           N-1                                      SGINV320
+       XCA                                                              SGINV321
+       MPY     FORTY                                                    SGINV322
+       XCA                                                              SGINV323
+       ADD     FORTY                                                    SGINV324
+       STA     *+1                                                      SGINV325
+       AXT     **,4            A(1,N+1)=A(1,1)+(N-1)*40+40              SGINV326
+       AXT     1,1                                                      SGINV327
+ GAMS  CLA     GAM+1,1         DEPENDENT VARIABLES                      SGINV328
+       STO     A,4             COMPLETE A ARRAY                         SGINV329
+       TXI     *+1,4,1                                                  SGINV330
+       TXI     *+1,1,1                                                  SGINV331
+ENDGAM TXL     GAMS,1,**                                                SGINV332
+ XR1   AXT     **,1            RESTORE INDEX REGISTERS                  SGINV333
+ XR2   AXT     **,2                                                     SGINV334
+ XR4   AXT     **,4                                                     SGINV335
+       TRA     1,4                                                      SGINV336
+ FORTY DEC     40                                                       SGINV337
+ FXONE DEC     1                                                        SGINV338
+ FXTWO DEC     2                                                        SGINV339
+FLOAT2 DEC     2.                                                       SGINV340
+ I     DEC     1                                                        SGINV341
+ IHOLD DEC     1                                                        SGINV342
+ ROW1  DEC     1                                                        SGINV343
+ ((2)) BSS     1                                                        SGINV344
+ TRIG  BSS     1                                                        SGINV345
+POWCOS BSS     1                                                        SGINV346
+ HOLD  BSS     1                                                        SGINV347
+TRIGSQ BSS     1                                                        SGINV348
+ PQ    BSS     1                                                        SGINV349
+ PR    BSS     1                                                        SGINV350
+ N     BSS     1                                                        SGINV351
+ NTEST PZE     0                                                        SGINV352
+ NORD  SYN     N                                                        SGINV353
+ A     BES     1600                                                     SGINV354
+       BSS     1                                                        SGINV355
+*     THIS SUBROUTINE COMPUTE THE VALUE OF THE FUNCTION PHI AT Y(J),    SGINV356
+*     J=1,...,N AND -Y(J), J=1,...,N WITH SUBN=0,...,INFINITY           SGINV357
+ PHI   SXA     INDEX1,1                                                 SGINV358
+       SXA     INDEX2,2                                                 SGINV359
+       SXA     INDEX4,4                                                 SGINV360
+       AXT     0,2             INITIALIZE INDEX REGISTER 2              SGINV361
+       CLA     FIXN            SMALLN                                   SGINV362
+       ARS     18              SHIFT INTO ADDRESS                       SGINV363
+       ORA     =O233000000000  FLOAT                                    SGINV364
+       FAD     =0                   SMALL                               SGINV365
+       STO     SMALLN                    N                              SGINV366
+       SXA     TSAVE,1                                                  SGINV367
+       LXA     TCNT,1                                                   SGINV368
+       CLA     PI                                                       SGINV369
+ TVAL  FDP     **,1                                                     SGINV370
+       STQ     PIDT                                                     SGINV371
+ TSAVE AXT     **,1                                                     SGINV372
+ ARG2  AXT     1,1             INITIALIZE INDEX REGISTER 1              SGINV373
+LODARG CLA     ARG+1,1         Y(J)*PI                                  SGINV374
+       FDP     PI              Y(J)                                     SGINV375
+       XCA                                                              SGINV376
+ NOOP  NOP                                                              SGINV377
+       FAD     SMALLN          Y(J)+N                                   SGINV378
+ SICOS FAD     HALF            Y(J)+N+(1/2) OR Y(J)+N                   SGINV379
+       XCA                                                              SGINV380
+       FMP     PIDT            (PI/T)(Y(J)+N+(1/2)) OR (PI/T)(Y(J)+N)   SGINV381
+ FUNCT STO     K,1             K ARRAY= (PI/T)(Y(J)+N+(1/2) J=1,...,N   SGINV382
+       TXI     *+1,1,1                                                  SGINV383
+ NHOLD TXL     LODARG,1,**     TEST IF THROUGH WITH K ARRAY             SGINV384
+       CLA     MINARG          YES,COMPUTE ARGUEMENT USING -Y(J)        SGINV385
+       STO     FUNCT                                                    SGINV386
+       CLA     MINAC           TO SET Y(J) NEGATIVE                     SGINV387
+       STO     NOOP            REPLACE NOP                              SGINV388
+       TXI     *+1,2,1                                                  SGINV389
+       TXL     ARG2,2,1        TEST IF WE ARE TO GO BACK USING -Y(J)    SGINV390
+*      THE ARGUEMENTS FOR PHI1 AND PHI2 HAVE BEEN CALCULATED AND STORED SGINV391
+*      IN THE ARRAYS K AND L RESPECTIVELY                               SGINV392
+SAVE41 CLA     **              POWER OF P(X)                            SGINV393
+       ARS     18              SHIFT INTO ADDRESS                       SGINV394
+       ADD     FXONE                                                    SGINV395
+       STA     POWPOL                                                   SGINV396
+       CLA     P(X)            COEFFICIENTS OF P(X)                     SGINV397
+       STA     HOLD1           HOLD IN RESERVE                          SGINV398
+       STA     COEF1                                                    SGINV399
+       ADD     FX1             B+1                                      SGINV400
+       STA     HOLD2           HOLD IN RESERVE                          SGINV401
+       STA     COEF2                                                    SGINV402
+ ON    AXT     1,2             INITIALIZE INDEX REGISTER 2              SGINV403
+POWPOL AXT     **,1            POWER OF PRESENT POLYNOMIAL              SGINV404
+ COEF1 CLA     **,1            B(0),B(1),...,B(N)  C(0),C(1),...,C(N)   SGINV405
+ FUNC  STO     PX,2                                                     SGINV406
+       TXL     DONE,1,0        TEST FOR NN=MM=0                         SGINV407
+ FUNC1 LDQ     PX,2                                                     SGINV408
+MULTY  FMP     K,2             ARGUEMENT ARRAY                          SGINV409
+ COEF2 FAD     **,1            EITHER B ARRAY OR C ARRAY                SGINV410
+       STO     PX,2            P(X)=B(0)+B(1)X+...+B(N)X**N             SGINV411
+       TIX     *-4,1,1         BUILD POLYNOMIAL                         SGINV412
+ DONE  TXI     *+1,2,1                                                  SGINV413
+       TXL     POWPOL,2,**     TEST FOR MORE ARGUEMENTS                 SGINV414
+       CLA     TEST1           TEST IF THROUGH WITH Q(X)                SGINV415
+       TNZ     DIV                                                      SGINV416
+       CLA     FX1                                                      SGINV417
+       STA     TEST1           ACTIVATE TEST1                           SGINV418
+       CLA     DENS            ADDRESS OF Q(X)                          SGINV419
+       STA     FUNC                                                     SGINV420
+       STA     FUNC1                                                    SGINV421
+       STA     COEF2+1                                                  SGINV422
+ POWQ  CLA     **              POWER OF Q(X)                            SGINV423
+       ARS     18              SHIFT TO ADDRESS                         SGINV424
+       ADD     FXONE                                                    SGINV425
+       STA     POWPOL          DEGREE OF POLYNOMIAL Q(X)                SGINV426
+       CLA     Q(X)            INITIAL ADDRESS OF C ARRAY               SGINV427
+       STA     COEF1                                                    SGINV428
+       ADD     FX1              C+1                                     SGINV429
+       STA     COEF2                                                    SGINV430
+       TRA     ON              BEGIN COMPUTING Q(X)                     SGINV431
+ DIV   AXT     1,2             INITIALIZE INDEX REGISTER 2 FOR DIVIDING SGINV432
+       CLA     PX,2            PX(J)                                    SGINV433
+       FDP     QX,2            QX(J)                                    SGINV434
+NEWPHI STQ     PHI1,2          PHI1 ARRAY                               SGINV435
+       TXI     *+1,2,1                                                  SGINV436
+DIVPHI TXL     *-4,2,**        COMPUTE P(X)/Q(X)                        SGINV437
+       CLA     **                                                       SGINV438
+       ARS     18                                                       SGINV439
+       ADD     FXONE                                                    SGINV440
+       STA     POWPOL                                                   SGINV441
+       CLA     ZERO                                                     SGINV442
+       STA     TEST1                                                    SGINV443
+       CLA     MINPHI                                                   SGINV444
+       STO     MULTY                                                    SGINV445
+       CLA     PHITWO                                                   SGINV446
+       STO     NEWPHI                                                   SGINV447
+       CLA     TEST2                                                    SGINV448
+       TNZ     EXIT            ADD PHI1 AND PHI2                        SGINV449
+       CLA     FX1                                                      SGINV450
+       STA     TEST2           ACTIVATE TEST2                           SGINV451
+       CLA     NUMS            IN                                       SGINV452
+       STA     FUNC              IT                                     SGINV453
+       STA     FUNC1               IA                                   SGINV454
+       STA     COEF2+1               LI                                 SGINV455
+       CLA     HOLD1                   ZE                               SGINV456
+       STA     COEF1           COEFFICIENTS                             SGINV457
+       CLA     HOLD2                                                    SGINV458
+       STA     COEF2                                                    SGINV459
+       TRA     ON              COMPUTE PHI2 USING -Y(J)                 SGINV460
+ EXIT  AXT     1,2             INITIALIZE INDEX REGISTER 2              SGINV461
+ SIGMA CLA     PHI1,2                                                   SGINV462
+       FAD     PHI2,2                                                   SGINV463
+       STO     PHISUM+1,2      PHI=PHI1+PHI2                            SGINV464
+       TXI     *+1,2,1                                                  SGINV465
+SUMPHI TXL     SIGMA,2,**      COMPUTE PHI ARRAY                        SGINV466
+       CLA     POON            BEGIN RESETTING                          SGINV467
+       STO     NOOP                                                     SGINV468
+       CLA     ZERO                                                     SGINV469
+       STO     TEST1                                                    SGINV470
+       STO     TEST2                                                    SGINV471
+       CLA     PHIONE                                                   SGINV472
+       STO     NEWPHI                                                   SGINV473
+       CLA     NUMS                                                     SGINV474
+       STA     FUNC                                                     SGINV475
+       STA     FUNC1                                                    SGINV476
+       STA     COEF2+1                                                  SGINV477
+       CLA     PLUARG                                                   SGINV478
+       STO     FUNCT                                                    SGINV479
+       CLA     PLUPHI                                                   SGINV480
+       STO     MULTY           END RESETTING                            SGINV481
+INDEX1 AXT     **,1                                                     SGINV482
+INDEX2 AXT     **,2            RESTORE INDEX REGISTERS                  SGINV483
+INDEX4 AXT     **,4                                                     SGINV484
+       TRA     1,4                                                      SGINV485
+ P(X)  PZE     **                                                       SGINV486
+ Q(X)  PZE     **                                                       SGINV487
+MINPHI FMP     L,2                                                      SGINV488
+PLUPHI FMP     K,2                                                      SGINV489
+PHIONE STQ     PHI1,2                                                   SGINV490
+PHITWO STQ     PHI2,2                                                   SGINV491
+MINARG STO     L,1                                                      SGINV492
+PLUARG STO     K,1                                                      SGINV493
+ MINAC SSM                                                              SGINV494
+ POON  NOP                                                              SGINV495
+ ZERO  DEC     0                                                        SGINV496
+ TEST1 PZE     0                                                        SGINV497
+ TEST2 PZE     0                                                        SGINV498
+ NUMS  PZE     PX                                                       SGINV499
+ DENS  PZE     QX                                                       SGINV500
+ HALF  DEC     .5                                                       SGINV501
+ HOLD1 BSS     1                                                        SGINV502
+ HOLD2 BSS     1                                                        SGINV503
+SMALLN BSS     1                                                        SGINV504
+ PIDT  BSS     1                                                        SGINV505
+ T     BSS     1                                                        SGINV506
+ K     BES     40                                                       SGINV507
+ L     BES     40                                                       SGINV508
+ PHI1  BES     40                                                       SGINV509
+ PHI2  BES     40                                                       SGINV510
+ PX    BES     40                                                       SGINV511
+ QX    BES     40                                                       SGINV512
+PHISUM BES     40                                                       SGINV513
+       BSS     1                                                        SGINV514
+ FX1   SYN     FXONE                                                    SGINV515
+*      THE FOLLOWING SUBROUTINE SUMS THE SERIES FN(T), N=0,...,INFINITY SGINV516
+*      BY TAKING THE PARTIAL SUMS, FA(T), A=0,...,N...N=0,...,INFINITY  SGINV517
+*      SOTHAT CONVERGENCE OCCURS AT SOME N. THE REAL-TIME SOLUTION IS   SGINV518
+*      THEN F(T)=PI/T(FN(T))                                            SGINV519
+INVERT SXA     IR1,1           SAVE INDEX REGISTERS                     SGINV520
+       SXA     IR2,2                                                    SGINV521
+       SXA     IR4,4                                                    SGINV522
+       SXA     REG1,1                                                   SGINV523
+       SXA     REG2,2                                                   SGINV524
+       SXA     REG4,4                                                   SGINV525
+       CLA     FIXN            SMALLN                                   SGINV526
+       ANA     DECONE          TEST FOR ODD N                           SGINV527
+       TZE     *+3             TRANSFER IF N EVEN                       SGINV528
+       CLA     NEG                                                      SGINV529
+       STO     NEGSNX          -SN(X)                                   SGINV530
+STOREP CLA     **              TOL                                      SGINV531
+       STO     EPSILN                                                   SGINV532
+       AXT     0,1             INITIALIZE INDEX REGISTER 1, J=0         SGINV533
+ GO1   CLA     ARG,1           Y(J)*PI                                  SGINV534
+       TSX     $COS,4          COS(PIY(J))                              SGINV535
+       STO     COSARG                                                   SGINV536
+       CLA     X,1             WEIGHT(J)                                SGINV537
+       FDP     COSARG          WEIGHT(J)/COS(PIY(J))                    SGINV538
+       FMP     PHISUM,1        PHISUM(J)                                SGINV539
+       STO     SX,1            S(X)=W(J)*PHISUM(J)/COS(PIY(J))          SGINV540
+       TXI     *+1,1,1                                                  SGINV541
+ TESTG TXL     GO1,1,**                                                 SGINV542
+       AXT     0,1                                                      SGINV543
+       ZAC                                                              SGINV544
+SUMSX  FAD     SX,1            SX-1,I=1,...,N-1                         SGINV545
+       TXI     *+1,1,1                                                  SGINV546
+       TXL     *-2,1,**                                                 SGINV547
+       XCA                                                              SGINV548
+NEGSNX FMP     PLUS1           PLUS OR MINUS SN(X)                      SGINV549
+       STO     SNX                                                      SGINV550
+       CLA     POS             RESTORE SIGN                             SGINV551
+       STO     NEGSNX                                                   SGINV552
+       CLA     COTEST                                                   SGINV553
+       TNZ     PATCH                                                    SGINV554
+       CLA     FIXN                                                     SGINV555
+       TNZ     PROCD           IS SUBN EQUAL TO ZERO                    SGINV556
+ CONE  CLA     SNX             S(X) FOR SUBN=0                          SGINV557
+       STO     ALPHA           S(X) FOR SUBN=0                          SGINV558
+ ADDM  CLA     FIXN                                                     SGINV559
+       ADD     DECONE                                                   SGINV560
+       CAS     MAXITE          HAS THE MAXIMUM NUMBER OF ITERATIONS BEENSGINV561
+       TRA     MOM             REACHED...IF SO,GO TO MOM                SGINV562
+       TRA     MOM                                                      SGINV563
+       STD     FIXN                                                     SGINV564
+ REG1  AXT     **,1                                                     SGINV565
+ REG2  AXT     **,2                                                     SGINV566
+ REG4  AXT     **,4                                                     SGINV567
+       TRA     1,4                                                      SGINV568
+ PROCD CLA     ALPHA                                                    SGINV569
+       FAD     SNX                                                      SGINV570
+       STO     SUM             SUM=ALPHA+S(SUBN)                        SGINV571
+       AXT     0,1                                                      SGINV572
+ EVAL  CLA     SUM                                                      SGINV573
+       FAD     ALPHA,1                                                  SGINV574
+       XCA                                                              SGINV575
+       FMP     PT5             AVG=1/2(SUM+ALPHA(J-1))                  SGINV576
+       STO     AVG                                                      SGINV577
+ TSNEJ PXD     ,1                                                       SGINV578
+       CAS     FIXNM1                                                   SGINV579
+       TRA     CONTIN          NO,CONTINUE                              SGINV580
+       TRA     CHKTOL          YES,CHECK TO SEE IF ALPHA IS WITHIN TOL  SGINV581
+CONTIN CLA     SUM                                                      SGINV582
+       STO     ALPHA,1                                                  SGINV583
+       CLA     AVG                                                      SGINV584
+       STO     SUM                                                      SGINV585
+       TXI     EVAL+1,1,1                                               SGINV586
+CHKTOL CLA     ALPHA,1         IS ALPHA(J-1)-T) LESS THAN TOLERANCE     SGINV587
+       FSB     AVG                                                      SGINV588
+       FDP     AVG                                                      SGINV589
+       XCA                                                              SGINV590
+       SSP                                                              SGINV591
+       STO     DIFF                                                     SGINV592
+       CAS     EPSILN                                                   SGINV593
+       TRA     REITER                                                   SGINV594
+       TRA     REITER                                                   SGINV595
+       TRA     CONVGD          CONVERGENCE OF THE SERIES HAS OCCURRED   SGINV596
+REITER CLA     SUM                                                      SGINV597
+       STO     ALPHA,1                                                  SGINV598
+       CLA     AVG                                                      SGINV599
+       STO     ALPHA-1,1                                                SGINV600
+       CLA     FIXNM1                                                   SGINV601
+       ADD     DECONE                                                   SGINV602
+       STD     FIXNM1                                                   SGINV603
+       TXI     ADDM,1,1                                                 SGINV604
+CONVGD CLA     FL2             2.                                       SGINV605
+       SXA     TTEST,1                                                  SGINV606
+       LXA     TCNT,1                                                   SGINV607
+ DIVT  FDP     **,1            2/T                                      SGINV608
+       FMP     AVG             (2/T)(S(T))                              SGINV609
+ F(T)  STO     **,1            F(T)=2/T(S(T))                           SGINV610
+       CLA     COTEST                                                   SGINV611
+       TZE     STOREA-1                                                 SGINV612
+ ACE1  CLA     **,1                                                     SGINV613
+       FAD     CZERO                                                    SGINV614
+ ACE2  STO     **,1                                                     SGINV615
+* TEST TO SEE IF RE(S) HAS BEEN TRANSLATED BECAUSE OF A SINGULARITY IN  SGINV616
+* RE(S) GREATER THAN ZERO. THEN F(S+A)=INV(F(T))*EXP(-AT)               SGINV617
+       LXA     IR4,4                                                    SGINV618
+STOREA CLA     **              A                                        SGINV619
+       TZE     TTEST           NO TRANSLATION IN RE(S)                  SGINV620
+       XCA                                                              SGINV621
+MULTYT FMP     **,1            AT                                       SGINV622
+       SXA     SVR43,4                                                  SGINV623
+       TSX     $EXP,4          EXP(AT)                                  SGINV624
+       XCA                                                              SGINV625
+ FTEAT FMP     **,1            F(T)*EXP(AT)                             SGINV626
+       STO     **,1                                                     SGINV627
+ SVR43 AXT     **,4                                                     SGINV628
+ TTEST AXT     **,1                                                     SGINV629
+       CLA     TCNT                                                     SGINV630
+       ADD     FIX1                                                     SGINV631
+       STO     TCNT            TCNT=TCNT+1                              SGINV632
+       CAS     NUMTS           HAS F(T) BEEN EVALUATED FOR ALL T        SGINV633
+       TRA     IR1             YES,TRANSFER BACK TO MAIN PROGRAM        SGINV634
+       TRA     IR1             YES,TRANSFER BACK TO MAIN PROGRAM        SGINV635
+       CLA     NAUGHT          NO,EVALUATE F(T) FOR ANOTHER VALUE OF T  SGINV636
+       STO     FIXN            RESET SMALLN TO ZERO                     SGINV637
+       STO     FIXNM1                                                   SGINV638
+       TRA     REG1            GO BACK TO SUBROUTINE PHI FOR NEW F(T)   SGINV639
+ IR1   AXT     **,1            RESTORE INDEX REGISTERS                  SGINV640
+ IR2   AXT     **,2                                                     SGINV641
+ IR4   AXT     **,4                                                     SGINV642
+       TRA     2,4             RETURN TO MAIN PROGRAM                   SGINV643
+COSARG BSS     1                                                        SGINV644
+ POS   FMP     PLUS1                                                    SGINV645
+ NEG   FMP     MINUS1                                                   SGINV646
+ PLUS1 DEC     1.                                                       SGINV647
+MINUS1 DEC     -1.                                                      SGINV648
+MAXITE OCT     000100000000    MAXIMUM NUMBER OF ITERATIONS             SGINV649
+ DOS   OCT     000002000000                                             SGINV650
+ FL2   DEC     2.                                                       SGINV651
+DECONE OCT     000001000000                                             SGINV652
+ SNX   BSS     1                                                        SGINV653
+ ALPHA BES     300                                                      SGINV654
+       BSS     1                                                        SGINV655
+ SUM   BSS     1                                                        SGINV656
+ CZERO BSS     1             C(0)                                       SGINV657
+ AVG   BSS     1                                                        SGINV658
+ANSWER BSS     1                                                        SGINV659
+EPSILN BSS     1                                                        SGINV660
+ DIFF  BSS     1                                                        SGINV661
+ SX    BES     40                                                       SGINV662
+       BSS     1                                                        SGINV663
+ NUMTS BSS     1                                                        SGINV664
+FLOATN SYN     NFLOAT                                                   SGINV665
+NAUGHT SYN     ZERO                                                     SGINV666
+ FIX1  SYN     FX1                                                      SGINV667
+ PT5   SYN     HALF                                                     SGINV668
+ PATCH CLA     FIXN                                                     SGINV669
+       TNZ     ROMP                                                     SGINV670
+       LXA     TCNT,1                                                   SGINV671
+       CLA     SNX                                                      SGINV672
+ MORET FDP     **,1            SXN/T                                    SGINV673
+       STQ     CZERO                                                    SGINV674
+       TRA     ADDM                                                     SGINV675
+ ROMP  CAS     DECONE                                                   SGINV676
+       TRA     PROCD                                                    SGINV677
+       TRA     CONE                                                     SGINV678
+       TRA     CONE                                                     SGINV679
+ MOM   CLA     DOS             THE MAXIMUM NUMBER                       SGINV680
+       STD*    DAD             OF ITERATIONS HAS BEEN REACHED...        SGINV681
+       TRA     RSTOR4          CONVERGENCE IS IMPOSSIBLE...SET FLAG     SGINV682
+       END                                                              SGINV683
+C     MATS SOLVES THE SET OF N SIMULTANEOUS EQUATIONS BY GAUSSIAN       SGMATS00
+C     ELIMINATION                                                       SGMATS01
+C     A IS THE AUGMENTED MATRIX OF INDEPENDENT AND DEPENDENT VARIABLES  SGMATS02
+C     X IS THE COLUMN MATRIX WITH THE SOLUTION                          SGMATS03
+C     N IS THE NUMBER OF SIMULTANEOUS EQUATIONS                         SGMATS04
+C     M IS THE NUMBER OF COLUMNS OF DEPENDENT VARIABLES                 SGMATS05
+C     THIS SUBROUTINE IS DIMENSIONED FOR A MAXIMUM OF 40 EQUATIONS      SGMATS06
+      SUBROUTINE MATS(A,X,N,M)                                          SGMATS07
+      DIMENSION A(40,40),X(40)                                          SGMATS08
+      IF(1-N) 99,69,69                                                  SGMATS09
+   69 X(1)=A(1,2)/A(1,1)                                                SGMATS10
+      GO TO 999                                                         SGMATS11
+   99 MM=N+M                                                            SGMATS12
+      DO 15 I=2,N                                                       SGMATS13
+   70 II=I-1                                                            SGMATS14
+    7 DO 15 J=1,II                                                      SGMATS15
+    8 IF (A(I,J))9,15,9                                                 SGMATS16
+    9 IF (ABSF(A(J,J))-ABSF(A(I,J)))11,10,10                            SGMATS17
+   10 R=A(I,J)/A(J,J)                                                   SGMATS18
+      GO TO 130                                                         SGMATS19
+   11 R=A(J,J)/A(I,J)                                                   SGMATS20
+      DO 12 K=1,MM                                                      SGMATS21
+      B=A(J,K)                                                          SGMATS22
+      A(J,K)=A(I,K)                                                     SGMATS23
+   12 A(I,K)=B                                                          SGMATS24
+  130 JJ=J+1                                                            SGMATS25
+   13 DO 14 K=JJ,MM                                                     SGMATS26
+   14 A(I,K)=A(I,K)-R*A(J,K)                                            SGMATS27
+   15 CONTINUE                                                          SGMATS28
+      IF(ABSF(A(N,N))-1.0E-10) 16,16,17                                 SGMATS29
+   16 PRINT 200                                                         SGMATS30
+      WRITE OUTPUT TAPE 6,200                                           SGMATS31
+  200 FORMAT(35H SINGULAR MATRIX IN SUBROUTINE MATS)                    SGMATS32
+      CALL EXIT                                                         SGMATS33
+   17 DO 28 J=1,M                                                       SGMATS34
+      KK=N+J                                                            SGMATS35
+      X(N)=A(N,KK)/A(N,N)                                               SGMATS36
+      DO 28 I = 2,N                                                     SGMATS37
+      JJ=N-I+1                                                          SGMATS38
+      B=0.                                                              SGMATS39
+      II=N-I+2                                                          SGMATS40
+      DO 25 K=II,N                                                      SGMATS41
+   25 B=B+A(JJ,K)*X(K)                                                  SGMATS42
+      IF (ABSF(A(JJ,JJ))-1.0E-10) 16,16,28                              SGMATS43
+   28 X(JJ)=(A(JJ,KK)-B)/A(JJ,JJ)                                       SGMATS44
+  999 RETURN                                                            SGMATS45
+      END                                                               SGMATS46

@@ -1,0 +1,40 @@
+S            TITLE   SQ36 SYSTEM/360 SQUAREROOT SUBROUTINE              SQ360001
+S            COUNT   40                                                 SQ360002
+SQRT       START 0                     DEFINE BEGINNING OF PROGRAM      SQ360003
+* THIS SQUARE ROOT SUBROUTINE IS CALLED BY THE FOLLOWING SEQUENCE       SQ360004
+*          L     14,=V(SQRT)           GET LOCATION OF SQRT ROUTINE.    SQ360005
+*          ...                         ANY SEQUENCE OF INSTRUCTIONS.    SQ360006
+*          BALR  15,14                 GO TAKE SQRT OF F.P.R. 0         SQ360007
+* THE RESULT IS RETURNED IN F.P.R. 0, AND NO OTHERS ARE DISTURBED.      SQ360008
+* ON NEGATIVE ARGUMENT AN SVC 2 IS DONE.                                SQ360009
+*                                                                       SQ360010
+ARG        EQU   0                     LOCATION OF THE ARGUMENT         SQ360011
+CALLER     EQU   15                    LOCATION OF CALLER               SQ360012
+ME         EQU   14                    LOCATION OF SQRT                 SQ360013
+           USING *,ME                  TELL THE ASSEMBLER ABOUT US      SQ360014
+           LTDR  ARG,ARG               WHAT HAVE WE HERE.               SQ360015
+           BP    CONT                  GREATER THAN ZERO.               SQ360016
+           BCR   8,CALLER              EQUAL ZERO.                      SQ360017
+           SVC   2                     LESS THAN ZERO                   SQ360018
+CONT       STD   2,SAVE2               SAVE F.P.R. 2                    SQ360019
+           STD   4,SAVE4               SAVE F.P.R. 4                    SQ360020
+           LDR   2,ARG                 X IS FIRST APPROXIMATION TOSQRT. SQ360021
+LOOP       LDR   4,ARG                 ARGUMENT TO 4 FOR ITERATION.     SQ360022
+           DDR   4,2                   DIVIDE BY LAST APPROXIMATION.    SQ360023
+           ADR   4,2                   ADD LAST APPROXIMATION.          SQ360024
+           HDR   4,4                   AND TAKE THE AVERAGE.            SQ360025
+GATE       NOP   TEST                  THIS IS A ONE-TIME GATE.         SQ360026
+           OI    GATE+1,X'F0'          THIS TURNS IT INTO A B    .      SQ360027
+ON         LDR   2,4                   SAVE THIS APPROXIMATION.         SQ360028
+           B     LOOP                  AND ITERATE ONCE MORE.           SQ360029
+TEST       CDR   2,4                   ARE WE THROUGH.                  SQ360030
+           BH    ON                    NO, TRY AGAIN.                   SQ360031
+           NI    GATE+1,X'00'          OPEN THE GATE AGAIN.             SQ360032
+           LDR   ARG,4                 PUT THE RESULT IN F.P.R. 0       SQ360033
+           LD    2,SAVE2               RESTORE F.P.R. 2                 SQ360034
+           LD    4,SAVE4               RESTORE F.P.R. 4                 SQ360035
+           BR    CALLER                AND RETURN TO THE CALLER         SQ360036
+           CNOP  0,8                   FIRST BYTE IN EIGHT.             SQ360037
+SAVE2      DC    D'0'                  TEMPORARY STORAGE FOR F.P.R. 2   SQ360038
+SAVE4      DC    D'0'                  TEMPORARY STORAGE FOR F.P.R. 4   SQ360039
+           END                                                          SQ360040

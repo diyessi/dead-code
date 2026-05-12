@@ -1,0 +1,525 @@
+C     SCUHANA   MINERAL IDENTIFICATION PROGRAM       S. M. KATZ         HAN001  
+C                                                                       HAN002  
+C                                                                       HAN003  
+C     THIS PROGRAM IDENTIFIES THE COMPONENTS OF ROCK SAMPLES FROM THE   HAN004  
+C     X-RAY DIFFRACTION PATTERNS                                        HAN005  
+C                                                                       HAN006  
+C                                                                       HAN007  
+C     TWO PART PROCESS USED.                                            HAN008  
+C              1) SMALL NUMBER OF COMMON MINERALS IDENTIFIED ON BASIS   HAN009  
+C                   OF LINE SPACINGS ONLY                               HAN010  
+C              2) OTHER MINERALS IDENTIFIED BY SPACINGS AND INTENSITIES HAN011  
+C                                                                       HAN012  
+C                                                                       HAN013  
+C                                                                       HAN014  
+C                                                                       HAN015  
+      COMMON TITLE,CSP,CIN,NRES,RES,RINT,BTOL,NFO,NLF,FOUND,FINT,TIFO   HAN016  
+C                                                                       HAN017  
+      DIMENSION TITLE(2),IDPOS(5),CSP(30),CIN(30),FACT(5)               HAN018  
+      DIMENSION NDL(10),ANG(10,100),SINT(10,100),SPA(10,100),TOL(10,100)HAN019  
+      DIMENSION NRES(10),RES(10,100),RINT(10,100),BTOL(10,100)          HAN020  
+      DIMENSION NFO(10),NLF(10),FOUND(10,100),FINT(10,100),TIFO(10,20,2)HAN021  
+C                                                                       HAN022  
+C                                                                       HAN023  
+C                                                                       HAN024  
+C     NCOM = TAPE NUMBER FOR COMMON MINERAL DATA                        HAN025  
+C     NUNC = TAPE NUMBER FOR OTHER MINERAL DATA                         HAN026  
+C     NOU = OUTPUT TAPE NUMBER                                          HAN027  
+C                                                                       HAN028  
+      NCOM = 10                                                         HAN029  
+      NUNC = 10                                                         HAN030  
+      NOU = 6                                                           HAN031  
+      REWIND NOU                                                        HAN032  
+C                                                                       HAN033  
+C                                                                       HAN034  
+C     PRELIMINARY PART                                                  HAN035  
+C                   CLEAR NEEDED STORAGES                               HAN036  
+C                                                                       HAN037  
+C                                                                       HAN038  
+    1 DO 10 I=1,10                                                      HAN039  
+      DO 10 J=1,100                                                     HAN040  
+      FOUND(I,J)=0.0                                                    HAN041  
+   10 FINT(I,J)=0.0                                                     HAN042  
+C                                                                       HAN043  
+C                                                                       HAN044  
+C                                                                       HAN045  
+C                   READ IN DATA FOR UNKNOWNS                           HAN046  
+C                   CONVERT LINE SPACINGS IN DEGREES (ANG(I,J))         HAN047  
+C                        TO ANGSTROMS (SPA(I,J))                        HAN048  
+C                   SET UP MASTER ARRAYS OF SPACINGS,INTENSITIES,       HAN049  
+C                        TOLERANCES (SPA(I,J),SINT(I,J),TOL(I,J))       HAN050  
+C                        FOR LATER REFERENCE                            HAN051  
+C                   SET UP WORKING ARRAYS OF NUMBER LINES, SPACINGS,    HAN052  
+C                        INTENSITIES, TOLERANCES (NRES(I),RES(I,J),     HAN053  
+C                        RINT(I,J),BTOL(I))                             HAN054  
+C                                                                       HAN055  
+C                                                                       HAN056  
+C     DATA FOR UNKNOWNS READ IN FROM CARDS                              HAN057  
+C     ALAM= X-RAY WAVE LENGTH                                PLUS       HAN058  
+C     ATOL= TOLERANCE IN MEASURED ANGLES (DEGREES)           PLUS       HAN059  
+C     NSAM =NUMBER OF UNKNOWNS (LTE10)                       PLUS       HAN060  
+C     NDL(I),I=1,NSAM =NO. LINES FOR UNKNOWN I. ONE CARD                HAN061  
+C                                       (F10.5,F5.3,11I5)               HAN062  
+C     ERR = TOLERANCE IN RELATIVE INTENSITES  (F10.5)                   HAN063  
+C                                                                       HAN064  
+C     FOR EACH UNKNOWN   J=1,NSAM                                       HAN065  
+C     ANG(J,M),SINT(J,M),M=1,NDL(J)=ANGULAR SPACING AND INTENSITY OF    HAN066  
+C              MTH LINE -IN ORDER OF INCREASING ANG   (7(F7.4,F3.0))    HAN067  
+C                                                                       HAN068  
+C                                                                       HAN069  
+C                                                                       HAN070  
+C                                                                       HAN071  
+      READ INPUT TAPE NCOM,1001,NCO                                     HAN072  
+C                                                                       HAN073  
+C     NCO = NO. COMMON MINERALS IN LIBRARY   (I5)                       HAN074  
+C                                                                       HAN075  
+      READ 1004, ALAM,ATOL,NSAM,(NDL(I),I=1,10),ERR                     HAN076  
+      IF (NSAM)210 ,210,20                                              HAN077  
+   20 DO 50 I=1,NSAM                                                    HAN078  
+      L=NDL(I)                                                          HAN079  
+      NFO(I) = 0                                                        HAN080  
+      NLF(I) = 0                                                        HAN081  
+      NRES(I) = NDL(I)                                                  HAN082  
+      READ 1003, (ANG(I,J),SINT(I,J),J=1,L)                             HAN083  
+      DO 50 K=1,L                                                       HAN084  
+      SPA(I,K) = ALAM/(2.0*SINF(ANG(I,K)/114.5916))                     HAN085  
+      RES(I,K) =SPA(I,K)                                                HAN086  
+      RINT(I,K) =SINT(I,K)                                              HAN087  
+      TOL(I,K) = (ALAM * COSF(ANG(I,K)/114.5916)*ATOL)/(229.1832 *      HAN088  
+     1(SINF(ANG(I,K)/114.5916))**2)                                     HAN089  
+   50 BTOL(I,K) = TOL(I,K)                                              HAN090  
+      WRITE OUTPUT TAPE NOU, 1020                                       HAN091  
+C                                                                       HAN092  
+C                                                                       HAN093  
+C                                                                       HAN094  
+C     PART ONE                                                          HAN095  
+C                   FOR EACH COMMON MINERAL IN SEQUENCE (COUNTER I)     HAN096  
+C                   LOOK FOR PRESENCE IN EACH SAMPLE  (COUNTER J)       HAN097  
+C                   IF PRESENT SUBTRACT CORRESPONDING LINES FROM        HAN098  
+C                        RES/RINT AND ADD TO FOUND/FINT                 HAN099  
+C                                                                       HAN100  
+C                                                                       HAN101  
+C                                                                       HAN102  
+C         TAPE NCOM HAS COMMON MINERAL DATA (AFTER NCO)                 HAN103  
+C                                                                       HAN104  
+C     FOR EACH COMMON MINERAL HAVE                                      HAN105  
+C     TITLE(J),J=1,2  =NAME OF MINERAL- 12 ALFA CHARACTERS   PLUS       HAN106  
+C     NTL = NO. DIFFRACTION LINES IN MINERAL  (LTE30)        PLUS       HAN107  
+C     IDEN = NO. OF LINES FOR IDENTIFICATION  (LTE5)         PLUS       HAN108  
+C     MAS = POSITION OF KEY IDENTIFIER IN LIST. ONE CARD (2A6,8X,3I5)   HAN109  
+C     IDPOS(J),J=1,IDEN  =POSITIONS OF IDENTIFIERS IN LIST (5I5)        HAN110  
+C     CSP(J),CIN(J),J=1,NTL = SPACING AND INTENSITY OF JTH LINE -IN     HAN111  
+C         ORDER OF DECREASING MAGNITUDE OF CSP   (7(F7.4,F3.0))         HAN112  
+C                                                                       HAN113  
+C                                                                       HAN114  
+C     FOR EACH UNKNOWN(J=1,NSAM) ALLOW FOR IDENTIFYING UP TO 20 MINERALSHAN115  
+C        AND 100 LINES                                                  HAN116  
+C     NFO(J),J=1,NSAM=COUNT OF MINERALS IDENTIFIED IN J                 HAN117  
+C     NLF(J),J=1,NSAM=COUNT OF LINES EXPECTED IN J                      HAN118  
+C     TIFO(J,K,L),J=1,NSAM,K=1,NFO(J),L=1,2=NAME OF MINERAL K IN J      HAN119  
+C     FOUND(J,M),FINT(J,M),J=1,NSAM,M=1,NLF(J)=SPACING AND INTENSITY OF HAN120  
+C        MTH LINE-IN ORDER OF DECREASING MAGNITUDE OF FOUND             HAN121  
+C                                                                       HAN122  
+C                                                                       HAN123  
+C                                                                       HAN124  
+C                   READ DATA FOR MINERAL I                             HAN125  
+C                                                                       HAN126  
+      IF (NCO) 300,300,500                                              HAN127  
+  500 DO 100 I=1,NCO                                                    HAN128  
+      READINPUTTAPE NCOM,1002,TITLE(1),TITLE(2),NTL,IDEN,MAS            HAN129  
+      READINPUTTAPE NCOM,1001,(IDPOS(M),M=1,IDEN)                       HAN130  
+      READINPUTTAPE NCOM,1003,(CSP(M),CIN(M),M=1,NTL)                   HAN131  
+      DO 100 J=1,NSAM                                                   HAN132  
+C                                                                       HAN133  
+C     IF TWENTY MINERALS HAVE BEEN IDENTIFIED DO NOT LOOK FOR MORE      HAN134  
+C                                                                       HAN135  
+      IF (NFO(J)-20) 51,100,100                                         HAN136  
+C                                                                       HAN137  
+C                   L COUNTS LINES IN SAMPLE J                          HAN138  
+C                                                                       HAN139  
+   51 L=0                                                               HAN140  
+C                                                                       HAN141  
+C                   K COUNTS IDENTIFYING LINES IN MINERAL I             HAN142  
+C                                                                       HAN143  
+      DO 60 K=1,IDEN                                                    HAN144  
+      ID = IDPOS(K)                                                     HAN145  
+C                                                                       HAN146  
+C     ADVANCE L AND TEST IF MORE LINES IN SAMPLE                        HAN147  
+C                                                                       HAN148  
+   53 L=L+1                                                             HAN149  
+      IF (L-NRES(J)) 510,510,100                                        HAN150  
+  510 IF (ABSF(CSP(ID)-RES(J,L))-BTOL(J,L))55,55,52                     HAN151  
+C                                                                       HAN152  
+C     IDENTIFIER K AND LINE L DO NOT CORRESPOND-IF IDENTIFIER LT LINE   HAN153  
+C         ADVANCE L AND CONTINUE. ELSE MINERAL NOT IN SAMPLE            HAN154  
+C                                                                       HAN155  
+   52 IF (CSP(ID)-RES(J,L)) 53,53,100                                   HAN156  
+C                                                                       HAN157  
+C     IDENTIFIER K CORRESPONDS TO LINE L. IS K THE MASTER LINE          HAN158  
+C                                                                       HAN159  
+   55 IF(ID-MAS) 60,56,60                                               HAN160  
+C                                                                       HAN161  
+C     K IS MASTER IDENTIFIER. STORE L IN NUM                            HAN162  
+C                                                                       HAN163  
+   56 NUM=L                                                             HAN164  
+   60 CONTINUE                                                          HAN165  
+C                                                                       HAN166  
+C                                                                       HAN167  
+C     MINERAL IS PRESENT IN SAMPLE. SET UP INTENSITY FACTOR AND CALL    HAN168  
+C         SUBROUTINE TO SUBTRACT FROM RES/RINT AND ADD TO FOUND/FINT    HAN169  
+C                                                                       HAN170  
+C                                                                       HAN171  
+      FAC = RINT(J,NUM)/CIN(MAS)                                        HAN172  
+      CALL ADDSUB (J,NTL,FAC)                                           HAN173  
+  100 CONTINUE                                                          HAN174  
+C                                                                       HAN175  
+C                                                                       HAN176  
+C     PART TWO                                                          HAN177  
+C                   LOOKS FOR PRESENCE OF MINERALS THAT ARE NOT COMMON  HAN178  
+C                   FOR EACH ONE FOUND ADDS TO FOUND/FINT AND SUBTRACTS HAN179  
+C                   FROM RES/RINT                                       HAN180  
+C                                                                       HAN181  
+C                                                                       HAN182  
+C         DATA FOR THESE MINERALS ON TAPE NUNC                          HAN183  
+C     TITLE(J),J=1,2 =NAME -12 ALFA CHARACTERS               PLUS       HAN184  
+C     NTL = NUMBER OF DIFFRACTION LINES. ONE CARD (2A6,8X,3I5)          HAN185  
+C     IDPOS(J),J=1,5 =POSITIONS OF 5 IDENTIFIERS IN LIST (5I5)          HAN186  
+C     CSP(J),CIN(J),J=1,NTL = AS ABOVE                                  HAN187  
+C     BLANK CARD AT END OF LIST                                         HAN188  
+C                                                                       HAN189  
+C                                                                       HAN190  
+C                                                                       HAN191  
+C                                                                       HAN192  
+C                                                                       HAN193  
+C                                                                       HAN194  
+C                                                                       HAN195  
+C                   READ DATA FOR MINERAL. IF LAST ONE, GO TO FINAL PARTHAN196  
+C                                                                       HAN197  
+  300 READ INPUT TAPE NUNC, 1002, TITLE(1),TITLE(2),NTL                 HAN198  
+      IF (NTL) 400,400,302                                              HAN199  
+  302 READ INPUT TAPE NUNC,1001,(IDPOS(M),M=1,5)                        HAN200  
+      READ INPUT TAPE NUNC,1003,(CSP(M),CIN(M),M=1,NTL)                 HAN201  
+      DO 370 J=1,NSAM                                                   HAN202  
+C                                                                       HAN203  
+C     PART TWO IS MUCH LIKE PART ONE. SEE COMMENTS IN THAT PORTSON      HAN204  
+C                                                                       HAN205  
+      IF (NFO(J) -20) 305,370,370                                       HAN206  
+  305 L = 0                                                             HAN207  
+      FAC = 0.0                                                         HAN208  
+      DO 360 K=1,5                                                      HAN209  
+      ID = IDPOS(K)                                                     HAN210  
+  308 L=L+1                                                             HAN211  
+      IF (L-NRES(J)) 310,310,370                                        HAN212  
+  310 IF (ABSF(CSP(ID) -RES(J,L)) -BTOL(J,L)) 315,315,312               HAN213  
+  312 IF (CSP(ID) - RES(J,L)) 308,308,370                               HAN214  
+  315 FACT(K) = RINT(J,L)/CIN(ID)                                       HAN215  
+  360 FAC = FAC + FACT(K)                                               HAN216  
+      FAC = FAC/5.0                                                     HAN217  
+      DO 365 K=1,5                                                      HAN218  
+      IF (( ABSF(FAC-FACT(K))/FAC)- ERR) 365,365,370                    HAN219  
+  365 CONTINUE                                                          HAN220  
+      CALL ADDSUB (J,NTL,FAC)                                           HAN221  
+  370 CONTINUE                                                          HAN222  
+      GO TO 300                                                         HAN223  
+C     FINAL PART                                                        HAN224  
+C                   WRITE OUT RESULTS ON TAPE NOU                       HAN225  
+C                                                                       HAN226  
+C     FOR EACH SAMPLE IN SEQUENCE                                       HAN227  
+C                                                                       HAN228  
+  400 DO 200 J=1,NSAM                                                   HAN229  
+C                                                                       HAN230  
+C     PRINT NAMES OF MINERALS IDENTIFIED                                HAN231  
+C                                                                       HAN232  
+      WRITE OUTPUT TAPE NOU, 1005, J                                    HAN233  
+      IF (NFO(J)) 107,107,101                                           HAN234  
+  101 K= NFO(J)                                                         HAN235  
+      WRITEOUTPUTTAPE NOU,1006,(L,TIFO(J,L,1),TIFO(J,L,2),L=1,K)        HAN236  
+      GO TO 109                                                         HAN237  
+  107 WRITE OUTPUT TAPE NOU, 1011                                       HAN238  
+C                                                                       HAN239  
+C     SET UP TO PRINT SPA/SINT/ANG, RES/RINT, AND FOUND/FINT            HAN240  
+C         SPACING OUT SO CORRESPONDING VALUES ARE ON SAME LINE          HAN241  
+C                                                                       HAN242  
+C                                                                       HAN243  
+C     COUNTERS      IOR COUNTS LINES IN SPA                             HAN244  
+C                   IFO COUNTS LINES IN FOUND                           HAN245  
+C                   IRE COUNTS LINES IN RES                             HAN246  
+C                                                                       HAN247  
+C     NSW IS 8-WAY SWITCH                                               HAN248  
+C                   =1, NO LINES IN SPA, FOUND AND RES                  HAN249  
+C                   =2, LINES  IN SPA ONLY                              HAN250  
+C                   =3, LINES  IN RES ONLY                              HAN251  
+C                   =4, LINES  IN SPA AND RES                           HAN252  
+C                   =5, LINES  IN FOUND ONLY                            HAN253  
+C                   =6, LINES  IN SPA AND FOUND                         HAN254  
+C                   =7, LINES  IN RES AND FOUND                         HAN255  
+C                   =8, LINES  IN ALL THREE                             HAN256  
+C                                                                       HAN257  
+C         VALUES OF 2, 3, OR 7 SHOULD NOT ARISE                         HAN258  
+C                                                                       HAN259  
+C                                                                       HAN260  
+C                                                                       HAN261  
+  109 IOR =1                                                            HAN262  
+      IFO = 1                                                           HAN263  
+      IRE = 1                                                           HAN264  
+      NSW = 8                                                           HAN265  
+      WRITE OUTPUT TAPE NOU, 1007                                       HAN266  
+  110 GO TO  (200,190,190,120,130,115,190,115),NSW                      HAN267  
+C                                                                       HAN268  
+C     LINES REMAINING IN SPA AND FOUND. DO THEY CORRESPOND              HAN269  
+C                                                                       HAN270  
+  115 IF (ABSF(SPA(J,IOR)-FOUND(J,IFO))-TOL(J,IOR)) 150,150,117         HAN271  
+C                                                                       HAN272  
+C     LINES DO NOT CORRESPOND. WHICH IS LARGER                          HAN273  
+C                                                                       HAN274  
+  117 IF (SPA(J,IOR)-FOUND(J,IFO)) 130,130,120                          HAN275  
+C                                                                       HAN276  
+C                                                                       HAN277  
+C     SPA IS LARGER AND THERE MUST BE CORRESPONDING LINE IN RES.        HAN278  
+C         PRINT BOTH                                                    HAN279  
+C                                                                       HAN280  
+  120 WRITEOUTPUTTAPE NOU,1008,ANG(J,IOR),SPA(J,IOR),SINT(J,IOR),TOL(J, HAN281  
+     1IOR),RES(J,IRE),RINT(J,IRE)                                       HAN282  
+C                                                                       HAN283  
+C     ADVANCE IRE AND TEST. IF GT NRES(J), HAVE GONE THRU ALL LINES IN  HAN284  
+C         RES-DECREASE NSW BY 2                                         HAN285  
+C                                                                       HAN286  
+      IRE =IRE+1                                                        HAN287  
+      IF(IRE-NRES(J)) 122,122,121                                       HAN288  
+  121 NSW=NSW-2                                                         HAN289  
+C                                                                       HAN290  
+C     ADVANCE IOR AND TEST. IF GT NDL(J), HAVE GONE THRU ALL LINES IN   HAN291  
+C         SPA-DECREASE NSW BY 1                                         HAN292  
+C                                                                       HAN293  
+  122 IOR =IOR +1                                                       HAN294  
+      IF (IOR-NDL(J)) 110,110,125                                       HAN295  
+  125 NSW = NSW -1                                                      HAN296  
+      GO TO 110                                                         HAN297  
+C                                                                       HAN298  
+C     FOUND IS LARGER-PRINT IT                                          HAN299  
+C                                                                       HAN300  
+  130 WRITEOUTPUTTAPE NOU,1009,FOUND(J,IFO),FINT(J,IFO)                 HAN301  
+C                                                                       HAN302  
+C     ADVANCE IFO AND TEST. IF GT NLF(J), HAVE GONE THRU ALL LINES IN   HAN303  
+C         FOUND-DECREASE NSW BY 4                                       HAN304  
+C                                                                       HAN305  
+      IFO = IFO+1                                                       HAN306  
+      IF (IFO-NLF(J)) 110,110,135                                       HAN307  
+  135 NSW = NSW-4                                                       HAN308  
+      GO TO 110                                                         HAN309  
+C                                                                       HAN310  
+C     LINES IN SPA AND FOUND CORRESPOND. IS THERE LINE IN RES           HAN311  
+C                                                                       HAN312  
+  150 IF (NSW-6)163 ,163,155                                            HAN313  
+C                                                                       HAN314  
+C     LINE PRESENT IN RES. DOES IT GO WITH LINE IN SPA                  HAN315  
+C                                                                       HAN316  
+  155 IF(SPA(J,IOR)-RES(J,IRE)) 163,160,163                             HAN317  
+C                                                                       HAN318  
+C     LINE IN RES TO GO WITH SPA. PRINT SPA, FOUND, AND RES             HAN319  
+C                                                                       HAN320  
+  160 WRITEOUTPUTTAPE NOU,1010,ANG(J,IOR),SPA(J,IOR),SINT(J,IOR),TOL(J, HAN321  
+     1IOR),FOUND(J,IFO),FINT(J,IFO),RES(J,IRE),RINT(J,IRE)              HAN322  
+C                                                                       HAN323  
+C     ADVANCE IRE AND TEST AS BEFORE                                    HAN324  
+C                                                                       HAN325  
+      IRE = IRE+1                                                       HAN326  
+      IF (IRE-NRES(J)) 165,165,161                                      HAN327  
+  161 NSW = NSW-2                                                       HAN328  
+      GO TO 165                                                         HAN329  
+C                                                                       HAN330  
+C     NO LINE IN RES. PRINT SPA AND FOUND                               HAN331  
+C                                                                       HAN332  
+  163 WRITEOUTPUTTAPE NOU,1010,ANG(J,IOR),SPA(J,IOR),SINT(J,IOR),       HAN333  
+     1TOL(J,IOR),FOUND(J,IFO),FINT(J,IFO)                               HAN334  
+C                                                                       HAN335  
+C     ADVANCE IFO AND TEST AS BEFORE                                    HAN336  
+C                                                                       HAN337  
+  165 IFO = IFO +1                                                      HAN338  
+      IF(IFO-NLF(J))122,122,170                                         HAN339  
+  170 NSW = NSW - 4                                                     HAN340  
+      GO TO 122                                                         HAN341  
+  190 PAUSE 77777                                                       HAN342  
+  200 CONTINUE                                                          HAN343  
+      REWIND NCOM                                                       HAN344  
+      IF (NCOM-NUNC) 205,208,205                                        HAN345  
+  205 REWIND NUNC                                                       HAN346  
+  208 GO  TO 1                                                          HAN347  
+C                                                                       HAN348  
+C     IF NSAM=0 THERE ARE NO MORE UNKNOWNS. END FILE AND REWIND NOU     HAN349  
+C                                                                       HAN350  
+C                                                                       HAN351  
+C                                                                       HAN352  
+  210 END FILE NOU                                                      HAN353  
+      REWIND NOU                                                        HAN354  
+      PRINT 1021, NOU                                                   HAN355  
+ 1001 FORMAT (5I5)                                                      HAN356  
+ 1002 FORMAT (2A6,8X,3I5)                                               HAN357  
+ 1003 FORMAT (7(F7.4,F3.0))                                             HAN358  
+ 1004 FORMAT (F10.5,F5.3,11I5)                                          HAN359  
+ 1005 FORMAT(1H144X,28HCOMPOSITION OF SAMPLE NUMBERI3//50X,19HMINERALS IHAN360  
+     1DENTIFIED)                                                        HAN361  
+ 1006 FORMAT (53X,I2,2X,2A6)                                            HAN362  
+ 1007 FORMAT(//6X,19HDIFFRACTION PATTERN/26X,8HOBSERVED30X,22HIN MINERALHAN363  
+     1S IDENTIFIED10X,17HNOT ACCOUNTED FOR/117H LINE SPACING   LINE SPACHAN364  
+     2ING     INTENSITY      TOLERANCE    LINE SPACING     INTENSITY    HAN365  
+     3LINE SPACING     INTENSITY/4X,7HDEGREES7X,9HANGSTROMS21X,9HANGSTROHAN366  
+     4MS6X,9HANGSTROMS21X,9HANGSTROMS)                                  HAN367  
+ 1008 FORMAT (4F15.4,30X,2F15.4)                                        HAN368  
+ 1009 FORMAT (60X,2F15.4)                                               HAN369  
+ 1010 FORMAT (8F15.4)                                                   HAN370  
+ 1011 FORMAT (53X,15HNONE IDENTIFIED)                                   HAN371  
+ 1020 FORMAT (1H119X,14HEXCEPTION LIST///)                              HAN372  
+ 1021 FORMAT(24H1PROGRAM COMPLETED. TAPEI5,30HHAS BEEN END FILED AND REWHAN373  
+     1OUND///)                                                          HAN374  
+      END (2,0,0,0,1)                                                   HAN375  
+C     SUBROUTINE TO ADD DIFFRACTION LINES TO FOUND ARRAY         SMK    HAN376  
+C     AND SUBTRACT FROM RES                                             HAN377  
+C                                                                       HAN378  
+      SUBROUTINE ADDSUB (J,NTL,FAC)                                     HAN379  
+C                                                                       HAN380  
+      COMMON  TITLE,CSP,CIN,NRES,RES,RINT,BTOL,NFO,NLF,FOUND,FINT,TIFO  HAN381  
+      DIMENSION TITLE(2),CSP(30),CIN(30)                                HAN382  
+      DIMENSION NRES,10),RES(10,100),RINT(10,100),BTOL(10,100)          HAN383  
+      DIMENSION NFO(10),NLF(10),FOUND(10,100),FINT(10,100),TIFO(10,20,2)HAN384  
+C                                                                       HAN385  
+C     INCREASE COUNT OF NUMBER OF MINERALS FOUND (NFO) AND TEST TO SEE  HAN386  
+C         IF NUMBER IS TWENTY - IF SO, WRITE EXCEPTION                  HAN387  
+C                                                                       HAN388  
+      NFO(J)=NFO(J) +1                                                  HAN389  
+      NLOP =NFO(J)                                                      HAN390  
+      NOU = 6                                                           HAN391  
+      IF (NLOP -20) 15,10,10                                            HAN392  
+   10 WRITE OUTPUT TAPE NOU,1000,J                                      HAN393  
+C                                                                       HAN394  
+C     TRANSFER MINERAL NAME TO TIFO                                     HAN395  
+C                                                                       HAN396  
+   15 TIFO (J,NLOP,1)=TITLE(1)                                          HAN397  
+      TIFO (J,NLOP,2) = TITLE (2)                                       HAN398  
+C                                                                       HAN399  
+C     SET UP COUNTERS FOR LINES IN RES(L) AND FOUND (M), AND 4-WAY      HAN400  
+C         SWITCH (NSW)                                                  HAN401  
+C                   NSW= 1 = NO MORE LINES IN RES AND FOUND. STILL ARE  HAN402  
+C                             LINES TO ADD TO FOUND AT END              HAN403  
+C                   NSW= 2 = LINES LEFT IN RES BUT NOT FOUND. LINES TO  HAN404  
+C                             BE ADDED TO FOUND AT END                  HAN405  
+C                   NSW= 3 = LINES LEFT IN FOUND BUT NOT RES.           HAN406  
+C                   NSW= 4 = LINES LEFT IN BOTH RES AND FOUND           HAN407  
+C                                                                       HAN408  
+C     COUNTER FOR LINES IN CSP IS K                                     HAN409  
+C                                                                       HAN410  
+      L=1                                                               HAN411  
+      M=1                                                               HAN412  
+      IF(NLF(J))17,17,18                                                HAN413  
+   17 NSW=2                                                             HAN414  
+      GO TO 19                                                          HAN415  
+   18 NSW=4                                                             HAN416  
+   19 DO 100 K=1,NTL                                                    HAN417  
+C                                                                       HAN418  
+C     REDUCED INTENSITY FOR LINE IS DED                                 HAN419  
+C                                                                       HAN420  
+      DED =CIN(K) * FAC                                                 HAN421  
+C                                                                       HAN422  
+C     IF REDUCED INTENSITY IS LTE 1 IGNORE LINE, ELSE CONTINUE          HAN423  
+C                                                                       HAN424  
+      IF (DED -1.0) 100,100,20                                          HAN425  
+   20 GO TO (85,22,70,22),NSW                                           HAN426  
+C                                                                       HAN427  
+C     SWITCH TO HERE WHEN THERE ARE LINES IN RES TO BE EXAMINED         HAN428  
+C                                                                       HAN429  
+   22 IF(ABSF(CSP(K)-RES(J,L))-BTOL(J,L))25,25,40                       HAN430  
+C                                                                       HAN431  
+C     LINE K IN CSP CORRESPONDS TO LINE J,L IN RES WITHIN TOLERANCE     HAN432  
+C         LIMITS.  DECREASE INTENSITY IN RINT                           HAN433  
+C                                                                       HAN434  
+   25 RINT(J,L)=RINT(J,L)-DED                                           HAN435  
+C                                                                       HAN436  
+C     IF REDUCED INTENSITY IS NEAR ZERO, SET TO ZERO                    HAN437  
+C     IF REDUCED INTENSITY IS VERY NEGATIVE, WRITE EXCEPTION AND SET    HAN438  
+C         TO ZERO                                                       HAN439  
+C                                                                       HAN440  
+      IF (RINT(J,L)-1.0) 27,38,38                                       HAN441  
+   27 IF (RINT(J,L)+10.0) 29,29,31                                      HAN442  
+   29 WRITE OUTPUT TAPE NOU, 1001, RES(J,L), J                          HAN443  
+   31 NN =NRES(J)-1                                                     HAN444  
+      NRES(J)=NN                                                        HAN445  
+      DO 35 N=L,NN                                                      HAN446  
+      RES(J,N)=RES(J,N+1)                                               HAN447  
+      RINT(J,N)=RINT(J,N+1)                                             HAN448  
+   35 BTOL(J,N)=BTOL(J,N+1)                                             HAN449  
+   38 GO TO (85,85,70,70),NSW                                           HAN450  
+C                                                                       HAN451  
+C     LINE J,L IN SAMPLE DOES NOT CORRESPOND WITH LINE K IN MINERAL.    HAN452  
+C         DETERMINE CORRECT ORDER OF TWO LINES                          HAN453  
+C                                                                       HAN454  
+   40 IF(CSP(K)-RES(J,L))55,55,43                                       HAN455  
+C                                                                       HAN456  
+C     LINE K GT LINE J,L- HENCE SAMPLE DOES NOT HAVE LINE IN MINERAL.   HAN457  
+C         WRITE EXCEPTION IF INTENSITY WANTED IS GT 10                  HAN458  
+C                                                                       HAN459  
+C                                                                       HAN460  
+   43 IF (DED-10.0) 38,38,45                                            HAN461  
+   45 WRITE OUTPUT TAPE  NOU, 1002, CSP(K), J                           HAN462  
+      GO TO 38                                                          HAN463  
+C                                                                       HAN464  
+C     LINE K LT LINE J,L- ADVANCE L AND EXAMINE NEXT LINE IN SAMPLE     HAN465  
+C                                                                       HAN466  
+   55 L=L+1                                                             HAN467  
+      IF (L-NRES(J)) 20,20,60                                           HAN468  
+C                                                                       HAN469  
+C     NO MORE LINES IN SAMPLE J. SUBTRACT 1 FROM NSW, WRITE EXCEPTION   HAN470  
+C                                                                       HAN471  
+   60 NSW =NSW-1                                                        HAN472  
+      WRITE OUTPUT TAPE NOU, 1003, CSP(K), J                            HAN473  
+      GO TO 38                                                          HAN474  
+C                                                                       HAN475  
+C                                                                       HAN476  
+C     HAVE SUBTRACTED LINE FROM RES. NOW ADD TO FOUND                   HAN477  
+C                                                                       HAN478  
+C                                                                       HAN479  
+C     WHAT IS RELATIVE ORDER OF LINE K IN MINERAL AND LINE J,M IN SAMPLEHAN480  
+C                                                                       HAN481  
+   70 IF (CSP(K)-FOUND(J,M)) 80,72,75                                   HAN482  
+C                                                                       HAN483  
+C     TWO ARE EQUAL. ADD DED TO FINT                                    HAN484  
+C                                                                       HAN485  
+   72 FINT(J,M)=FINT(J,M)+DED                                           HAN486  
+      GO TO 100                                                         HAN487  
+C                                                                       HAN488  
+C     LINE K GT LINE J,M. ADD 1 TO NLF(J), SPREAD FOUND/FINT ONE SPACE  HAN489  
+C         AND INSERT CSP/DED                                            HAN490  
+C                                                                       HAN491  
+   75 NN=NLF(J)                                                         HAN492  
+      NLF(J)=NN+1                                                       HAN493  
+      DO 78 N=M,NN                                                      HAN494  
+      NK=NN+M-N                                                         HAN495  
+      FOUND(J,NK+1)= FOUND(J,NK)                                        HAN496  
+   78 FINT(J,NK+1)=FINT(J,NK)                                           HAN497  
+      FOUND(J,M)=CSP(K)                                                 HAN498  
+      FINT(J,M)=DED                                                     HAN499  
+      GO TO 100                                                         HAN500  
+C                                                                       HAN501  
+C     LINE K LT LINE J,M. ADVANCE M AND EXAMINE NEXT LINE IN FOUND      HAN502  
+C                                                                       HAN503  
+   80 M=M+1                                                             HAN504  
+      IF(M-NLF(J)) 70,70,82                                             HAN505  
+C                                                                       HAN506  
+C     NO MORE LINES IN FOUND/FINT. SUBTRACT 2 FROM NSW. PLACE CSP/DED   HAN507  
+C         AT END OF FOUND/FINT. ADD 1 TO NLF(J)                         HAN508  
+C                                                                       HAN509  
+   82 NSW=NSW-2                                                         HAN510  
+   85 NN=NLF(J)+1                                                       HAN511  
+      NLF(J)=NN                                                         HAN512  
+      FOUND (J,NN) = CSP(K)                                             HAN513  
+      FINT (J,NN) = DED                                                 HAN514  
+  100 CONTINUE                                                          HAN515  
+      RETURN                                                            HAN516  
+ 1000 FORMAT (54H TWENTY MINERALS HAVE BEEN IDENTIFIED IN SAMPLE NUMBER HAN517  
+     1I3)                                                               HAN518  
+ 1001 FORMAT (30H RELATIVE INTENSITY OF LINE AT1PE9.2,28H ANGSTROMS FOR HAN519  
+     1SAMPLE NUMBERI3,12H WAS TOO LOW///)                               HAN520  
+ 1002 FORMAT ( 8H LINE AT1PE9.2,28H ANGSTROMS FOR SAMPLE NUMBERI3,      HAN521  
+     112H NOT PRESENT///)                                               HAN522  
+ 1003 FORMAT (8H LINE AT1PE9.2,39H ANGSTROMS AND LESS NOT FOUND IN SAMPLHAN523  
+     1EI3///)                                                           HAN524  
+      END(2,0,0,0,0)                                                    HAN525  

@@ -1,0 +1,300 @@
+C     SIMPLE STEPWISE REGRESSION                                        MPR20001
+      DIMENSION DATA (150), VECTOR(151,151), AVE(150), SIGMA(150),      MPR20002
+     1COEN(150), SIGMCO(150), INDEX(150),FMT(12)                        MPR20003
+  100 READ INPUT TAPE 5,5,TOL,EFIN,EFOUT,NOPROB,INVAR,NODATA  ,         MPR20004
+     -IFWT,IFSTEP,IFRAW,IFAVE,IFRESD,IFCOEN,IFPRED,IFCNST,IFFORM        MPR20005
+C     IFWT = 1,THEN ALL WHTS = 1.0                                      MPR20006
+C     IFSTEP = 1, DO NOT PRINT EACH STEP                                MPR20007
+C     IFRAW  = 1   DO NOT PRINT RAW SUMS AND SQUARES                    MPR20008
+C     IFAVE  = 1   DO NOT PRINT AVERAGES                                MPR20009
+C     IFRESD = 1   DO NOT PRINT RESIDUAL SUMS SQUARES                   MPR20010
+C     IFCOEN = 1   DO NOT PRINT PARTIAL COEFFICIENTS                    MPR20011
+C     IFPRED = 1   DO NOT CALC PREDICTED VALUES                         MPR20012
+C     IFCNST = 1   DO NOT HAVE CONST TERM IN EQUATION                   MPR20013
+      REWIND  3                                                         MPR20014
+      IFMT = 1                                                          MPR20015
+      NOIN = 0                                                          MPR20016
+      VAR  = 0                                                          MPR20017
+      K    = 0                                                          MPR20018
+      FLEVEL = 0                                                        MPR20019
+      NOENT = 0                                                         MPR20020
+      NOMIN = 0                                                         MPR20021
+      NOMAX = 0                                                         MPR20022
+      NOVAR = INVAR                                                     MPR20023
+      NVP1 = NOVAR + 1                                                  MPR20024
+      NIX  = 1                                                          MPR20025
+       IF(IFFORM)1,2,1                                                  MPR20026
+    1 READ INPUT TAPE 5,3,(FMT(I),I=1,12)                               MPR20027
+      IFMT = 2                                                          MPR20028
+    2 IF (INVAR-150) 110,110,1800                                       MPR20029
+  110 DO 120 I = 1, NVP1                                                MPR20030
+  130 DO 120 J = 1, NVP1                                                MPR20031
+  120 VECTOR(I,J) = 0.0                                                 MPR20032
+  140 IF(IFWT) 900, 500, 150                                            MPR20033
+  900 PRINT 905                                                         MPR20034
+      GO TO 910                                                         MPR20035
+  150 DO 170 N = 1, NODATA                                              MPR20036
+      GO TO (160,162),IFMT                                              MPR20037
+  160 READ INPUT TAPE 5,10,RUN,(DATA(L),L=1,NOVAR)                      MPR20038
+      GO TO 161                                                         MPR20039
+  162 READ INPUT TAPE 5,FMT,RUN,(DATA(L),L=1,NOVAR)                     MPR20040
+  161 WRITE TAPE 3,(DATA(L), L = 1, NOVAR),RUN                          MPR20041
+  180 DO 190 I = 1, NOVAR                                               MPR20042
+  200 VECTOR(I, NOVAR + 1) = VECTOR(I, NOVAR + 1) + DATA(I)             MPR20043
+  210 DO 220 J = I, NOVAR                                               MPR20044
+  220 VECTOR (I,J) = VECTOR(I,J) + DATA(I) * DATA(J)                    MPR20045
+  190 CONTINUE                                                          MPR20046
+  170 VECTOR(NVP1, NVP1)           = VECTOR(NVP1, NVP1)           + 1.0 MPR20047
+  230 GO TO 565                                                         MPR20048
+C     CALCULATION SUMS WHEN VARIABLE WEIGHTS                            MPR20049
+  500 DO 510 N = 1, NODATA                                              MPR20050
+      GO TO (520,522),IFMT                                              MPR20051
+  520 READ INPUT TAPE 5,10,RUN,(DATA(L),L=1,NOVAR),WHT                  MPR20052
+      GO TO 521                                                         MPR20053
+  522 READ INPUT TAPE 5,FMT,RUN,(DATA(L),L=1,NOVAR)   ,WHT              MPR20054
+  521 WRITE TAPE 3,(DATA(L), L = 1, NOVAR),RUN                          MPR20055
+  530 DO 540 I = 1, NOVAR                                               MPR20056
+  550 VECTOR (I,NOVAR + 1) = VECTOR (I, NOVAR + 1) + DATA (I) * WHT     MPR20057
+  560 DO 540 J = I, NOVAR                                               MPR20058
+  540 VECTOR (I, J) = VECTOR (I, J) + DATA (I) * DATA (J) * WHT         MPR20059
+  510 VECTOR (NVP1, NVP1)           = VECTOR (NVP1, NVP1)           +WHTMPR20060
+C     COMPLETED SUMS OF SQUARES AND CROSS PRODUCTS.  THESE ARE IN       MPR20061
+C    1STORAGE IN LOCATION, VECTOR (I, J).  THESE WILL BE PRINTED OUT ON MPR20062
+C    2TAPE 6 UNDER CONTROL OF STATEMENT 100                             MPR20063
+  565 NOVMI = NOVAR - 1                                                 MPR20064
+  566 NOVPL = NOVAR + 1                                                 MPR20065
+  567 WRITE OUTPUT TAPE 6,90,NOPROB,NODATA,NOVAR,VECTOR(NOVPL,          MPR20066
+     1NOVPL),EFIN, EFOUT                                                MPR20067
+  568 PRINT 90,NOPROB,NODATA,NOVAR,VECTOR(NOVPL,NOVPL),                 MPR20068
+     1EFIN, EFOUT                                                       MPR20069
+  570 IF (IFRAW) 900, 580, 650                                          MPR20070
+  580 WRITE OUTPUT TAPE 6,15                                            MPR20071
+  590 WRITE OUTPUT TAPE 6,20,(I,VECTOR(I,NOVPL),I=1,NOVMI)              MPR20072
+  600 WRITE OUTPUT TAPE 6,25,VECTOR(NOVAR,NOVPL)                        MPR20073
+  610 WRITE OUTPUT TAPE 6,30                                            MPR20074
+  620 WRITE OUTPUT TAPE 6,35,((I,J,VECTOR(I,J),J=I,NOVMI),I=1,NOVMI)    MPR20075
+  630 WRITE OUTPUT TAPE 6,40,(I,VECTOR(I,NOVAR),I=1,NOVMI)              MPR20076
+  640 WRITE OUTPUT TAPE 6,45,VECTOR(NOVAR,NOVAR)                        MPR20077
+      GO TO 650                                                         MPR20078
+C     CALCULATION OF RESIDUAL SUMS OF SQUARES AND CROSS PRODUCTS        MPR20079
+  650 IF(IFCNST) 900,651,735                                            MPR20080
+  651 IF(VECTOR(NOVPL,NOVPL)) 652,652,655                               MPR20081
+  652 PRINT 654                                                         MPR20082
+      GO TO 910                                                         MPR20083
+  655 DO 660 I = 1, NOVAR                                               MPR20084
+  670 DO 660 J = I, NOVAR                                               MPR20085
+  660 VECTOR (I,J) = VECTOR (I,J) - (VECTOR(I,NOVPL) * VECTOR (J,NOVPL) MPR20086
+     - / VECTOR (NOVPL, NOVPL))                                         MPR20087
+  680 DO 690  I = 1, NOVAR                                              MPR20088
+  690 AVE(I)  = VECTOR(I,NOVPL) / VECTOR(NOVPL,NOVPL)                   MPR20089
+  700 IF (IFAVE)   900, 710, 735                                        MPR20090
+  710 WRITE OUTPUT TAPE 6,50                                            MPR20091
+  720 WRITE OUTPUT TAPE 6,20,(I,AVE(I),I=1,NOVMI)                       MPR20092
+  730 WRITE OUTPUT TAPE 6,25,AVE(NOVAR)                                 MPR20093
+  735 IF (IFRESD)  900, 740, 780                                        MPR20094
+  740 WRITE OUTPUT TAPE 6,55                                            MPR20095
+  750 WRITE OUTPUT TAPE 6,35,((I,J,VECTOR(I,J),J=I,NOVMI),I=1,NOVMI)    MPR20096
+  760 WRITE OUTPUT TAPE 6,40,(I,VECTOR(I,NOVAR),I=1,NOVMI)              MPR20097
+  770 WRITE OUTPUT TAPE 6,45,VECTOR(NOVAR,NOVAR)                        MPR20098
+  780 NOSTEP = -1                                                       MPR20099
+  781 ASSIGN  1320  TO NUMBER                                           MPR20100
+  782 DEFR   = VECTOR(NOVPL,NOVPL) - 1.0                                MPR20101
+  790 DO 800  I = 1,NOVAR                                               MPR20102
+  791 IF(VECTOR(I,I)) 792,794,810                                       MPR20103
+  792 PRINT 793,I                                                       MPR20104
+      GO TO 910                                                         MPR20105
+  793 FORMAT (31H ERROR RESIDUAL SQUARE VARIABLE I4,31H IS NEGATIVE,PROBMPR20106
+     1LEM TERMINATED )                                                  MPR20107
+  794 WRITE OUTPUT TAPE 6,795,I                                         MPR20108
+  796 SIGMA(I) =     1.0                                                MPR20109
+  797 GO TO 800                                                         MPR20110
+  795 FORMAT (1H010H VARIABLE I5,13H IS CONSTANT )                      MPR20111
+  810 SIGMA(I) = SQRTF (VECTOR (I,I))                                   MPR20112
+  800 VECTOR(I,I) = 1.0                                                 MPR20113
+  820 DO 830  I = 1,NOVMI                                               MPR20114
+  840 IP1 = I + 1                                                       MPR20115
+  841 DO 830 J = IP1, NOVAR                                             MPR20116
+  850 VECTOR(I,J) = VECTOR(I,J) /( SIGMA(I)* SIGMA(J))                  MPR20117
+  830 VECTOR(J,I) = VECTOR(I,J)                                         MPR20118
+  860 IF (IFCOEN)  900, 870, 1000                                       MPR20119
+  870 WRITE OUTPUT TAPE 6,60                                            MPR20120
+  874 NOVM2  = NOVMI  - 1                                               MPR20121
+  875 DO 885  I = 1, NOVM2                                              MPR20122
+  880 IP1 =  I + 1                                                      MPR20123
+  885 WRITE OUTPUT TAPE 6,35,(I,J,VECTOR(I,J),J=IP1,NOVMI)              MPR20124
+  890 WRITE OUTPUT TAPE 6,40,(I,VECTOR(I,NOVAR),I=1,NOVMI)              MPR20125
+ 1000 NOSTEP = NOSTEP + 1                                               MPR20126
+ 1001 IF (VECTOR( NOVAR,NOVAR)) 1002,1002,1010                          MPR20127
+ 1002 NSTPM1 = NOSTEP - 1                                               MPR20128
+      PRINT 1004,NSTPM1                                                 MPR20129
+      WRITE OUTPUT TAPE 6,1004,NSTPM1                                   MPR20130
+      GO TO 1381                                                        MPR20131
+ 1010 SIGY =  SIGMA(NOVAR) * SQRTF (VECTOR(NOVAR,NOVAR)/ DEFR)          MPR20132
+ 1011 IF(1.0 - VECTOR(NOVAR, NOVAR)) 1013,1013,1012                     MPR20133
+ 1012 R =  SQRTF(1.0  - VECTOR(NOVAR, NOVAR) )                          MPR20134
+      GO TO 1015                                                        MPR20135
+ 1013 R  = 0.0                                                          MPR20136
+ 1015 DEFR =DEFR-1.0                                                    MPR20137
+ 1016 IF (DEFR )  1017,1017, 1020                                       MPR20138
+ 1017 PRINT 1019,NOSTEP                                                 MPR20139
+ 1018 WRITE OUTPUT TAPE 6,1019,NOSTPE                                   MPR20140
+      GO TO 1381                                                        MPR20141
+ 1020 VMIN = 0.0                                                        MPR20142
+ 1030 VMAX = 0.0                                                        MPR20143
+ 1035 NOIN = 0                                                          MPR20144
+ 1040 DO 1050  I = 1,NOVMI                                              MPR20145
+ 1041 IF (VECTOR (I,I)) 1042,1050,1060                                  MPR20146
+ 1042 PRINT 1044,I,NOSTEP                                               MPR20147
+ 1043 WRITE OUTPUT TAPE 6,1044,I,NOSTEP                                 MPR20148
+ 1045 GO TO 1381                                                        MPR20149
+ 1060 IF(VECTOR(I,I) - TOL)   1050,1080,1080                            MPR20150
+ 1080 VAR = VECTOR(I,NOVAR) * VECTOR(NOVAR,I) / VECTOR(I,I)             MPR20151
+ 1090 IF(VAR)1100,1050,1110                                             MPR20152
+ 1100 NOIN = NOIN + 1                                                   MPR20153
+ 1120 INDEX(NOIN) = I                                                   MPR20154
+ 1130 COEN(NOIN)  = VECTOR(I,NOVAR) * SIGMA(NOVAR) / SIGMA (I)          MPR20155
+ 1140 SIGMCO(NOIN) = (SIGY / SIGMA(I)) * SQRTF(VECTOR(I,I))             MPR20156
+ 1150 IF (VMIN) 1160,1170,904                                           MPR20157
+  904 WRITE OUTPUT TAPE 6,906                                           MPR20158
+      PRINT 906                                                         MPR20159
+      GO TO 910                                                         MPR20160
+ 1170 VMIN = VAR                                                        MPR20161
+ 1180 NOMIN = I                                                         MPR20162
+ 1190 GO TO 1050                                                        MPR20163
+ 1160 IF(VAR - VMIN)1050,1050,1170                                      MPR20164
+ 1110 IF (VAR - VMAX)1050,1050,1210                                     MPR20165
+ 1210 VMAX = VAR                                                        MPR20166
+ 1220 NOMAX = I                                                         MPR20167
+ 1050 CONTINUE                                                          MPR20168
+ 1230 IF (NOIN) 903,1240,1245                                           MPR20169
+  903 WRITE OUTPUT TAPE 6,907                                           MPR20170
+      PRINT 907                                                         MPR20171
+      GO TO  910                                                        MPR20172
+ 1240 WRITE OUTPUT TAPE 6,65,SIGY                                       MPR20173
+ 1260 GO TO 1350                                                        MPR20174
+ 1245 IF (IFCNST) 900,1250,1246                                         MPR20175
+ 1246 CNST = 0.0                                                        MPR20176
+ 1247 GO TO 1300                                                        MPR20177
+ 1250 CNST = AVE(NOVAR)                                                 MPR20178
+ 1270 DO 1280 I = 1,NOIN                                                MPR20179
+ 1290 J = INDEX(I)                                                      MPR20180
+ 1280 CNST = CNST - (COEN(I) * AVE(J))                                  MPR20181
+ 1300 IF(IFSTEP) 900,1310,1320                                          MPR20182
+ 1310 IF (NOENT) 1311,1311,1313                                         MPR20183
+ 1311 WRITE OUTPUT TAPE 6,91,NOSTEP,K                                   MPR20184
+ 1312 GO TO 1314                                                        MPR20185
+ 1313 WRITE OUTPUT TAPE 6,92,NOSTEP,K                                   MPR20186
+ 1314 WRITE OUTPUT TAPE 6,70,FLEVEL,SIGY,R,CNST,                        MPR20187
+     1 (INDEX(J),COEN(J),SIGMCO(J), J = 1, NOIN )                       MPR20188
+ 1315 GO TO (1316,1580),NIX                                             MPR20189
+ 1316 GO TO NUMBER, (1320,1580)                                         MPR20190
+ 1320 FLEVEL = VMIN * DEFR / VECTOR (NOVAR,NOVAR)                       MPR20191
+ 1330 IF(EFOUT + FLEVEL) 1350, 1350, 1340                               MPR20192
+ 1340 K =  NOMIN                                                        MPR20193
+ 1345 NOENT = 0                                                         MPR20194
+      GO  TO  1391                                                      MPR20195
+ 1350 DENOM = VECTOR(NOVAR,NOVAR) - VMAX                                MPR20196
+      IF(DENOM) 1351,1351,1352                                          MPR20197
+ 1351 NIX = 2                                                           MPR20198
+      GO TO 1370                                                        MPR20199
+ 1352 FLEVEL = VMAX * DEFR / DENOM                                      MPR20200
+ 1360 IF (EFIN - FLEVEL) 1370,1361,1380                                 MPR20201
+ 1361 IF (EFIN) 1380,1380,1370                                          MPR20202
+ 1370 K = NOMAX                                                         MPR20203
+ 1390 NOENT =  K                                                        MPR20204
+ 1391 IF(K) 1392,1392,1400                                              MPR20205
+ 1392 WRITE OUTPUT TAPE 6,1395,NOSTEP                                   MPR20206
+ 1393 PRINT 1395,NOSTEP                                                 MPR20207
+ 1394 GO TO 910                                                         MPR20208
+ 1400 DO 1410   I = 1,NOVAR                                             MPR20209
+ 1420 IF (I-K) 1430,1410,1430                                           MPR20210
+ 1430 DO 1440   J = 1, NOVAR                                            MPR20211
+ 1450 IF (J-K) 1460,1440,1460                                           MPR20212
+ 1460 VECTOR(I,J) = VECTOR(I,J) - (VECTOR(I,K) * VECTOR (K,J) / VECTOR  MPR20213
+     -(K,K))                                                            MPR20214
+ 1440 CONTINUE                                                          MPR20215
+ 1410 CONTINUE                                                          MPR20216
+ 1470 DO 1480  I = 1, NOVAR                                             MPR20217
+ 1490 IF (I-K) 1500,1480,1500                                           MPR20218
+ 1500 VECTOR (I,K)  =  -  VECTOR (I,K) / VECTOR (K,K)                   MPR20219
+ 1480 CONTINUE                                                          MPR20220
+ 1510 DO 1520 J = 1, NOVAR                                              MPR20221
+ 1530 IF (J-K) 1540,1520,1540                                           MPR20222
+ 1540 VECTOR(K,J) =   VECTOR (K,J) / VECTOR (K,K)                       MPR20223
+ 1520 CONTINUE                                                          MPR20224
+ 1550 VECTOR(K,K) =  1.0 / VECTOR(K,K)                                  MPR20225
+ 1560 GO TO (1000,1561),NIX                                             MPR20226
+ 1561 WRITE OUTPUT TAPE 6,1004,NOSTEP                                   MPR20227
+      R = 1.00                                                          MPR20228
+      SIGY  =  0.0                                                      MPR20229
+      IFSTEP = 0                                                        MPR20230
+      GO TO 1015                                                        MPR20231
+ 1380 PRINT 75,NOSTEP                                                   MPR20232
+ 1381 IF (IFSTEP) 900, 1580,1570                                        MPR20233
+ 1570 ASSIGN  1580  TO NUMBER                                           MPR20234
+ 1571 GO TO  1310                                                       MPR20235
+ 1580 WRITE OUTPUT TAPE 6,1586,(L,VECTOR(L,L),L=1,NOVMI)                MPR20236
+ 1581 IF( IFPRED)  900,1582,910                                         MPR20237
+ 1582 REWIND 3                                                          MPR20238
+ 1583 WRITE OUTPUT TAPE 6,85                                            MPR20239
+ 1586 FORMAT (24H0     DIAGONAL  ELEMENTS //20H   VAR.NO.     VALUE//   MPR20240
+     1(1H  I 7, F16.6))                                                 MPR20241
+ 1590 DO  1660   N = 1, NODATA                                          MPR20242
+ 1600 READ TAPE  3,(DATA(L),L= 1, NOVAR), RUN                           MPR20243
+ 1610 YPRED = CNST                                                      MPR20244
+ 1620 DO 1630  I = 1,NOIN                                               MPR20245
+ 1640 K = INDEX(I)                                                      MPR20246
+ 1630 YPRED=  YPRED +  COEN(I) * DATA(K)                                MPR20247
+ 1650 DEV  =  DATA(NOVAR) -  YPRED                                      MPR20248
+ 1660 WRITE OUTPUT TAPE 6,80,RUN,DATA(NOVAR),YPRED,DEV                  MPR20249
+  910 REWIND  3                                                         MPR20250
+  121 GO TO 100                                                         MPR20251
+ 1800 WRITE OUTPUT TAPE 6,93,INVAR                                      MPR20252
+      GO TO 910                                                         MPR20253
+   93  FORMAT (45H1INVAR SHOULD NOT BE GREATER THAN 150.  IT IS  I5 )   MPR20254
+    3 FORMAT (12A6)                                                     MPR20255
+    5 FORMAT (3F10.5,3I5,1H 10I2)                                       MPR20256
+   10 FORMAT (6(F12.5))                                                 MPR20257
+   15 FORMAT (1H 49H                               SUM  OF  VARIABLES//)MPR20258
+   20 FORMAT (1H 11H     SUM X( I2,3H) = F12.4,8H  SUM X( I2,3H) =F12.4,MPR20259
+     18H  SUM X( I2,3H) =F12.4,8H  SUM X(I2,3H) =F12.4 )                MPR20260
+   25 FORMAT (17H      SUM   Y   =F12.4)                                MPR20261
+   30 FORMAT(1H0 70H                            RAW  SUM  OF  SQUARES  AMPR20262
+     1ND  CROSS PRODUCTS// )                                            MPR20263
+   35 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   MPR20264
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       MPR20265
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     MPR20266
+   40 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      MPR20267
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          MPR20268
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        MPR20269
+   45 FORMAT (1H 21H     Y     VS   Y   =F15.6)                         MPR20270
+   50 FORMAT (1H063H                                  AVERAGE  VALUE  OFMPR20271
+     -  VARIABLES// )                                                   MPR20272
+   55 FORMAT(1H077H                             RESIDUAL  SUMS  OF  SQUAMPR20273
+     -RES  AND  CROSS PRODUCTS//)                                       MPR20274
+   60 FORMAT(1H069H                                    SIMPLE  CORRELATIMPR20275
+     -ON  COEFFICIENTS//)                                               MPR20276
+   65 FORMAT (25H0  STANDARD ERROR OF Y = F12.6 )                       MPR20277
+   70 FORMAT (11H   F LEVEL   F12.4 /25H   STANDARD ERROR OF Y    F12.4/MPR20278
+     135H  MULTIPLE CORRELATION COEFFICIENT    F12.5/                12HMPR20279
+     2   CONSTANT F13.5/56H            VARIABLE   COEFFICIENT   STD  ERRMPR20280
+     3OR OF COEF    //  (16H              X-I3,F15.5, F15.5 ))          MPR20281
+   75 FORMAT (10H COMPLETED I5,20H STEPS OF REGRESSION)                 MPR20282
+   80 FORMAT (8H        F6.0,2H  F12.5,3H   F12.5,2H  F12.5)            MPR20283
+   85 FORMAT (1H043H               PREDICTED VS ACTUAL RESULTS  /59H    MPR20284
+     1      RUN NO.     ACTUAL       PREDICTED     DEVIATION //)        MPR20285
+   90 FORMAT (22H1STEPWISE  REGRESSION //12H PROBLEM NO I10 //13H NO OF MPR20286
+     1DATA = I5 //18H NO OF VARIABLES = I10 //30H WEIGHTED DEGREES OF FRMPR20287
+     2EEDOM = F12.2 //28H F LEVEL TO ENTER VARIABLE = F10.3 //29H F LEVEMPR20288
+     3L TO REMOVE VARIABLE = F9.3  /// )                                MPR20289
+   91 FORMAT (9H0STEP NO.I5 /19H   VARIABLE REMOVED I8)                 MPR20290
+   92 FORMAT (9H0STEP NO.I5 /20H   VARIABLE ENTERING I8)                MPR20291
+  654 FORMAT (31H  ZERO NUMBER OF DATA. SO LONG.)                       MPR20292
+  905 FORMAT (42H ERROR IN CONTROL CARD, PROBLEM TERMINATED)            MPR20293
+  906 FORMAT (25H ERROR, VMIN PLUS. SOLONG)                             MPR20294
+  907 FORMAT (26H  ERROR,NOIN MINUS, SOLONG )                           MPR20295
+ 1004 FORMAT (1H037HY SQUARE NON-POSITIVE,TERMINATE STEP  I 5)          MPR20296
+ 1019 FORMAT (1H029H NO MORE DEGREES FREEDOM STEP I 5 )                 MPR20297
+ 1044 FORMAT (1H010H SQUARE X-I5,17H NEGATIVE. SOLONG I5,6H STEPS)      MPR20298
+ 1395 FORMAT (12H  K=0. STEP I6, 7H SOLONG)                             MPR20299
+       END                                                              MPR20300

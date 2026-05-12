@@ -1,0 +1,297 @@
+$* FORT4/MAP SOURCE AND TEST DECKS FOR STU SOLVE, DOT, XXXX.  JOB CARD GOES HERE
+$IBJOB         MAP                                                              
+$IBFTC SOLVE                                                            SLV40000
+CSOLVE   LINEAR EQUATION SOLVER WITH ITERATIVE IMPROVEMENT   VERSION IV SLV40010
+      SUBROUTINE SOLVE(NN,A,B,IN,EPS,ITMAX,X,IT)                        SLV40020
+C     SOLVES AX=B WHERE A IS NXN MATRIX AND B IS NX1 VECTOR             SLV40030
+C     IN=                                                               SLV40040
+C         1 FOR FIRST ENTRY                                             SLV40050
+C         2 FOR SUBSEQUENT ENTRIES WITH NEW B                           SLV40060
+C         3 TO RESTORE A AND B                                          SLV40070
+C     EPS AND ITMAX ARE PARAMETERS IN THE ITERATION                     SLV40080
+C     IT=                                                               SLV40090
+C         -1 IF A IS SINGULAR                                           SLV40100
+C         0 IF NOT CONVERGENT                                           SLV40110
+C         NUMBER OF ITERATIONS IF CONVERGENT                            SLV40120
+C     CALLS MAP SUBROUTINES ILOG2,DOT,SDOT AND DAD                      SLV40130
+C                                                                       SLV40140
+C     TO MODIFY DIMENSIONS, CHANGE THE NEXT 3 (NOT 2 BUT 3) CARDS.      SLV40150
+      DIMENSION A(20,20),B(20),X(20),AA(20,20),DX(20),R(20),            SLV40160
+     *          Z(20),RM(20),IRP(20)                                    SLV40170
+      MA=20                                                             SLV40180
+C     MA MUST = DECLARED DIMENSION OF SYSTEM                            SLV40190
+      EQUIVALENCE(R,DX)                                                 SLV40200
+      GO TO (1000,2000,3000),IN                                         SLV40210
+ 1000 N=NN                                                              SLV40220
+      NM1=N-1                                                           SLV40230
+      NP1=N+1                                                           SLV40240
+C                                                                       SLV40250
+C     EQUILIBRATION                                                     SLV40260
+C                                                                       SLV40270
+      DO 510 I=1,N                                                      SLV40280
+          KTOP=ILOG2(A(I,1))                                            SLV40290
+          DO 503 J=2,N                                                  SLV40300
+  503     KTOP=MAX0(KTOP,ILOG2(A(I,J)))                                 SLV40310
+          RM(I)=2.0**(-KTOP)                                            SLV40320
+          DO 509 J=1,N                                                  SLV40330
+  509     A(I,J)=A(I,J)*RM(I)                                           SLV40340
+  510 CONTINUE                                                          SLV40350
+C                                                                       SLV40360
+C     SAVE EQUILIBRATED DATA                                            SLV40370
+C                                                                       SLV40380
+      DO 548 I=1,N                                                      SLV40390
+      DO 548 J=1,N                                                      SLV40400
+  548 AA(I,J)=A(I,J)                                                    SLV40410
+C                                                                       SLV40420
+C     GAUSSIAN ELIMINATION WITH PARTIAL PIVOTING                        SLV40430
+C                                                                       SLV40440
+      DO 99 M=1,NM1                                                     SLV40450
+          TOP=ABS (A(M,M))                                              SLV40460
+          IMAX=M                                                        SLV40470
+          DO 12 I=M,N                                                   SLV40480
+               IF(TOP-ABS (A(I,M)))10,12,12                             SLV40490
+   10          TOP=ABS (A(I,M))                                         SLV40500
+               IMAX=I                                                   SLV40510
+   12     CONTINUE                                                      SLV40520
+          IF(TOP)14,13,14                                               SLV40530
+   13     IT=-1                                                         SLV40540
+C         *SINGULAR*                                                    SLV40550
+          RETURN                                                        SLV40560
+   14     IRP(M)=IMAX                                                   SLV40570
+   23     IF(IMAX-M)29,29,24                                            SLV40580
+   24     DO 25 J=1,N                                                   SLV40590
+               TEMP=A(M,J)                                              SLV40600
+               A(M,J)=A(IMAX,J)                                         SLV40610
+   25          A(IMAX,J)=TEMP                                           SLV40620
+   29     MP1=M+1                                                       SLV40630
+          DO 33 I=MP1,N                                                 SLV40640
+               EM=A(I,M)/A(M,M)                                         SLV40650
+               A(I,M)=EM                                                SLV40660
+               IF(EM)31,33,31                                           SLV40670
+   31          DO 32 J=MP1,N                                            SLV40680
+   32          A(I,J)=A(I,J)-A(M,J)*EM                                  SLV40690
+   33     CONTINUE                                                      SLV40700
+   99 CONTINUE                                                          SLV40710
+      IRP(N)=N                                                          SLV40720
+      IF (A(N,N))120,113,120                                            SLV40730
+  113 IT=-1                                                             SLV40740
+      RETURN                                                            SLV40750
+  120 CONTINUE                                                          SLV40760
+C     STORAGE FOR A NOW CONTAINS TRIANGULAR L AND U SO THAT (L+I)*U=A   SLV40770
+C                                                                       SLV40780
+C     DUPLICATE INTERCHANGES IN DATA                                    SLV40790
+C                                                                       SLV40800
+      DO 229 I=1,N                                                      SLV40810
+          IP=IRP(I)                                                     SLV40820
+          IF(I-IP)221,229,221                                           SLV40830
+  221     DO 222 J=1,N                                                  SLV40840
+               TEMP=AA(I,J)                                             SLV40850
+               AA(I,J)=AA(IP,J)                                         SLV40860
+  222          AA(IP,J)=TEMP                                            SLV40870
+  229 CONTINUE                                                          SLV40880
+C                                                                       SLV40890
+C     PROCESS RIGHT HAND SIDE                                           SLV40900
+C                                                                       SLV40910
+ 2000 CONTINUE                                                          SLV40920
+      DO 601 I=1,N                                                      SLV40930
+  601     B(I)=B(I)*RM(I)                                               SLV40940
+      DO 609 I=1,NM1                                                    SLV40950
+          IP=IRP(I)                                                     SLV40960
+          TEMP=B(I)                                                     SLV40970
+          B(I)=B(IP)                                                    SLV40980
+          B(IP)=TEMP                                                    SLV40990
+  609 CONTINUE                                                          SLV41000
+C                                                                       SLV41010
+C     SOLVE FOR FIRST APPROXIMATION TO X                                SLV41020
+C                                                                       SLV41030
+  199 DO 200 I=1,N                                                      SLV41040
+  200 Z(I)=-SDOT(I-1,A(I,1),MA,Z(1),1,-B(I))                            SLV41050
+      DO 201 K=1,N                                                      SLV41060
+      I=NP1-K                                                           SLV41070
+  201 X(I)=-SDOT(N-I,A(I,I+1),MA,X(I+1),1,-Z(I))/A(I,I)                 SLV41080
+C                                                                       SLV41090
+C     ITERATIVE IMPROVEMENT                                             SLV41100
+C                                                                       SLV41110
+      IF(ITMAX)370,370,300                                              SLV41120
+  300 TOP=0.0                                                           SLV41130
+      DO 303 I=1,N                                                      SLV41140
+  303 TOP=AMAX1(TOP,ABS(X(I)))                                          SLV41150
+      EPSX=EPS*TOP                                                      SLV41160
+      DO 369 IT=1,ITMAX                                                 SLV41170
+C         FIND RESIDUALS                                                SLV41180
+          DO 319 I=1,N                                                  SLV41190
+  319     R(I)=-DOT(N,AA(I,1),MA,X(1),1,-B(I))                          SLV41200
+C         FIND INCREMENT                                                SLV41210
+          DO 329 I=1,N                                                  SLV41220
+  329     Z(I)=-SDOT(I-1,A(I,1),MA,Z(1),1,-R(I))                        SLV41230
+          DO 339 K=1,N                                                  SLV41240
+          I=NP1-K                                                       SLV41250
+  339     DX(I)=-SDOT(N-I,A(I,I+1),MA,DX(I+1),1,-Z(I))/A(I,I)           SLV41260
+C         INCREMENT AND TEST CONVERGENCE                                SLV41270
+          TOP=0.0                                                       SLV41280
+          DO 342 I=1,N                                                  SLV41290
+               TEMP=X(I)                                                SLV41300
+               X(I)=DAD(X(I),DX(I))                                     SLV41310
+               DELX=ABS (X(I)-TEMP)                                     SLV41320
+               TOP=AMAX1(TOP,DELX)                                      SLV41330
+  342     CONTINUE                                                      SLV41340
+          IF(TOP-EPSX)381,381,369                                       SLV41350
+  369 CONTINUE                                                          SLV41360
+  370 IT=0                                                              SLV41370
+  381 RETURN                                                            SLV41380
+C                                                                       SLV41390
+C     RESTORE A AND B                                                   SLV41400
+C                                                                       SLV41410
+ 3000 CONTINUE                                                          SLV41420
+      DO 709 K=1,N                                                      SLV41430
+          I=NP1-K                                                       SLV41440
+          IP=IRP(I)                                                     SLV41450
+          IF(I-IP)701,709,701                                           SLV41460
+  701     TEMP=B(I)                                                     SLV41470
+          B(I)=B(IP)                                                    SLV41480
+          B(IP)=TEMP                                                    SLV41490
+          DO 702 J=1,N                                                  SLV41500
+               TEMP=AA(I,J)                                             SLV41510
+               AA(I,J)=AA(IP,J)                                         SLV41520
+  702          AA(IP,J)=TEMP                                            SLV41530
+  709 CONTINUE                                                          SLV41540
+      DO 729 I=1,N                                                      SLV41550
+          B(I)=B(I)/RM(I)                                               SLV41560
+          DO 729 J=1,N                                                  SLV41570
+          A(I,J)=AA(I,J)/RM(I)                                          SLV41580
+  729 CONTINUE                                                          SLV41590
+      RETURN                                                            SLV41600
+      END                                                               SLV41610
+$IBMAP DOT     84                                                       DOT40000
+*   DOT AND FRIENDS     ROUTINES FOR USE WITH SOLVE                     DOT40010
+       ENTRY   DOT (N,A(1),MA,B(1),MB,C)   DOUBLE INNER PRODUCT         DOT40020
+       ENTRY   SDOT (N,A(1),MA,B(1),MB,C)  INNER PRODUCT                DOT40030
+       ENTRY   ILOG2 (A)   FLOATING POINT EXPONENT                      DOT40040
+       ENTRY   DAD (A,B)   ADD WITH ROUND                               DOT40050
+*                                                                       DOT40060
+SNAD   MACRO   M     STORE NEGATIVE OF ADDRESS IN DECREMENT             DOT40070
+       SUB     =O100000        COMPLEMENT IF POSITIVE                   DOT40080
+       ALS     18                                                       DOT40090
+       STD     M                                                        DOT40100
+       ENDM    SNAD                                                     DOT40110
+*                                                                       DOT40120
+DOT    SAVE    1,2,4                                                    DOT40130
+       STZ     S                                                        DOT40140
+       STZ     S+1                                                      DOT40150
+       CLA*    8,4             C                                        DOT40160
+       LDQ     C+1                                                      DOT40170
+       STO     C                                                        DOT40180
+       CLA*    3,4             N                                        DOT40190
+       TZE     NONE            SKIP LOOP IF N = 0                       DOT40200
+       STO     N                                                        DOT40210
+       CLA     4,4             BASE ADDRESS OF A                        DOT40220
+       PAC     ,1              X1=-(BASE OF A)                          DOT40230
+       CLA*    5,4             MA                                       DOT40240
+       SNAD    MA                                                       DOT40250
+       CLA     6,4             BASE ADDRESS OF B                        DOT40260
+       PAC     ,2              X2=-(BASE OF B)                          DOT40270
+       CLA*    7,4             MB                                       DOT40280
+       SNAD    MB                                                       DOT40290
+       LXA     N,4             X4=N                                     DOT40300
+ LOOP  LDQ     0,1             A(I)                                     DOT40310
+       FMP     0,2             B(I)                                     DOT40320
+       DFAD    S                                                        DOT40330
+       DST     S                                                        DOT40340
+ MA    TXI     *+1,1,**        (X1)=(X1)+MA                             DOT40350
+ MB    TXI     *+1,2,**        (X2)=(X2)+MB                             DOT40360
+       TIX     LOOP,4,1        END OF MAIN LOOP                         DOT40370
+NONE   DFAD    C                                                        DOT40380
+       FRN                                                              DOT40390
+       RETURN  DOT                                                      DOT40400
+*                                                                       DOT40410
+SDOT   SAVE    1,2,4                                                    DOT40420
+       STZ     S                                                        DOT40430
+       CLA*    8,4                                                      DOT40440
+       STO     C                                                        DOT40450
+       CLA*    3,4                                                      DOT40460
+       TZE     SNONE                                                    DOT40470
+       STO     N                                                        DOT40480
+       CLA     4,4                                                      DOT40490
+       PAC     ,1                                                       DOT40500
+       CLA*    5,4                                                      DOT40510
+       SNAD    SMA                                                      DOT40520
+       CLA     6,4                                                      DOT40530
+       PAC     ,2                                                       DOT40540
+       CLA*    7,4                                                      DOT40550
+       SNAD    SMB                                                      DOT40560
+       LXA     N,4                                                      DOT40570
+SLOOP  LDQ     0,1                                                      DOT40580
+       FMP     0,2                                                      DOT40590
+       FAD     S                                                        DOT40600
+       STO     S                                                        DOT40610
+SMA    TXI     *+1,1,**                                                 DOT40620
+SMB    TXI     *+1,2,**                                                 DOT40630
+       TIX     SLOOP,4,1                                                DOT40640
+SNONE  FAD     C                                                        DOT40650
+       RETURN  SDOT                                                     DOT40660
+*                                                                       DOT40670
+ILOG2  CAL*    3,4                                                      DOT40680
+       ANA     =O377000000000                                           DOT40690
+       SUB     =O200000000000                                           DOT40700
+       ARS     27                                                       DOT40710
+       TRA     1,4                                                      DOT40720
+*                                                                       DOT40730
+DAD    CLA*    3,4                                                      DOT40740
+       FAD*    4,4                                                      DOT40750
+       FRN                                                              DOT40760
+       TRA     1,4                                                      DOT40770
+*                                                                       DOT40780
+       EVEN                                                             DOT40790
+C      PZE                                                              DOT40800
+       PZE                                                              DOT40810
+S      PZE                                                              DOT40820
+       PZE                                                              DOT40830
+N      PZE                                                              DOT40840
+       END                                                              DOT40850
+$IBFTC XXXX                                                             XXX40000
+C   FORTRAN IV   TEST SOLVE   MAIN PROGRAM                              XXX40010
+C     READS A MATRIX AND INVERTS IT                                     XXX40020
+      DIMENSION A(20,20),X(20,20),B(20),FORM(12)                        XXX40030
+    1 READ (5,100) N,EPS,ITMAX,FORM                                     XXX40040
+  100 FORMAT(I6,E6.0,I6/12A6)                                           XXX40050
+      READ (5,FORM) ((A(I,J),J=1,N),I=1,N)                              XXX40060
+      IN=1                                                              XXX40070
+      DO 9 J=1,N                                                        XXX40080
+         DO 3 I=1,N                                                     XXX40090
+    3    B(I)=0.0                                                       XXX40100
+         B(J)=1.0                                                       XXX40110
+         CALL SOLVE(N,A,B,IN,EPS,ITMAX,X(1,J),IT)                       XXX40120
+         IF(IT)13,9,9                                                   XXX40130
+   9     IN=2                                                           XXX40140
+      CALL SOLVE(N,A,B,3,DUMMY,DUMMY,DUMMY,DUMMY)                       XXX40150
+      WRITE (6,201) N,EPS,ITMAX,IT                                      XXX40160
+  201 FORMAT(1H1,2HN=,I3,7H   EPS=,E10.2,9H   ITMAX=,I4,9H   IT(N)=,I4/)XXX40170
+      DO 2 I=1,N                                                        XXX40180
+    2 WRITE (6,202) (A(I,J),J=1,N)                                      XXX40190
+  202 FORMAT(1H ,1P7E17.7)                                              XXX40200
+      WRITE (6,202)                                                     XXX40210
+      DO 5 I=1,N                                                        XXX40220
+    5 WRITE (6,202) (X(I,J),J=1,N)                                      XXX40230
+      GO TO 1                                                           XXX40240
+   13 WRITE (6,213)                                                     XXX40250
+  213 FORMAT(1H1,14H***SINGULAR***)                                     XXX40260
+      GO TO 1                                                           XXX40270
+      END                                                               XXX40280
+$*  DATA CARDS FOLLOW.                                                          
+     6   0.0    10                                                              
+(4X,6F10.0)                                                                     
+    36.       -630.     3360.     -7560.    7560.     -2772.                    
+    -630.     14700.    -88200.   211680.   -220500.  83160.                    
+    3360.     -88200.   564480.   -1411200. 1512000.  -582120.                  
+    -7560.    211680.   -1411200. 3628800.  -3969000. 1552320.                  
+    7560.     -220500.  1512000.  -3969000. 4410000.  -1746360.                 
+    -2772.    83160.    -582120.  1552320.  -1746360. 698544.                   
+     7 1.E-8    10                                                              
+  (7F10.0)                                                                      
+        49     -1176      8820    -29400     48510    -38808     12012          
+     -1176     37632   -317520   1128960  -1940400   1596672   -504504          
+      8820   -317520   2857680 -10584000  18711000 -15717240   5045040          
+    -29400   1128960 -10584000  40320000 -72765000  62092800 -20180160          
+     48510  -1940400  18711000 -72765000 133402500-115259760  37837800          
+    -38808   1596672 -15717240  62092800-115259760 100590336 -33297264          
+     12012   -504504   5045040 -20180160  37837800 -33297264  11099088          

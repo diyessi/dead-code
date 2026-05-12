@@ -1,0 +1,494 @@
+CMAIN                                                                           
+C     PROGRAM TO COMPUTE AVERAGE LENGTH OF FISH AT EACH AGE AND THE             
+C     LENGTH OF THE GROWING SEASON.                                             
+C     DATA FOR THIS PROGRAM IS READ OFF A SEPARATE DATA TAPE WHICH IS           
+C     MOUNTED ON A5.  ALL DATA THEN SHOULD BE READ ONTO A SEPARATE TAPE         
+C     IN LOGICAL BLOCKS, FOR INSTANCE, BY YEARS.                                
+C     EACH BLOCK OF DATA MUST BE LABLED BY A CARD PRECEDING THE DATA            
+C     WITH AN INTEGER RIGHT ADJUSTED IN COL. 72.  THE INTEGER MUST              
+C     CORRESPOND TO THE POSITION OF EACH BLOCK OR BLOCK 3 WOULD BE              
+C     PRECEDED BY A CARD CONTAINING THE INTEGER 3.  THE BLOCK IS                
+C     TERMINATED BY A CARD FOLLOWING THE LAST DATA CARD CONTAING ZEROS          
+C     IN COLS. 1-5.                                                             
+C     THERE ARE TWO DATA CARDS THAT MUST BE SUPPLIED WITH THE OBJECT            
+C     DECK.  THE FIRST IS THE CARD WHICH CONTROLS THE BLOCK(S) OF DATA          
+C     USED AND THE SECOND IS A PARAMETER CONTROLLING THE FORK LENGTH .          
+C     FIRST DATA CARD-----------                                                
+C     DIVIDING THE CARD INTO FIELDS OF 3 AND NUMBERING THESE FROM 1-24          
+C     THE YEAR(S) IS PLACED ON THIS CARD WITH THE FIELD NO. CORRESPOND-         
+C     ING TO THE BLOCK NO. ON TAPE.   THIS SHOULD BE THE FIRST DATA CARD        
+C     SECOND DATA CARD----------                                                
+C     THIS CONTAINS A FIELD OF 3 NUMERIC CHARACTER FOLLOWED BY A PERIOD.        
+C     THIS IS A PARAMETER WHICH CONTROLS THE TEST OF THE FORK LENGTH.           
+C     THE OUTPUT HEADINGS OF THE LAKE NAMES ARE SUPPLIED IN SUBROUTINE          
+C     TYPE.                                                                     
+C DEFINE FUNCTIONS                                                              
+      DVAF(A,B,C) = SQRTF((A - ((B**2 )/C))/(C - 1.))                           
+      LENTHF(A,B,C)=PARAM+((A*(B-PARAM))/C)                                     
+      DIMENSION X(8, 8), Y(8)                                                   
+     0DIMENSION SPAN(8, 8, 8), SPAN2(8, 8, 8), TOTAL(8, 8, 8),                  
+     1TOSPAN(8, 8), TOSPN2(8, 8), HOSPAN(8, 8), HOSPN2(8, 8), SUM(8, 8),        
+     2HOTOTL(8, 8), FESPAN(8, 8), FESPN2(8, 8), FETOTL(8, 8),                   
+     3GROWTH(8, 20, 8), GWTH2(8, 20, 8), GN(8, 20, 8), BRD(8, 20, 8),           
+     4BRD2(8, 20, 8), TGRWTH(8, 20), TGWTH2(8, 20), TGN(8, 20),                 
+     5TBRD(8, 20), TBRD2(8, 20), FEBRD(8, 20), FEBRD2(8, 20),                   
+     6FENBR(8, 20), HOBRD(8, 20), HOBRD2(8, 20), HONBR(8, 20),                  
+     7HOGWTH(8,20),HGWTH2(8,20),FEGWTH(8,20),FGWTH2(8,20)                       
+      DIMENSION ANN(9),NYEAR(24)                                                
+      PRINT 999                                                                 
+  999 FORMAT(36H MOUNT DATA TAPE ON A5 AND HIT START////)                       
+      PAUSE                                                                     
+      READ INPUT TAPE 5,1010,(NYEAR(NFILE),NFILE=1,24)                          
+ 1010 FORMAT(24I3)                                                              
+ 1019 FORMAT(F3.0)                                                              
+      READ INPUT TAPE 5,1019,PARAM                                              
+      DO 1000 NFILE=1,24                                                        
+      IF(NYEAR(NFILE))1,1000,1                                                  
+    1 WRITE OUTPUT TAPE 6,1020,NYEAR(NFILE)                                     
+ 1020 FORMAT(1H1,42X,32H COMPUTATION USING DATA FOR YEAR,I3)                    
+C SET VARIABLES EQUAL TO ZERO                                                   
+      DO 20 L=1,8                                                               
+      Y(L)=0.0                                                                  
+      DO 17 N=1,8                                                               
+      DO 17 J=1,8                                                               
+      X(L,N)=0.0                                                                
+      TOSPAN(L,N)=0.0                                                           
+      TOSPN2(L,N)=0.0                                                           
+      SUM(L,N)=0.0                                                              
+      HOSPAN(L,N)=0.0                                                           
+      HOSPN2(L,N)=0.0                                                           
+      HOTOTL(L,N)=0.0                                                           
+      FESPAN(L,N)=0.0                                                           
+      FESPN2(L,N)=0.0                                                           
+      FETOTL(L,N)=0.0                                                           
+      SPAN(L,N,J)=0.0                                                           
+      SPAN2(L,N,J)=0.0                                                          
+   17 TOTAL(L,N,J)=0.0                                                          
+      DO 20 K=1,20                                                              
+      DO 20 J=1,8                                                               
+      TGRWTH(L,K)=0.0                                                           
+      TGWTH2(L,K)=0.0                                                           
+      TGN(L,K)=0.0                                                              
+      TBRD(L,K)=0.0                                                             
+      TBRD2(L,K)=0.0                                                            
+      FEBRD(L,K)=0.0                                                            
+      FEBRD2(L,K)=0.0                                                           
+      FEGWTH(L,K)=0.0                                                           
+      FGWTH2(L,K)=0.0                                                           
+      FENBR(L,K)=0.0                                                            
+      HOBRD(L,K)=0.0                                                            
+      HOBRD2(L,K)=0.0                                                           
+      HOGWTH(L,K)=0.0                                                           
+      HGWTH2(L,K)=0.0                                                           
+      HONBR(L,K)=0.0                                                            
+      GROWTH(L,K,J)=0.0                                                         
+      GWTH2(L,K,J)=0.0                                                          
+      GN(L,K,J)=0.0                                                             
+      BRD(L,K,J)=0.0                                                            
+   20 BRD2(L,K,J)=0.0                                                           
+ 1002 READ INPUT TAPE 9,1030,NBLOCK                                             
+ 1030 FORMAT(70X,I2)                                                            
+      IF(NFILE-NBLOCK)1002,24,1002                                              
+C READ DATA                                                                     
+   240READ INPUT TAPE 9, 23, I, JR, MN, JA, MX, WGT, ETE, ANN(1),               
+     1ANN(2), ANN(3), ANN(4), ANN(5), ANN(6), ANN(7), ANN(8), FTM, ATM,         
+     2JGE, LAK                                                                  
+   23 FORMAT(I5, 2I1, I2, I1, 12F3.0, I1, I2)                                   
+      IF (I) 500, 60, 500                                                       
+C TEST DATA                                                                     
+  500 IF(9 - LAK) 33, 33, 5                                                     
+    5 IF (FTM) 33, 33, 22                                                       
+   22 IF(ETE - 80.) 35,25,25                                                    
+   25 IF(ETE - 280.) 26,26,35                                                   
+   26 IF(ABSF(FTM - 1.257*(ETE - PARAM)) -100.) 27, 27, 31                      
+   27 IF(ANN(JGE)) 33, 33, 901                                                  
+  901 IF(ANN(JGE + 1)) 33, 28, 33                                               
+   28 DO 30 N = 1, 8                                                            
+      IF(ANN(N)) 33, 33, 29                                                     
+   29 IF(FTM - ANN(N)) 33, 50, 50                                               
+   50 IF(ANN(N+1)) 33, 40, 51                                                   
+   51 IF(ANN(N+1) - ANN(N)) 33, 33, 30                                          
+   30 CONTINUE                                                                  
+      GO TO 40                                                                  
+   31 WRITE OUTPUT TAPE 6, 32, I                                                
+   32 FORMAT(I6, 44H  LENGTH VS SCALE RADIUS DOES NOT CORRESPOND)               
+      GO TO 24                                                                  
+   33 WRITE OUTPUT TAPE 6, 34, I                                                
+   34 FORMAT(I6, 29H  ANNULI RECORDED INCORRECTLY)                              
+      GO TO 24                                                                  
+   35 WRITE OUTPUT TAPE 6, 36, I                                                
+   36 FORMAT(I6, 22H  ERROR IN FORK LENGTH)                                     
+      GO TO 24                                                                  
+C BEGIN COMPUTATIONS                                                            
+  300 FORMAT(3F10.5)                                                            
+   40 DO 48 N = 1, 8                                                            
+      IF(ANN(N)) 49, 49, 41                                                     
+   41 SPAN(JGE, N, LAK) = SPAN(JGE, N, LAK) + LENTHF(ANN(N), ETE, FTM)          
+      SPAN2(JGE, N, LAK) = SPAN2(JGE,N,LAK)+ LENTHF(ANN(N) ,ETE,FTM)**2         
+      TOTAL(JGE, N, LAK) = TOTAL(JGE, N, LAK) + 1.                              
+      TOSPAN(JGE, N) = TOSPAN(JGE, N) + LENTHF(ANN(N), ETE, FTM)                
+      TOSPN2(JGE, N) = TOSPN2(JGE, N) + LENTHF(ANN(N), ETE, FTM)**2             
+      SUM(JGE, N) = SUM(JGE, N) + 1.                                            
+      GO TO(48, 46, 47), MX                                                     
+   46 HOSPAN(JGE,N)=HOSPAN(JGE,N)+LENTHF(ANN(N),ETE,FTM)                        
+      HOSPN2(JGE, N) = HOSPN2(JGE, N) + LENTHF(ANN(N), ETE, FTM)**2             
+      HOTOTL(JGE, N) = HOTOTL(JGE, N) + 1.                                      
+      GO TO 48                                                                  
+   47 FESPAN(JGE, N) = FESPAN(JGE, N) + LENTHF(ANN(N), ETE, FTM)                
+      FESPN2(JGE, N) = FESPN2(JGE, N) + LENTHF(ANN(N), ETE, FTM)**2             
+      FETOTL(JGE, N) = FETOTL(JGE, N) + 1.                                      
+   48 CONTINUE                                                                  
+   49 K = MN + 1                                                                
+      CALL DATE(K, MN, JA, LAK)                                                 
+     0GROWTH(JGE, K, LAK) = GROWTH(JGE, K, LAK) + ETE - LENTHF(ANN(JGE),        
+     1ETE, FTM)                                                                 
+     0GWTH2(JGE, K, LAK) = GWTH2(JGE, K, LAK) + (ETE - LENTHF(ANN(JGE),         
+     1ETE, FTM))**2                                                             
+      GN(JGE, K, LAK) = GN(JGE, K, LAK) + 1.                                    
+      BRD(JGE, K, LAK) = BRD(JGE, K, LAK) + ETE                                 
+      BRD2(JGE, K, LAK) = BRD2(JGE, K, LAK) + ETE**2                            
+      TGRWTH(JGE,K)=TGRWTH(JGE,K)+ETE-LENTHF(ANN(JGE),ETE,FTM)                  
+      TGWTH2(JGE,K)=TGWTH2(JGE,K)+(ETE-LENTHF(ANN(JGE),ETE,FTM))**2             
+      TGN(JGE, K) = TGN(JGE, K) + 1.                                            
+      TBRD(JGE, K) = TBRD(JGE, K) + ETE                                         
+      TBRD2(JGE, K) = TBRD2(JGE, K) + ETE**2                                    
+      GO TO(58, 56, 57), MX                                                     
+   56 HOBRD(JGE, K) = HOBRD(JGE, K) + ETE                                       
+      HOBRD2(JGE, K) = HOBRD2(JGE, K) + ETE**2                                  
+      HOGWTH(JGE,K)=HOGWTH(JGE,K)+ETE-LENTHF(ANN(JGE),ETE,FTM)                  
+      HGWTH2(JGE,K)=HGWTH2(JGE,K)+(ETE-LENTHF(ANN(JGE),ETE,FTM))**2             
+      HONBR(JGE, K) = HONBR(JGE, K) + 1.                                        
+      GO TO 58                                                                  
+   57 FEBRD(JGE, K) = FEBRD(JGE, K) + ETE                                       
+      FEBRD2(JGE, K) = FEBRD2(JGE, K) + ETE**2                                  
+      FEGWTH(JGE,K)=FEGWTH(JGE,K)+ETE-LENTHF(ANN(JGE),ETE,FTM)                  
+      FGWTH2(JGE,K)=FGWTH2(JGE,K)+(ETE-LENTHF(ANN(JGE),ETE,FTM))**2             
+      FENBR(JGE, K) = FENBR(JGE, K) + 1.                                        
+   58 GO TO 24                                                                  
+   60 DO 64 L = 1, 8                                                            
+      DO 62 N = 1, 8                                                            
+      DO 67 J = 1, 8                                                            
+      IF(TOTAL(L, N, J) - 1.) 65, 65, 66                                        
+   65 SPAN2(L, N, J) = 0                                                        
+      GO TO 67                                                                  
+   66 SPAN2(L,N,J)=DVAF(SPAN2(L,N,J),SPAN(L,N,J),TOTAL(L,N, J))                 
+   61 SPAN(L, N, J) = SPAN(L, N, J)/TOTAL(L, N, J)                              
+   67 CONTINUE                                                                  
+      IF(SUM(L, N) - 1.) 68, 68, 69                                             
+   68 TOSPN2(L, N) = 0                                                          
+      GO TO 70                                                                  
+   69 TOSPN2(L, N) = DVAF(TOSPN2(L, N), TOSPAN(L, N), SUM(L, N))                
+      TOSPAN(L, N) = TOSPAN(L, N)/SUM(L, N)                                     
+   70 IF(HOTOTL(L, N) - 1.) 75, 75, 76                                          
+   75 HOSPN2(L, N) = 0                                                          
+      GO TO 77                                                                  
+   76 HOSPN2(L, N) = DVAF(HOSPN2(L, N), HOSPAN(L, N), HOTOTL(L, N))             
+      HOSPAN(L, N) = HOSPAN(L, N)/HOTOTL(L, N)                                  
+   77 IF(FETOTL(L, N) - 1.) 78, 78, 79                                          
+   78 FESPN2(L, N) = 0                                                          
+      GO TO 62                                                                  
+   79 FESPN2(L, N) = DVAF(FESPN2(L, N), FESPAN(L, N), FETOTL(L,N))              
+      FESPAN(L, N) = FESPAN(L, N)/FETOTL(L, N)                                  
+   62 CONTINUE                                                                  
+      DO 64 K = 1, 15                                                           
+      DO 63 J = 1, 8                                                            
+      IF(GN(L, K, J) - 1.) 130, 130, 131                                        
+  130 BRD2(L, K, J) = 0                                                         
+      GWTH2(L, K, J) = 0                                                        
+      GO TO 63                                                                  
+  131 BRD2(L, K, J) = DVAF(BRD2(L, K, J), BRD(L, K, J), GN(L, K, J))            
+      BRD(L, K, J) = BRD(L, K, J)/GN(L, K, J)                                   
+      GWTH2(L,K,J)=DVAF(GWTH2(L,K,J),GROWTH(L,K,J),GN(L,K,J))                   
+      GROWTH(L, K, J) = GROWTH(L, K, J)/GN(L, K, J)                             
+   63 CONTINUE                                                                  
+      IF(TGN(L, K) - 1.) 133, 133, 134                                          
+  133 TGWTH2(L,K)=0                                                             
+      TBRD2(L,K)=0                                                              
+      GO TO 135                                                                 
+  134 TGWTH2(L,K)=DVAF(TGWTH2(L,K),TGRWTH(L,K),TGN(L,K))                        
+      TGRWTH(L, K) = TGRWTH(L, K)/TGN(L, K)                                     
+      TBRD2(L,K)=DVAF(TBRD2(L,K),TBRD(L,K),TGN(L,K))                            
+      TBRD(L, K) = TBRD(L, K)/TGN(L, K)                                         
+  135 IF(FENBR(L,K)-1.) 137, 137, 136                                           
+  137 FEBRD2(L, K) = 0                                                          
+      FGWTH2(L,K)=0                                                             
+      GO TO 138                                                                 
+  136 FEBRD2(L,K)=DVAF(FEBRD2(L,K),FEBRD(L,K),FENBR(L,K))                       
+      FEBRD(L, K) = FEBRD(L, K)/FENBR(L, K)                                     
+      FGWTH2(L,K)=DVAF(FGWTH2(L,K),FEGWTH(L,K),FENBR(L,K))                      
+      FEGWTH(L,K)=FEGWTH(L,K)/FENBR(L,K)                                        
+  138 IF(HONBR(L, K) - 1.) 139, 139, 140                                        
+  139 HOBRD2(L, K) = 0                                                          
+      HGWTH2(L,K)=0                                                             
+      GO TO 64                                                                  
+  140 HOBRD2(L,K)=DVAF(HOBRD2(L,K),HOBRD(L,K),HONBR(L,K))                       
+      HOBRD(L, K) = HOBRD(L, K)/HONBR(L, K)                                     
+      HGWTH2(L,K)=DVAF(HGWTH2(L,K),HOGWTH(L,K),HONBR(L,K))                      
+      HOGWTH(L,K)=HOGWTH(L,K)/HONBR(L,K)                                        
+   64 CONTINUE                                                                  
+      DO 757 L = 1, 8                                                           
+      DO 190 J = 1,8                                                            
+  190 X(L, J) = TOTAL(L, 1, J)                                                  
+  757 Y(L) = SUM(L, 1)                                                          
+C PRINT RESULTS                                                                 
+      DO 80 J = 1, 8                                                            
+      WRITE OUTPUT TAPE 6, 71                                                   
+   71 FORMAT(36H1 AVERAGE LENGTH OF FISH AT EACH AGE)                           
+      CALL TYPE (J)                                                             
+      WRITE OUTPUT TAPE 6, 72                                                   
+   72 FORMAT(10H AGE-GROUP, 35X, 18HLENGTH AT EACH AGE)                         
+      WRITE OUTPUT TAPE 6, 73                                                   
+   730FORMAT(1H , 13X, 1H1, 14X, 1H2, 14X, 1H3, 14X, 1H4, 14X, 1H5, 14X,        
+     11H6, 14X, 1H7, 14X, 1H8)                                                  
+      DO 80 L = 1, 8                                                            
+   800WRITE OUTPUT TAPE 6, 74, L, X(L, J), SPAN(L, 1, J),                       
+     1SPAN2(L, 1, J), SPAN(L, 2, J), SPAN2(L, 2, J), SPAN(L, 3, J),             
+     2SPAN2(L, 3, J), SPAN(L, 4, J), SPAN2(L, 4, J), SPAN(L, 5, J),             
+     3SPAN2(L, 5, J), SPAN(L, 6, J), SPAN2(L, 6, J), SPAN(L, 7, J),             
+     4SPAN2(L, 7, J), SPAN(L, 8, J), SPAN2(L, 8, J)                             
+   74 FORMAT(I2, F5.0, 8(F7.2,2H R, F6.3))                                      
+      WRITE OUTPUT TAPE 6, 71                                                   
+      WRITE OUTPUT TAPE 6, 200                                                  
+  200 FORMAT(7H  TOTAL)                                                         
+      WRITE OUTPUT TAPE 6, 72                                                   
+      WRITE OUTPUT TAPE 6, 73                                                   
+      DO 81 L = 1, 8                                                            
+   810WRITE OUTPUT TAPE 6, 74, L, Y(L), TOSPAN(L, 1), TOSPN2(L, 1),             
+     1TOSPAN(L,2),TOSPN2(L,2),TOSPAN(L,3),TOSPN2(L,3),TOSPAN(L,4),              
+     2TOSPN2(L,4),TOSPAN(L,5),TOSPN2(L,5),TOSPAN(L,6),TOSPN2(L,6),              
+     3TOSPAN(L,7),TOSPN2(L,7),TOSPAN(L,8),TOSPN2(L,8)                           
+      WRITE OUTPUT TAPE 6, 71                                                   
+      WRITE OUTPUT TAPE 6, 101                                                  
+      WRITE OUTPUT TAPE 6, 72                                                   
+      WRITE OUTPUT TAPE 6, 73                                                   
+      DO 400 J=1,8                                                              
+      CALL TYPE (J)                                                             
+  400 WRITE OUTPUT TAPE 6, 74, (L,Y(L),(HOSPAN(L,N),N=1,8),L=1,8)               
+      WRITE OUTPUT TAPE 6, 71                                                   
+      WRITE OUTPUT TAPE 6, 91                                                   
+      WRITE OUTPUT TAPE 6, 101                                                  
+      WRITE OUTPUT TAPE 6, 72                                                   
+      WRITE OUTPUT TAPE 6, 73                                                   
+      WRITE OUTPUT TAPE 6, 74, ((HOTOTL(L,N),N=1,8),L=1,8)                      
+      WRITE OUTPUT TAPE 6, 71                                                   
+      WRITE OUTPUT TAPE 6, 111                                                  
+      WRITE OUTPUT TAPE 6, 72                                                   
+      WRITE OUTPUT TAPE 6, 73                                                   
+      DO 302 J=1,8                                                              
+      CALL TYPE (J)                                                             
+  302 WRITE OUTPUT TAPE 6, 74, (L,Y(L),(FESPAN (L,N), N=1,8),L=1,8)             
+      WRITE OUTPUT TAPE 6, 71                                                   
+      WRITE OUTPUT TAPE 6, 91                                                   
+      WRITE OUTPUT TAPE 6, 111                                                  
+      WRITE OUTPUT TAPE 6, 72                                                   
+      WRITE OUTPUT TAPE 6, 73                                                   
+      WRITE OUTPUT TAPE 6, 74,((FETOTL(L,N), N=1,8),L=1,8)                      
+      DO 90 J = 1, 8                                                            
+      WRITE OUTPUT TAPE 6, 82                                                   
+   82 FORMAT(26H1 LENGTH OF GROWING SEASON/)                                    
+      CALL TYPE (J)                                                             
+      WRITE OUTPUT TAPE 6, 83                                                   
+   83 FORMAT(8H  PERIOD, 49X, 9HAGE GROUP)                                      
+      WRITE OUTPUT TAPE 6, 201                                                  
+  2010FORMAT(12X, 1H1, 14X, 1H2, 14X, 1H3, 14X, 1H4, 14X, 1H5, 14X,             
+     11H6, 14X, 1H7, 14X, 1H8)                                                  
+      DO 90 K = 1, 14                                                           
+     0WRITE OUTPUT TAPE 6, 84, K, BRD(1, K, J), BRD2(1, K, J),                  
+     1BRD(2, K, J), BRD2(2, K, J), BRD(3, K, J), BRD2(3, K, J),                 
+     2BRD(4, K, J), BRD2(4, K, J), BRD(5, K, J), BRD2(5, K, J),                 
+     3BRD(6, K, J), BRD2(6, K, J), BRD(7, K, J), BRD2(7, K, J),                 
+     4BRD(8, K, J), BRD2(8, K, J)                                               
+     0WRITE OUTPUT TAPE 6, 85, GROWTH(1, K, J), GWTH2(1, K, J),                 
+     1GROWTH(2, K, J), GWTH2(2, K, J), GROWTH(3, K, J), GWTH2(3, K, J),         
+     2GROWTH(4, K, J), GWTH2(4, K, J), GROWTH(5, K, J), GWTH2(5, K, J),         
+     3GROWTH(6, K, J), GWTH2(6, K, J), GROWTH(7, K, J), GWTH2(7, K, J),         
+     4GROWTH(8, K, J), GWTH2(8, K, J)                                           
+   900WRITE OUTPUT TAPE 6, 86, GN(1, K, J), GN(2, K, J), GN(3, K, J),           
+     1GN(4, K, J), GN(5, K, J), GN(6, K, J), GN(7, K, J), GN(8, K, J)           
+   84 FORMAT(I5,4H LTH, 8(F7.2,2H R, F6.3))                                     
+   85 FORMAT(5X,4H GTH, 8(F7.2,2H R, F6.3))                                     
+   86 FORMAT(5X,4H NBR, F5.0, 7F15.0)                                           
+      WRITE OUTPUT TAPE 6,82                                                    
+      WRITE OUTPUT TAPE 6,91                                                    
+   91 FORMAT(7H  TOTAL)                                                         
+      WRITE OUTPUT TAPE 6, 83                                                   
+      WRITE OUTPUT TAPE 6, 201                                                  
+      DO 100 K = 1, 14                                                          
+     0WRITE OUTPUT TAPE 6, 84, K, TBRD(1, K), TBRD2(1, K), TBRD(2, K),          
+     1TBRD2(2, K), TBRD(3, K), TBRD2(3, K), TBRD(4, K), TBRD2(4, K),            
+     2TBRD(5, K), TBRD2(5, K), TBRD(6, K), TBRD2(6, K), TBRD(7, K),             
+     3TBRD2(7, K), TBRD(8, K), TBRD2(8, K)                                      
+     0WRITE OUTPUT TAPE 6, 85, TGRWTH(1, K), TGWTH2(1, K), TGRWTH(2, K),        
+     1TGWTH2(2, K), TGRWTH(3, K), TGWTH2(3, K), TGRWTH(4, K),                   
+     2TGWTH2(4, K), TGRWTH(5, K), TGWTH2(5, K), TGRWTH(6, K),                   
+     3TGWTH2(6, K), TGRWTH(7, K), TGWTH2(7, K), TGRWTH(8, K),                   
+     4TGWTH2(8, K)                                                              
+  1000WRITE OUTPUT TAPE 6, 86, TGN(1, K), TGN(2, K), TGN(3, K),                 
+     1TGN(4, K), TGN(5, K), TGN(6, K), TGN(7, K), TGN(8, K)                     
+      WRITE OUTPUT TAPE 6, 82                                                   
+      WRITE OUTPUT TAPE 6, 101                                                  
+  101 FORMAT(11H  MALE ONLY)                                                    
+      WRITE OUTPUT TAPE 6, 83                                                   
+      WRITE OUTPUT TAPE 6, 201                                                  
+      DO 110 K = 1, 14                                                          
+     0WRITE OUTPUT TAPE 6, 84, K, HOBRD(1, K), HOBRD2(1, K), HOBRD(2,K),        
+     1HOBRD2(2, K), HOBRD(3, K), HOBRD2(3, K), HOBRD(4, K), HOBRD2(4,K),        
+     2HOBRD(5, K), HOBRD2(5, K), HOBRD(6, K), HOBRD2(6, K), HOBRD(7, K),        
+     3HOBRD2(7, K), HOBRD(8, K), HOBRD2(8, K)                                   
+      WRITE OUTPUT TAPE 6,85,(HOGWTH(N,K),HGWTH2(N,K),N=1,8)                    
+  1100WRITE OUTPUT TAPE 6, 86, HONBR(1, K), HONBR(2, K), HONBR(3, K),           
+     1HONBR(4, K), HONBR(5, K), HONBR(6, K), HONBR(7, K), HONBR(8, K)           
+      WRITE OUTPUT TAPE 6, 82                                                   
+      WRITE OUTPUT TAPE 6, 111                                                  
+  111 FORMAT(13H  FEMALE ONLY)                                                  
+      WRITE OUTPUT TAPE 6, 83                                                   
+      WRITE OUTPUT TAPE 6, 201                                                  
+      DO 120 K= 1, 14                                                           
+     0WRITE OUTPUT TAPE 6, 84, K, FEBRD(1, K), FEBRD2(1, K), FEBRD(2,K),        
+     1FEBRD2(2, K), FEBRD(3, K), FEBRD2(3, K), FEBRD(4, K), FEBRD2(4,K),        
+     2FEBRD(5, K), FEBRD2(5, K), FEBRD(6, K), FEBRD2(6, K), FEBRD(7, K),        
+     3FEBRD2(7, K), FEBRD(8, K), FEBRD2(8, K)                                   
+      WRITE OUTPUT TAPE 6,85,(FEGWTH(N,K),FGWTH2(N,K),N=1,8)                    
+  1200WRITE OUTPUT TAPE 6, 86, FENBR(1, K), FENBR(2, K), FENBR(3, K),           
+     1FENBR(4, K), FENBR(5, K), FENBR(6, K), FENBR(7, K), FENBR(8, K)           
+ 1000 CONTINUE                                                                  
+      PRINT 998                                                                 
+  998 FORMAT(45H DISMOUNT DATA TAPE (A5) AND RETURN WITH DECK////)              
+      CALL EXIT                                                                 
+      END                                                                       
+      SUBROUTINE DATE(K, MN, JA, LAK)                                           
+C A SUBROUTINE TO DIVIDE THE YEAR MORE EFFECTIVELY--FOR YEAR 1962               
+C METHOD NO. 2                                                                  
+    1 K = MN + 1                                                                
+    2 GO TO (26, 26, 26, 3, 6, 11, 16, 21, 24, 25), K                           
+    3 IF(JA - 26) 26, 26, 4                                                     
+    4 IF (LAK - 1) 26, 26, 5                                                    
+    5 K = 5                                                                     
+      GO TO 26                                                                  
+    6 IF(JA - 13) 7, 7, 8                                                       
+    7 K = 5                                                                     
+      GO TO 26                                                                  
+    8 IF (JA - 25) 9, 9, 10                                                     
+    9 K = 6                                                                     
+      GO TO 26                                                                  
+   10 K = 7                                                                     
+      GO TO 26                                                                  
+   11 IF(JA - 9) 12, 12, 13                                                     
+   12 K = 7                                                                     
+      GO TO 26                                                                  
+   13 IF(JA - 23) 14, 14, 15                                                    
+   14 K = 8                                                                     
+      GO TO 26                                                                  
+   15 K = 9                                                                     
+      GO TO 26                                                                  
+   16 IF(JA - 6) 17, 17, 18                                                     
+   17 K = 9                                                                     
+      GO TO 26                                                                  
+   18 IF(JA - 20) 19, 19, 20                                                    
+   19 K = 10                                                                    
+      GO TO 26                                                                  
+   20 K = 11                                                                    
+      GO TO 26                                                                  
+   21 IF(JA -1) 22, 22, 23                                                      
+   22 K = 11                                                                    
+      GO TO 26                                                                  
+   23 K = 12                                                                    
+      GO TO 26                                                                  
+   24 K = 13                                                                    
+      GO TO 26                                                                  
+   25 K = 14                                                                    
+   26 RETURN                                                                    
+      END                                                                       
+      SUBROUTINE TYPE(J)                                                        
+      GO TO(90, 92, 94, 96, 98, 100, 102, 104), J                               
+   90 WRITE OUTPUT TAPE 6, 91                                                   
+   91 FORMAT(14H  LAKE CROOKED//)                                               
+      GO TO 106                                                                 
+   92 WRITE OUTPUT TAPE 6, 93                                                   
+   93 FORMAT(11H  LAKE HIGH//)                                                  
+      GO TO 106                                                                 
+   94 WRITE OUTPUT TAPE 6, 95                                                   
+   95 FORMAT(13H  LAKE PRETTY//)                                                
+      GO TO 106                                                                 
+   96 WRITE OUTPUT TAPE 6, 97                                                   
+   97 FORMAT(14H  LAKE MAX-KEE//)                                               
+      GO TO 106                                                                 
+   98 WRITE OUTPUT TAPE 6, 99                                                   
+   99 FORMAT(13H  SYLVAN LAKE//)                                                
+      GO TO 106                                                                 
+  100 WRITE OUTPUT TAPE 6, 101                                                  
+  101 FORMAT(12H  LAKE SPEAR//)                                                 
+      GO TO 106                                                                 
+  102 WRITE OUTPUT TAPE 6, 103                                                  
+  103 FORMAT(11H  LAKE CARR//)                                                  
+      GO TO 106                                                                 
+  104 WRITE OUTPUT TAPE 6, 105                                                  
+  105 FORMAT(15H  LAKE RIDINGER//)                                              
+  106 RETURN                                                                    
+      END                                                                       
+*     DATA                                                                      
+0596332131063143040120                  1200002050306                           
+0596432131050135037101                  1010002050306                           
+0596532131065134040112                  1120002050306                           
+0596632131070147044120                  1200002050306                           
+0596732271078149043121                  1210002050306                           
+0596832271064148031119                  1190002050306                           
+0596932271095164012062127               1270003050306                           
+0597032271060140037121                  1210002050306                           
+0597132271096164047131                  1310002050306                           
+0597232271059142037112                  1120002050306                           
+0597332271070149034111                  1110002050306                           
+0597432271067143054112                  1120002050306                           
+0597532271066144045115                  1150002050306                           
+0597632271083154041121                  1210002050306                           
+0597732271073149034107                  1070002050306                           
+0597832271058135040111                  1110002050306                           
+0597932271047131028091                  0910002050306                           
+0598032271097167010060125               1250003050306                           
+0598132271065146010055111               1110003050306                           
+0598232271070147040115                  1150002050306                           
+0598332271054141036105                  1050002050306                           
+0598432271074150040109                  1090002050306                           
+0598533111222207035084130140151         1510005050306                           
+0598633111046133035102                  1020002050306                           
+0598733111106169055122                  1220002050306                           
+0598833111056137033102                  1020002050306                           
+0598933111080150045115                  1150002050306                           
+0599033111103159055112                  1120002050306                           
+0599133111033137034102                  1020002050306                           
+0599233111051136028101                  1010002050306                           
+0599333111056136033101                  1010002050306                           
+0599433111083154054117                  1170002050306                           
+0599533111052135037111                  1110002050306                           
+0599633111073140037119                  1190002050306                           
+0599733111091159059129                  1290002050306                           
+0599833111061147036106                  1060002050306                           
+0599933111074145033110                  1100002050306                           
+0600033111061139034115                  1150002050306                           
+0600133111071146044119                  1190002050306                           
+0600233111087160061119                  1190002050306                           
+0600333111052135035102                  1020002050306                           
+0600433111081158054121                  1210002050306                           
+0600533111058141027096                  0960002050306                           
+0600633111056137035107                  1070002050306                           
+0600733111054137028101                  1010002050306                           
+0600833111047122031095                  0950002050306                           
+0600933111056139036096                  0960002050306                           
+0601033111068145034109                  1090002050306                           
+0601133111053130029094                  0940002050306                           
+0601233111153184034095138               1380003050306                           
+0601333111126176020076136               1360003050306                           
+0601433111128173015074140               1400003050306                           
+0601533111072142035116                  1160002050306                           
+0601633111098164014064124               1240003050306                           
+0601733111151187037109138               1380003050306                           
+0601833111190172045102142               1420003050306                           
+0601933111128179036092153               1530003050306                           
+0602033111109169015077131               1310003050306                           
+0602133111070140044116                  1160002050306                           
+0602233111076148036112                  1120002050306                           
+0602333111133176027089131               1310003050306                           
+0602433111063145030094                  0940002050306                           
+0602533111063142035108                  1080002050306                           
+0602633111096164064130                  1300002050306                           
+0602733111080151039110                  1100002050306                           

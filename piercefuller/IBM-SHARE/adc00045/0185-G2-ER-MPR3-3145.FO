@@ -1,0 +1,946 @@
+C     STEPWISE REGRESSION WITH VARIABLE TRANSFORMATIONS                 MPR30001
+C                                                                       MPR30002
+C     L1 = CLASS OF A (OPERAND)                                         MPR30003
+C     L2 = INDEX OF A                                                   MPR30004
+C     C1 = CONSTANT TO BE ADDED TO A                                    MPR30005
+C     L3 = OPERATION CODE                                               MPR30006
+C     L4 = NO. OF TIMES OPERATION IS TO BE PERFORMED                    MPR30007
+C     L5 = CLASS OF B (OPERATOR)                                        MPR30008
+C     L6 = INDEX OF B                                                   MPR30009
+C     C2 = CONSTANT TO BE ADDED TO B                                    MPR30010
+C     L7 = CLASS OF RESULT (C)                                          MPR30011
+C     L8 = INDEX OF RESULT                                              MPR30012
+C                                                                       MPR30013
+C     Z  = INPUT VARIABLE (130)                                         MPR30014
+C     Y = REGRESSION DEPENDENT VARIABLE   (20)                          MPR30015
+C     X  = REGRESSION INDEPENDENT VARIABLE (130)                        MPR30016
+C     W  = INTERMEDIATE  VARIABLE  (70)                                 MPR30017
+C                                                                       MPR30018
+C     1FWT   =1,THEN ALL WHTS =1.0                                      MPR30019
+C     1FSTEP =1, DO NOT PRINT EACH STEP                                 MPR30020
+C     1FRAW  =1, DO NO PRINT RAW SUMS AND SQUARES                       MPR30021
+C     1FAVE  =1, DO NOT PRINT AVERAGES                                  MPR30022
+C     1FRESD =1, DO NOT PRINT RESIDUAL SUMS OF SQUARES                  MPR30023
+C     1FCOEN =1, DO NOT PRINT PARTIAL COEFFICIENTS                      MPR30024
+C     1FPRED =1, DO NOT CALC PREDICTED VALUES                           MPR30025
+C     1FCNST =1, DO NOT HAVE CNST TERM IN EQUATION                      MPR30026
+C     IFTRAN = 1, DO NOT PRINT TABLE OF VARIABLE TRANSFORMATIONS        MPR30027
+C                                                                       MPR30028
+C     INPUT DATA SPECIFICATIONS                                         MPR30029
+C     MAX. OF 25 OPERATION COMMAND CARDS EXCLUDING 5 CONTROL AT END     MPR30030
+C                                                                       MPR30031
+C                                                                       MPR30032
+      EQUIVALENCE  (DATA,X)                                             MPR30033
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30034
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30035
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30036
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30037
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1,NAMVAR,NAMEOP               MPR30038
+     5, NODATA                                                          MPR30039
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30040
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30041
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30042
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30043
+     4,NAMEOP(8),NAMVAR(4),  FMT(12)                                    MPR30044
+C                                                                       MPR30045
+C                                                                       MPR30046
+      CALL PERM(6H Z    , 6H W    , 6H X    , 6H Y    , 6H +    ,       MPR30047
+     1 6H -    , 6H *    , 6H /    , 6HLOGE  , 6HE **  , 6HARCTAN,      MPR30048
+     2 6H**    , NAMVAR(1),NAMVAR(2),NAMVAR(3),NAMVAR(4),NAMEOP(1),     MPR30049
+     3NAMEOP(2),NAMEOP(3),NAMEOP(4),NAMEOP(5),NAMEOP(6),NAMEOP(7),      MPR30050
+     4NAMEOP(8) )                                                       MPR30051
+      READ INPUT TAPE5, 5,TOL,EFIN,EFOUT,NOPROB,INVAR,NODATA,IFWT,      MPR30052
+     1IFSTEP,IFRAW,IFAVE,                                               MPR30053
+     2IFRESD,IFCOEN,IFPRED,IFCNST,N,IFTRAN, IFTVAR,IFFORM               MPR30054
+      REWIND 3                                                          MPR30055
+      NOIN = 0                                                          MPR30056
+      VAR  = 0                                                          MPR30057
+      K    = 0                                                          MPR30058
+      FLEVEL =0                                                         MPR30059
+      NOENT  = 0                                                        MPR30060
+      NOMIN  = 0                                                        MPR30061
+      NOMAX  = 0                                                        MPR30062
+      NOVAR  = INVAR                                                    MPR30063
+      NVP1   = NOVAR+1                                                  MPR30064
+      NIX   = 1                                                         MPR30065
+      IF (INVAR - 130)  100, 100, 1800                                  MPR30066
+  100 CALL SETUP                                                        MPR30067
+      IF (IFTRAN) 900, 102, 105                                         MPR30068
+  102 CALL PRTTRF                                                       MPR30069
+  105 DO 110  I = 1,NVP1                                                MPR30070
+      DO 110  J = 1,NVP1                                                MPR30071
+  110 VECTOR (I,J) = 0.0                                                MPR30072
+      IF (IFWT)  900,114,115                                            MPR30073
+  114 ASSIGN 130 TO IFWGT                                               MPR30074
+      GO TO  120                                                        MPR30075
+  115 ASSIGN 140 TO IFWGT                                               MPR30076
+  120 IF (IFFORM)  900, 124,122                                         MPR30077
+  122 READ INPUT TAPE 5, 125,  (FMT (I), I = 1,12)                      MPR30078
+      ASSIGN 127 TO IFMT                                                MPR30079
+      GO TO 126                                                         MPR30080
+  124 ASSIGN 128 TO IFMT                                                MPR30081
+  126 DO 150  K = 1, NODATA                                             MPR30082
+      GO TO IFMT, (127, 128)                                            MPR30083
+  127 READ INPUT TAPE 5, FMT, RUN, (Z(N1), N1 = 1,N), WHT               MPR30084
+      GO TO 129                                                         MPR30085
+  128 READ INPUT TAPE 5, 1000, RUN,    (Z(N1), N1 = 1,N) ,WHT           MPR30086
+  129 CALL SWITCH                                                       MPR30087
+      GO TO IFWGT, (130,140)                                            MPR30088
+  130 CALL WGTSUM                                                       MPR30089
+      GO TO 150                                                         MPR30090
+  140 CALL SUM                                                          MPR30091
+  150 CONTINUE                                                          MPR30092
+C                                                                       MPR30093
+C     HAVE CALCULATED SUMS OF SQUARES AND CROSS PRODUCTS - PRINT RESULTSMPR30094
+C        IF  1FRAW SAY  O.K.                                            MPR30095
+  565 NOVMI = NOVAR - 1                                                 MPR30096
+  566 NOVPL = NOVAR + 1                                                 MPR30097
+  567 WRITE OUTPUT TAPE 6, 90, NOPROB,NODATA, NOVAR, VECTOR(NOVPL,      MPR30098
+     1NOVPL),EFIN, EFOUT                                                MPR30099
+  568 PRINT 90,NOPROB,NODATA,NOVAR,VECTOR(NOVPL,NOVPL),                 MPR30100
+     1EFIN, EFOUT                                                       MPR30101
+  570 IF (IFRAW) 900, 580, 650                                          MPR30102
+  580 WRITE OUTPUT TAPE 6, 15                                           MPR30103
+  590 WRITE OUTPUT TAPE 6, 20,(I,VECTOR(I,NOVPL),I=1,NOVMI)             MPR30104
+  600 WRITE OUTPUT TAPE 6, 25, VECTOR (NOVAR, NOVPL)                    MPR30105
+  610 WRITE OUTPUT TAPE 6, 30                                           MPR30106
+  620 WRITE OUTPUT TAPE 6, 35,((I,J,VECTOR(I,J),J=I,NOVMI),I=1,NOVMI)   MPR30107
+  630 WRITE OUTPUT TAPE 6, 40,(I,VECTOR(I,NOVAR),I=1,NOVMI)             MPR30108
+  640 WRITE OUTPUT TAPE 6, 45, VECTOR(NOVAR,NOVAR)                      MPR30109
+C                                                                       MPR30110
+C     CALCULATE RESIDUAL SUMS OF SQUARES AND CROSS PRODUCTS             MPR30111
+  650 CALL RESID                                                        MPR30112
+      CALL NORM                                                         MPR30113
+      CALL CALC                                                         MPR30114
+C                                                                       MPR30115
+C     PRINT FINAL RESULTS AND RETURN                                    MPR30116
+ 1580 WRITE OUTPUT TAPE 6, 1586,(L,VECTOR(L,L),L=1,NOVMI )              MPR30117
+ 1581 IF( IFPRED)  900,1582,1900                                        MPR30118
+ 1582 REWIND 3                                                          MPR30119
+ 1583 WRITE OUTPUT TAPE 6, 85                                           MPR30120
+ 1590 DO  1660   N = 1, NODATA                                          MPR30121
+ 1600 READ TAPE  3,(DATA(L),L= 1, NOVAR), RUN                           MPR30122
+ 1610 YPRED = CNST                                                      MPR30123
+ 1620 DO 1630  I = 1,NOIN                                               MPR30124
+ 1640 K = INDEX(I)                                                      MPR30125
+ 1630 YPRED=  YPRED +  COEN(I) * DATA(K)                                MPR30126
+ 1650 DEV  =  DATA(NOVAR) -  YPRED                                      MPR30127
+ 1660 WRITE OUTPUT TAPE 6, 80, RUN, DATA(NOVAR), YPRED, DEV             MPR30128
+C                                                                       MPR30129
+C     TRANSFORM RESULTS TO FORM OF ORIGINAL INPUT                       MPR30130
+ 1900 IF (IFTVAR) 900,1905, 910                                         MPR30131
+ 1905 CALL PRINTX                                                       MPR30132
+      CALL OUTPUT                                                       MPR30133
+C                                                                       MPR30134
+  910 REWIND  3                                                         MPR30135
+  121 CALL EXIT                                                         MPR30136
+  900 PRINT 905                                                         MPR30137
+      GO TO 910                                                         MPR30138
+ 1800 WRITE OUTPUT TAPE 6, 93, INVAR                                    MPR30139
+      GO TO 910                                                         MPR30140
+C                                                                       MPR30141
+    5 FORMAT (3F10.5,3I5,1H  8I2, I4, 3I2)                              MPR30142
+   10 FORMAT (6(F12.5))                                                 MPR30143
+   15 FORMAT (1H 49H                               SUM  OF  VARIABLES//)MPR30144
+   20 FORMAT (1H 11H     SUM X( I2,3H) = F12.4,8H  SUM X( I2,3H) =F12.4,MPR30145
+     18H  SUM X( I2,3H) =F12.4,8H  SUM X(I2,3H) =F12.4 )                MPR30146
+   25 FORMAT (17H      SUM   Y   =F12.4)                                MPR30147
+   30 FORMAT(1H0 70H                            RAW  SUM  OF  SQUARES  AMPR30148
+     1ND  CROSS PRODUCTS// )                                            MPR30149
+   35 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   MPR30150
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       MPR30151
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     MPR30152
+   40 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      MPR30153
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          MPR30154
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        MPR30155
+   45 FORMAT (1H 21H     Y     VS   Y   =F15.6)                         MPR30156
+   80 FORMAT (8H        F6.0,2H  F12.5,3H   F12.5,2H  F12.5)            MPR30157
+   85 FORMAT (1H043H               PREDICTED VS ACTUAL RESULTS  /59H    MPR30158
+     1      RUN NO.     ACTUAL       PREDICTED     DEVIATION //)        MPR30159
+   90 FORMAT (22H1STEPWISE  REGRESSION //12H PROBLEM NO I10 //13H NO OF MPR30160
+     1DATA = I5 //18H NO OF VARIABLES = I10 //30H WEIGHTED DEGREES OF FRMPR30161
+     2EEDOM = F12.2 //28H F LEVEL TO ENTER VARIABLE = F10.3 //29H F LEVEMPR30162
+     3L TO REMOVE VARIABLE = F9.3  /// )                                MPR30163
+   93  FORMAT (45H1INVAR SHOULD NOT BE GREATER THAN 150.  IT IS  I5 )   MPR30164
+  905 FORMAT (42H ERROR IN CONTROL CARD, PROBLEM TERMINATED)            MPR30165
+ 1000 FORMAT (6F12.6)                                                   MPR30166
+ 1586 FORMAT (24H0     DIAGONAL  ELEMENTS //20H   VAR.NO.     VALUE//   MPR30167
+     1(1H  I 7, F16.6))                                                 MPR30168
+  125 FORMAT (12A6)                                                     MPR30169
+       END                                                              MPR30170
+C                                                                       MPR30171
+      SUBROUTINE SETUP                                                  MPR30172
+      EQUIVALENCE  (DATA,X)                                             MPR30173
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30174
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30175
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30176
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30177
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30178
+     5, NAMEOP, NAMVAR                                                  MPR30179
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30180
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30181
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30182
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30183
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30184
+      DUMMY = 1.0                                                       MPR30185
+      NN1 = 1                                                           MPR30186
+  100 READ INPUT TAPE 5, 900, L1(NN1),L2(NN1),C1(NN1),L3(NN1),L4(NN1),  MPR30187
+     1L5(NN1),L6(NN1),C2(NN1), L7(NN1),L8(NN1)                          MPR30188
+      IF (L1(NN1) -5) 110,800,850                                       MPR30189
+  110 IF (L4(NN1)) 120,120,130                                          MPR30190
+  120 L4(NN1)= 1                                                        MPR30191
+  130 IF (L3(NN1)) 860,860,140                                          MPR30192
+  140 IF (L3(NN1)-10) 150,160,160                                       MPR30193
+  150 L9(NN1) = L4(NN1)                                                 MPR30194
+      GO TO 180                                                         MPR30195
+  160 IF (L3(NN1)-20)  170,170,860                                      MPR30196
+  170 L9(NN1) =(L4(NN1) * (L4(NN1) +3))/2                               MPR30197
+C     L9 = NO. OF RESULTS                                               MPR30198
+  180 IF (L4(NN1)-10)184,184,890                                        MPR30199
+C     MAX OF 10 OPERATIONS PER COMMAND                                  MPR30200
+  184 IF(L2(NN1)) 870,185,186                                           MPR30201
+  185 L2(NN1) = 1                                                       MPR30202
+C     CHECK ON LEGALITY OF L1,L5,L7,L2,L6,L8                            MPR30203
+  186 IF (L8(NN1)) 870, 187, 188                                        MPR30204
+  187 L8(NN1) = 1                                                       MPR30205
+  188 IF (L7(NN1)-2) 850,190,190                                        MPR30206
+  190 IF (L7(NN1)-5) 195,850,850                                        MPR30207
+  195 L = L7(NN1)-1                                                     MPR30208
+      LN= L8(NN1)+L9(NN1) - 1                                           MPR30209
+      L8N = L8(NN1)                                                     MPR30210
+      GO TO  (200,210,220),L                                            MPR30211
+  200 IF(LN - 70) 205, 205, 870                                         MPR30212
+  205 DO 206  I = L8N,LN                                                MPR30213
+  206 W(I) = DUMMY                                                      MPR30214
+      GO TO 230                                                         MPR30215
+  210 IF (LN-150) 215,215,870                                           MPR30216
+  215 DO 216  I = L8N,LN                                                MPR30217
+  216 X(I) = DUMMY                                                      MPR30218
+      GO TO 230                                                         MPR30219
+  220 IF (LN-20) 225,225,870                                            MPR30220
+  225 DO 226  I = L8N,LN                                                MPR30221
+  226 Y(I) = DUMMY                                                      MPR30222
+  230 J = 1                                                             MPR30223
+      IF(L1(NN1)) 850, 258, 233                                         MPR30224
+  233 I1 = L1(NN1)-1                                                    MPR30225
+      I2 = L2(NN1)                                                      MPR30226
+  234 IF (I1)   258,258,235                                             MPR30227
+  235 IF  (I1-4) 240,850,850                                            MPR30228
+  240 I3 = I2 +L4(NN1) -1                                               MPR30229
+      GO TO (245,250,255),I1                                            MPR30230
+  245 IF (I3-70) 246,246,870                                            MPR30231
+  246 DO 247   I = I2,I3                                                MPR30232
+      IF (W(I))  880,880,247                                            MPR30233
+  247 CONTINUE                                                          MPR30234
+      GO TO 258                                                         MPR30235
+  250 IF(I3-130) 251,251,870                                            MPR30236
+  251 DO  252  I = I2,I3                                                MPR30237
+      IF (X(I)) 880,880,252                                             MPR30238
+  252 CONTINUE                                                          MPR30239
+      GO TO 258                                                         MPR30240
+  255 IF (I3-20) 256,256,870                                            MPR30241
+  256 DO  257  I = I2,I3                                                MPR30242
+      IF (Y(I)) 880,880,257                                             MPR30243
+  257 CONTINUE                                                          MPR30244
+  258 GO TO (260,270),J                                                 MPR30245
+C                                                                       MPR30246
+  260 J = 2                                                             MPR30247
+      IF(L5(NN1)) 850,258,265                                           MPR30248
+  265 I1 = L5(NN1) -1                                                   MPR30249
+      I2 = L6(NN1)                                                      MPR30250
+      GO TO 234                                                         MPR30251
+C                                                                       MPR30252
+  270 NN1 = NN1 + 1                                                     MPR30253
+      IF ( NN1 - 26)  100, 100, 1000                                    MPR30254
+C                  ERROR RETURNS                                        MPR30255
+  850 KK = 1                                                            MPR30256
+      GO TO 1000                                                        MPR30257
+  860 KK = 2                                                            MPR30258
+      GO TO 1000                                                        MPR30259
+  870 KK = 3                                                            MPR30260
+      GO TO 1000                                                        MPR30261
+  880 KK = 4                                                            MPR30262
+      GO TO 1000                                                        MPR30263
+  890 KK = 5                                                            MPR30264
+ 1000 WRITE OUTPUT TAPE 6, 910, RUN,NN1 ,KK                             MPR30265
+      PRINT 910, RUN,NN1,KK                                             MPR30266
+      CALL EXIT                                                         MPR30267
+C                                                                       MPR30268
+C                      NORMAL RETURN                                    MPR30269
+  800 NN1 = NN1 - 1                                                     MPR30270
+      RETURN                                                            MPR30271
+  900 FORMAT (2I6,F12.6,4I6,F12.6,2I6)                                  MPR30272
+  910 FORMAT (107H ERROR IN -- (1) CLASS, (2) OP CODE, (3) INDEX, (4) A MPR30273
+     1OR B NOT PREVIOUSLY DEFINED, (5) INDEX OF OPERATIONS. /14H SET OF MPR30274
+     2DATA = F12.6,  12H, CARD NO. = I3, 10H, ERROR = I3, 1H./1H1)      MPR30275
+       END                                                              MPR30276
+C     SUBROUTINE TO SET UP PERMANENT BCD CODES IN PROPER CELLS          MPR30277
+      SUBROUTINE PERM(A,B,C,D,E,F,G,H,I,J,K,L,AA,BB,CC,DD,EE,FF,GG,HH,  MPR30278
+     1 II,JJ,KK,LL)                                                     MPR30279
+C                                                                       MPR30280
+      AA = A                                                            MPR30281
+      BB = B                                                            MPR30282
+      CC = C                                                            MPR30283
+      DD = D                                                            MPR30284
+      EE = E                                                            MPR30285
+      FF = F                                                            MPR30286
+      GG = G                                                            MPR30287
+      HH = H                                                            MPR30288
+      II = I                                                            MPR30289
+      JJ = J                                                            MPR30290
+      KK = K                                                            MPR30291
+      LL = L                                                            MPR30292
+      RETURN                                                            MPR30293
+       END                                                              MPR30294
+      SUBROUTINE SWITCH                                                 MPR30295
+      EQUIVALENCE  (DATA,X)                                             MPR30296
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30297
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30298
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30299
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30300
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30301
+     5, NAMVAR, NAMEOP                                                  MPR30302
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30303
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30304
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30305
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30306
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30307
+C     NN1  = NO. OF TRANSFORMATION COMMANDS                             MPR30308
+      DO  1000   N = 1, NN1                                             MPR30309
+      LL1 = L1(N)                                                       MPR30310
+      LL2 =  L2(N)                                                      MPR30311
+      LL3 =  L3(N)                                                      MPR30312
+      LL4 =  L4(N)                                                      MPR30313
+      LL5 = L5(N)                                                       MPR30314
+      LL6 =  L6(N)                                                      MPR30315
+      LL7 =  L7(N)-1                                                    MPR30316
+      LL8 =  L8(N)                                                      MPR30317
+      LL9 =  L9(N)                                                      MPR30318
+C     L9 = NO. OF RESULTS                                               MPR30319
+C     L4  = NO. OF OPERATIONS                                           MPR30320
+      M1 = LL3                                                          MPR30321
+      M2 = 21                                                           MPR30322
+      DO  110  I = 1,LL4                                                MPR30323
+      IF (LL1)5,5,10                                                    MPR30324
+    5 A(I) = C1(N)                                                      MPR30325
+      GO TO 40                                                          MPR30326
+   10 GO TO (15,20,25,30),LL1                                           MPR30327
+   15 A(I)=Z (LL2) + C1(N)                                              MPR30328
+      GO TO 40                                                          MPR30329
+   20 A(I) = W(LL2) + C1(N)                                             MPR30330
+      GO TO 40                                                          MPR30331
+   25 A(I) = X(LL2) + C1(N)                                             MPR30332
+      GO TO 40                                                          MPR30333
+   30 LL2 = NOVAR-1+L2(N)                                               MPR30334
+      A(I) = X(LL2) + C1(N)                                             MPR30335
+      GO TO 40                                                          MPR30336
+   40 IF (LL5)45,45,50                                                  MPR30337
+   45 B(I) = C2(N)                                                      MPR30338
+      GO TO 100                                                         MPR30339
+   50 GO TO (55,60,65,70),LL5                                           MPR30340
+   55 B(I) = Z (LL6) + C2(N)                                            MPR30341
+      GO TO 100                                                         MPR30342
+   60 B(I) = W(LL6) + C2(N)                                             MPR30343
+      GO TO 100                                                         MPR30344
+   65 B(I) = X(LL6) + C2(N)                                             MPR30345
+      GO TO 100                                                         MPR30346
+   70 LL6 = NOVAR + L6(N) - 1                                           MPR30347
+      B(I) = X(LL6)+C2(N)                                               MPR30348
+  100 LL2 = LL2 + 1                                                     MPR30349
+      LL6 = LL6 + 1                                                     MPR30350
+  110 CONTINUE                                                          MPR30351
+  120 GO TO (210,220,230,240,250,260,270,280,290,300,310,310,           MPR30352
+     1 310,310,310,310,310,310,390,400,500),M1                          MPR30353
+  210 DO 215  K = 1,LL4                                                 MPR30354
+  215 C(K) = A(K) + B(K)                                                MPR30355
+      GO TO 450                                                         MPR30356
+C                                                                       MPR30357
+  220 DO 225  K= 1,LL4                                                  MPR30358
+  225 C(K) = A(K)-B(K)                                                  MPR30359
+      GO TO 450                                                         MPR30360
+C                                                                       MPR30361
+  230 DO 235  K= 1,LL4                                                  MPR30362
+  235 C(K) = A(K) * B(K)                                                MPR30363
+      GO TO 450                                                         MPR30364
+C                                                                       MPR30365
+  240 DO 245   K=1,LL4                                                  MPR30366
+  245 C(K) = A(K) / B(K)                                                MPR30367
+      GO TO 450                                                         MPR30368
+C                                                                       MPR30369
+  250 DO 255  K=1,LL4                                                   MPR30370
+  255 C(K) = LOGF(A(K))                                                 MPR30371
+      GO TO 450                                                         MPR30372
+C                                                                       MPR30373
+  260 DO 265  K = 1,LL4                                                 MPR30374
+  265 C(K) = EXPF(A(K))                                                 MPR30375
+      GO TO 450                                                         MPR30376
+C                                                                       MPR30377
+  270 DO 275  K = 1,LL4                                                 MPR30378
+  275 C(K) = ATANF(A(K))                                                MPR30379
+      GO TO 450                                                         MPR30380
+C                                                                       MPR30381
+  280 DO 285  K = 1,LL4                                                 MPR30382
+  285 C(K) = A(K) ** B(K)                                               MPR30383
+      GO TO 450                                                         MPR30384
+C                                                                       MPR30385
+  290 DO 295   K=1,LL4                                                  MPR30386
+      CALL  FCN1(A,B,C)                                                 MPR30387
+  295 CONTINUE                                                          MPR30388
+      GO TO 450                                                         MPR30389
+C                                                                       MPR30390
+  300 IF(M2-21) 303,301,303                                             MPR30391
+  301 DO 302  K = 1,LL4                                                 MPR30392
+  302 CTEMP(K) = A(K)                                                   MPR30393
+      GO TO 305                                                         MPR30394
+  303 DO 304  K= 1,LL4                                                  MPR30395
+  304 CTEMP(K) = C(K)                                                   MPR30396
+  305 KK = 1                                                            MPR30397
+      DO 307  K1 = 1,LL4                                                MPR30398
+      C(KK) = CTEMP(K1)                                                 MPR30399
+      K1 = K1                                                           MPR30400
+      KK=KK+1                                                           MPR30401
+      DO 306  K=K1,LL4                                                  MPR30402
+      C(KK) = CTEMP(K1) * CTEMP(K)                                      MPR30403
+  306 KK = KK+1                                                         MPR30404
+  307 CONTINUE                                                          MPR30405
+      M2 = 21                                                           MPR30406
+      GO TO 450                                                         MPR30407
+C                                                                       MPR30408
+  310 M1 = M1-10                                                        MPR30409
+      M2 = 10                                                           MPR30410
+      GO TO 120                                                         MPR30411
+C                                                                       MPR30412
+  390 DO 395  K= 1,LL4                                                  MPR30413
+      CALL FCN2(A,B,C)                                                  MPR30414
+  395 CONTINUE                                                          MPR30415
+      GO TO 450                                                         MPR30416
+C                                                                       MPR30417
+  400 DO  405  K=1,LL4                                                  MPR30418
+      CALL FCN3 (A,B,C)                                                 MPR30419
+  405 CONTINUE                                                          MPR30420
+      GO TO 450                                                         MPR30421
+C                                                                       MPR30422
+  450 M1 = M2                                                           MPR30423
+      GO TO 120                                                         MPR30424
+C                                                                       MPR30425
+  500  GO TO ( 510, 520, 530), LL7                                      MPR30426
+  510 DO  515  M = 1,LL9                                                MPR30427
+      W(LL8) = C(M)                                                     MPR30428
+  515 LL8 = LL8+1                                                       MPR30429
+      GO TO 1000                                                        MPR30430
+  520 DO 525 M = 1,LL9                                                  MPR30431
+      X(LL8) = C(M)                                                     MPR30432
+  525 LL8= LL8+1                                                        MPR30433
+      GO TO 1000                                                        MPR30434
+  530 LL8 = LL8 + NOVAR-1                                               MPR30435
+      DO 535   M=1,LL9                                                  MPR30436
+      X(LL8) = C(M)                                                     MPR30437
+  535 LL8 = LL8 + 1                                                     MPR30438
+      GO TO 1000                                                        MPR30439
+C                                                                       MPR30440
+ 1000 CONTINUE                                                          MPR30441
+C                                                                       MPR30442
+      RETURN                                                            MPR30443
+       END                                                              MPR30444
+      SUBROUTINE PRTTRF                                                 MPR30445
+      EQUIVALENCE  (DATA,X)                                             MPR30446
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30447
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30448
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30449
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30450
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30451
+     5, NAMVAR, NAMEOP                                                  MPR30452
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30453
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30454
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30455
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30456
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30457
+      WRITE OUTPUT TAPE 6, 10                                           MPR30458
+      DO 200 I = 1,NN1                                                  MPR30459
+      LL1 = L1(I)                                                       MPR30460
+      LL2 = L2(I)                                                       MPR30461
+      LL3 = L3(I)                                                       MPR30462
+      LL4 = L4(I)                                                       MPR30463
+      LL5 = L5(I)                                                       MPR30464
+      LL6 = L6(I)                                                       MPR30465
+      LL7 = L7(I)                                                       MPR30466
+      LL8 = L8(I)                                                       MPR30467
+      NOPER = NAMEOP(LL3)                                               MPR30468
+      NVAR1 = NAMVAR(LL1)                                               MPR30469
+      NVAR5 = NAMVAR(LL5)                                               MPR30470
+      NVAR7 = NAMVAR(LL7)                                               MPR30471
+      GO TO (20, 20, 20, 20, 40, 40, 40, 20, 60, 80, 100, 100, 100, 100,MPR30472
+     1     120, 120, 120, 100, 60, 60), LL3                             MPR30473
+C                                                                       MPR30474
+C                                                                       MPR30475
+   20 DO 25 J = 1, LL4                                                  MPR30476
+      WRITE OUTPUT TAPE 6, 11, NVAR1,       LL2, C1(I), NOPER, NVAR5,   MPR30477
+     1LL6,                                                              MPR30478
+     1  C2(I), NVAR7, LL8                                               MPR30479
+      LL2 = LL2 + 1                                                     MPR30480
+      LL6 = LL6 + 1                                                     MPR30481
+      LL8 = LL8 + 1                                                     MPR30482
+   25 CONTINUE                                                          MPR30483
+      GO TO 200                                                         MPR30484
+C                                                                       MPR30485
+C                                                                       MPR30486
+   40 DO 45 J = 1, LL4                                                  MPR30487
+      WRITE OUTPUT TAPE 6, 12, NOPER, NVAR1, LL2, C1(I), NVAR7, LL8     MPR30488
+      LL2 = LL2 + 1                                                     MPR30489
+      LL8 = LL8 + 1                                                     MPR30490
+   45 CONTINUE                                                          MPR30491
+      GO TO 200                                                         MPR30492
+C                                                                       MPR30493
+C                                                                       MPR30494
+   60 IF (LL3 - 19)  62, 64, 66                                         MPR30495
+   62 NOFCN = 1                                                         MPR30496
+      GO TO 70                                                          MPR30497
+   64 NOFCN = 2                                                         MPR30498
+      GO TO 70                                                          MPR30499
+   66 NOFCN = 3                                                         MPR30500
+   70 DO 75 J = 1,LL4                                                   MPR30501
+      WRITE OUTPUT TAPE 6, 16, NOFCN, NVAR7, LL8                        MPR30502
+      LL8 = LL8 + 1                                                     MPR30503
+   75 CONTINUE                                                          MPR30504
+      GO TO 200                                                         MPR30505
+C                                                                       MPR30506
+C                                                                       MPR30507
+   80 NOPER = NAMEOP(3)                                                 MPR30508
+      DO 95 J= 1, LL4                                                   MPR30509
+      WRITE OUTPUT TAPE 6, 13, NVAR1, LL2, C1(I), NVAR7, LL8            MPR30510
+      J = J                                                             MPR30511
+      LL8 = LL8 + 1                                                     MPR30512
+      J2 = LL2                                                          MPR30513
+      DO 85 J1 = J,LL4                                                  MPR30514
+      WRITE OUTPUT TAPE 6, 11, NVAR1, LL2, C1(I), NOPER, NVAR1, J2,     MPR30515
+     1C1(I), NVAR7, LL8                                                 MPR30516
+      J2 = J2 +1                                                        MPR30517
+      LL8 = LL8 + 1                                                     MPR30518
+   85 CONTINUE                                                          MPR30519
+      LL2 = LL2 + 1                                                     MPR30520
+   95 CONTINUE                                                          MPR30521
+      GO TO 200                                                         MPR30522
+C                                                                       MPR30523
+C                                                                       MPR30524
+  100 LL3 = LL3 - 10                                                    MPR30525
+      NOPER = NAMEOP(LL3)                                               MPR30526
+      DO 110 J = 1,LL4                                                  MPR30527
+      WRITE OUTPUT TAPE 6, 11, NVAR1, LL2, C1(I), NOPER, NVAR5, LL6,    MPR30528
+     2C2(I), NVAR7, LL8                                                 MPR30529
+      J = J                                                             MPR30530
+      LL8= LL8 + 1                                                      MPR30531
+      J2 = LL2                                                          MPR30532
+      J6 = LL6                                                          MPR30533
+      DO 105 J1 = J, LL4                                                MPR30534
+      WRITE OUTPUT TAPE 6, 14, NVAR1, LL2, C1(I), NOPER, NVAR5, LL6,    MPR30535
+     3C2(I), NVAR1, J2,                                                 MPR30536
+     1 C1(I), NOPER, NVAR5, J6, C2(I), NVAR7, LL8                       MPR30537
+      J2 = J2 + 1                                                       MPR30538
+      J6 = J6 + 1                                                       MPR30539
+      LL8 = LL8 + 1                                                     MPR30540
+  105 CONTINUE                                                          MPR30541
+      LL2 = LL2 + 1                                                     MPR30542
+      LL6 = LL6 + 1                                                     MPR30543
+  110 CONTINUE                                                          MPR30544
+      GO TO 200                                                         MPR30545
+C                                                                       MPR30546
+C                                                                       MPR30547
+  120 LL3 = LL3 - 10                                                    MPR30548
+      NOPER = NAMEOP(LL3)                                               MPR30549
+      DO 130 J = 1, LL4                                                 MPR30550
+      WRITE OUTPUT TAPE 6, 12, NOPER, NVAR1, LL2, C1(I), NVAR7, LL8     MPR30551
+      J = J                                                             MPR30552
+      LL8= LL8 + 1                                                      MPR30553
+      J2 = LL2                                                          MPR30554
+      DO 125 J1 = J, LL4                                                MPR30555
+      WRITE OUTPUT TAPE 6, 15, NOPER, NVAR1, LL2, C1(I), NOPER, NVAR1,  MPR30556
+     4J2, C1(I), NVAR7                                                  MPR30557
+     1, LL8                                                             MPR30558
+      J2 = J2 + 1                                                       MPR30559
+      LL8 = LL8 + 1                                                     MPR30560
+  125 CONTINUE                                                          MPR30561
+      LL2 = LL2 + 1                                                     MPR30562
+  130 CONTINUE                                                          MPR30563
+      GO TO 200                                                         MPR30564
+C                                                                       MPR30565
+C                                                                       MPR30566
+  200 CONTINUE                                                          MPR30567
+C                                                                       MPR30568
+      RETURN                                                            MPR30569
+C                                                                       MPR30570
+   10 FORMAT (72H1                                               VARIABLMPR30571
+     1E TRANSFORMATIONS  / / )                                          MPR30572
+   11 FORMAT (5H    ( A2,1H( I3, 3H) +  F12.6, 2H)  A2, 3H  ( A2, 1H(   MPR30573
+     1  I3, 3H) +  F12.6, 4H)  =  A2, 1H( I3, 1H)  )                    MPR30574
+   12 FORMAT (4H    A6, 1H(  A2, 1H(  I3, 3H) + F12.6, 4H)  = A2, 1H(   MPR30575
+     1 I3, 1H)  )                                                       MPR30576
+   13 FORMAT (5H    (  A2, 1H(  I3, 3H) +  F12.6, 4H)  =  A2, 1H( I3,   MPR30577
+     1  1H)  )                                                          MPR30578
+   14 FORMAT (6H    ((  A2, 1H( I3, 3H) +  F12.6, 1H)  A2, 1H( A2, 1H(  MPR30579
+     1 I3, 3H) +  F12.6, 7H)) * ((  A2, 1H( I3, 3H) + F12.6, 1H)  A2,   MPR30580
+     2 1H(  A2, 1H( I3, 3H) +  F12.6, 4H)) =  A2, 1H( I3, 1H)  )        MPR30581
+   15 FORMAT (4H    A6, 1H(  A2, 1H(  I3, 3H) +  F12.6, 4H) *  A6, 1H(  MPR30582
+     1  A2, 1H(  I3, 3H) +  F12.6,  4H)  =  A2, 1H( I3, 1H)  )          MPR30583
+   16 FORMAT (7H    FCN I1, 13H CALCULATES   A2, 1H(  I3, 1H)  )        MPR30584
+       END                                                              MPR30585
+      SUBROUTINE SUM                                                    MPR30586
+C     CALCUALTION OF SUMS WITH WEIGHTS = 1.0                            MPR30587
+C                                                                       MPR30588
+      EQUIVALENCE  (DATA,X)                                             MPR30589
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30590
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30591
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30592
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30593
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30594
+     5, NAMVAR, NAMEOP                                                  MPR30595
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30596
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30597
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30598
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30599
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30600
+C                                                                       MPR30601
+  161 WRITE TAPE 3, (X(L), L = 1, NOVAR), RUN                           MPR30602
+  180 DO 190 I = 1, NOVAR                                               MPR30603
+  200 VECTOR(I, NOVAR + 1) = VECTOR(I, NOVAR + 1) + DATA(I)             MPR30604
+  210 DO 220 J = I, NOVAR                                               MPR30605
+  220 VECTOR (I,J) = VECTOR(I,J) + DATA(I) * DATA(J)                    MPR30606
+  190 CONTINUE                                                          MPR30607
+  170 VECTOR(NVP1, NVP1)           = VECTOR(NVP1, NVP1)           + 1.0 MPR30608
+      RETURN                                                            MPR30609
+       END                                                              MPR30610
+C     CALCULATION SUMS WHEN VARIABLE WEIGHTS                            MPR30611
+      SUBROUTINE WGTSUM                                                 MPR30612
+C                                                                       MPR30613
+      EQUIVALENCE  (DATA,X)                                             MPR30614
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30615
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30616
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30617
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30618
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30619
+     5, NAMVAR, NAMEOP                                                  MPR30620
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30621
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30622
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30623
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30624
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30625
+C                                                                       MPR30626
+  521 WRITE TAPE 3, (X(L), L = 1, NOVAR), RUN                           MPR30627
+  530 DO 540 I = 1, NOVAR                                               MPR30628
+  550 VECTOR (I,NOVAR + 1) = VECTOR (I, NOVAR + 1) + DATA (I) * WHT     MPR30629
+  560 DO 540 J = I, NOVAR                                               MPR30630
+  540 VECTOR (I, J) = VECTOR (I, J) + DATA (I) * DATA (J) * WHT         MPR30631
+  510 VECTOR (NVP1, NVP1)           = VECTOR (NVP1, NVP1)           +WHTMPR30632
+      RETURN                                                            MPR30633
+       END                                                              MPR30634
+C     CALCULATES THE NORMAL EQUATIONS                                   MPR30635
+C     CALCULATION OF RESIDUAL SUMS OF SQUARES AND CROSS PRODUCTS        MPR30636
+      SUBROUTINE RESID                                                  MPR30637
+C                                                                       MPR30638
+      EQUIVALENCE  (DATA,X)                                             MPR30639
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30640
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30641
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30642
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30643
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30644
+     5, NAMVAR, NAMEOP                                                  MPR30645
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30646
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30647
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30648
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30649
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30650
+C                                                                       MPR30651
+  650 IF(IFCNST) 900,651,735                                            MPR30652
+  651 IF(VECTOR(NOVPL,NOVPL)) 652,652,655                               MPR30653
+  652 PRINT 654                                                         MPR30654
+      GO TO 910                                                         MPR30655
+  655 DO 660 I = 1, NOVAR                                               MPR30656
+  670 DO 660 J = I, NOVAR                                               MPR30657
+  660 VECTOR (I,J) = VECTOR (I,J) - (VECTOR(I,NOVPL) * VECTOR (J,NOVPL) MPR30658
+     - / VECTOR (NOVPL, NOVPL))                                         MPR30659
+  680 DO 690  I = 1, NOVAR                                              MPR30660
+  690 AVE(I)  = VECTOR(I,NOVPL) / VECTOR(NOVPL,NOVPL)                   MPR30661
+  700 IF (IFAVE)   900, 710, 735                                        MPR30662
+  710 WRITE OUTPUT TAPE 6, 50                                           MPR30663
+  720 WRITE OUTPUT TAPE 6, 20, (I,AVE(I), I=1,NOVMI)                    MPR30664
+  730 WRITE OUTPUT TAPE 6, 25, AVE(NOVAR)                               MPR30665
+  735 IF (IFRESD)  900, 740, 780                                        MPR30666
+  740 WRITE OUTPUT TAPE 6, 55                                           MPR30667
+  750 WRITE OUTPUT TAPE 6, 35, ((I,J,VECTOR(I,J),J=I,NOVMI),I=1,NOVMI)  MPR30668
+  760 WRITE OUTPUT TAPE 6, 40, (I,VECTOR(I,NOVAR),I=1,NOVMI)            MPR30669
+  770 WRITE OUTPUT TAPE 6, 45, VECTOR(NOVAR,NOVAR)                      MPR30670
+  780 RETURN                                                            MPR30671
+C                                                                       MPR30672
+C      ERROR RETURNS                                                    MPR30673
+  900 PRINT 905                                                         MPR30674
+  910 REWIND 3                                                          MPR30675
+      CALL EXIT                                                         MPR30676
+C                                                                       MPR30677
+   20 FORMAT (1H 11H     SUM X( I2,3H) = F12.4,8H  SUM X( I2,3H) =F12.4,MPR30678
+     18H  SUM X( I2,3H) =F12.4,8H  SUM X(I2,3H) =F12.4 )                MPR30679
+   25 FORMAT (17H      SUM   Y   =F12.4)                                MPR30680
+   35 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   MPR30681
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       MPR30682
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     MPR30683
+   40 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      MPR30684
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          MPR30685
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        MPR30686
+   45 FORMAT (1H 21H     Y     VS   Y   =F15.6)                         MPR30687
+   50 FORMAT (1H063H                                  AVERAGE  VALUE  OFMPR30688
+     -  VARIABLES// )                                                   MPR30689
+   55 FORMAT(1H077H                             RESIDUAL  SUMS  OF  SQUAMPR30690
+     -RES  AND  CROSS PRODUCTS//)                                       MPR30691
+  654 FORMAT (31H  ZERO NUMBER OF DATA. SO LONG.)                       MPR30692
+  905 FORMAT (42H ERROR IN CONTROL CARD, PROBLEM TERMINATED)            MPR30693
+       END                                                              MPR30694
+C     PRINT TRANSFORMED VARIABLES (X)                                   MPR30695
+      SUBROUTINE  PRINTX                                                MPR30696
+      EQUIVALENCE  (DATA,X)                                             MPR30697
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30698
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30699
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30700
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30701
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30702
+     5, NAMVAR, NAMEOP, NODATA                                          MPR30703
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30704
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30705
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30706
+     3L9(25),                    C1(26),C2(26)                          MPR30707
+     4, NAMEOP(8), NAMVAR(4), IK(9)                                     MPR30708
+C                                                                       MPR30709
+      WRITE OUTPUT TAPE 6, 300                                          MPR30710
+      DO 100 I = 1, NOVAR, 9                                            MPR30711
+      REWIND 3                                                          MPR30712
+      IK = I                                                            MPR30713
+      DO 10  J = 1, 8                                                   MPR30714
+      J = J                                                             MPR30715
+   10 IK(J+1) = IK + J                                                  MPR30716
+      IL1 = NOVAR - (IK +8)                                             MPR30717
+      IF (IL1)  20, 30, 30                                              MPR30718
+   20 IL1 = 9 + IL1                                                     MPR30719
+      IL2 = NOVAR                                                       MPR30720
+      GO TO 40                                                          MPR30721
+   30 IL1 = 9                                                           MPR30722
+      IL2 = IK +8                                                       MPR30723
+   40 WRITE OUTPUT TAPE 6, 310, (IK(L), L = 1, IL1)                     MPR30724
+      DO 50  N = 1, NODATA                                              MPR30725
+      READ TAPE 3, (X(M), M = 1, NOVAR), RUN                            MPR30726
+      WRITE OUTPUT TAPE 6, 320, RUN, (X(M), M= I, IL2)                  MPR30727
+   50 CONTINUE                                                          MPR30728
+  100 CONTINUE                                                          MPR30729
+      RETURN                                                            MPR30730
+  300 FORMAT(75H1                                                 TRANSFMPR30731
+     1ORMED VARABLES (X) / / )                                          MPR30732
+  310 FORMAT( / 12H  RUN NO.    I10, 8I12 )                             MPR30733
+  320 FORMAT ( F8.0, 4H      9F12.6)                                    MPR30734
+       END                                                              MPR30735
+      SUBROUTINE CALC                                                   MPR30736
+      EQUIVALENCE  (DATA,X)                                             MPR30737
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30738
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30739
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30740
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30741
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30742
+     5, NAMVAR, NAMEOP                                                  MPR30743
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30744
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30745
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30746
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30747
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30748
+  781 ASSIGN  1320  TO NUMBER                                           MPR30749
+ 1000 NOSTEP = NOSTEP + 1                                               MPR30750
+ 1001 IF (VECTOR( NOVAR,NOVAR)) 1002,1002,1010                          MPR30751
+ 1002 NSTPM1 = NOSTEP - 1                                               MPR30752
+      PRINT 1004, NSTPM1                                                MPR30753
+      WRITE OUTPUT TAPE 6, 1004, NSTPM1                                 MPR30754
+      GO TO 1381                                                        MPR30755
+ 1010 SIGY =  SIGMA(NOVAR) * SQRTF (VECTOR(NOVAR,NOVAR)/ DEFR)          MPR30756
+ 1011 IF(1.0 - VECTOR(NOVAR, NOVAR)) 1013,1013,1012                     MPR30757
+ 1012 R =  SQRTF(1.0  - VECTOR(NOVAR, NOVAR) )                          MPR30758
+      GO TO 1015                                                        MPR30759
+ 1013 R  = 0.0                                                          MPR30760
+ 1015 DEFR=DEFR-1.0                                                     MPR30761
+ 1016 IF(DEFR)1017,1020,1020                                            MPR30762
+ 1017 PRINT 1019, NOSTEP                                                MPR30763
+ 1018 WRITE OUTPUT TAPE 6, 1019, NOSTEP                                 MPR30764
+      GO TO 1381                                                        MPR30765
+ 1020 VMIN = 0.0                                                        MPR30766
+ 1030 VMAX = 0.0                                                        MPR30767
+ 1035 NOIN = 0                                                          MPR30768
+ 1040 DO 1050  I = 1,NOVMI                                              MPR30769
+ 1041 IF (VECTOR (I,I)) 1042,1050,1060                                  MPR30770
+ 1042 PRINT 1044, I, NOSTEP                                             MPR30771
+ 2043 WRITE OUTPUT TAPE 6, 1044, I, NOSTEP                              MPR30772
+ 1045 GO TO 920                                                         MPR30773
+ 1060 IF(VECTOR(I,I) - TOL)   1050,1080,1080                            MPR30774
+ 1080 VAR = VECTOR(I,NOVAR) * VECTOR(NOVAR,I) / VECTOR(I,I)             MPR30775
+ 1090 IF(VAR)1100,1050,1110                                             MPR30776
+ 1100 NOIN = NOIN + 1                                                   MPR30777
+ 1120 INDEX(NOIN) = I                                                   MPR30778
+ 1130 COEN(NOIN)  = VECTOR(I,NOVAR) * SIGMA(NOVAR) / SIGMA (I)          MPR30779
+ 1140 SIGMCO(NOIN) = (SIGY / SIGMA(I)) * SQRTF(VECTOR(I,I))             MPR30780
+ 1150 IF (VMIN) 1160,1170,904                                           MPR30781
+  904 WRITE OUTPUT TAPE 6, 906                                          MPR30782
+      PRINT 906                                                         MPR30783
+      GO TO 910                                                         MPR30784
+ 1170 VMIN = VAR                                                        MPR30785
+ 1180 NOMIN = I                                                         MPR30786
+ 1190 GO TO 1050                                                        MPR30787
+ 1160 IF(VAR - VMIN)1050,1050,1170                                      MPR30788
+ 1110 IF (VAR - VMAX)1050,1050,1210                                     MPR30789
+ 1210 VMAX = VAR                                                        MPR30790
+ 1220 NOMAX = I                                                         MPR30791
+ 1050 CONTINUE                                                          MPR30792
+ 1230 IF (NOIN) 903,1240,1245                                           MPR30793
+  903 WRITE OUTPUT TAPE 6, 907                                          MPR30794
+      PRINT 907                                                         MPR30795
+      GO TO  910                                                        MPR30796
+ 1240 WRITE OUTPUT TAPE 6, 65, SIGY                                     MPR30797
+ 1260 GO TO 1350                                                        MPR30798
+ 1245 IF (IFCNST) 900,1250,1246                                         MPR30799
+ 1246 CNST = 0.0                                                        MPR30800
+ 1247 GO TO 1300                                                        MPR30801
+ 1250 CNST = AVE(NOVAR)                                                 MPR30802
+ 1270 DO 1280 I = 1,NOIN                                                MPR30803
+ 1290 J = INDEX(I)                                                      MPR30804
+ 1280 CNST = CNST - (COEN(I) * AVE(J))                                  MPR30805
+ 1300 IF(IFSTEP) 900,1310,1320                                          MPR30806
+ 1310 IF (NOENT) 1311,1311,1313                                         MPR30807
+ 1311 WRITE OUTPUT TAPE 6, 91,NOSTEP,K                                  MPR30808
+ 1312 GO TO 1314                                                        MPR30809
+ 1313 WRITE OUTPUT TAPE 6, 92,NOSTEP,K                                  MPR30810
+ 1314 WRITE OUTPUT TAPE 6, 70, FLEVEL, SIGY, R,  CNST,                  MPR30811
+     1 (INDEX(J),COEN(J),SIGMCO(J), J = 1, NOIN )                       MPR30812
+ 1315 GO TO (1316,1580),NIX                                             MPR30813
+ 1316 GO TO NUMBER, (1320,1580)                                         MPR30814
+ 1320 FLEVEL = VMIN *(DEFR+1.0)/VECTOR(NOVAR,NOVAR)                     MPR30815
+ 1330 IF(EFOUT + FLEVEL) 1350, 1350, 1340                               MPR30816
+ 1340 K =  NOMIN                                                        MPR30817
+ 1345 NOENT = 0                                                         MPR30818
+      GO  TO  1391                                                      MPR30819
+ 1350 DENOM = VECTOR(NOVAR,NOVAR) - VMAX                                MPR30820
+      IF(DENOM) 1351,1351,1352                                          MPR30821
+ 1351 NIX = 2                                                           MPR30822
+      GO TO 1370                                                        MPR30823
+ 1352 FLEVEL = VMAX * DEFR / DENOM                                      MPR30824
+ 1360 IF (EFIN - FLEVEL) 1370,1361,1380                                 MPR30825
+ 1361 IF (EFIN) 1380,1380,1370                                          MPR30826
+ 1370 K = NOMAX                                                         MPR30827
+ 1390 NOENT =  K                                                        MPR30828
+ 1391 IF(K) 1392,1392,1400                                              MPR30829
+ 1392 WRITE OUTPUT TAPE 6, 1395, NOSTEP                                 MPR30830
+ 1393 PRINT 1395, NOSTEP                                                MPR30831
+ 1394 GO TO 910                                                         MPR30832
+ 1400 DO 1410   I = 1,NOVAR                                             MPR30833
+ 1420 IF (I-K) 1430,1410,1430                                           MPR30834
+ 1430 DO 1440   J = 1, NOVAR                                            MPR30835
+ 1450 IF (J-K) 1460,1440,1460                                           MPR30836
+ 1460 VECTOR(I,J) = VECTOR(I,J) - (VECTOR(I,K) * VECTOR (K,J) / VECTOR  MPR30837
+     -(K,K))                                                            MPR30838
+ 1440 CONTINUE                                                          MPR30839
+ 1410 CONTINUE                                                          MPR30840
+ 1470 DO 1480  I = 1, NOVAR                                             MPR30841
+ 1490 IF (I-K) 1500,1480,1500                                           MPR30842
+ 1500 VECTOR (I,K)  =  -  VECTOR (I,K) / VECTOR (K,K)                   MPR30843
+ 1480 CONTINUE                                                          MPR30844
+ 1510 DO 1520 J = 1, NOVAR                                              MPR30845
+ 1530 IF (J-K) 1540,1520,1540                                           MPR30846
+ 1540 VECTOR(K,J) =   VECTOR (K,J) / VECTOR (K,K)                       MPR30847
+ 1520 CONTINUE                                                          MPR30848
+ 1550 VECTOR(K,K) =  1.0 / VECTOR(K,K)                                  MPR30849
+ 1560 GO TO (1000,1561),NIX                                             MPR30850
+ 1561 WRITE OUTPUT TAPE 6, 1004, NOSTEP                                 MPR30851
+      R = 1.00                                                          MPR30852
+      SIGY  =  0.0                                                      MPR30853
+      IFSTEP = 0                                                        MPR30854
+      GO TO 1015                                                        MPR30855
+ 1380 PRINT 75, NOSTEP                                                  MPR30856
+ 1381 IF (IFSTEP) 900, 1580,1570                                        MPR30857
+ 1570 ASSIGN  1580  TO NUMBER                                           MPR30858
+ 1571 GO TO  1310                                                       MPR30859
+ 1580 RETURN                                                            MPR30860
+C                                                                       MPR30861
+C      ERROR RETURNS                                                    MPR30862
+  900 PRINT 905                                                         MPR30863
+  910 REWIND 3                                                          MPR30864
+      CALL EXIT                                                         MPR30865
+ 1800 WRITE OUTPUT TAPE 6, 93, INVAR                                    MPR30866
+      GO TO 910                                                         MPR30867
+C                                                                       MPR30868
+  920 IF(IFSTEP)900,910,921                                             MPR30869
+  921 NIX=3                                                             MPR30870
+      GO TO 1310                                                        MPR30871
+   65 FORMAT (25H0  STANDARD ERROR OF Y = F12.6 )                       MPR30872
+   70 FORMAT (11H   F LEVEL   F12.4 /25H   STANDARD ERROR OF Y    F12.4/MPR30873
+     135H  MULTIPLE CORRELATION COEFFICIENT    F12.5/                12HMPR30874
+     2   CONSTANT F13.5/56H            VARIABLE   COEFFICIENT   STD  ERRMPR30875
+     3OR OF COEF    //  (16H              X-I3,F15.5, F15.5 ))          MPR30876
+   75 FORMAT (10H COMPLETED I5,20H STEPS OF REGRESSION)                 MPR30877
+   91 FORMAT (9H0STEP NO.I5 /19H   VARIABLE REMOVED I8)                 MPR30878
+   92 FORMAT (9H0STEP NO.I5 /20H   VARIABLE ENTERING I8)                MPR30879
+   93  FORMAT (45H1INVAR SHOULD NOT BE GREATER THAN 150.  IT IS  I5 )   MPR30880
+  906 FORMAT (25H ERROR, VMIN PLUS. SOLONG)                             MPR30881
+  907 FORMAT (26H  ERROR,NOIN MINUS, SOLONG )                           MPR30882
+ 1004 FORMAT (1H037HY SQUARE NON-POSITIVE,TERMINATE STEP  I 5)          MPR30883
+ 1019 FORMAT (1H029H NO MORE DEGREES FREEDOM STEP I 5 )                 MPR30884
+ 1044 FORMAT (1H010H SQUARE X-I5,17H NEGATIVE. SOLONG I5,6H STEPS)      MPR30885
+ 1395 FORMAT (12H  K=0. STEP I6, 7H SOLONG)                             MPR30886
+  905 FORMAT (42H ERROR IN CONTROL CARD, PROBLEM TERMINATED)            MPR30887
+       END                                                              MPR30888
+      SUBROUTINE NORM                                                   MPR30889
+C                                                                       MPR30890
+      EQUIVALENCE  (DATA,X)                                             MPR30891
+      COMMON  DATA, AVE, SIGMA, COEN, SIGMCO, INDEX, Z, W, X, Y,    RUN,MPR30892
+     1 WHT, TOL, EFIN, EFOUT, IFSTEP, IFAVE, IFRESD, IFCOEN, IFCNST,    MPR30893
+     2NOIN, VAR, K, FLEVEL, NOENT, NOMIN, NOMAX, NOVAR, NIX, NOVMI,     MPR30894
+     3NOVPL, CNST, NOSTEP, DEFR, VECTOR, NVP1                           MPR30895
+     4,L1,L2,L3,L4,L5,L6,L7,L8,L9,C1,C2,NN1                             MPR30896
+     5, NAMVAR, NAMEOP                                                  MPR30897
+      DIMENSION  DATA(130), AVE(130), SIGMA(130), COEN(130), SIGMCO(130)MPR30898
+     1, INDEX(130), Z(130), W(70), X(130), Y(20), VECTOR(131,131),      MPR30899
+     2L1(26), L2(26), L3(26), L4(26), L5(26), L6(26), L7(26),L8(26),    MPR30900
+     3L9(25),A(10),B(10), C(65), C1(26),C2(26),CTEMP(10)                MPR30901
+     4,NAMEOP(8),NAMVAR(4)                                              MPR30902
+C                                                                       MPR30903
+  780 NOSTEP = -1                                                       MPR30904
+  782 DEFR   = VECTOR(NOVPL,NOVPL) - 1.0                                MPR30905
+  790 DO 800  I = 1,NOVAR                                               MPR30906
+  791 IF(VECTOR(I,I)) 792,794,810                                       MPR30907
+  792 PRINT 793, I                                                      MPR30908
+      GO TO 910                                                         MPR30909
+  794 WRITE OUTPUT TAPE 6, 795, I                                       MPR30910
+  796 SIGMA(I) =     1.0                                                MPR30911
+  797 GO TO 800                                                         MPR30912
+  810 SIGMA(I) = SQRTF (VECTOR (I,I))                                   MPR30913
+  800 VECTOR(I,I) = 1.0                                                 MPR30914
+  820 DO 830  I = 1,NOVMI                                               MPR30915
+  840 IP1 = I + 1                                                       MPR30916
+  841 DO 830 J = IP1, NOVAR                                             MPR30917
+  850 VECTOR(I,J) = VECTOR(I,J) /( SIGMA(I)* SIGMA(J))                  MPR30918
+  830 VECTOR(J,I) = VECTOR(I,J)                                         MPR30919
+  860 IF (IFCOEN)  900, 870, 1000                                       MPR30920
+  870 WRITE OUTPUT TAPE 6, 60                                           MPR30921
+  874 NOVM2  = NOVMI  - 1                                               MPR30922
+  875 DO 885  I = 1, NOVM2                                              MPR30923
+  880 IP1 =  I + 1                                                      MPR30924
+  885 WRITE OUTPUT TAPE 6, 35,(I,J,VECTOR(I,J),J=IP1,NOVMI )            MPR30925
+  890 WRITE OUTPUT TAPE 6, 40, (I,VECTOR(I,NOVAR),I=1,NOVMI)            MPR30926
+ 1000 RETURN                                                            MPR30927
+C                                                                       MPR30928
+C      ERROR RETURNS                                                    MPR30929
+  900 PRINT 905                                                         MPR30930
+  910 REWIND 3                                                          MPR30931
+      CALL EXIT                                                         MPR30932
+C                                                                       MPR30933
+   35 FORMAT (1H 7H     X(I2,7H) VS X(I2,3H) = F15.6,                   MPR30934
+     1        6H    X(I2,7H) VS X(I2,3H) = F15.6,                       MPR30935
+     2        6H    X(I2,7H) VS X(I2,3H) = F15.6  )                     MPR30936
+   40 FORMAT (1H 7H     X(I2,12H) VS   Y   =F15.6,                      MPR30937
+     1        6H    X(I2,12H) VS   Y   =F15.6,                          MPR30938
+     2        6H    X(I2,12H) VS   Y   =F15.6  )                        MPR30939
+   60 FORMAT(1H069H                                    SIMPLE  CORRELATIMPR30940
+     -ON  COEFFICIENTS//)                                               MPR30941
+  793 FORMAT (31H ERROR RESIDUAL SQUARE VARIABLE I4,31H IS NEGATIVE,PROBMPR30942
+     1LEM TERMINATED )                                                  MPR30943
+  795 FORMAT (   10H VARIABLE I5,13H IS CONSTANT     )                  MPR30944
+  905 FORMAT (42H ERROR IN CONTROL CARD, PROBLEM TERMINATED)            MPR30945
+       END                                                              MPR30946

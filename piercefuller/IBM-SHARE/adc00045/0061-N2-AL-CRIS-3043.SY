@@ -1,0 +1,396 @@
+*ALCRIS  SUBROUTINE FOR SETTING UP AND EXECUTING POST MORTEM DUMPING.   CRIS0000
+*      SORENSEN AND CHARTZ. NASA, AMES RESEARCH CENTER, MOFFETT FIELD.  CRIS0001
+*      USAGE- TO OBTAIN DUMP-  CALL POST                                CRIS0002
+*      SET-UP  CALL CRISIS(A,Z), WHERE A AND Z BRACKET THE              CRIS0003
+*              REGION TO BE DUMPED. AN ARBITRARY NUMBER OF              CRIS0004
+*              PAIRS (A,Z) MAY BE USED.                                 CRIS0005
+       COUNT   400                                                      CRIS0006
+       ENTRY   CRISIS         SET-UP ENTRY.                             CRIS0007
+       ENTRY   POST          POST MORTEM DUMP ENTRY.                    CRIS0008
+       BCI     1,CRISIS                                                 CRIS0009
+PBREAK BOOL    143           PROGRAM / COMMON   BREAK.                  CRIS0010
+ OUTAP PZE     ,,6           OUTPUT TAPE 6.                             CRIS0011
+ N     EQU     50            SIZE OF CRISIS TABLE.                      CRIS0012
+CRISIS SXA     SV4,4                                                    CRIS0013
+       SXA     SV2,2                                                    CRIS0014
+       SXA     SV1,1                                                    CRIS0015
+       CLA     1,4            TEST FOR PLUS/MINUS TSX-WITH-             CRIS0016
+       ANA     MASKA          ZERO-TAG WORD, I.E., AT LEAST             CRIS0017
+       SUB     TSX            ONE WORD IN CALLING LIST.                 CRIS0018
+       TZE     LOOPA                                                    CRIS0019
+       CLA     NOP            REPLACE SINGLE CALLING SEQ                CRIS0020
+       STO     0,4            WORD WITH NOP AND RETURN                  CRIS0021
+       TRA     1,4                                                      CRIS0022
+ LOOPA TXI     *+1,4,-1       TEST REST OF CALLING LIST.                CRIS0023
+       CLA     1,4            TO FIND END                               CRIS0024
+       ANA     MASKA                                                    CRIS0025
+       SUB     TSX                                                      CRIS0026
+       TZE     LOOPA                                                    CRIS0027
+       PXD     ,4             X4 HAS CORRECT VALUE FOR                  CRIS0028
+       SXA     C4,4           RETURNING 1,4 FROM IDUMP                  CRIS0029
+       LXA     SV4,4          OR TEST. SAVE IN DECREMENT                CRIS0030
+       STD     1,4            OF 1,4.                                   CRIS0031
+       LXA     I,1                                                      CRIS0032
+       TXI     *+1,1,1                                                  CRIS0033
+       TXL     LESS,1,N                                                 CRIS0034
+ FLAG  TXH     THRU                                                     CRIS0035
+       TSX     )DIA(,4        PRINT MESSAGE-SIZE OF                     CRIS0036
+       PZE     NOTE1,,7       PANIC TABLE EXCEEDED.                     CRIS0037
+       CLS     FLAG                                                     CRIS0038
+       STO     FLAG                                                     CRIS0039
+ SV4   AXT     SV4,4                                                    CRIS0040
+       TRA     THRU                                                     CRIS0041
+ LESS  SXA     I,1                                                      CRIS0042
+       PXD     ,4                                                       CRIS0043
+       STD     S,1                                                      CRIS0044
+       CLA     0,4            FIND RELOCATION AMOUNT                    CRIS0045
+ SUB   SUB     =1                                                       CRIS0046
+       STA     *+1                                                      CRIS0047
+       LDI     *                                                        CRIS0048
+       IIL     2100           TEST SI FOR TTR WORD.                     CRIS0049
+       LFT     777777                                                   CRIS0050
+       TRA     ADD                                                      CRIS0051
+       TRA     SUB                                                      CRIS0052
+ ADD   ADD     =1                                                       CRIS0053
+       STA     S,1            SAVE RELOCATION AMOUNTS.                  CRIS0054
+ SA2   CLA     TSXTES         REPLACE TSX WITH TSX TO TEST(             CRIS0055
+       STO     0,4                                                      CRIS0056
+ SV2   AXT     *,2                                                      CRIS0057
+ SV1   AXT     *,1                                                      CRIS0058
+ C4    AXT     C4,4                                                     CRIS0059
+       TRA     1,4            RETURN TO PROGRAM.                        CRIS0060
+ NOTE1 BCI     7,0LIMIT ON SIZE OF CRISIS TABLE EXCEEDED.               CRIS0061
+ NOTE2 BCI     3,1POST MORTEM DUMP.                                     CRIS0062
+ SAFE  BSS     0                THERE MUST BE AT LEAST N LOCATIONS      CRIS0063
+       REM    BEFORE THIS INSTRUCTION . PART OF THE PROGRAM WILL BE     CRIS0064
+       REM     OVERWRITTEN AT POST MORTEM TIME.                         CRIS0065
+TSXTES TSX     TEST,4        LOCATION FOR INSERTING TSX TO ANY TEST     CRIS0066
+       REM                   ROUTINE DESIRED.                           CRIS0067
+       EJECT                                                            CRIS0068
+ POST  SXA     PV4,4         POST MORTEM DUMP ENTRY.                    CRIS0069
+       SXA     PV2,2         SAVE INDEX REGISTERS.                      CRIS0070
+       SXA     RETRN,1                                                  CRIS0071
+       LXA     I,1            X1=I                                      CRIS0072
+       TXL     RETRN,1,0                                                CRIS0073
+       TSX     )DIA(,4        PRINT-POST MORTEM DUMP-                   CRIS0074
+       PZE     NOTE2,,3                                                 CRIS0075
+ FLOP  CLA     S,1                                                      CRIS0076
+       STO     SAFE,1                                                   CRIS0077
+       TIX     *-2,1,1                                                  CRIS0078
+ I     AXT     0,2            SORT ARRAY S.                             CRIS0079
+       SXD     LL,2                                                     CRIS0080
+       CLA     MASKA          SET LOWER BOUND OF RELOCATION             CRIS0081
+       STO     S-1,2          AMOUNT TO ZERO.                           CRIS0082
+       TXL     ONE,2,1        SKIP SORT IF I=1.                         CRIS0083
+ LC    LXA     I,2            K=I                                       CRIS0084
+       LXD     J,1                                                      CRIS0085
+       TXI     *+1,1,1                                                  CRIS0086
+       SXD     J,1                                                      CRIS0087
+       STZ     BOX                                                      CRIS0088
+ LB    CLA     S,2            MOVE SMALLEST INDEX REGISTER              CRIS0089
+       LDQ     S+1,2          (LARGEST RELOCATION AMOUNT)TO             CRIS0090
+       TLQ     LA             BEGINNING OF ARRAY.                       CRIS0091
+       STQ     S,2                                                      CRIS0092
+       STO     S+1,2                                                    CRIS0093
+       STL     BOX                                                      CRIS0094
+ LA    TXI     *+1,2,-1       K=K-1                                     CRIS0095
+ J     TXH     LB,2,**        **=J. TEST K GT J.                        CRIS0096
+       ZET     BOX                                                      CRIS0097
+       TRA     LC                                                       CRIS0098
+ ONE   CLA     PBREAK                                                   CRIS0099
+       ARS     18                                                       CRIS0100
+       STA     BOX                                                      CRIS0101
+       AXT     1,2            SET DUMP COUNTER.                         CRIS0102
+LK     LDQ     SAFE,2                                                   CRIS0103
+       TSX     )CAB(,4        CONVERT REL AMT TO BCD.                   CRIS0104
+       SLW     LOC                                                      CRIS0105
+       CLA     SAFE,2                                                   CRIS0106
+       STA     CSF+3                                                    CRIS0107
+       STA     LRA                                                      CRIS0108
+       STA     LD                                                       CRIS0109
+       PDX     ,4                                                       CRIS0110
+       SXA     CX4,4                                                    CRIS0111
+       AXT     1,4                                                      CRIS0112
+ LF    CAS     S,4            FIND CURRENT DUMP IN SORTED ARRAY.        CRIS0113
+       TXI     LF,4,1                                                   CRIS0114
+       TRA     *+2                                                      CRIS0115
+       TXI     LF,4,1                                                   CRIS0116
+ CLASP CLA     S+1,4          TEST FOR DUPLICATE REL AMT.               CRIS0117
+       ANA     =O77777                                                  CRIS0118
+       CAS     LRA                                                      CRIS0119
+       TRA     *+2                                                      CRIS0120
+       TIX     CLASP,4,1                                                CRIS0121
+       STO     URA                                                      CRIS0122
+       AXC     1,1                                                      CRIS0123
+ LD    LDI     *,1            TEST FOR TTR, I.E., END OF                CRIS0124
+       IIL     2100           TRANSFER VECTOR.                          CRIS0125
+       LFT     777777                                                   CRIS0126
+       TXI     *+2,1,-3                                                 CRIS0127
+       TXI     LD,1,-1                                                  CRIS0128
+       RFT     777777                                                   CRIS0129
+       TRA     MP             MAIN PROGRAM-BRING IN STARS.              CRIS0130
+       CLA*    LD             SUBPROGRAM-BRING IN NAME.                 CRIS0131
+       TRA     LE                                                       CRIS0132
+ MP    CLA     STARS                                                    CRIS0133
+ LE    STO     NAME                                                     CRIS0134
+       LXA     CX4,4          TEST FOR PANIC/CRISIS ENTRY.              CRIS0135
+       CLA     1,4                                                      CRIS0136
+ CENT  AXC     1,1            CRISIS ENTRY.                             CRIS0137
+       STA     GA                                                       CRIS0138
+       TXI     LG,4,-1                                                  CRIS0139
+ CX4   AXT     *,4            * = CURRENT X4, MODIFIED TO               CRIS0140
+       AXT     0,1            PICK UP DUMP REGIONS.                     CRIS0141
+ LG    TXI     *+1,4,-1                                                 CRIS0142
+       SXA     CX4,4                                                    CRIS0143
+       CLA     0,4                                                      CRIS0144
+       STA     GA,1                                                     CRIS0145
+       ANA     MASKA                                                    CRIS0146
+       SUB     TSX                                                      CRIS0147
+       TNZ     LH                                                       CRIS0148
+       TXH     LI,1,0         TEST FOR A PAIR. YES.                     CRIS0149
+       TXI     LG,1,-1        NO.                                       CRIS0150
+ LI    TSX     )DIA(,4        PRINT NAME AND REL. AMT.                  CRIS0151
+       PZE     NOTE3,,5                                                 CRIS0152
+       STZ     GA+2                                                     CRIS0153
+       AXT     2,1                                                      CRIS0154
+ BB    CLA     GA+2,1         TEST FOR WORD IN COMMON.                  CRIS0155
+       LDQ     BOX                                                      CRIS0156
+       TLQ     BD             YES. SKIP DUMMY VARIABLE TEST.            CRIS0157
+       CAS     LRA            NO. TEST FOR LOWER DV.                    CRIS0158
+       TRA     BA                                                       CRIS0159
+       TRA     BA             NO. SKIP REPLACEMENT.                     CRIS0160
+       TRA     BC             YES.                                      CRIS0161
+ BA    CAS     URA            TEST FOR HIGHER DV.                       CRIS0162
+ BC    CLA     URA            REPLACE DV WITH URA.                      CRIS0163
+       STL     GA+2                                                     CRIS0164
+ BD    STA     CSF+3,1                                                  CRIS0165
+       TIX     BB,1,1                                                   CRIS0166
+       NZT     GA+2                                                     CRIS0167
+       TRA     CSF                                                      CRIS0168
+       TSX     )DIA(,4        PRINT DV MESSAGE.                         CRIS0169
+       PZE     NOTE5,,5                                                 CRIS0170
+ CSF   TSX     )PDP(,4        TAKE DUMP.                                CRIS0171
+       TSX     *              *=L(A)                                    CRIS0172
+       TSX     *              *=L(B)                                    CRIS0173
+       TSX     *              *=L(R)                                    CRIS0174
+       TRA     CX4                                                      CRIS0175
+ LH    TXL     LJ,1,0                                                   CRIS0176
+       TSX     )DIA(,4        PRINT NAME, REL. AMT AND-                 CRIS0177
+       PZE     NOTE3,,8       DUMP OMITTED.                             CRIS0178
+ LJ    TXI     *+1,2,1                                                  CRIS0179
+ LL    TXL     LK,2,*         *=I                                       CRIS0180
+ RETRN AXT     *,1           RESTORE INDEX REGISTERS.                   CRIS0181
+ PV2   AXT     *,2                                                      CRIS0182
+ PV4   AXT     *,4                                                      CRIS0183
+       TRA     1,4           RETURN                                     CRIS0184
+ TEST  CLA     1,4         SET RETURN TO SKIP CALLING LIST OF CRISIS    CRIS0185
+       PDX     ,4             STATEMENT.                                CRIS0186
+       TRA     1,4                                                      CRIS0187
+ TSX   TSX                                                              CRIS0188
+ THRU  SYN     SA2                                                      CRIS0189
+ URA   PZE                                                              CRIS0190
+ LRA   PZE                                                              CRIS0191
+ MASKA OCT     777777700000                                             CRIS0192
+ S     BES     N                                                        CRIS0193
+ BOX   PZE                                                              CRIS0194
+ STARS BCI     1, *****                                                 CRIS0195
+ NOTE3 BCI     5,0      NAME  BEGINNING   XXXXX                         CRIS0196
+       BCI     3,. DUMP OMITTED.                                        CRIS0197
+ NOTE5 BCI     5,0 DUMMY VARIABLE-DUMP MODIFIED.                        CRIS0198
+ LOC   SYN     NOTE3+4                                                  CRIS0199
+ NAME  SYN     NOTE3+1                                                  CRIS0200
+ GA    BSS     3                                                        CRIS0201
+ NOP   NOP                                                              CRIS0202
+       EJECT                                                            CRIS0203
+*PDP        DUMP ROUTINE USED BY CRISIS.                                CRIS0204
+*      USAGE-  CRISIS ENTERS DUMP AT )PDP( BY                           CRIS0205
+*              TSX $)PDP(,4 WITH A FIFTH CALLING SEQUENCE               CRIS0206
+*              WORD THAT CONTAINS THE RELOCATION AMOUNT FOR THIS DUMP.  CRIS0207
+ )PDP( CLA     3,4                                                      CRIS0208
+       STA     C                                                        CRIS0209
+       SXA    DSV4,4          SAVE INDEX REGISTER 4.                    CRIS0210
+       SXA     DSV1,1                                                   CRIS0211
+       SXA     DSV2,2                                                   CRIS0212
+ LOAD2 CLA     1,4                                                      CRIS0213
+       LDQ     2,4            TEST TO SEE IF L(A) IS                    CRIS0214
+       TLQ     *+2            LESS THAN (OR EQUAL TO) L(B).             CRIS0215
+       XCA                    INTERCHANGE L(A) AND L(B).                CRIS0216
+       STA     L(B)                                                     CRIS0217
+       XCA                                                              CRIS0218
+       STA     L(A)           SAVE L(A) AND L(B).                       CRIS0219
+       ANA     =O77777        TEST TO SEE IF L(A) IS ZERO.              CRIS0220
+       TNZ     COMO           YES-SET RELOCATION AMOUNT TO ZERO         CRIS0221
+       STZ     C              AND PERFORM DUMP. NO-                     CRIS0222
+       TRA     STUMP                                                    CRIS0223
+ COMO  CLA     PBREAK         BRING IN LOWEST COMMON                    CRIS0224
+       ARS     18             LOCATION, AND MASK OFF PROGRAM            CRIS0225
+       CAS     L(B)           BREAK. COMPARE WITH L(B).                 CRIS0226
+       TRA     TESDV          B IS NOT IN COMMON.                       CRIS0227
+       TRA     TESDV          B IS IN COMMON.                           CRIS0228
+       CAS     L(A)           TEST FOR STRADDLING.                      CRIS0229
+       TRA     STRAD          DOES. PRINT MESSAGE.                      CRIS0230
+       TRA     *+1                                                      CRIS0231
+       STZ     C                                                        CRIS0232
+       TRA     STUMP          SET RELOCATION AMOUNT TO ZERO.            CRIS0233
+ STRAD TSX     )DIA(,4        PRINT STRADDLE MESSAGE.                   CRIS0234
+       PZE     MESS1,,4                                                 CRIS0235
+       TRA    DSV4            CONTINUE WITH MORE DUMPS.                 CRIS0236
+ TESDV CLA     L(A)           TEST A FOR DUMMY VARIABLE.                CRIS0237
+       SUB     C                                                        CRIS0238
+       TPL     STUMP                                                    CRIS0239
+ DUMMY TSX     )DIA(,4        PRINT DUMMY VARIABLE MESSAGE.             CRIS0240
+       PZE     MESS2,,5                                                 CRIS0241
+DSV4   AXT    DSV4,4                                                    CRIS0242
+ DSV1  AXT     *,1                                                      CRIS0243
+ DSV2  AXT     *,2                                                      CRIS0244
+       TRA     4,4            RETURN TO )PMD( FOR MORE.                 CRIS0245
+ STUMP CLA     L(A)           COMPUTE THE RELATIVE ADDRESS              CRIS0246
+       SUB     C              OF A AND DROP THE LAST OCTAL              CRIS0247
+       ANA     =O77770        DIGIT.                                    CRIS0248
+       STO     K                                                        CRIS0249
+       ADD     C                                                        CRIS0250
+       STA     ADD1                                                     CRIS0251
+       LDQ     L(A)           SAME, PLUS OCTAL OR DECIMAL.              CRIS0252
+       TSX     )CAB(,4        CONVERT L(A) AND L(B) TO BCD.             CRIS0253
+       SLW     BL(A)                                                    CRIS0254
+       LDQ     L(B)                                                     CRIS0255
+       TSX     )CAB(,4                                                  CRIS0256
+       SLW     BL(B)                                                    CRIS0257
+       TSX     )DIA(,4        PRINT PDUMP, DUMP, PANIC DUMP             CRIS0258
+       PZE     MESS5,,5       OR CRISIS DUMP AND THE LIMITS OF          CRIS0259
+       TSX     )DIA(,4        PRINT BLANK LINE.                         CRIS0260
+       PZE     BLANK,,2                                                 CRIS0261
+       SIR     40             INITIALIZE INDICATOR.                     CRIS0262
+       AXT     0,1            THE FIRST LINE. INITIALIZE ZERO           CRIS0263
+ ADD3  AXT     1,2            CELLS.                                    CRIS0264
+ ADD1  CLA     *,1            SET UP ONE LINE OF PRINT-8 CELLS.         CRIS0265
+       STO     B,2            REPLACE (B) WITH (D.                      CRIS0266
+       TXI     *+1,1,-1       PREPARE TO PICK UP NEXT                   CRIS0267
+       TXI     *+1,2,1        ELEMENTS OF B AND D.                      CRIS0268
+       TXL     ADD1,2,8       TEST FOR COMPLETE LINE.                   CRIS0269
+       AXT     8,2            PERFORM ZERO TEST ON ARRAY B.             CRIS0270
+ ZET   ZET     B,2                                                      CRIS0271
+       TRA     NOT            ELEMENT IS NON-ZERO.                      CRIS0272
+       TIX     ZET,2,1        CONTINUE TEST IF ELEMENT IS ZERO.         CRIS0273
+       CLA     K              WHOLE LINE IS ZERO                        CRIS0274
+       RNT     40             TEST TO SEE IF THIS IS THE FIRST          CRIS0275
+       TRA     EASY           ZERO LINE. IF IT IS, SET INDICA-          CRIS0276
+       RIR     40             TOR AND Z1. IF NOT, INDICATOR AND         CRIS0277
+       STO     Z1             Z1 HAVE ALREADY BEEN SET.                 CRIS0278
+ EASY  ADD     =7             SET Z2. (NOTE, Z1 IS THE BEGINNING        CRIS0279
+       STO     Z2             AND Z2 THE END OF THE ZERO BLOCK.)        CRIS0280
+       TRA     PAST           OMIT PRINTING OF LINE.                    CRIS0281
+ NOT   RFT     40             TEST TO SEE IF ZERO BLOCK HAS BEEN        CRIS0282
+       TRA     NEXT           TERMINATED BY THIS NON-ZERO ELEMENT.      CRIS0283
+       TSX     BLOOP,4        IF SO, PRINT LINE THAT GIVES THE          CRIS0284
+       SIR     40             LIMITS ON THIS ZERO BLOCK. RESET          CRIS0285
+ NEXT  LDQ     K              INDICATOR AND CONTINUE.                   CRIS0286
+       TSX     )CAB(,4                                                  CRIS0287
+       SLW     NK                                                       CRIS0288
+       STI     TSI                                                      CRIS0289
+ GO    TSX     LINE,4                                                   CRIS0290
+       LDI     TSI                                                      CRIS0291
+ PAST  CLA     K              MODIFY RELATIVE LOCATION FOR              CRIS0292
+       ADD     =8             NEXT LINE OF PRINT.                       CRIS0293
+       STO     K                                                        CRIS0294
+       ADD     C              TEST TO SEE IF UPPER LIMIT ON             CRIS0295
+       CAS     L(B)           DUMP HAS BEEN EXCEEDED.                   CRIS0296
+       TRA     GRATE          YES. TERMINATE DUMP.                      CRIS0297
+       TRA     *+1            NO. CONTINUE TO NEXT TEST.                CRIS0298
+       CAS     =O77777        TEST FOR WRAP-AROUND INTO LOWER           CRIS0299
+       TRA     GRATE          CORE.                                     CRIS0300
+       TRA     GRATE                                                    CRIS0301
+       TRA     ADD3           CONTINUE WITH NEXT LINE OF DUMP.          CRIS0302
+ GRATE RNT     40             TEST TO SEE IF THE LAST LINE OF           CRIS0303
+       TSX     BLOOP,4        THE DUMP WAS ALL ZEROS. IF SO,            CRIS0304
+       TRA    DSV4            RETURN TO TEST FOR MORE DUMPS.            CRIS0305
+ BLOOP SXA     BLOO,4         CONVERT Z1 AND Z2 TO BCD.                 CRIS0306
+       LDQ     Z1                                                       CRIS0307
+       TSX     )CAB(,4                                                  CRIS0308
+       SLW     Z1                                                       CRIS0309
+       LDQ     Z2                                                       CRIS0310
+       TSX     )CAB(,4                                                  CRIS0311
+       SLW     Z2                                                       CRIS0312
+       TSX     )DIA(,4        PRINT MESSAGE ABOUT BLOCK OF              CRIS0313
+       PZE     MESS6,,6       ZEROS.                                    CRIS0314
+       TSX     )DIA(,4        PRINT BLANK LINE.                         CRIS0315
+       PZE     BLANK,,2                                                 CRIS0316
+ BLOO  AXT     *,4                                                      CRIS0317
+       TRA     1,4            RETURN                                    CRIS0318
+ MESS1 BCI     4,0CORE SPANNED-OMIT DUMP.                               CRIS0319
+ MESS2 BCI     5,0DUMMY VARIABLE-DUMP OMITTED.                          CRIS0320
+ MESS5 BCI     5,0 DEC DUMP   BL(A)  TO   BL(B)                         CRIS0321
+ MESS6 BCI     6,0CELLS  Z1    TO    Z2   ARE ZERO.                     CRIS0322
+ BLANK BCI     2,                                                       CRIS0323
+ B     BES     9                                                        CRIS0324
+ NK    PZE                                                              CRIS0325
+ K     PZE                                                              CRIS0326
+ C     PZE                                                              CRIS0327
+ L(A)  PZE                                                              CRIS0328
+ L(B)  PZE                                                              CRIS0329
+ Z1    SYN     MESS6+1                                                  CRIS0330
+ Z2    SYN     MESS6+3                                                  CRIS0331
+ BL(A) SYN     MESS5+2                                                  CRIS0332
+ BL(B) SYN     MESS5+4                                                  CRIS0333
+ LINE  SXA     O1,1                                                     CRIS0334
+       SXA     O4,4                                                     CRIS0335
+ OL    CAL     OUTAP                                                    CRIS0336
+       TSX     $(STH),4                                                 CRIS0337
+ OB    PZE     OG,,-1         *=FORMAT.                                 CRIS0338
+       LXA     =1,1                                                     CRIS0339
+ OK    LDQ     B+1,1                                                    CRIS0340
+       STR                                                              CRIS0341
+       TXI     *+1,1,1                                                  CRIS0342
+       TXL     OK,1,9                                                   CRIS0343
+       TSX     $(FIL),4                                                 CRIS0344
+ O1    AXT     *,1                                                      CRIS0345
+ O4    AXT     *,4                                                      CRIS0346
+       TRA     1,4                                                      CRIS0347
+ OG    BCI     3,(1H A6,8G14.7)    G-FORMAT.                            CRIS0348
+ TSI   PZE                                                              CRIS0349
+       EJECT                                                            CRIS0350
+*CAB     )CAB( SUBROUTINE FOR CONVERTING AN ADDRESS TO BCD. SORENSEN,   CRIS0351
+ )CAB( SXA     CV4,4                                                    CRIS0352
+       RQL     21                                                       CRIS0353
+       AXT     5,4            INITIALIZE COUNTER.                       CRIS0354
+       CLA     =O60           PUT BLANK AS FIRST CHARACTER.             CRIS0355
+       ALS     3              SPACE OUT BINARY ADDRESS INTO FULL        CRIS0356
+       LGL     3              BCD WORD BY INSERTING ZEROS BETWEEN       CRIS0357
+       TIX     *-2,4,1        OCTAL DIGITS.                             CRIS0358
+       TOV     *+1                                                      CRIS0359
+ CV4   AXT     *,4            RETURN TO PROGRAM.                        CRIS0360
+       TRA     1,4                                                      CRIS0361
+       EJECT                                                            CRIS0362
+*DIA     )DIA( SUBROUTINE FOR PRINTING ONE LINE OF HOLLERITH            CRIS0363
+*      INFORMATION. SORENSEN, EMC. AUGUST 7, 1961.                      CRIS0364
+*      CALLING SEQUENCE-MESSAGE WRITER (TAPE 6)                         CRIS0365
+*(N)   TSX     )DIA(,4                                                  CRIS0366
+*(N+1) PZE     A,,M                                                     CRIS0367
+*              WHERE A=LOCATION OF FIRST WORD OF MESSAGE                CRIS0368
+*                    A+1=LOCATION OF SECOND WORD, ETC.                  CRIS0369
+*                      M=NUMBER OF WORDS IN MESSAGE.                    CRIS0370
+*      NOTE-   THE FIRST CHARACTER IN THE FIRST WORD CONTROLS LINE      CRIS0371
+*              SPACING.                                                 CRIS0372
+ )DIA( SXA     D4,4                                                     CRIS0373
+       SXA     D1,1                                                     CRIS0374
+       STI     DIASI                                                    CRIS0375
+       CLA     1,4                                                      CRIS0376
+       PDX     ,1             X1=M                                      CRIS0377
+       SXA     M,1                                                      CRIS0378
+       ADD     M              COMPUTE A+M                               CRIS0379
+       STA     APM                                                      CRIS0380
+       CAL     OUTAP                                                    CRIS0381
+       TSX     $(STH),4                                                 CRIS0382
+       PZE     FMT,,-1                                                  CRIS0383
+ M     AXT     M,1                                                      CRIS0384
+ APM   LDQ     APM,1                                                    CRIS0385
+       STR                                                              CRIS0386
+       TIX     APM,1,1                                                  CRIS0387
+       TSX     $(FIL),4                                                 CRIS0388
+ D1    AXT     *,1                                                      CRIS0389
+ D4    AXT     *,4                                                      CRIS0390
+       LDI     DIASI                                                    CRIS0391
+       TRA     2,4                                                      CRIS0392
+ FMT   BCI     1,(20A6)                                                 CRIS0393
+ DIASI PZE                                                              CRIS0394
+       END                                                              CRIS0395

@@ -1,0 +1,292 @@
+*      LABEL                                                            MPDIV001
+*      FAP                                                              MPDIV002
+*MPDIV         IND=MPDIV(T,LT,B,LB,Q,LQ,R,LR,SUM)    07/18/63           MPDIV003
+       COUNT   350                                                              
+*              IND=0 ON NORMAL RETURN, IND=1 IF B=0                     MPDIV004
+*              SUM=ACL CHECK SUM OF UNSIGNED REMAINDER.                 MPDIV005
+*              TEST SUM BY BOOLEAN IF STATEMENT ONLY.                   MPDIV006
+*              T,B,Q,R= DIVIDEND,DIVISOR,QUOTIENT,REMAINDER             MPDIV007
+*              LT=LB,LQ,LR= RESPECTIVE LENGTHS OF ABOVE.                MPDIV008
+       ENTRY   MPDIV                                                    MPDIV009
+       PMC     ON                                                       MPDIV010
+ SIGN  MACRO   N,NSIGN,TAG,OUT                                          MPDIV011
+       CAL     NSIGN                                                    MPDIV012
+       TZE     OUT                                                      MPDIV013
+       ORS*    N                                                        MPDIV014
+       TIX     *-1,TAG,1                                                MPDIV015
+ SIGN  END                                                              MPDIV016
+*                                                                       MPDIV017
+UNSIGN MACRO   N,LN,NSIGN,TAG                                           MPDIV018
+       LXD     LN,TAG                                                   MPDIV019
+       NZT*    N                                                        MPDIV020
+       TIX     *-1,TAG,1                                                MPDIV021
+       SXD     N,TAG                                                    MPDIV022
+       CLA*    N                                                        MPDIV023
+       CLM                                                              MPDIV024
+       STO     NSIGN                                                    MPDIV025
+UNSIGN END                                                              MPDIV026
+*                                                                       MPDIV027
+ MPDIV SXA     X1,1                                                     MPDIV028
+       SXA     X2,2                                                     MPDIV029
+       CAL     1,4                                                      MPDIV030
+       ADM     =1                                                       MPDIV031
+       STA     T                                                        MPDIV032
+       CAL     3,4                                                      MPDIV033
+       ADM     =1                                                       MPDIV034
+       STA     B                                                        MPDIV035
+       CAL     5,4                                                      MPDIV036
+       ADM     =1                                                       MPDIV037
+       STA     Q                                                        MPDIV038
+       CAL     7,4                                                      MPDIV039
+       ADM     =1                                                       MPDIV040
+       STA     R                                                        MPDIV041
+       STA     R2                                                       MPDIV042
+       CLA*    2,4                                                      MPDIV043
+       STO     MT                                                       MPDIV044
+       CLA*    4,4                                                      MPDIV045
+       STO     MB                                                       MPDIV046
+       UNSIGN  B,MB,BSIGN,2                                             MPDIV047
+       TXH     LONG,2,1      TEST FOR 1-WORD DIVISOR                    MPDIV048
+       CLA*    B                                                        MPDIV049
+       TZE     ERROR                                                    MPDIV050
+       LXD     MT,1                                                     MPDIV051
+       CLA*    T                                                        MPDIV052
+       LRS     35                                                       MPDIV053
+ FAST  LDQ*    T                                                        MPDIV054
+       DVH*    B             REG 2 HAS A 1                              MPDIV055
+       STQ*    Q                                                        MPDIV056
+       TIX     FAST,1,1                                                 MPDIV057
+       STO*    R             1 WORD REMAINDER                           MPDIV058
+       SLW*    9,4           STORE UNSIGNED REMAINDER AS SUM            MPDIV059
+       PXD     0,2                                                      MPDIV060
+       STO*    8,4           LR=1                                       MPDIV061
+       LXD     MT,1                                                     MPDIV062
+       NZT*    Q                                                        MPDIV063
+       TIX     *-1,1,1                                                  MPDIV064
+       PXD     0,1           LQ                                         MPDIV065
+       STO*    6,4                                                      MPDIV066
+       TRA     SUPEGO                                                   MPDIV067
+*              DO IT THE HARD WAY- B HAS OVER 1 WORD                    MPDIV068
+ LONG  TPL     FIXT                                                     MPDIV069
+       CLA     =O377777777777  B IS NEGATIVE -                          MPDIV070
+       ANS*    B             REMOVE SIGNS                               MPDIV071
+       TIX     *-1,2,1                                                  MPDIV072
+ FIXT  UNSIGN  T,MT,TSIGN,1                                             MPDIV073
+       TPL     FIXQ                                                     MPDIV074
+       CLA     =O377777777777  T IS NEGATIVE -                          MPDIV075
+       ANS*    T             REMOVE SIGNS                               MPDIV076
+       TIX     *-1,1,1                                                  MPDIV077
+ FIXQ  CAL     TSIGN                                                    MPDIV078
+       ERA     BSIGN                                                    MPDIV079
+       SLW     QSIGN                                                    MPDIV080
+       SXA     X4,4                                                     MPDIV081
+       TSX     DIV,4                                                    MPDIV082
+ T     PZE     **,1,**       IS THIS BETTER, BOB                        MPDIV083
+ B     PZE     **,2,**                                                  MPDIV084
+ Q     PZE     **,1                                                     MPDIV085
+ R     PZE     **,1                                                     MPDIV086
+*              COLLECT SCATTERED PARTS FROM DIV                         MPDIV087
+ X4    AXT     **,4                                                     MPDIV088
+       SLW*    9,4           REMAINDER CHECK SUM                        MPDIV089
+       PXD     0,1                                                      MPDIV090
+       STO*    6,4           LQ                                         MPDIV091
+       PXD     0,2                                                      MPDIV092
+       STO*    8,4           LR                                         MPDIV093
+       SIGN    Q,QSIGN,1,EGO APPLY SIGN TO Q                            MPDIV094
+ EGO   SIGN    R2,TSIGN,2,ID            TO R                            MPDIV095
+       LXD     MT,1                                                     MPDIV096
+       ORS*    T                        TO T                            MPDIV097
+       TIX     *-1,1,1                                                  MPDIV098
+ ID    LXD     MB,2                                                     MPDIV099
+       SIGN    B,BSIGN,2,SUPEGO         TO B                            MPDIV100
+SUPEGO PXD     0,0                                                      MPDIV101
+       TRA     X1                                                       MPDIV102
+ ERROR STZ*    5,4                                                      MPDIV103
+       STZ*    7,4                                                      MPDIV104
+       STZ*    9,4                                                      MPDIV105
+       CLA     =1B17                                                    MPDIV106
+       STO*    6,4                                                      MPDIV107
+       STO*    8,4                                                      MPDIV108
+ X1    AXT     **,1                                                     MPDIV109
+ X2    AXT     **,2                                                     MPDIV110
+       TRA     10,4                                                     MPDIV111
+ R2    PZE     **,2                                                     MPDIV112
+ TSIGN BSS     1                                                        MPDIV113
+ BSIGN BSS     1                                                        MPDIV114
+ QSIGN BSS     1                                                        MPDIV115
+ MT    BSS     1                                                        MPDIV116
+ MB    BSS     1                                                        MPDIV117
+ DIV   CLA     1,4           LINK TSX DIV,4                             MPDIV118
+       PDX     ,1            PZE LWT+1,1,LT                             MPDIV119
+       NZT*    1,4           PZE LWB+1,2,LB                             MPDIV120
+       TIX     *-1,1,1       HTR LWQ+1,1                                MPDIV121
+       SXA     LT,1          HTR LWR+1,1                                MPDIV122
+       TXI     *+1,1,1       CRH ..............                         MPDIV123
+       STZ*    4,4                                                      MPDIV124
+       TXI     *+1,1,-1                                                 MPDIV125
+       CLA*    1,4           MOVE DIVIDEND (T) TO WORKING AREA          MPDIV126
+       STO*    4,4                                                      MPDIV127
+       TIX     *-2,1,1                                                  MPDIV128
+       CLA     2,4                                                      MPDIV129
+       STA     SOMA+1                                                   MPDIV130
+       PDX     ,2                                                       MPDIV131
+       NZT*    2,4                                                      MPDIV132
+       TIX     *-1,2,1                                                  MPDIV133
+       SXA     LB,2                                                     MPDIV134
+       NZT*    2,4                                                      MPDIV135
+       HTR     *             HALT HERE MEANS LB=1 AND B=0               MPDIV136
+       LXA     LT,1                                                     MPDIV137
+       CLA     LT                                                       MPDIV138
+       SUB     LB                                                       MPDIV139
+       TZE     BLZ                                                      MPDIV140
+       TPL     ZLY                                                      MPDIV141
+ SHORT LXA     LT,2          LT IS LESS THAN LB. THUS REMAINDER =T.     MPDIV142
+       PXA     ,0                                                       MPDIV143
+       ACL*    4,4           FORM LOGICAL CHECK SUM OF THE REMAINDER    MPDIV144
+       TIX     *-1,1,1                                                  MPDIV145
+       AXT     1,1           LQ=1                                       MPDIV146
+       STZ*    3,4           Q=0                                        MPDIV147
+       TRA     5,4           EXIT NUMBER 1                              MPDIV148
+ BLZ   CLA*    2,4                                                      MPDIV149
+       CAS*    4,4                                                      MPDIV150
+       TRA     SHORT                                                    MPDIV151
+       TRA     GLOR                                                     MPDIV152
+ PLOOS CLA     BITS                                                     MPDIV153
+       STA     STORIN                                                   MPDIV154
+       STA     DUR                                                      MPDIV155
+       STO     WDCNT                                                    MPDIV156
+       TRA     ZUT                                                      MPDIV157
+ GLOR  TNX     PLOOS,2,1                                                MPDIV158
+       TXI     BLZ,1,-1                                                 MPDIV159
+ ZLY   STA     WRAG                                                     MPDIV160
+       ADD     BITS                                                     MPDIV161
+       STA     STORIN                                                   MPDIV162
+       STA     DUR                                                      MPDIV163
+       STO     WDCNT                                                    MPDIV164
+ ZUT   CAL     4,4           AT THIS POINT LQ IS CORRECT                MPDIV165
+       SUB     WDCNT         COMPUTE SUBTRACTION REFERENCE ADDRESS      MPDIV166
+       STA     MOLT          (FEEDER WORD ADDRESS)                      MPDIV167
+       STA     NUTT                                                     MPDIV168
+       STA     SOMA                                                     MPDIV169
+       ADD     BITS                                                     MPDIV170
+       STA     SUN                                                      MPDIV171
+       LXA     LB,1                                                     MPDIV172
+       TXI     *+1,1,-1                                                 MPDIV173
+       SXD     SEEM,1                                                   MPDIV174
+       SXD     TEEM,1                                                   MPDIV175
+       AXT     35,1                                                     MPDIV176
+       LDI     ZERO                                                     MPDIV177
+ OVERL LXA     LB,2                                                     MPDIV178
+       CLA*    MOLT                                                     MPDIV179
+       LDQ*    SUN                                                      MPDIV180
+       LLS     1                                                        MPDIV181
+       SLW*    MOLT                                                     MPDIV182
+       TNX     SLEMP,2,1                                                MPDIV183
+ GUN   CLA*    MOLT                                                     MPDIV184
+ SUN   LDQ     **,2                                                     MPDIV185
+       LLS     1                                                        MPDIV186
+       STO*    MOLT                                                     MPDIV187
+       TIX     GUN,2,1                                                  MPDIV188
+ SLEMP STQ*    NUTT                                                     MPDIV189
+       LXA     LB,2                                                     MPDIV190
+ MOLT  CAL     **,2                                                     MPDIV191
+       LAS*    2,4                                                      MPDIV192
+       TRA     GOUT                                                     MPDIV193
+       TRA     SLUM                                                     MPDIV194
+       TIX     OVERL,1,1                                                MPDIV195
+STORIN AXT     **,1          LQ,1                                       MPDIV196
+       STI*    3,4                                                      MPDIV197
+       TNX     ENDS,1,1                                                 MPDIV198
+       SXA     STORIN,1                                                 MPDIV199
+ WRAG  AXT     **,1                                                     MPDIV200
+       CLA*    4,4                                                      MPDIV201
+ NUTT  STO     **                                                       MPDIV202
+       TXI     *+1,1,-1                                                 MPDIV203
+       SXA     WRAG,1                                                   MPDIV204
+       TRA     OVERL-2                                                  MPDIV205
+ SLUM  TIX     MOLT,2,1                                                 MPDIV206
+ GOUT  OSI     BITS+1,1                                                 MPDIV207
+       SXA     TURNIP,1                                                 MPDIV208
+       AXT     1,1                                                      MPDIV209
+ SEEM  TXH     GRUNT,1,**                                               MPDIV210
+ ROMA  CAL     PBITR                                                    MPDIV211
+ SOMA  ADD     **,1                                                     MPDIV212
+       SUB     **,1                                                     MPDIV213
+       STO*    SOMA                                                     MPDIV214
+       PBT                                                              MPDIV215
+       TRA     BAR                                                      MPDIV216
+       TXI     SEEM,1,1                                                 MPDIV217
+ BAR   TXI     *+1,1,1                                                  MPDIV218
+ TEEM  TXH     FRONT,1,**                                               MPDIV219
+       CLA     TT35M1                                                   MPDIV220
+       TRA     SOMA                                                     MPDIV221
+ GRUNT CAL*    SOMA                                                     MPDIV222
+       TRA     FRONT+2                                                  MPDIV223
+ FRONT CAL*    SOMA                                                     MPDIV224
+       SUB     BITS                                                     MPDIV225
+       XEC     SOMA+1                                                   MPDIV226
+       STO*    SOMA                                                     MPDIV227
+TURNIP AXT     **,1                                                     MPDIV228
+       TRA     STORIN-1                                                 MPDIV229
+ ENDS  LXA     LB,1                                                     MPDIV230
+       NZT*    SOMA                                                     MPDIV231
+       TIX     *-1,1,1                                                  MPDIV232
+       SXA     PLATZ,1                                                  MPDIV233
+       TXI     *+1,1,-1                                                 MPDIV234
+       SXD     NOST,1                                                   MPDIV235
+       AXT     1,1                                                      MPDIV236
+       CLA*    SOMA                                                     MPDIV237
+       STO*    4,4                                                      MPDIV238
+ NOST  TXH     *+2,1,**      *+2,1,(LB-1)                               MPDIV239
+       TXI     *-3,1,1                                                  MPDIV240
+ PLATZ AXT     **,2          LR,2                                       MPDIV241
+       LXA     PLATZ,1                                                  MPDIV242
+       PXA     ,0                                                       MPDIV243
+       ACL*    4,4           FORM LOGICAL CHECK SUM OF R.               MPDIV244
+       TIX     *-1,1,1                                                  MPDIV245
+ DUR   AXT     **,1          LQ,1                                       MPDIV246
+       NZT*    3,4                                                      MPDIV247
+       TXI     *+1,1,-1                                                 MPDIV248
+       TRA     5,4           EXIT NUMBER 2                              MPDIV249
+ LT    HTR     0             CONTAINS LT (NO LEADING ZERO WORDS)        MPDIV250
+ LB    HTR     0             CONTAINS LB (NO ZERO LEADING WORDS)        MPDIV251
+WDCNT  HTR     0                                                        MPDIV252
+ ZERO  DEC     0                                                        MPDIV253
+TT35M1 OCT     377777777777                                             MPDIV254
+ PBITR MZE                                                              MPDIV255
+       OCT     200000000000                                             MPDIV256
+       OCT     100000000000                                             MPDIV257
+       OCT     40000000000                                              MPDIV258
+       OCT     20000000000                                              MPDIV259
+       OCT     10000000000                                              MPDIV260
+       OCT     4000000000                                               MPDIV261
+       OCT     2000000000                                               MPDIV262
+       OCT     1000000000                                               MPDIV263
+       OCT     400000000                                                MPDIV264
+       OCT     200000000                                                MPDIV265
+       OCT     100000000                                                MPDIV266
+       OCT     40000000                                                 MPDIV267
+       OCT     20000000                                                 MPDIV268
+       OCT     10000000                                                 MPDIV269
+       OCT     4000000                                                  MPDIV270
+       OCT     2000000                                                  MPDIV271
+       OCT     1000000                                                  MPDIV272
+       OCT     400000                                                   MPDIV273
+       OCT     200000                                                   MPDIV274
+       OCT     100000                                                   MPDIV275
+       OCT     40000                                                    MPDIV276
+       OCT     20000                                                    MPDIV277
+       OCT     10000                                                    MPDIV278
+       OCT     4000                                                     MPDIV279
+       OCT     2000                                                     MPDIV280
+       OCT     1000                                                     MPDIV281
+       OCT     400                                                      MPDIV282
+       OCT     200                                                      MPDIV283
+       OCT     100                                                      MPDIV284
+       OCT     40                                                       MPDIV285
+       OCT     20                                                       MPDIV286
+       OCT     10                                                       MPDIV287
+       OCT     4                                                        MPDIV288
+       OCT     2                                                        MPDIV289
+ BITS  OCT     1                                                        MPDIV290
+       END                                                              MPDIV291

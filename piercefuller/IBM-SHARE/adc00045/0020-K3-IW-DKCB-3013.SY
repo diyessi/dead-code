@@ -1,0 +1,299 @@
+*IW DKCB  7090-1301 DISK PACKAGE FOR COBOL OPERATING UNDER IBJOB        DKCB0001
+*CHARLES K. FENDALL  GPD, IBM  SAN JOSE  03/09/64                       DKCB0002
+* PARAMETERS FOR INSTALLATION MODIFICATION                              DKCB0003
+ ACC   SET     1          ACCESS ARMS PER MODULE (LIMIT 2)              DKCB0004
+ MOD   SET     2          MODULES ON 7909 (LIMIT 10)                    DKCB0005
+*                                                                       DKCB0006
+* SEEK SUBR TO SET BINARY TRACK ADDRESS IN UCW4,FLAG                    DKCB0007
+* CONVERSION AND REQUEST SEEK. USE BEFORE IO IS OPTIONAL.               DKCB0008
+* CALL 'DSEEK' USING UNIT,TRACK.                                        DKCB0009
+ DSEEK SAVE    1,2,I                                                    DKCB0010
+       TSX     UNIT,1                                                   DKCB0011
+       TSX     TRACK,1                                                  DKCB0012
+       ENB     ZERO       STOP TRAPS                                    DKCB0013
+       STO     3,2        TRACK NO. TO UCW4                             DKCB0014
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKCB0015
+       SSM                                                              DKCB0016
+       STO     2,2                                                      DKCB0017
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKCB0018
+       TSX     .ACTV,4    START ACTION                                  DKCB0019
+       PZE     UCB                                                      DKCB0020
+       RETURN  DSEEK                                                    DKCB0021
+*                                                                       DKCB0022
+* WRITE SUBR TO SET UP UCB AND START WRITE.                             DKCB0023
+* CALL 'DPUT' USING UNIT,TRACK,HA2,DATA,NWDS.                           DKCB0024
+ DPUT  SAVE    1,2,I                                                    DKCB0025
+       TSX     IOACT,1                                                  DKCB0026
+       CLS     SEL        FLAG WRITE IN UCW2                            DKCB0027
+       STO     1,2                                                      DKCB0028
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKCB0029
+       TSX     .ACTV,4    START ACTION                                  DKCB0030
+       PZE     UCB                                                      DKCB0031
+       RETURN  DPUT                                                     DKCB0032
+*                                                                       DKCB0033
+* READ SUBR TO SET UP UCB AND START READ.                               DKCB0034
+* CALL 'DTAKE' USING UNIT,TRACK,HA2,DATA,NWDS.                          DKCB0035
+ DTAKE SAVE    1,2,I                                                    DKCB0036
+       TSX     IOACT,1                                                  DKCB0037
+       CLA     SEL        FLAG READ IN UCW2                             DKCB0038
+       STO     1,2                                                      DKCB0039
+       ENB*    .TRAPX     RESTORE TRAPS                                 DKCB0040
+       TSX     .ACTV,4    START ACTION                                  DKCB0041
+       PZE     UCB                                                      DKCB0042
+       RETURN  DTAKE                                                    DKCB0043
+*                                                                       DKCB0044
+* CHECK SUBR TO CHECK READ OR WRITE FOR SUCCESSFUL COMPLETION GIVING    DKCB0045
+* NORMAL RETURN, OTHERWISE BUSY OR ERROR RETURNS.                       DKCB0046
+* CALL 'DCHEK' USING UNIT.                                              DKCB0047
+* RETURNING BUSY,ERROR.                                                 DKCB0048
+ DCHEK SAVE    1,2,I,E                                                  DKCB0049
+       TSX     UNIT,1                                                   DKCB0050
+       NZT     1,2        CHECK FOR DONE (UCW2)                         DKCB0051
+       TRA     ETEST      YES                                           DKCB0052
+       RETURN  DCHEK,1    TO BUSY RETURN                                DKCB0053
+ ETEST LDC     ACCES,1    GET TABLE INDEX                               DKCB0054
+       CLA     ERR,1      TEST FOR ERROR                                DKCB0055
+       TZE     OK         NO                                            DKCB0056
+       RETURN  DCHEK,2    TO ERROR RETURN                               DKCB0057
+ OK    RETURN  DCHEK      TO NORMAL RETURN                              DKCB0058
+*                                                                       DKCB0059
+* INNER SUBR TO SAVE REGISTERS, GET UCB LOC AND TEST FOR ATTACHMENT     DKCB0060
+* OF ACCESS AND MODULE. USED BY ALL MAIN SUBRS. EXITS WITH -UCB IN X2.  DKCB0061
+* CALL TSX     UNIT,1                                                   DKCB0062
+*      RETURN                                                           DKCB0063
+ UNIT  SXA     X4,4       FINISH SAVING REGS                            DKCB0064
+       LDQ*    3,4                                                      DKCB0065
+       ZET     DAVAL      TEST FOR 1ST ENTRY                            DKCB0066
+       TRA     DACC       NO                                            DKCB0067
+       LXD     SYSUBC,2   YES, GET CHANNEL COUNT                        DKCB0068
+       LAC     SYSUBC,4   1ST CHANNEL POINTER                           DKCB0069
+ AVCHN LDI*    0,4        UCW1                                          DKCB0070
+       LFT     20000      7909 TEST                                     DKCB0071
+       TRA     HIT        YES                                           DKCB0072
+       TNX     NODSK,2,1  END OF CHAIN, NO DISK                         DKCB0073
+       TXI     AVCHN,4,-1 TO NEXT CHANNEL                               DKCB0074
+ HIT   CLA     0,4                                                      DKCB0075
+       STO     DAVAL      1ST UCB LOC IN 7909 CHAIN                     DKCB0076
+ DACC  XCA                GET ACCESS AND MODULE                         DKCB0077
+       PAX     0,2                                                      DKCB0078
+       SXD     ACCES,2                                                  DKCB0079
+       SXD     ACMSK,2                                                  DKCB0080
+       TXH     NOTACH,2,19 NON-EXISTENT                                 DKCB0081
+       TXL     SCAN,2,9   ACCESS 0, SKIP ADJUSTMENTS                    DKCB0082
+       TXI     *+1,2,6    ACCESS 1, SPREAD LIKE UCW1                    DKCB0083
+       SXD     ACMSK,2                                                  DKCB0084
+       TXI     *+1,2,MOD-16 FORM TABLE INDEX                            DKCB0085
+       SXD     ACCES,2                                                  DKCB0086
+ SCAN  LAC     DAVAL,2    START SCAN                                    DKCB0087
+       LXD     DAVAL,4    UCB COUNT FOR CHANNEL                         DKCB0088
+ MDCHK LDI     0,2        UCW1                                          DKCB0089
+       IIL     100        DISK BIT                                      DKCB0090
+       LFT     700        TEST FOR DISK                                 DKCB0091
+       TXI     CHAIN,2,-4 NO                                            DKCB0092
+       IIS     ACMSK      YES, TEST ACCESS AND MODULE                   DKCB0093
+       LFT     37                                                       DKCB0094
+       TXI     CHAIN,2,-4 NO                                            DKCB0095
+       CLA     0,2        SUGAR-COAT FOR IOEX                           DKCB0096
+       SLW     0,2                                                      DKCB0097
+       SXA     *+1,2      SAVE UCB LOC FOR .ACTV                        DKCB0098
+       AXC     **,4                                                     DKCB0099
+       SXA     UCB,4                                                    DKCB0100
+       LXA     X4,4                                                     DKCB0101
+       TRA     1,1                                                      DKCB0102
+ CHAIN TIX     MDCHK,4,1   TO NEXT UCB IN CHAIN                         DKCB0103
+       TRA     NOTACH     NOT FOUND IN CHAIN                            DKCB0104
+*                                                                       DKCB0105
+* INNER SUBR TO GET TRACK NO. AND HANG UNTIL UNIT INACTIVE.             DKCB0106
+* USED BY DSEEK, DPUT, DTAKE. EXITS WITH TRACK NO. IN ACC               DKCB0107
+* ADDRESS                                                               DKCB0108
+* CALL TSX     TRACK,1                                                  DKCB0109
+*      RETURN                                                           DKCB0110
+ TRACK ZET     1,2        HANG ON UCW2                                  DKCB0111
+       TRA     *-1                                                      DKCB0112
+       CAL     APMSK                                                    DKCB0113
+       ANA     2,2        HANG TIL AF - PF FLAGS CLEAR                  DKCB0114
+       TNZ     *-2                                                      DKCB0115
+       CLA*    4,4        GET TRACK NUMBER                              DKCB0116
+       TRA     1,1                                                      DKCB0117
+*                                                                       DKCB0118
+* INNER SUBR TO DO DPUT AND DTAKE COMMON CHORES. STORES INFO            DKCB0119
+* IN SEL UNIT TABLES AND FLAGS SEEK IN UCW3.                            DKCB0120
+* CALL TSX     IOACT,1                                                  DKCB0121
+*      RETURN                                                           DKCB0122
+ IOACT SXA     SV1,1      SAVE X1                                       DKCB0123
+       TSX     UNIT,1                                                   DKCB0124
+       CAL*    5,4        GET HA2                                       DKCB0125
+       ANA     HAMSK      CLEAR GARBAGE                                 DKCB0126
+       AXT     TBEND-HATAB-1,1 NO. OF HA TABLE ENTRIES                  DKCB0127
+       LAS     TBEND,1                                                  DKCB0128
+       TRA     *+2                                                      DKCB0129
+       TRA     BADHA      ILLEGAL HA2                                   DKCB0130
+       TIX     *-3,1,1                                                  DKCB0131
+       XCL                                                              DKCB0132
+       TSX     TRACK,1                                                  DKCB0133
+       STO     HATAB      SAVE TRACK NO.                                DKCB0134
+       AXT     2,1                                                      DKCB0135
+       PXD     0,0                                                      DKCB0136
+       LGL     6           00 TO 12                                     DKCB0137
+       TNZ     *+2                                                      DKCB0138
+       CAL     12A                                                      DKCB0139
+       LGR     6                                                        DKCB0140
+       RQL     6                                                        DKCB0141
+       TIX     *-5,1,1                                                  DKCB0142
+       RQL     24          READY TO PASS TO SEL                         DKCB0143
+       LDC     ACCES,1    GET TABLE INDEX                               DKCB0144
+       STQ     SELTB1,1   HA2 TO DECR 1                                 DKCB0145
+       STZ     ERR,1      CLEAR ERROR BITS                              DKCB0146
+       CLA     6,4        GET DATA ADDRESS                              DKCB0147
+       ALS     18                                                       DKCB0148
+       STD     SELTB2,1   TO DECR 2                                     DKCB0149
+       CLA*    7,4        GET NUMBER OF WORDS                           DKCB0150
+       STA     SELTB1,1   WORD COUNT TO ADDR 1                          DKCB0151
+       CLA     HATAB                                                    DKCB0152
+       ENB     ZERO                                                     DKCB0153
+       STO     3,2        NEW TRACK TO UCW4                             DKCB0154
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKCB0155
+       SSM                                                              DKCB0156
+       STO     2,2                                                      DKCB0157
+ SV1   AXT     **,1       RETURN                                        DKCB0158
+       TRA     1,1                                                      DKCB0159
+*                                                                       DKCB0160
+* SELECT ROUTINE                                                        DKCB0161
+DSEL   SXA     DSV1,1     SAVE REGISTERS                                DKCB0162
+       PAC     0,2        -UCB TO X2                                    DKCB0163
+       LRS     0          SAVE SEL + OR-FLAG                            DKCB0164
+       CLA     0,2        UCW1                                          DKCB0165
+       ANA     TBEND      ACCESS AND MODULE BITS                        DKCB0166
+       PDC     0,1        FORM UNIT TABLE INDEX                         DKCB0167
+       TXL     *+3,1,0                                                  DKCB0168
+       TXH     *+2,1,-16                                                DKCB0169
+       TXI     *+1,1,16-MOD                                             DKCB0170
+       TQP     DSELP      TO SEL +                                      DKCB0171
+       PIA                                                              DKCB0172
+       LFT     7100       TEST FOR ERROR                                DKCB0173
+       ORS     ERR,1      STORE FOR DCHEK                               DKCB0174
+       CLA     AMASK                                                    DKCB0175
+       ANA     ERAS       GET COUNT                                     DKCB0176
+       TZE     TERM       NO OVERFLOW                                   DKCB0177
+       CLA     AMASK                                                    DKCB0178
+       ANA     3,2        GET TRACK FROM UCW4                           DKCB0179
+       ADD     40A        FORM 1ST TRACK                                DKCB0180
+       LRS     35         OF NEXT CYL                                   DKCB0181
+       DVP     40A                                                      DKCB0182
+       MPY     40A                                                      DKCB0183
+       STQ     3,2         SET IN UCW4                                  DKCB0184
+       CLA     2,2        REQUEST SEEK VIA UCW3                         DKCB0185
+       SSM                                                              DKCB0186
+       STO     2,2                                                      DKCB0187
+       CLA     ERAS                                                     DKCB0188
+       STA     SELTB1,1   SET NEW COUNT                                 DKCB0189
+       STD     SELTB2,1   SET NEW DATA LOCATION                         DKCB0190
+       TRA     DSV1                                                     DKCB0191
+ TERM  STZ     1,2        CLEAR UCW2                                    DKCB0192
+ DSV1  AXT     **,1                                                     DKCB0193
+ SOUT  TOV     *+1                                                      DKCB0194
+       TRA     1,4        RETURN                                        DKCB0195
+ DSELP CAL     2,2         SEEK ORDER- WD 1                             DKCB0196
+       SUB     CYL         MAKE CYL VERIFY                              DKCB0197
+       LDQ     3,2         SEEK ORDER- WD 2                             DKCB0198
+       LGR     12                                                       DKCB0199
+       CRQ     DKCDZ,,6    00 TO 12                                     DKCB0200
+       LGL     12                                                       DKCB0201
+       STO     ORDER       ORDER- WD 1                                  DKCB0202
+       LGL     12                                                       DKCB0203
+       LDQ     SELTB1,1    HA2                                          DKCB0204
+       LGR     12                                                       DKCB0205
+       STQ     ORDER+1     ORDER- WD 2                                  DKCB0206
+       CLA     AMASK                                                    DKCB0207
+       ANA     3,2        GET TRACK NO.                                 DKCB0208
+       LRS     35                                                       DKCB0209
+       DVP     40A                                                      DKCB0210
+       SUB     40A        NO. OF TRACKS LEFT ON CYL                     DKCB0211
+       XCL                                                              DKCB0212
+       MPY     465A       NO. OF WDS LEFT ON CYL                        DKCB0213
+       STQ     ERAS                                                     DKCB0214
+       CAL     SELTB1,1                                                 DKCB0215
+       ANA     AMASK                                                    DKCB0216
+       SUB     ERAS       TEST FOR CYL OVERFLOW                         DKCB0217
+       TPL     OVFLO      YES                                           DKCB0218
+       PXD     0,0        NO-MAKE OVFLO COUNT ZERO                      DKCB0219
+ OVFLO STO     ERAS       SAVE OVERFLOW COUNT                           DKCB0220
+       SBM     SELTB1,1   FORM COUNT FOR CPYD                           DKCB0221
+       LDQ     SELTB2,1   DATA LOC                                      DKCB0222
+       LGL     18                                                       DKCB0223
+       ORA     CPYD       CPYD DATA,,COUNT                              DKCB0224
+       SLW     CPYD1                                                    DKCB0225
+       SLW     CPYD2                                                    DKCB0226
+       ACL     SELTB2,1   DATA + COUNT                                  DKCB0227
+       STD     ERAS       DATA LOC FOR OVERFLOW                         DKCB0228
+       LDQ     1,2        UCW2                                          DKCB0229
+       CLA     CRCOM      READ COMMAND LOC                              DKCB0230
+       TQP     *+2                                                      DKCB0231
+       CLA     CWCOM      WRITE COMMAND LOC                             DKCB0232
+       LXA     DSV1,1     -CHANNEL TO X1                                DKCB0233
+       STA*    .RCHX      SET COMMAND LOC                               DKCB0234
+       XEC*    .RCHX      START CHANNEL                                 DKCB0235
+       TRA     SOUT       TO EXIT                                       DKCB0236
+ RCOM  SMS     6          READ SEQUENCE                                 DKCB0237
+       CTLR    ORDER                                                    DKCB0238
+ CPYD1 CPYD    **,,**     READ DATA                                     DKCB0239
+       TCH     SYSTWT     DONE                                          DKCB0240
+ WCOM  SMS     6                                                        DKCB0241
+       CTLW    ORDER                                                    DKCB0242
+ CPYD2 CPYD    **,,**     WRITE DATA                                    DKCB0243
+       TCH     SYSTWT     DONE                                          DKCB0244
+*                                                                       DKCB0245
+* CATASTROPHIC ERROR ROUTINES                                           DKCB0246
+ NODSK AXT     12,1       NO 7909                                       DKCB0247
+       TRA     PRINT                                                    DKCB0248
+NOTACH AXT     6,1        NO ACCESS/MODULE                              DKCB0249
+       TRA     PRINT                                                    DKCB0250
+ BADHA AXT     0,1        ILLEGAL HA2                                   DKCB0251
+       ORA     BLNKS      FILL IN BLANKS                                DKCB0252
+       SLW     MESG                                                     DKCB0253
+ PRINT TSX     .MWR,4     PRINT ON-LINE DIAGNOSTIC                      DKCB0254
+       PZE     2                                                        DKCB0255
+       PZE     MESG,1,6                                                 DKCB0256
+       PZE     FINI,,3                                                  DKCB0257
+       TRA     .LXERR     TOSS JOB OFF                                  DKCB0258
+*                                                                       DKCB0259
+* CONSTANTS AND STORAGE                                                 DKCB0260
+ HATAB PZE     0          TRACK NO. (ADDR)                              DKCB0261
+* THIS BCI TABLE MAY BE REMOVED,CHANGED,OR EXTENDED, AT THE             DKCB0262
+* DISCRETION OF THE USER INSTALLATION                                   DKCB0263
+       BCI   1,BM0000     ILLEGAL HA TABLE (BETW HATAB AND TBEND)       DKCB0264
+ TBEND OCT     37000000   MASK FOR ACCESS AND MODULE                    DKCB0265
+ 12A   OCT     12                                                       DKCB0266
+ 40A   PZE     40                                                       DKCB0267
+ 465A  PZE     465                                                      DKCB0268
+ AMASK OCT     77777      ADDRESS MASK                                  DKCB0269
+ HAMSK OCT     777700000000                                             DKCB0270
+ BLNKS BCI   1,00                                                       DKCB0271
+ APMSK TNX     0,,0                                                     DKCB0272
+ CYL   OCT     000500000000                                             DKCB0273
+ CPYD  MON     0          COMMAND CODE                                  DKCB0274
+ SEL   PZE     0,,DSEL    ADDRESS OF SELECT ROUTINE                     DKCB0275
+ CRCOM PZE     RCOM       COMMAND LOC FOR CHANNEL-READ                  DKCB0276
+ CWCOM PZE     WCOM       DITTO-WRITE                                   DKCB0277
+ DKCDZ VFD     6/10,30/DKCDZ                                            DKCB0278
+       DUP     1,10                                                     DKCB0279
+       VFD     6/*-DKCDZ,30/DKCDZ                                       DKCB0280
+ X4    PZE     **         FOOL-PROOF X4 ACCESS                          DKCB0281
+ ACCES PZE     0,,**      TABLE INDEX                                   DKCB0282
+ DAVAL PZE     **         1ST UCB IN 7909 CHAIN                         DKCB0283
+ ACMSK PZE     0,,**      SPREAD ACCESS AND MODULE                      DKCB0284
+ UCB   PZE     0          UCB LOC (ADDR)                                DKCB0285
+ ZERO  PZE     0          DISABLE TRAPS                                 DKCB0286
+ ERAS  PZE     0                                                        DKCB0287
+       BCI   6,7909 UNIT IS NOT AVAILABLE TO IBSYS                      DKCB0288
+       BCI   6,ACCESS/MODULE NOT AVAILABLE TO IBSYS                     DKCB0289
+ MESG  BCI   6,      HOME ADDRESS 2 IS NOT ALLOWED                      DKCB0290
+ FINI  BCI   3,JOB TERMINATED                                           DKCB0291
+ ERR   DUP     1,ACC*MOD   EXPANDABLE UNIT TABLES                       DKCB0292
+       PZE     0                                                        DKCB0293
+SELTB1 DUP     1,ACC*MOD                                                DKCB0294
+       PZE     0                                                        DKCB0295
+SELTB2 DUP     1,ACC*MOD                                                DKCB0296
+       PZE     0                                                        DKCB0297
+ ORDER BSS     2          SET-UP AREA FOR DISK ORDER                    DKCB0298
+       END                                                              DKCB0299

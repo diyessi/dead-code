@@ -1,0 +1,516 @@
+$IBMAP FZERO                                                            ZERO0000
+* SUBROUTINE ZEROS,COMPUTES THE ROOT OF F(X)=0                          ZERO0010
+*                                                                       ZERO0020
+*  CALLING SEQUENCE TO SOLVE THE EQUATION FONC(X,Y,....)=0              ZERO0030
+*  CALL ZEROS(X,XT,FXT,RATIO,PRECI,XMIN,XMAX,6HTTPPRR,FONC,X,Y,...)     ZERO0040
+*                                                                       ZERO0050
+*      INDICATORS GUIDE                                                 ZERO0060
+*      ****************                                                 ZERO0070
+*                                                                       ZERO0080
+* 1)CODING   BITS  26 TO 35                                             ZERO0090
+*                                                                       ZERO0100
+*      BIT 26=1   ARITHMETIC TABULATION                                 ZERO0110
+*      BIT 27=1   GEOMETRIC TABULATION                                  ZERO0120
+*      BIT 28=1   INCREASING FUNCTION                                   ZERO0130
+*      BIT 29=1   DECREASING FUNCTION                                   ZERO0140
+*      BIT 30=1   INITIAL VALUE SUPERIOR TO THE ROOT                    ZERO0150
+*      BIT 31=1   INITIAL VALUE INFERIOR TO THE ROOT                    ZERO0160
+*      BIT 32=1   FUNCTION WITH AN UNDEFINED MODE OF VARIATION          ZERO0170
+*      BIT 33=1   SUPERIOR VALUE                                        ZERO0180
+*      BIT 34=1   INFERIOR VALUE                                        ZERO0190
+*      BIT 35=1   BEST VALUE OF THE RESULT                              ZERO0200
+*                                                                       ZERO0210
+* 2)LINKAGE TABUL   BITS  15 TO 17                                      ZERO0220
+*                                                                       ZERO0230
+*      TABUL =2   COMPUTATION OF F(V) FOR V=VT                          ZERO0240
+*      TABUL =5   THE MODE OF VARIATION IS UNKNOWN.X=XT+PAS OR X=XT*PAS ZERO0250
+*      TABUL =1   SEARCH OF THE BOUNDARIES                              ZERO0260
+*      TABUL =0   BOUNDARIES FOUND,SEARCH OF THE ROOT                   ZERO0270
+*                                                                       ZERO0280
+* 3)LINKAGE AIGD   BIT  14                                              ZERO0290
+*                                                                       ZERO0300
+*      AIGD  =1   INTERSECTION WITH A FIXED SLOPE LINE                  ZERO0310
+*      AIGD  =0   DICHOTOMY                                             ZERO0320
+*                                                                       ZERO0330
+* 5)COUNTER  BITS  7 AND 8                                              ZERO0340
+*                                                                       ZERO0350
+*      ADDS  1  TO ITS CONTENT EACH TIME ONE ADDS A BIT TO ONE OF THE   ZERO0360
+*      BOUNDARIES.THIS OPERATION CAN BE DONE ONLY 2 TIMES               ZERO0370
+*                                                                       ZERO0380
+* 6)FLAGS 1 AND 2  BITS  5  AND  4                                      ZERO0390
+*                                                                       ZERO0400
+*      FLAG2 =1   IF XT IS GREATER THAN OR EQUAL TO XMAX                ZERO0410
+*      FLAG1 =1   IF XT IS LESS THAN OR EQUAL TO XMIN                   ZERO0420
+*                                                                       ZERO0430
+* 7)ERROR BIT  BIT  3                                                   ZERO0440
+*      INDICATES THAT THE VARIABLE REACHED ONE OF THE BOUNDARIES        ZERO0450
+       EJECT                                                            ZERO0460
+       REM                                                              ZERO0470
+       ENTRY   ZEROS                                                    ZERO0480
+*******    MACRO-INSTRUCTION GENARATING THE BLOCKS    *******           ZERO0490
+*******    OF PARAMETERS RELATED WITH EACH STAGE      *******           ZERO0500
+       REM                                                              ZERO0510
+BLOCK  MACRO   I                                                        ZERO0520
+       IRP     I                                                        ZERO0530
+RATE'I BSS     1                                                        ZERO0540
+IND'I  BSS     1                                                        ZERO0550
+VI'I   BSS     1                                                        ZERO0560
+FVI'I  BSS     1                                                        ZERO0570
+VS'I   BSS     1                                                        ZERO0580
+FVS'I  BSS     1                                                        ZERO0590
+VA'I   BSS     1                                                        ZERO0600
+FVA'I  BSS     1                                                        ZERO0610
+V'I    BSS     1                                                        ZERO0620
+MA'I   BSS     1                                                        ZERO0630
+M'I    BSS     1                                                        ZERO0640
+LKDR'I PZE                                                              ZERO0650
+       BCI     1,ZEROS'I                                                ZERO0660
+CALL'I TSX     **,4                                                     ZERO0670
+       TRA     RET.AP                                                   ZERO0680
+       PZE     ,,LKDR'I                                                 ZERO0690
+       BSS     N                                                        ZERO0700
+       SPACE   2                                                        ZERO0710
+       IRP                                                              ZERO0720
+       ENDM    BLOCK                                                    ZERO0730
+       REM                                                              ZERO0740
+*******    PARAMETERS OF DIMENSION    *******                           ZERO0750
+N      SET     3                                                        ZERO0760
+NNN    SET     N+16                                                     ZERO0770
+       BLOCK   (1,2,3)                                                  ZERO0780
+       REM                                                              ZERO0790
+       REM                                                              ZERO0800
+       REM     *RESTAURATION*                                           ZERO0810
+ZEROS  TRA     STI                                                      ZERO0820
+       CLA     LKDR1,2        RESTAURATION OF THE ADDRESS OF INDEX 4    ZERO0830
+       STA     AXT4                                                     ZERO0840
+       TXI     *+1,2,NNN                                                ZERO0850
+       SXD     STAGE,2                                                  ZERO0860
+X2     AXT     **,2           RESTAURATION OF THE INDEXES               ZERO0870
+X1     AXT     **,1                                                     ZERO0880
+AXT4   AXT     **,4                                                     ZERO0890
+       LDI     PROTI          PROTECTION OF THE INDICATOR REGISTER      ZERO0900
+       TRA     1,4            RETURN TO THE CALLING PROGRAM             ZERO0910
+PROTI  PZE                                                              ZERO0920
+       REM     *PROTECTION*                                             ZERO0930
+STI    STI     PROTI          PROTECTION OF THE INDICATOR REGISTER      ZERO0940
+       REM                    DETERMINATION OF THE STAGE                ZERO0950
+       SXA     X2,2                                                     ZERO0960
+       LXD     STAGE,2                                                  ZERO0970
+       TXI     *+1,2,-NNN                                               ZERO0980
+       SXA     X1,1                                                     ZERO0990
+DEB    SXD     STAGE,2                                                  ZERO1000
+       TXI     *+1,2,-LKDR1                                             ZERO1010
+       SCA     SXALKD,2       LOCATION OF INDEX 4 FOR THE RETROSPECTIVE ZERO1020
+       REM                    ANALYSIS                                  ZERO1030
+       LXD     STAGE,2                                                  ZERO1040
+       SXA     SYSLOC,4                                                 ZERO1050
+SXALKD SXA     **,4                                                     ZERO1060
+       RIS     MASK5          INDICATOR REGISTER CLEARED                ZERO1070
+       STZ     FV             F(V)=0.                                   ZERO1080
+       STZ     MA1,2          MA=0.                                     ZERO1090
+       REM     *DECODING OF THE CALLING SEQUENCE*                       ZERO1100
+       CLA*    6,4                                                      ZERO1110
+       STO     RATE1,2        LOAD RATIO INTO BLOCK                     ZERO1120
+       CLA     11,4                                                     ZERO1130
+       STA     CALL1,2        LOAD ADDRESS OF THE FUNCTION INTO BLOCK   ZERO1140
+       CLA     LKDR1,2                                                  ZERO1150
+       PAX     ,4                                                       ZERO1160
+       CLA     1,4                                                      ZERO1170
+       PDX     ,1                                                       ZERO1180
+       REM     *COUNT AND LOAD OF THE ARGUMENTS OF FONC*                ZERO1190
+       TXI     *+1,1,-9                                                 ZERO1200
+       TXH     ARGU,1,10                                                ZERO1210
+ARG.F  CAL     12,4                                                     ZERO1220
+       SLW     CALL1+3,2                                                ZERO1230
+       TXI     *+1,2,-1                                                 ZERO1240
+       TXI     *+1,4,-1                                                 ZERO1250
+       TIX     ARG.F,1,1                                                ZERO1260
+       TRA     F.ARG                                                    ZERO1270
+ARGU   AXT     DIAG1,1        THERE ARE TOO MANY ARGUMENTS IN FONC.     ZERO1280
+       REM                    CONTROL IS GIVEN TO THE 'DANGER' CALL...  ZERO1290
+INIT   SXA     DANGER+4,1                                               ZERO1300
+       TRA     DANGER                                                   ZERO1310
+       REM     *DECODING OF THE HOLLERITH ARGUMENTS*                    ZERO1320
+F.ARG  LXD     STAGE,2                                                  ZERO1330
+       CLA     LKDR1,2                                                  ZERO1340
+       PAX     ,4                                                       ZERO1350
+       AXT     3,1                                                      ZERO1360
+       LDQ*    10,4                                                     ZERO1370
+CTABLE CLA     TAB,1          LOOK-UP OF THE CODING TABLE               ZERO1380
+       PDX     ,2                                                       ZERO1390
+       PXD     ,                                                        ZERO1400
+       LGL     12                                                       ZERO1410
+COL    LAS*    TAB,1          IS THE CODE IDENTICAL TO THE CODE OF THE  ZERO1420
+       REM                    TABLE.                                    ZERO1430
+       TRA     *+2            NO                                        ZERO1440
+       TXI     IDENT,2,-1     YES                                       ZERO1450
+       TIX     COL,2,2                                                  ZERO1460
+       AXT     DIAG2,1        AN UNDEFINED CODE HAS BEEN USED IN THE    ZERO1470
+       REM                    CALLING SEQUENCE.CONTROL IS GIVEN TO THE  ZERO1480
+       REM                    DANGER CALL.                              ZERO1490
+       TRA     INIT                                                     ZERO1500
+IDENT  OSI*    TAB,1                                                    ZERO1510
+       TIX     CTABLE,1,1                                               ZERO1520
+       LXD     STAGE,2                                                  ZERO1530
+       REM     *END OF THE PREPARATION.START OF THE COMPUTATION*        ZERO1540
+       SIL     000002         AIGD=0 AND TABUL=2                        ZERO1550
+       CLA*    4,4                                                      ZERO1560
+       STO     V1,2           V=VT                                      ZERO1570
+       RNT     000010         IS THE MODE OF VARIATION KNOWN.           ZERO1580
+       TRA     F.INIT         YES                                       ZERO1590
+       CAS*    9,4            NO.VT(IN AC) IS COMPARED WITH VMAX        ZERO1600
+       TRA     FLAG2          VT IS GREATER THAN VMAX                   ZERO1610
+       TRA     FLAG2+2        VT=VMAX                                   ZERO1620
+       CAS*    8,4            VT IS COMPARED WITH VMIN                  ZERO1630
+       TRA     F.INIT         VT IS GREATER THAN VMIN                   ZERO1640
+       TRA     FLAG1+2        VT=VMIN                                   ZERO1650
+FLAG1  CLA*    8,4            VT IS LESS THAN VMIN.                     ZERO1660
+       STO     V1,2           ONE MAKES V1=VMIN                         ZERO1670
+       SIL     010000         AND FLAG1=1                               ZERO1680
+       TRA     F.INIT                                                   ZERO1690
+FLAG2  CLA*    9,4                                                      ZERO1700
+       STO     V1,2           ONE MAKES V1=VMAX                         ZERO1710
+       SIL     020000         AND FLAG2=1                               ZERO1720
+F.INIT CLA*    5,4            IS FVT EQUAL TO 0.                        ZERO1730
+       TZE     CALCFV         NO.TRANSFER TO THE COMPUTATION OF F(V1)   ZERO1740
+       STO     FV             YES.F(V1)=F(VT)                           ZERO1750
+       TRA     KKK                                                      ZERO1760
+       REM     *PREPARATION OF THE COMPUTATION*                         ZERO1770
+CALCFV CLA     V1,2           LOAD OF THE VARIABLE                      ZERO1780
+       STO*    3,4                                                      ZERO1790
+       STI     IND1,2         PROTECTION OF THEINDICATORS OF THE STAGE  ZERO1800
+       LDI     PROTI          LOAD OF THE INDICATOR REGISTER            ZERO1810
+       LXA     X1,1                                                     ZERO1820
+       LXA     X2,2                                                     ZERO1830
+       LXD     STAGE,4        INDEX 4=INDEX 2 TRUE                      ZERO1840
+       TRA     CALL1,4                                                  ZERO1850
+       REM     *RETURN FROM THE COMPUTATION.RESTAURATION.*              ZERO1860
+RET.AP STO     FV                                                       ZERO1870
+       SXA     X1,1           RESTAURATION OF X1                        ZERO1880
+       SXA     X2,2           RESTAURATION OF X2                        ZERO1890
+       STI     PROTI          RESTAURATION OF PROTI                     ZERO1900
+       LXD     STAGE,2                                                  ZERO1910
+       CLA     LKDR1,2        RESTAURATION OF INDEX 2 AND 4             ZERO1920
+       PAX     ,4                                                       ZERO1930
+       LDI     IND1,2         RESTAURATION OF THE STAGE INDICATORS      ZERO1940
+       CLA     FV                                                       ZERO1950
+       TZE     RESTAU         IS F(V) EQUAL TO ZERO                     ZERO1960
+       LNT     000002         NO.IS TABUL EQUAL TO 2                    ZERO1970
+       TRA     T.ENC1         NO                                        ZERO1980
+KKK    CLA     V1,2           YES.TABUL=2                               ZERO1990
+       STO     VA1,2                                                    ZERO2000
+       CLA     FV                                                       ZERO2010
+       STO     FVA1,2                                                   ZERO2020
+T.MONO RNT     000010         IS THE MODE OF VARIATION KNOWN.           ZERO2030
+       TRA     N.MONO         YES                                       ZERO2040
+YES8   RIL     000002         YES.ONE MAKES TABUL=5                     ZERO2050
+       SIL     000005                                                   ZERO2060
+T.TAB1 RNT     001000         IS THE TABULATION ARITHMETIC.             ZERO2070
+       TRA     GEOM1          NO                                        ZERO2080
+ARITH1 CLA     V1,2           YES                                       ZERO2090
+       FAD     RATE1,2                                                  ZERO2100
+       STO     V1,2           V1=V1+RATE1                               ZERO2110
+       TRA     T.INT1                                                   ZERO2120
+GEOM1  LDQ     V1,2                                                     ZERO2130
+       FMP     RATE1,2                                                  ZERO2140
+       STO     V1,2           V1=V1*RATE1                               ZERO2150
+       TRA     T.INT1                                                   ZERO2160
+N.MONO RIL     000002         THE MODE OF VARIATION IS DETERMINED       ZERO2170
+       SIL     000001         ONE MAKES TABUL=1                         ZERO2180
+       RFT     000200                                                   ZERO2190
+       TRA     F.CROI         THE FUNCTION IS INCREASING                ZERO2200
+       RFT     000100                                                   ZERO2210
+       TRA     F.DECR         THE FUNCTION IS DECREASING                ZERO2220
+       RFT     000040                                                   ZERO2230
+       TRA     T.TAB3                                                   ZERO2240
+       TRA     T.TAB4                                                   ZERO2250
+F.CROI CLA     FV                                                       ZERO2260
+       REM     *INCREASING FUNCTION*                                    ZERO2270
+       TMI     T.TAB4                                                   ZERO2280
+T.TAB3 RNT     001000                                                   ZERO2290
+       TRA     GEOM3                                                    ZERO2300
+ARITH3 CLS     RATE1,2                                                  ZERO2310
+       STO     RATE1,2        RATE1=-RATE1                              ZERO2320
+       TRA     ARITH1                                                   ZERO2330
+GEOM3  CLA*    4,4                                                      ZERO2340
+       TPL     T.TAB2                                                   ZERO2350
+       TRA     GEOM1                                                    ZERO2360
+       REM     *DECREASING FUNCTION*                                    ZERO2370
+F.DECR CLA     FV                                                       ZERO2380
+       TMI     T.TAB3                                                   ZERO2390
+T.TAB4 RNT     000400                                                   ZERO2400
+       TRA     ARITH1                                                   ZERO2410
+GEOM4  CLA*    4,4                                                      ZERO2420
+       TPL     GEOM1                                                    ZERO2430
+T.TAB2 RNT     001000                                                   ZERO2440
+       TRA     GEOMET                                                   ZERO2450
+       CLS     RATE1,2                                                  ZERO2460
+       STO     RATE1,2                                                  ZERO2470
+       TRA     ARITH1                                                   ZERO2480
+GEOMET CLA     =1.                                                      ZERO2490
+       FDH     RATE1,2                                                  ZERO2500
+       STQ     RATE1,2                                                  ZERO2510
+       TRA     GEOM1                                                    ZERO2520
+       REM     *TESTS ON THE SIGNS OF F(V1) AND F(VA1)*                 ZERO2530
+       REM     *COMPARISON OF F(V1) AND F(VA1)*                         ZERO2540
+       REM                    COMPARISON OF THE SIGNS                   ZERO2550
+T.ENC1 CAL     FVA1,2         TABUL=0,1 OR 5                            ZERO2560
+       ERA     FV                                                       ZERO2570
+       PBT                    DO F(V1) AND F(VA1) HAVE THE SAME SIGN.   ZERO2580
+       TRA     YES3           YES.                                      ZERO2590
+       RIL     040000         NO.THE ERROR BIT,IF ANY,IS CLEARED        ZERO2600
+       LFT     000007         IS TABUL EQUAL TO 0.                      ZERO2610
+       TRA     *+2            NO                                        ZERO2620
+       TRA     RBSI1          YES                                       ZERO2630
+       RIL     000007         ONE MAKES TABUL=0                         ZERO2640
+       CLA     V1,2                                                     ZERO2650
+       STO*    4,4                                                      ZERO2660
+       CLA     FV                                                       ZERO2670
+       STO*    5,4                                                      ZERO2680
+       TRA     RBSI1                                                    ZERO2690
+YES3   LNT     000005         IS TABUL EQUAL TO 5                       ZERO2700
+       TRA     NO4            NO.TABUL=0 OR1                            ZERO2710
+       RIL     000004         YES.ONE MAKES TABUL=1                     ZERO2720
+       REM                    COMPARISON OF THE ABSOLUTE VALUES         ZERO2730
+       CLA     FVA1,2                                                   ZERO2740
+       SSP                                                              ZERO2750
+       STO     WORK                                                     ZERO2760
+       CLA     FV                                                       ZERO2770
+       SSP                                                              ZERO2780
+       CAS     WORK                                                     ZERO2790
+       TRA     TFLAGS         IF(V1)I IS GREATER THAN IF(VA1)I          ZERO2800
+       TRA     YES8           IF(V1)I = IF(VA1)I                        ZERO2810
+       LFT     040000         IF(V1)I IS LESS THAN IF(VA1)I.IS THE ERRORZERO2820
+       REM                    BIT ON.                                   ZERO2830
+       TRA     OIGI           YES                                       ZERO2840
+       RIL     030000         NO.ONE MAKES FLAG1=FLAG2=0                ZERO2850
+TTT    CLA     V1,2                                                     ZERO2860
+       STO     VA1,2                                                    ZERO2870
+       CLA     FV                                                       ZERO2880
+       STO     FVA1,2                                                   ZERO2890
+       TRA     T.TAB1                                                   ZERO2900
+TFLAGS LFT     030000         ARE BOTH FLAG1 AND FLAG2 EQUAL TO 0       ZERO2910
+       TRA     OIGI           NO.THERE IS NO ROOT IN THE INTERVAL.      ZERO2920
+       REM                    CONTROL IS GIVEN TO THE DANGER CALL.      ZERO2930
+       RIL     040000         YES                                       ZERO2940
+       CLA*    4,4                                                      ZERO2950
+       STO     V1,2                                                     ZERO2960
+       TRA     T.TAB2                                                   ZERO2970
+OIGI   AXT     DIAG3,1                                                  ZERO2980
+       SXA     DANGER+4,1                                               ZERO2990
+       TRA     DANGER                                                   ZERO3000
+NO4    LFT     040000         IS THERE AN ERROR BIT ON.                 ZERO3010
+       TRA     OIGI           YES.BACK TO DANGER.                       ZERO3020
+       LNT     000001         NO.IS TABUL EQUAL TO 1                    ZERO3030
+       TRA     RBSI2          NO.TABUL=0                                ZERO3040
+       TRA     TTT            YES.TABUL=1(V1 IS IN THE AC)              ZERO3050
+       REM     *COMPARISON OF V1 WITH VMIN AND VMAX                     ZERO3060
+T.INT1 CAS*    9,4                                                      ZERO3070
+       TRA     BORNSU         V1 IS GREATER THAN VMAX                   ZERO3080
+       TRA     OIG            V1=VMAX                                   ZERO3090
+       CAS*    8,4                                                      ZERO3100
+       TRA     CALCFV         V1 IS GREATER THAN VMIN                   ZERO3110
+       TRA     OIG            V1 = VMIN                                 ZERO3120
+BORNIN CLA*    8,4                                                      ZERO3130
+       STO     V1,2           ONE MAKES V1=VMIN                         ZERO3140
+       TRA     OIG                                                      ZERO3150
+BORNSU CLA*    9,4                                                      ZERO3160
+       STO     V1,2           ONE MAKES V1=VMAX                         ZERO3170
+OIG    SIL     040000         THE ERROR BIT IS SET ON.THE POSSIBLE ERRORZERO3180
+       REM                    IS 'NO ROOT IN THE INTERVAL'              ZERO3190
+       TRA     CALCFV                                                   ZERO3200
+       REM     *END OF THE TABULATION.SEARCH OF THE ROOT IS CARRIED ON. ZERO3210
+RBSI2  CAL     FVI1,2                                                   ZERO3220
+       ERA     FV                                                       ZERO3230
+       PBT                    DO F(V1) AND F(VI1) HAVE THE SAME SIGN.   ZERO3240
+       TRA     YES6           YES                                       ZERO3250
+       TRA     NO6            NO                                        ZERO3260
+RBSI1  LDQ     V1,2                                                     ZERO3270
+       CLA     VA1,2                                                    ZERO3280
+       TLQ     YES5           IS V1 LESS THAN VA1.                      ZERO3290
+NO5    STO     VI1,2          NO.ONE MAKES VI1=VA1                      ZERO3300
+       CLA     FVA1,2                                                   ZERO3310
+       STO     FVI1,2         F(VI1)=F(VA1)                             ZERO3320
+NO6    CLA     V1,2                                                     ZERO3330
+       STO     VS1,2          VS1=V1                                    ZERO3340
+       CLA     FV                                                       ZERO3350
+       STO     FVS1,2         F(VS1)=F(V1)                              ZERO3360
+       TRA     T.DBIT                                                   ZERO3370
+YES5   STO     VS1,2          ONE MAKES VS1=VA1                         ZERO3380
+       CLA     FVA1,2                                                   ZERO3390
+       STO     FVS1,2         F(VS1)=F(VA1)                             ZERO3400
+YES6   CLA     V1,2                                                     ZERO3410
+       STO     VI1,2          VI1=V1                                    ZERO3420
+       CLA     FV                                                       ZERO3430
+       STO     FVI1,2         F(VI1)=F(V1)                              ZERO3440
+T.DBIT CLA     VS1,2          *                                         ZERO3450
+       UFS     VI1,2          *                                         ZERO3460
+       ANA     MASK3          *                                         ZERO3470
+       TZE     SO.RES         *                                         ZERO3480
+       CLA     VS1,2          *                                         ZERO3490
+       FSB     VI1,2          *                                         ZERO3500
+       STO     WORK           *IS IVS1-VI1I LESS THAN IV1*PRECII.       ZERO3510
+       ARS     27             *                                         ZERO3520
+       TZE     SO.RES         *                                         ZERO3530
+       LDQ*    7,4            *                                         ZERO3540
+       FMP     V1,2           *                                         ZERO3550
+       SSP                    *                                         ZERO3560
+       LDQ     WORK           *                                         ZERO3570
+       TLQ     SO.RES         *                                         ZERO3580
+       CLA     V1,2           NO.THE PRECISION IS NOT REACHED           ZERO3590
+       UFS     VA1,2                                                    ZERO3600
+       ANA     MASK4                                                    ZERO3610
+       TZE     CH.SEC         DO V1 AND VA1 DIFFER ONLY BY  THEIR LAST  ZERO3620
+       REM                    9 BITS                                    ZERO3630
+       CLA     FV             NO.COMPUTATION OF COTG=(V1-VA1)/(FV-FVA1) ZERO3640
+       FSB     FVA1,2                                                   ZERO3650
+       TNZ     CALCO          IF THE DENOMINATOR OF COTG IS NOT ZERO    ZERO3660
+       REM                    COMPUTATION OF COTG IS CARRIED ON IN CALCOZERO3670
+CH.SEC CLA     V1,2           THE DENOMINATOR IS ZERO.TRANSFER ON SECOURZERO3680
+       STO     VA1,2                                                    ZERO3690
+       CLA     FV                                                       ZERO3700
+       STO     FVA1,2                                                   ZERO3710
+       TRA     SECOUR                                                   ZERO3720
+CALCO  STO     WORK                                                     ZERO3730
+       CLA     V1,2                                                     ZERO3740
+       FSB     VA1,2                                                    ZERO3750
+       FDH     WORK                                                     ZERO3760
+       STQ     COTG                                                     ZERO3770
+       CLA     V1,2                                                     ZERO3780
+       STO     VA1,2                                                    ZERO3790
+       CAL     FVA1,2                                                   ZERO3800
+       ERA     FV                                                       ZERO3810
+       PBT                    DO F(V1) AND F(VA1) HAVE THE SAME SIGN.   ZERO3820
+       TRA     YES7           YES                                       ZERO3830
+       CLA     FV             NO                                        ZERO3840
+       STO     FVA1,2         F(VA1)=F(V1)                              ZERO3850
+       CLA     MA1,2                                                    ZERO3860
+       TZE     AAA            MA1 HAS NOT BEEN LOADED YET               ZERO3870
+       STO     M1,2           MA1 IS NOT 0.ONE MAKES M1=MA1             ZERO3880
+AAA    CLA     COTG                                                     ZERO3890
+       STO     MA1,2          MA1=COTG                                  ZERO3900
+       LDQ     COTG                                                     ZERO3910
+       FMP     FVA1,2                                                   ZERO3920
+       FSB     VA1,2                                                    ZERO3930
+       CHS                                                              ZERO3940
+       STO     V1,2           V1=VA1-F(VA1)*COTG                        ZERO3950
+       REM                    COMPARISON OF V1,VI1,VS1                  ZERO3960
+T.INT3 CAS     VS1,2                                                    ZERO3970
+       TRA     BBB            V1 GREATER THAN VS1                       ZERO3980
+       TRA     SOUST          V1=VS1                                    ZERO3990
+       CAS     VI1,2          V1 IS LESS THAN VS1                       ZERO4000
+       TRA     CALCFV         V1 IS LESS THAN VS1 AND GREATER THAN VI1  ZERO4010
+       TRA     ADDIT          V1=VI1                                    ZERO4020
+       TRA     BBB            V1 IS LESS THAN VI1                       ZERO4030
+       REM                    ADDITION OR SUBSTRACTION OF 1 IN BIT 35 OFZERO4040
+       REM                    V1.TTHIS CAN BE REPEATED THREE TIMES      ZERO4050
+SOUST  SUB     BIT                                                      ZERO4060
+       TRA     SORV                                                     ZERO4070
+ADDIT  ADD     BIT                                                      ZERO4080
+SORV   STO     V1,2                                                     ZERO4090
+       PIA                                                              ZERO4100
+       ADD     MASK6                                                    ZERO4110
+       PAI                                                              ZERO4120
+       LNT     003000         IS IT THE THIRD TIME.                     ZERO4130
+       TRA     CALCFV         NO.TRANSFER ON COMPUTATION OF F(V1)       ZERO4140
+BBB    RIL     003010         YES.OR ELSE V1 IS NOT BETWEEN VI1 AND VS1 ZERO4150
+       REM                    AIGD=0 AND THE COUNTER IS CLEARED         ZERO4160
+       TRA     DICHO          TRANSFER ON DICHOTOMY                     ZERO4170
+YES7   CLA     FV                                                       ZERO4180
+       STO     FVA1,2         F(VA1)=F(V1)                              ZERO4190
+       CLA     MA1,2                                                    ZERO4200
+       FAD     MA1,2                                                    ZERO4210
+       SSP                                                              ZERO4220
+       XCA                                                              ZERO4230
+       CLA     COTG                                                     ZERO4240
+       SSP                                                              ZERO4250
+       STO     WORK                                                     ZERO4260
+       REM                    I2*MA1I IN (MQ)                           ZERO4270
+       REM                    ICOTGI IN (AC)                            ZERO4280
+       TLQ     BBB            IS I2*MA1I LESS THAN ICOTGI.              ZERO4290
+       FMP     =0.25          NO                                        ZERO4300
+       LDQ     WORK                                                     ZERO4310
+       REM                    IMA1/2I IN (AC)                           ZERO4320
+       REM                    ICOTGI IN (MQ)                            ZERO4330
+       TLQ     BBB            IS ICOTGI LESS THAN IMA1/2I.              ZERO4340
+       SIL     000010         NO.ONE MAKES AIGD=1                       ZERO4350
+       TRA     AAA                                                      ZERO4360
+SECOUR LNT     000010         IS AIGD EQUAL TO 1                        ZERO4370
+       TRA     DICHO          NO                                        ZERO4380
+       LDQ     M1,2           YES..USE OF THE FIXED SLOPE LINE          ZERO4390
+       FMP     FVA1,2                                                   ZERO4400
+       FSB     VA1,2                                                    ZERO4410
+       CHS                                                              ZERO4420
+       STO     V1,2           V1=VA1-F(VA1)*M1                          ZERO4430
+       TRA     T.INT3                                                   ZERO4440
+DICHO  CLA     VI1,2                                                    ZERO4450
+       FAD     VS1,2                                                    ZERO4460
+       FDH     =2.                                                      ZERO4470
+       STQ     V1,2           V1=(VI1+VS1)/2                            ZERO4480
+       TRA     CALCFV         TRANSFER ON COMPUTATION OF F(V1)          ZERO4490
+       REM     *PREPARATION OF THE OUTPUT OF THE RESULT*                ZERO4500
+SO.RES RFT     000004                                                   ZERO4510
+       TRA     EXCESS                                                   ZERO4520
+       RFT     000002                                                   ZERO4530
+       TRA     INFER                                                    ZERO4540
+       CLA     FVI1,2                                                   ZERO4550
+       SSP                                                              ZERO4560
+       XCA                                                              ZERO4570
+       CLA     FVS1,2                                                   ZERO4580
+       SSP                                                              ZERO4590
+       TLQ     INFER          IS F(VI1) LESS THAN F(VS1).               ZERO4600
+EXCESS CLA     VS1,2          NO                                        ZERO4610
+       STO*    3,4                                                      ZERO4620
+       TRA     RESTAU                                                   ZERO4630
+INFER  CLA     VI1,2          YES                                       ZERO4640
+       STO*    3,4                                                      ZERO4650
+RESTAU CLA*    3,4                                                      ZERO4660
+       RETURN  ZEROS                                                    ZERO4670
+DANGER CALL    .FWRD.(UN06,**)                                          ZERO4680
+       CALL    .FFIL.                                                   ZERO4690
+       CALL    EXIT                                                     ZERO4700
+DIAG1  BCI     5,(1H1,18HTOO MANY ARGUMENTS)                            ZERO4710
+       MTH     -1,7,-1                                                  ZERO4720
+DIAG2  BCI     5,(1H1,16HINCORRECT CODING)                              ZERO4730
+       MTH     -1,7,-1                                                  ZERO4740
+DIAG3  BCI     6,(1H1,23HNO ROOT IN THE INTERVAL)                       ZERO4750
+       MTH     -1,7,-1                                                  ZERO4760
+       REM     *TABLE FOR DECODING THE HOLLERITH ARGUMENTS*             ZERO4770
+TAB1   BCI     1,0000AR                                                 ZERO4780
+       OCT     1000                                                     ZERO4790
+       BCI     1,0000GE                                                 ZERO4800
+       OCT     400                                                      ZERO4810
+FTAB1  BSS     0                                                        ZERO4820
+TAB2   BCI     1,0000CR                                                 ZERO4830
+       OCT     200                                                      ZERO4840
+       BCI     1,0000DC                                                 ZERO4850
+       OCT     100                                                      ZERO4860
+       BCI     1,0000SU                                                 ZERO4870
+       OCT     40                                                       ZERO4880
+       BCI     1,0000IN                                                 ZERO4890
+       OCT     20                                                       ZERO4900
+       BCI     1,0000UN                                                 ZERO4910
+       OCT     10                                                       ZERO4920
+FTAB2  BSS     0                                                        ZERO4930
+TAB3   BCI     1,0000EX                                                 ZERO4940
+       OCT     4                                                        ZERO4950
+       BCI     1,0000DF                                                 ZERO4960
+       OCT     2                                                        ZERO4970
+       BCI     1,0000BO                                                 ZERO4980
+BIT    OCT     1                                                        ZERO4990
+FTAB3  BSS     0                                                        ZERO5000
+       PZE     FTAB1,2,FTAB1-TAB1                                       ZERO5010
+       PZE     FTAB2,2,FTAB2-TAB2                                       ZERO5020
+       PZE     FTAB3,2,FTAB3-TAB3                                       ZERO5030
+TAB    BSS     0                                                        ZERO5040
+       REM     *MASKS*                                                  ZERO5050
+MASK3  OCT     000777777776                                             ZERO5060
+MASK4  OCT     000777777000                                             ZERO5070
+MASK5  OCT     777777777777                                             ZERO5080
+MASK6  OCT     001000000000                                             ZERO5090
+       REM     *WORK STORAGES*                                          ZERO5100
+STAGE          ,,NNN                                                    ZERO5110
+WORK   BSS     1                                                        ZERO5120
+FV     BSS     1                                                        ZERO5130
+COTG   BSS     1                                                        ZERO5140
+       END                                                              ZERO5150

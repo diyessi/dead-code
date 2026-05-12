@@ -1,0 +1,1949 @@
+$ID    ON      RUST ENGINEERING  SUMMATION AND SEARCHING PROGRAM        S+S 0010
+$PAUSE                                                                  S+S 0020
+$RESTORE                                                                S+S 0030
+$ATTACH        A5                                                       S+S 0040
+$AS            SYSCK1,H                                                 S+S 0050
+$ATTACH        B5                                                       S+S 0060
+$AS            SYSLB3,H                                                 S+S 0070
+$REWIND        SYSLB3                                                   S+S 0080
+$ATTACH        A6                                                       S+S 0090
+$AS            SYSLB4,H                                                 S+S 0100
+$REWIND        SYSLB4                                                   S+S 0110
+$ATTACH        B6                                                       S+S 0120
+$AS            SYSCK2,H                                                 S+S 0130
+$REWIND        SYSCK2                                                   S+S 0140
+$EXECUTE       IBJOB                                                    S+S 0150
+$IBJOB         GO,LOGIC,MAP,FILES                                       S+S 0160
+$IBFTC STANAL  LIST,M94,XR7                                             S+S 0170
+      DIMENSION NLCSA(4),LDCNS(24),NLCSB(4),NTAPE(4),NTPTBL(5)          S+S 0180
+      DIMENSION MM(40),MEMB(150,2),FMMEM(12,150),EMMEM(12,150)          S+S 0190
+      DIMENSION JOINTS(650),DEFJ(6,650),DEFJS(6,650)                    S+S 0200
+      DIMENSION REFJ(6,4),REFJM(6,4),JOINT(4)                           S+S 0210
+      DIMENSION PMAX(3,650),GNMAX(3,650),SMAX(3,650),IPMAX(3,650)       S+S 0220
+      DIMENSION INMAX(3,650),FACT(8)                                    S+S 0230
+      DIMENSION IPOS(4)                                                 S+S 0240
+      DIMENSION IDATA(12),SEVENS(23),IUNIT(2)                           S+S 0250
+      DATA (SEVENS(I),I=1,23)/23*O777777777777/                         S+S 0260
+      DATA IEND/3HEND/                                                  S+S 0270
+      DATA IUNIT(1)/7HUNIT NU/                                          S+S 0280
+      DATA (NTAPE(I),I=1,4)/9,10,11,12/                                 S+S 0290
+      DATA IJNTT/6HJOINT /                                              S+S 0300
+      DATA IRETT/6HREACTI/                                              S+S 0310
+      EQUIVALENCE (DEFJ,PMAX),(DEFJ(1951),GNMAX),(DEFJS,SMAX),          S+S 0320
+     1(DEFJS(1951),IPMAX)                                               S+S 0330
+      EQUIVALENCE (MEMB,DEFJ),(FMMEM,DEFJ(1000))                        S+S 0340
+      EQUIVALENCE (EMMEM,DEFJS),(REFJ,DEFJ),(REFJM,DEFJS)               S+S 0350
+      IPR=0                                                             S+S 0360
+      IPAGE=0                                                           S+S 0370
+      ITAP12=1                                                          S+S 0380
+      WRITE (6,1999)                                                    S+S 0390
+ 1999 FORMAT (1H1,25X)                                                  S+S 0400
+      DO 10 I=1,10                                                      S+S 0410
+   10 WRITE (6,2000)                                                    S+S 0420
+ 2000 FORMAT (1H0,25X)                                                  S+S 0430
+      WRITE (6,2001)                                                    S+S 0440
+ 2001 FORMAT (52X,15HSTRESS ANALYSIS/////54X,12HPREPARED FOR///46X,28HTHS+S 0450
+     1E RUST ENGINEERING COMPANY)                                       S+S 0460
+      WRITE (6,2000)                                                    S+S 0470
+      WRITE (6,2002)                                                    S+S 0480
+ 2002 FORMAT (1H0,58X,2HBY///51X,19HSCIENTIFIC SERVICES///45X,30HTHE SERS+S 0490
+     1VICE BUREAU CORPORATION///51X,18HNEW YORK, NEW YORK)              S+S 0500
+      WRITE (6,1999)                                                    S+S 0510
+ 11   READ (5,1025) (IDATA(I),I=1,12)                                   S+S 0520
+ 1025 FORMAT (12A6)                                                     S+S 0530
+      IF (IDATA(1)-IEND) 13,20,13                                       S+S 0540
+ 13   WRITE (6,2025) (IDATA(I),I=1,12)                                  S+S 0550
+ 2025 FORMAT (30X,12A6)                                                 S+S 0560
+      GO TO 11                                                          S+S 0570
+20    READ (5,1000) IPRINT                                              S+S 0580
+      READ (5,1000) JNTS                                                S+S 0590
+ 1000 FORMAT (I3)                                                       S+S 0600
+      READ (5,1001) (MM(I),I=1,20)                                      S+S 0610
+ 1001 FORMAT (20I3)                                                     S+S 0620
+      READ (5,1001) (MM(I),I=21,40)                                     S+S 0630
+ 48   READ (5,1002) NOTPS,(NLCSA(I),I=1,4)                              S+S 0640
+ 1002 FORMAT (5I2)                                                      S+S 0650
+      DO 50 I=1,4                                                       S+S 0660
+ 50   NLCSB (I)= 0                                                      S+S 0670
+      DO 52 I=1,NOTPS                                                   S+S 0680
+      DO 52 J=1,I                                                       S+S 0690
+ 52   NLCSB (I)= NLCSA (J) + NLCSB (I)                                  S+S 0700
+ 45   DO 46 I=1,5                                                       S+S 0710
+ 46   NTPTBL (I)= 0                                                     S+S 0720
+      DO 49 I=1,NOTPS                                                   S+S 0730
+      ITAPE=NTAPE(I)                                                    S+S 0740
+ 15   READ (ITAPE,1016) (IDATA(J),J=1,2)                                S+S 0750
+ 1016 FORMAT (11X,A6,A1)                                                S+S 0760
+      IF (IDATA(1)-IUNIT(1)) 15,16,15                                   S+S 0770
+ 16   IF (IDATA(2)-IUNIT(2)) 15,17,15                                   S+S 0780
+ 17   DO 18 I=1,5                                                       S+S 0790
+ 18   BACKSPACE ITAPE                                                   S+S 0800
+ 49   CONTINUE                                                          S+S 0810
+ 53   NP=1                                                              S+S 0820
+ 54   READ (5,1003)  LCSUM,(FACT(I),LDCNS(I),I=1,7)                     S+S 0830
+ 1003 FORMAT (I3,7(F8.3,I3))                                            S+S 0840
+      IF (LCSUM-999) 59,110,59                                          S+S 0850
+ 59   IF (IPR)  55,56,55                                                S+S 0860
+ 55   IF (IPRINT) 57,56,57                                              S+S 0870
+ 57   PRINT 2051                                                        S+S 0880
+ 2051 FORMAT (1H1,9X,41HMOUNT A NEW OUTPUT TAPE ON B1 IF DESIRED./// 10XS+S 0890
+     1,76HOTHERWISE THE NEXT LOADING CONDITION WILL BE WRITTEN ON THE SAS+S 0900
+     1ME OUTPUT TAPE/1H0,9X,44HPRESS START WHEN DESIRED ACTION IS COMPLES+S 0910
+     1TED)                                                              S+S 0920
+      PAUSE                                                             S+S 0930
+ 56   GO TO (300,350,400), NP                                           S+S 0940
+ 58   NT=1                                                              S+S 0950
+      IPR=1                                                             S+S 0960
+ 60   IF (LDCNS(NT)) 61,63,61                                           S+S 0970
+ 61   IF (NT- 8) 62,84,84                                               S+S 0980
+ 63   DO 65 I=NT,24                                                     S+S 0990
+      FACT(I)=0.0                                                       S+S 1000
+ 65   LDCNS(I)=0                                                        S+S 1010
+      GO TO 84                                                          S+S 1020
+ 62   DO 64 I=1,4                                                       S+S 1030
+      IF (LDCNS (NT)-NLCSB(I)) 68,68,64                                 S+S 1040
+ 64   CONTINUE                                                          S+S 1050
+ 66   PRINT 2050, LDCNS(NT), LCSUM                                      S+S 1060
+ 2050 FORMAT (10X,35HTHERE IS NO INPUT LOADING CONDITION,I3,5X,         S+S 1070
+     124HOUTPUT LOADING CONDITION,I3,23H WILL NOT BE CALCULATED)        S+S 1080
+      GO TO 54                                                          S+S 1090
+ 68   ITAPE=NTAPE(I)                                                    S+S 1100
+      IF (IPOS(I)) 74,69,74                                             S+S 1110
+ 69   IP=0                                                              S+S 1120
+      IPOS(I)=1                                                         S+S 1130
+ 74   NTPTBL(I)=ITAPE                                                   S+S 1140
+ 76   IF (I-1) 78,80,78                                                 S+S 1150
+ 78   LC=LDCNS(NT)-NLCSB(I-1)                                           S+S 1160
+      GO TO 82                                                          S+S 1170
+ 80   LC=LDCNS(NT)                                                      S+S 1180
+ 82   FACTOR=FACT(NT)                                                   S+S 1190
+      GO TO (304,354,404),NP                                            S+S 1200
+ 84   GO TO (322,372,414),NP                                            S+S 1210
+ 86   DO 104 I=1,NOTPS                                                  S+S 1220
+      IF (NTPTBL(I)) 88,104,88                                          S+S 1230
+ 88   ITAPE=NTPTBL(I)                                                   S+S 1240
+      IPOS(I)=0                                                         S+S 1250
+ 90   READ (ITAPE,1010) ITITLE                                          S+S 1260
+ 1010 FORMAT (1X/1X/1X/25X,A6)                                          S+S 1270
+      GO TO (92,98),NP                                                  S+S 1280
+ 92   IF (ITITLE-IJNTT) 94,104,94                                       S+S 1290
+ 94   READ (ITAPE,1020) IUN                                             S+S 1300
+ 1020 FORMAT (22X,I6)                                                   S+S 1310
+      NMS=MM(IUN)                                                       S+S 1320
+      J=0                                                               S+S 1330
+ 95   READ (ITAPE,1018)                                                 S+S 1340
+      DO 96 K=1,13                                                      S+S 1350
+      READ (ITAPE,1006)                                                 S+S 1360
+      J=J+1                                                             S+S 1370
+      IF (J-NMS) 96,90,90                                               S+S 1380
+ 96   CONTINUE                                                          S+S 1390
+      READ (ITAPE,1019)                                                 S+S 1400
+      GO TO 95                                                          S+S 1410
+ 98   IF (ITITLE-IRETT) 100,104,100                                     S+S 1420
+ 100  J=0                                                               S+S 1430
+ 101  READ (ITAPE,1018)                                                 S+S 1440
+      DO 102 K=1,20                                                     S+S 1450
+      READ (ITAPE,1005)                                                 S+S 1460
+      J=J+1                                                             S+S 1470
+      IF (J-JNTS)  102,90,90                                            S+S 1480
+ 102  CONTINUE                                                          S+S 1490
+      READ (ITAPE,1018)                                                 S+S 1500
+      GO TO 101                                                         S+S 1510
+ 104  CONTINUE                                                          S+S 1520
+ 106  NP=NP+1                                                           S+S 1530
+      GO TO 56                                                          S+S 1540
+ 110  LC=99999                                                          S+S 1550
+      WRITE (ITAP12) LC,((DEFJ(K2,J2),K2=1,3),J2=1,JNTS)                S+S 1560
+      REWIND ITAP12                                                     S+S 1570
+      DO 112 J=1,JNTS                                                   S+S 1580
+      DO 112 M=1,3                                                      S+S 1590
+      IPMAX(M,J)=0                                                      S+S 1600
+      INMAX(M,J)=0                                                      S+S 1610
+      PMAX(M,J)=0.0                                                     S+S 1620
+ 112  GNMAX(M,J)=0.0                                                    S+S 1630
+ 114  READ (ITAP12) LC,((SMAX(K2,J2),K2=1,3),J2=1,JNTS)                 S+S 1640
+      IF (LC-99999) 116,127,116                                         S+S 1650
+ 116  DO 126  J=1,JNTS                                                  S+S 1660
+      DO 126  M=1,3                                                     S+S 1670
+      IF (SMAX(M,J)) 122,117,118                                        S+S 1680
+ 117  SMAX(M,J)=0.0                                                     S+S 1690
+ 118  IF (SMAX(M,J)-PMAX(M,J)) 121,120,120                              S+S 1700
+ 120  PMAX(M,J)=SMAX(M,J)                                               S+S 1710
+      IPMAX(M,J)=LC                                                     S+S 1720
+ 121  IF (SMAX(M,J)) 126,123,126                                        S+S 1730
+ 123  SMAX(M,J)=-0.0                                                    S+S 1740
+ 122  IF (ABS(SMAX(M,J))-ABS(GNMAX(M,J))) 126,124,124                   S+S 1750
+ 124  GNMAX(M,J)=SMAX(M,J)                                              S+S 1760
+      INMAX(M,J)=LC                                                     S+S 1770
+ 126  CONTINUE                                                          S+S 1780
+      GO TO 114                                                         S+S 1790
+ 127  J=1                                                               S+S 1800
+ 128  IPAGE=IPAGE+1                                                     S+S 1810
+      WRITE (6,2003) IPAGE                                              S+S 1820
+      WRITE (6,2015)                                                    S+S 1830
+ 2015 FORMAT (1H0,42X,33HMAXIMUM TRANSLATIONAL DEFLECTIONS)             S+S 1840
+      WRITE (6,2016)                                                    S+S 1850
+ 2016 FORMAT (1H0,40X,8HPOSITIVE,42X,8HNEGATIVE)                        S+S 1860
+      WRITE (6,2017)                                                    S+S 1870
+ 2017 FORMAT (1H0,9X,5HJOINT,10X,3HD-X,6X,2HLC,6X,3HD-Y,6X,2HLC,6X,3HD-ZS+S 1880
+     1,6X,2HLC,10X,3HD-X,6X,2HLC,6X,3HD-Y,6X,2HLC,6X,3HD-Z,6X,2HLC)     S+S 1890
+      WRITE (6,2019)                                                    S+S 1900
+ 2019 FORMAT (1H0,25X)                                                  S+S 1910
+      DO 130  I=1,20                                                    S+S 1920
+      WRITE (6,2018) JOINTS(J),((PMAX(M,J),IPMAX(M,J),M=1,3),(GNMAX(M,J)S+S 1930
+     1,INMAX(M,J),M=1,3))                                               S+S 1940
+ 2018 FORMAT (1H0,8X,I5,6X,3(E13.5,1X,I2,1X),4X,3(E13.5,1X,I2,1X))      S+S 1950
+      J=J+1                                                             S+S 1960
+      IF (J-JNTS-1) 130,132,132                                         S+S 1970
+ 130  CONTINUE                                                          S+S 1980
+      GO TO 128                                                         S+S 1990
+ 132  REWIND ITAP12                                                     S+S 2000
+      END FILE 2                                                        S+S 2010
+      REWIND 2                                                          S+S 2020
+      STOP                                                              S+S 2030
+ 300  DO 302 M6=1,150                                                   S+S 2040
+      DO 302 I7=1,12                                                    S+S 2050
+ 302  FMMEM (I7,M6)=0.0                                                 S+S 2060
+      GO TO 58                                                          S+S 2070
+ 304  J=0                                                               S+S 2080
+ 306  READ (ITAPE,1004)IUN,LOAD                                         S+S 2090
+ 1004 FORMAT (1X/1X/1X/1X/22X,I6/75X,I6)                                S+S 2100
+      NMS=MM(IUN)                                                       S+S 2110
+      IF (LC-LOAD) 308,312,308                                          S+S 2120
+ 308  READ (ITAPE,1017)                                                 S+S 2130
+ 1005 FORMAT (5X)                                                       S+S 2140
+      DO 310 I=1,13                                                     S+S 2150
+      READ (ITAPE,1006)                                                 S+S 2160
+ 1006 FORMAT (5X/5X)                                                    S+S 2170
+      J=J+1                                                             S+S 2180
+      IF (J-NMS) 310,304,304                                            S+S 2190
+ 310  CONTINUE                                                          S+S 2200
+      GO TO 306                                                         S+S 2210
+ 312  M6=1                                                              S+S 2220
+ 314  READ (ITAPE,1017)                                                 S+S 2230
+ 1017 FORMAT (1X/1X/1X)                                                 S+S 2240
+      DO 316 J=1,13                                                     S+S 2250
+      READ (ITAPE,1007) MEMB(M6,1),MEMB(M6,2),(EMMEM(I7,M6),I7=1,6)     S+S 2260
+ 1007 FORMAT (5X,2I6,17X,6E13.5)                                        S+S 2270
+      READ (ITAPE,1008) (EMMEM(I7,M6),I7=7,12)                          S+S 2280
+ 1008 FORMAT (34X,6E13.5)                                               S+S 2290
+      M6=M6+1                                                           S+S 2300
+      IF (NMS+1-M6) 318,318,316                                         S+S 2310
+ 316  CONTINUE                                                          S+S 2320
+      READ (ITAPE,1009)                                                 S+S 2330
+ 1009 FORMAT (1X/1X/1X/1X/1X/1X)                                        S+S 2340
+      GO TO 314                                                         S+S 2350
+ 318  DO 320 M6=1,NMS                                                   S+S 2360
+      DO 320 I7=1,12                                                    S+S 2370
+ 320  FMMEM(I7,M6)=FMMEM(I7,M6)+EMMEM(I7,M6)*FACTOR                     S+S 2380
+      NT=NT+1                                                           S+S 2390
+      GO TO 60                                                          S+S 2400
+ 322  M6=1                                                              S+S 2410
+ 324  IPAGE=IPAGE+1                                                     S+S 2420
+      WRITE (6,2003) IPAGE                                              S+S 2430
+ 2003 FORMAT (1H1,116X,4HPAGE,I6)                                       S+S 2440
+      WRITE (6,2004)                                                    S+S 2450
+ 2004 FORMAT (1H0,//25X,41HFORCES AND MOMENTS AT THE ENDS OF MEMBERS)   S+S 2460
+      WRITE (6,2005) IUN                                                S+S 2470
+ 2005 FORMAT (1H0,10X,11HUNIT NUMBER,I6)                                S+S 2480
+      WRITE (6,2006)  LCSUM,(I,LDCNS(I),I,FACT(I),I=1,4)                S+S 2490
+ 2006 FORMAT (1H0,60X,14HLOAD CONDITION,I6,/19X,4(1HL,I1,1H=,I2,3H  K,I1S+S 2500
+     1,1H=,F6.2,4X))                                                    S+S 2510
+      WRITE (6,2007)                                                    S+S 2520
+ 2007 FORMAT(1H0, 7X,6HMEMBER,8X,6HAT END,10X,3HF-X,10X,3HF-Y,10X,3HF-Z,S+S 2530
+     110X,3HM-X,10X,3HM-Y,10X,3HM-Z)                                    S+S 2540
+      WRITE (6,2019)                                                    S+S 2550
+      DO 326 I=1,13                                                     S+S 2560
+      WRITE (6,2008) MEMB(M6,1),MEMB(M6,2),MEMB(M6,1),(FMMEM(I7,M6),I7=1S+S 2570
+     1,6)                                                               S+S 2580
+ 2008 FORMAT (1H0,4X,2I6,6X,I5,6X,6E13.5)                               S+S 2590
+      WRITE (6,2009) MEMB(M6,2),(FMMEM(I7,M6),I7=7,12)                  S+S 2600
+ 2009 FORMAT (1H ,22X,I5,6X,6E13.5)                                     S+S 2610
+      M6=M6+1                                                           S+S 2620
+      IF(NMS+1-M6) 328,328,326                                          S+S 2630
+ 326  CONTINUE                                                          S+S 2640
+      GO TO 324                                                         S+S 2650
+ 328  DO 330 M6=1,NMS                                                   S+S 2660
+ 330  WRITE (2) MEMB(M6,1),MEMB(M6,2),LCSUM,(LDCNS(I),I=1,4),(FACT(I),I S+S 2670
+     1=1,4),(FMMEM(I7,M6),I7=1,12)                                      S+S 2680
+      IF (IUN-1) 332,332,56                                             S+S 2690
+ 332  WRITE (2) (SEVENS(I),I=1,23)                                      S+S 2700
+      GO TO 86                                                          S+S 2710
+ 350  DO 352  J=1,650                                                   S+S 2720
+      DO 352  K=1,6                                                     S+S 2730
+ 352  DEFJ(K,J)=0.0                                                     S+S 2740
+      GO TO 58                                                          S+S 2750
+ 354  IF (IP) 355,357,355                                               S+S 2760
+ 355  READ (ITAPE,1018)                                                 S+S 2770
+ 357  J=0                                                               S+S 2780
+      IP=1                                                              S+S 2790
+ 356  READ(ITAPE,1011) LOAD                                             S+S 2800
+ 1011 FORMAT (75X,I6)                                                   S+S 2810
+      IF (LC-LOAD) 358,362,358                                          S+S 2820
+ 358  READ (ITAPE,1017)                                                 S+S 2830
+      DO 360 I=1,20                                                     S+S 2840
+      READ (ITAPE,1005)                                                 S+S 2850
+      J=J+1                                                             S+S 2860
+      IF (J-JNTS) 360,355,355                                           S+S 2870
+ 360  CONTINUE                                                          S+S 2880
+      READ(ITAPE,1018)                                                  S+S 2890
+ 1018 FORMAT (1X/1X/1X/1X)                                              S+S 2900
+      GO TO 356                                                         S+S 2910
+ 362  J2=1                                                              S+S 2920
+ 364  READ (ITAPE,1017)                                                 S+S 2930
+      DO 366 J=1,20                                                     S+S 2940
+      READ (ITAPE,1013) JOINTS(J2),(DEFJS(K2,J2),K2=1,6)                S+S 2950
+ 1013 FORMAT (9X,I5,5X,6E13.5)                                          S+S 2960
+      J2=J2+1                                                           S+S 2970
+      IF (J2-JNTS-1)  366,368,368                                       S+S 2980
+ 366  CONTINUE                                                          S+S 2990
+      READ(ITAPE,1019)                                                  S+S 3000
+ 1019 FORMAT (1X/1X/1X/1X/1X)                                           S+S 3010
+ 1015 FORMAT (1X/1X/1X)                                                 S+S 3020
+      GO TO 364                                                         S+S 3030
+ 368  DO 370 J2=1,JNTS                                                  S+S 3040
+      DO 370 K2=1,6                                                     S+S 3050
+ 370  DEFJ(K2,J2)=DEFJ(K2,J2)+DEFJS(K2,J2)*FACTOR                       S+S 3060
+      NT=NT+1                                                           S+S 3070
+      GO TO 60                                                          S+S 3080
+ 372  J2=1                                                              S+S 3090
+ 374  IPAGE=IPAGE+1                                                     S+S 3100
+      WRITE (6,2003) IPAGE                                              S+S 3110
+      WRITE (6,2010)                                                    S+S 3120
+ 2010 FORMAT (1H0,//25X,31HJOINT DEFLECTIONS AND ROTATIONS)             S+S 3130
+      WRITE (6,2006)  LCSUM,(I,LDCNS(I),I,FACT(I),I=1,4)                S+S 3140
+      WRITE (6,2011)                                                    S+S 3150
+ 2011 FORMAT(1H0, 7X,5HJOINT,10X,3HD-X,10X,3HD-Y,10X,3HD-Z,10X,3HR-X,10XS+S 3160
+     1,3HR-Y,10X,3HR-Z)                                                 S+S 3170
+      WRITE (6,2019)                                                    S+S 3180
+      DO 376  I=1,20                                                    S+S 3190
+      WRITE (6,2012) JOINTS(J2),(DEFJ(K2,J2),K2=1,6)                    S+S 3200
+ 2012 FORMAT (1H0,8X,I5,5X,6E13.5)                                      S+S 3210
+      J2=J2+1                                                           S+S 3220
+      IF (J2-JNTS-1) 376,378,378                                        S+S 3230
+ 376  CONTINUE                                                          S+S 3240
+      GO TO 374                                                         S+S 3250
+ 378  WRITE (ITAP12) LCSUM,((DEFJ(K2,J2),K2=1,3),J2=1,JNTS)             S+S 3260
+      GO TO 86                                                          S+S 3270
+ 400  DO 402 J2=1,4                                                     S+S 3280
+      DO 402 K2=1,6                                                     S+S 3290
+ 402  REFJ(K2,J2)=0.0                                                   S+S 3300
+      GO TO 58                                                          S+S 3310
+ 404  IF (IP) 405,409,405                                               S+S 3320
+ 405  READ (ITAPE,1018)                                                 S+S 3330
+ 409  READ (ITAPE,1011) LOAD                                            S+S 3340
+      IP=1                                                              S+S 3350
+      IF (LOAD-LC) 406,408,406                                          S+S 3360
+ 406  DO 407 I=1,3                                                      S+S 3370
+ 407  READ (ITAPE,1006)                                                 S+S 3380
+      READ (ITAPE,1005)                                                 S+S 3390
+      GO TO 405                                                         S+S 3400
+ 408  READ (ITAPE,1017)                                                 S+S 3410
+      DO 410  J2=1,4                                                    S+S 3420
+ 410  READ (ITAPE,1013) JOINT (J2),(REFJM (M,J2),M=1,6)                 S+S 3430
+      DO 412 J2=1,4                                                     S+S 3440
+      DO 412 M=1,6                                                      S+S 3450
+ 412  REFJ(M,J2)=REFJ(M,J2)+REFJM(M,J2)*FACTOR                          S+S 3460
+      NT=NT+1                                                           S+S 3470
+      GO TO 60                                                          S+S 3480
+ 414  IPAGE=IPAGE+1                                                     S+S 3490
+      WRITE (6,2003)IPAGE                                               S+S 3500
+      WRITE (6,2013)                                                    S+S 3510
+ 2013 FORMAT (1H0,//25X,27HREACTION FORCES AND MOMENTS)                 S+S 3520
+      WRITE (6,2006)  LCSUM,(I,LDCNS(I),I,FACT(I),I=1,4)                S+S 3530
+      WRITE (6,2014)                                                    S+S 3540
+ 2014 FORMAT(1H0, 7X,5HJOINT,10X,3HF-X,10X,3HF-Y,10X,3HF-Z,10X,3HM-X,10XS+S 3550
+     1,3HM-Y,10X,3HM-Z)                                                 S+S 3560
+      WRITE (6,2019)                                                    S+S 3570
+      DO 416 J2=1,4                                                     S+S 3580
+ 416  WRITE (6,2012)  JOINT(J2),(REFJ(M,J2),M=1,6)                      S+S 3590
+      DO 420 I=1,NOTPS                                                  S+S 3600
+ 418  ITAPE=NTAPE(I)                                                    S+S 3610
+      REWIND ITAPE                                                      S+S 3620
+ 420  CONTINUE                                                          S+S 3630
+      GO TO 45                                                          S+S 3640
+      END                                                               S+S 3650
+$IBMAP UN09    2,M94                                                    S+S 3660
+       ENTRY   .UN09.                                                   S+S 3670
+.UN09. PZE     UNIT09                                                   S+S 3680
+UNIT09 FILE    ,CK1,READY,INPUT,BLK=22,BCD                              S+S 3690
+       END                                                              S+S 3700
+$IBMAP UN10    2,M94                                                    S+S 3710
+       ENTRY   .UN10.                                                   S+S 3720
+.UN10. PZE     UNIT10                                                   S+S 3730
+UNIT10 FILE    ,LB3,READY,INPUT,BLK=22,BCD                              S+S 3740
+       END                                                              S+S 3750
+$IBMAP UN11    2,M94                                                    S+S 3760
+       ENTRY   .UN11.                                                   S+S 3770
+.UN11. PZE     UNIT11                                                   S+S 3780
+UNIT11 FILE    ,LB4,READY,INPUT,BLK=22,BCD                              S+S 3790
+       END                                                              S+S 3800
+$IBMAP UN12    2,M94                                                    S+S 3810
+       ENTRY   .UN12.                                                   S+S 3820
+.UN12. PZE     UNIT12                                                   S+S 3830
+UNIT12 FILE    ,CK2,READY,INPUT,BLK=22,BCD                              S+S 3840
+       END                                                              S+S 3850
+$IBMAP .FVIO.  36                                                       S+S 3860
+.FVIO. SAVE    (4)                                                      S+S 3870
+       CLA     4,4                                                      S+S 3880
+       STA     VUNIT                                                    S+S 3890
+       CLA     3,4                                                      S+S 3900
+       STA     LOCVUN                                                   S+S 3910
+       CLA*    3,4                                                      S+S 3920
+       TZE     ERROR                                                    S+S 3930
+       CAS     TABLE                                                    S+S 3940
+       TRA     ERROR                                                    S+S 3950
+       NOP                                                              S+S 3960
+       PAC     0,4                                                      S+S 3970
+       CLA*    TABLE,4                                                  S+S 3980
+       PAX     0,4                                                      S+S 3990
+       TXH     VUNIT,4,0                                                S+S 4000
+ERROR  CLA*    LOCVUN                                                   S+S 4010
+       ALS     18                                                       S+S 4020
+       STD     CODE                                                     S+S 4030
+UNERR  CALL    .FXEM.(CODE)                                             S+S 4040
+       CALL    EXIT                                                     S+S 4050
+CODE   PZE     47                                                       S+S 4060
+LOCVUN PZE     **                                                       S+S 4070
+VUNIT  STO     **                                                       S+S 4080
+       RETURN  .FVIO.                                                   S+S 4090
+TABLE  PZE     NUNITS                                                   S+S 4100
+       PZE     .UN01.                                                   S+S 4110
+       PZE     .UN02.                                                   S+S 4120
+       PZE     .UN03.                                                   S+S 4130
+       PZE     .UN04.                                                   S+S 4140
+       PZE     .UN05.                                                   S+S 4150
+       PZE     .UN06.                                                   S+S 4160
+       PZE     .UN07.                                                   S+S 4170
+       PZE     .UN08.                                                   S+S 4180
+       PZE     .UN09.                                                   S+S 4190
+       PZE     .UN10.                                                   S+S 4200
+       PZE     .UN11.                                                   S+S 4210
+       PZE     .UN12.                                                   S+S 4220
+NUNITS EQU     *-TABLE-1                                                S+S 4230
+       END                                                              S+S 4240
+√                                                                       S+S 4250
+$IBSYS                                                                  S+S 4260
+$ID    OFF     RUST ENGINEERING  SUMMATION AND SEARCHING PROGRAM        S+S 4270
+$RESTORE                                                                S+S 4280
+$ENDFILE       SYSOU1                                                   S+S 4290
+$ENDFILE       SYSPP1                                                   S+S 4300
+          MEMBER DATA CARD SORT PREPARATION WITH SUBROUTINE WRITE               
+CMDC      PREPARATION OF MEMBER DATA CARDS FOR SORTING                  MDCP0010
+C         MEMBER DATA CARD SORT PREPARATION                             MDCP0020
+C              THIS PROGRAM PRODUCES A BINARY TAPE OF THE MEMBER DATA   MDCP0030
+C              CARDS. TO PREPARE THE FRAN MEMBER DATA CARD DECK, REMOVE MDCP0040
+C              THE MEMBER HEADER CARD AND PLACE A BLANK CARD AFTER THE  MDCP0050
+C              LAST DATA CARD.                                          MDCP0060
+C                                                                       MDCP0070
+      DIMENSION C(16),M(16),D(600)                                      MDCP0080
+      COMMON C,M,C9,M9,D,A,B,LA,LB                                      MDCP0090
+      EQUIVALENCE (C,M),(LA,A),(LB,B)                                   MDCP0100
+      REWIND 4                                                          MDCP0110
+B     A=644531636060                                                    MDCP0120
+B     B=442544222551                                                    MDCP0130
+   55 K=0                                                               MDCP0140
+      DO 222 I=1,40                                                     MDCP0150
+   22 READ INPUT TAPE 5,111,C(1),(M(J),J=2,3),C(4),(M(J),J=5,8),        MDCP0160
+     *(C(J),J=9,16)                                                     MDCP0170
+  111 FORMAT(A6,2I4,F6.0,I1,I2,I1,I2,4F6.0,2F5.0,2A6)                   MDCP0180
+C                                                                       MDCP0190
+C CHECKING UNIT CARDS                                                   MDCP0200
+C                                                                       MDCP0210
+      NR=M(1)-LA                                                        MDCP0220
+C                                                                       MDCP0230
+C CHECKING MEMBER CARDS                                                 MDCP0240
+C                                                                       MDCP0250
+      IF (NR) 11,22,11                                                  MDCP0260
+   11 NR=M(1)-LB                                                        MDCP0270
+      IF (NR) 66,33,66                                                  MDCP0280
+   33 DO 44 J=1,15                                                      MDCP0290
+      JK=J+K                                                            MDCP0300
+      JI=J+1                                                            MDCP0310
+   44 D(JK)=C(JI)                                                       MDCP0320
+      K=K+15                                                            MDCP0330
+  222 CONTINUE                                                          MDCP0340
+      CALL WRITE(D,600)                                                 MDCP0350
+      GO TO 55                                                          MDCP0360
+   66 IF(K)77,77,77                                                     MDCP0370
+   77 N=K+1                                                             MDCP0380
+B     C9=377777777777                                                   MDCP0390
+      DO 88 I=N,600                                                     MDCP0400
+   88 D(I)=C9                                                           MDCP0410
+      CALL WRITE(D,600)                                                 MDCP0420
+   99 END FILE 4                                                        MDCP0430
+      REWIND 4                                                          MDCP0440
+      CALL EXIT                                                         MDCP0450
+      END                                                               MDCP0460
+       ENTRY   WRITE                                                    RITE0010
+ WRITE SXA     EXIT,1                                                   RITE0020
+       SXA     EXIT+1,2                                                 RITE0030
+       CLA     1,4                                                      RITE0040
+       ALS     18                                                       RITE0050
+       SUB*    2,4                                                      RITE0060
+       ARS     18                                                       RITE0070
+       ADD     =1                                                       RITE0080
+       STA     COMM                                                     RITE0090
+       CLA*    2,4                                                      RITE0100
+       STD     COMM                                                     RITE0110
+       ARS     18                                                       RITE0120
+       STA     TEMP                                                     RITE0130
+       ADD     COMM                                                     RITE0140
+       STA     A                                                        RITE0150
+       CLA     TEMP                                                     RITE0160
+       ARS     1                                                        RITE0170
+       PAX     ,1                                                       RITE0180
+       ADD     COMM                                                     RITE0190
+       STA     B                                                        RITE0200
+       AXT     1,2                                                      RITE0210
+       CLA*    B                                                        RITE0220
+       LDQ*    A                                                        RITE0230
+       STQ*    B                                                        RITE0240
+       STO*    A                                                        RITE0250
+       TXI     *+1,2,1                                                  RITE0260
+       TIX     *-5,1,1                                                  RITE0270
+       AXT     10,1                                                     RITE0280
+       WTBA    4                                                        RITE0290
+       RCHA    COMM                                                     RITE0300
+       TCOA    *                                                        RITE0310
+       TRCA    *+2                                                      RITE0320
+       TRA     EXIT                                                     RITE0330
+       BSRA    4                                                        RITE0340
+       TIX     *-6,1,1                                                  RITE0350
+       HPR     1,5                                                      RITE0360
+       WTBA    4                                                        RITE0370
+       RCHA    COMM                                                     RITE0380
+       TCOA    *                                                        RITE0390
+ EXIT  AXT     **,1                                                     RITE0400
+       AXT     **,2                                                     RITE0410
+       TRA     3,4                                                      RITE0420
+ COMM  IOCD    **,,**                                                   RITE0430
+ A     PZE     **,1                                                     RITE0440
+ B     PZE     **,2                                                     RITE0450
+ TEMP  PZE                                                              RITE0460
+       END                                                              RITE0470
+          LOAD DATA CARD SORT PREPARATION WITH SUBROUTINE WRITE                 
+CLDC      PREPARATION OF LOAD DATA CARDS FOR SORTING                    LDCP0010
+C         LOAD DATA CARD SORT PREPARATION                               LDCP0020
+C              THIS PROGRAM PRODUCES A BINARY TAPE OF THE LOAD DATA     LDCP0030
+C              CARDS. TO PREPARE THE FRAN LOAD DATA CARD DECK, REPLACE  LDCP0040
+C              THE LOAD HEADER CARD WITH THE ZONE CARD(SEE DOCUMENTA-   LDCP0050
+C              TION) AND PLACE A BLANK CARD AFTER THE LAST DATA CARD.   LDCP0060
+C                                                                       LDCP0070
+      DIMENSION E(13),L(13),G(520)                                      LDCP0080
+      COMMON E,L,E9,L9,KF,FK,M,W,N,D,A,B,C,D,NA,NB,NC,ND                LDCP0090
+      EQUIVALENCE (E,L),(KF,FK),(W,M),(NA,A),(NB,B),(NC,C),(ND,D)       LDCP0100
+      REWIND 4                                                          LDCP0110
+B     A=714645256060                                                    LDCP0120
+B     B=644531636060                                                    LDCP0130
+B     C=434621242345                                                    LDCP0140
+B     D=434621246060                                                    LDCP0150
+      N=0                                                               LDCP0160
+      M=0                                                               LDCP0170
+      KF=0                                                              LDCP0180
+    5 J=0                                                               LDCP0190
+      DO 500 I=1,40                                                     LDCP0200
+   15 READ INPUT TAPE 5,100,E(1),(L(K),K=2,3),(E(K),K=4,11),L(12)       LDCP0210
+  100 FORMAT(A6,2I4,5F6.0,6X,2F6.0,A1,14X,I1)                           LDCP0220
+C                                                                       LDCP0230
+C CHECKING ZONE CARDS                                                   LDCP0240
+C                                                                       LDCP0250
+      NR=L(1)-NA                                                        LDCP0260
+      IF (NR) 10,20,10                                                  LDCP0270
+   20 N=L(2)                                                            LDCP0280
+      GO TO 15                                                          LDCP0290
+C                                                                       LDCP0300
+C CHECKING UNIT CARDS                                                   LDCP0310
+C                                                                       LDCP0320
+   10 NR=L(1)-NB                                                        LDCP0330
+      IF (NR) 40,15,40                                                  LDCP0340
+C                                                                       LDCP0350
+C CHECKING LOADCN CARDS                                                 LDCP0360
+C                                                                       LDCP0370
+   40 NR=L(1)-NC                                                        LDCP0380
+      IF (NR) 50,60,50                                                  LDCP0390
+   60 M=N+L(2)                                                          LDCP0400
+      GO TO 15                                                          LDCP0410
+C                                                                       LDCP0420
+C CHECKING LOAD CARDS                                                   LDCP0430
+C                                                                       LDCP0440
+   50 NR=L(1)-ND                                                        LDCP0450
+      IF (NR) 75,70,75                                                  LDCP0460
+   70 IF (L(3)-L(2)) 25,35,35                                           LDCP0470
+   25 KF=1                                                              LDCP0480
+      LA=L(3)                                                           LDCP0490
+      L(3)=L(2)                                                         LDCP0500
+      L(2)=LA                                                           LDCP0510
+      GO TO 80                                                          LDCP0520
+   35 KF=0                                                              LDCP0530
+   80 G(J+1)=FK                                                         LDCP0540
+      DO 45 K=2,3                                                       LDCP0550
+      JK=J+K                                                            LDCP0560
+   45 G(JK)=E(K)                                                        LDCP0570
+      G(J+4)=W                                                          LDCP0580
+      DO 55 K=4,12                                                      LDCP0590
+      JK=J+K+1                                                          LDCP0600
+   55 G(JK)=E(K)                                                        LDCP0610
+      J=J+13                                                            LDCP0620
+  500 CONTINUE                                                          LDCP0630
+      CALL WRITE(G,520)                                                 LDCP0640
+      GO TO 5                                                           LDCP0650
+   75 IF(J)65,65,65                                                     LDCP0660
+   65 JI=J+1                                                            LDCP0670
+B     E9=377777777777                                                   LDCP0680
+      DO 85 I=JI,520                                                    LDCP0690
+   85 G(I)=E9                                                           LDCP0700
+      CALL WRITE(G,520)                                                 LDCP0710
+   95 END FILE 4                                                        LDCP0720
+      REWIND 4                                                          LDCP0730
+      CALL EXIT                                                         LDCP0740
+      END                                                               LDCP0750
+       ENTRY   WRITE                                                    RITE0010
+ WRITE SXA     EXIT,1                                                   RITE0020
+       SXA     EXIT+1,2                                                 RITE0030
+       CLA     1,4                                                      RITE0040
+       ALS     18                                                       RITE0050
+       SUB*    2,4                                                      RITE0060
+       ARS     18                                                       RITE0070
+       ADD     =1                                                       RITE0080
+       STA     COMM                                                     RITE0090
+       CLA*    2,4                                                      RITE0100
+       STD     COMM                                                     RITE0110
+       ARS     18                                                       RITE0120
+       STA     TEMP                                                     RITE0130
+       ADD     COMM                                                     RITE0140
+       STA     A                                                        RITE0150
+       CLA     TEMP                                                     RITE0160
+       ARS     1                                                        RITE0170
+       PAX     ,1                                                       RITE0180
+       ADD     COMM                                                     RITE0190
+       STA     B                                                        RITE0200
+       AXT     1,2                                                      RITE0210
+       CLA*    B                                                        RITE0220
+       LDQ*    A                                                        RITE0230
+       STQ*    B                                                        RITE0240
+       STO*    A                                                        RITE0250
+       TXI     *+1,2,1                                                  RITE0260
+       TIX     *-5,1,1                                                  RITE0270
+       AXT     10,1                                                     RITE0280
+       WTBA    4                                                        RITE0290
+       RCHA    COMM                                                     RITE0300
+       TCOA    *                                                        RITE0310
+       TRCA    *+2                                                      RITE0320
+       TRA     EXIT                                                     RITE0330
+       BSRA    4                                                        RITE0340
+       TIX     *-6,1,1                                                  RITE0350
+       HPR     1,5                                                      RITE0360
+       WTBA    4                                                        RITE0370
+       RCHA    COMM                                                     RITE0380
+       TCOA    *                                                        RITE0390
+ EXIT  AXT     **,1                                                     RITE0400
+       AXT     **,2                                                     RITE0410
+       TRA     3,4                                                      RITE0420
+ COMM  IOCD    **,,**                                                   RITE0430
+ A     PZE     **,1                                                     RITE0440
+ B     PZE     **,2                                                     RITE0450
+ TEMP  PZE                                                              RITE0460
+       END                                                              RITE0470
+      MEMBER SORT CONTROL CARDS                                                 
+$ATTACH        RDA                                                      MSOR0010
+$AS            SYSIN1                                                   MSOR0020
+$EXECUTE       SORT                                                     MSOR0030
+      FIL,INP/200,REE/1,MOD/B,DEN/L,BLO/600                             MSOR0040
+      FIL,OUT,MOD/B,DEN/L,BLO/600                                       MSOR0050
+      REC,TYP/F,LEN/15,FIE/72B                                          MSOR0060
+      SOR,FIL/200,SEQ/S,ORD/3,FIE/1                                     MSOR0070
+      CHA,INP/UT3,MER/(A,B,UT)                                          MSOR0080
+      OPT,CAR,TAP,NOC                                                   MSOR0090
+      END                                                               MSOR0100
+      LOAD SORT CONTROL CARDS                                                   
+$ATTACH        RDA                                                      LSOR0010
+$AS            SYSIN1                                                   LSOR0020
+$EXECUTE       SORT                                                     LSOR0030
+      FIL,INP/200,REE/1,MOD/B,DEN/L,BLO/520                             LSOR0040
+      FIL,OUT,MOD/B,DEN/L,BLO/520                                       LSOR0050
+      REC,TYP/F,LEN/13,FIE/(36B,108B)                                   LSOR0060
+      SOR,FIL/200,SEQ/S,ORD/3,FIE/2                                     LSOR0070
+      CHA,INP/UT3,MER/(A,B,UT)                                          LSOR0080
+      OPT,CAR,TAP,NOC                                                   LSOR0090
+      END                                                               LSOR0100
+      REACTION SORT CONTROL CARDS                                               
+$ATTACH        RDA                                                      RSOR0010
+$AS            SYSIN1                                                   RSOR0020
+$EXECUTE       SORT                                                     RSOR0030
+      FIL,INP/100,REE/1,MOD/B,DEN/H,BLO/24                              RSOR0040
+      FIL,OUT,MOD/B,DEN/L,BLO/24                                        RSOR0050
+      REC,TYP/F,LEN/24,FIE/(36B,108B)                                   RSOR0060
+      SOR,FIL/100,SEQ/S,ORD/3,FIE/2                                     RSOR0070
+      CHA,INP/UT3,MER/(A,B,UT)                                          RSOR0080
+      OPT,CAR,TAP,NOC                                                   RSOR0090
+      END                                                               RSOR0100
+CSTRSM    STRESS - MAINLINE PROGRAM                                     STRS0010
+C         STRESS PROGRAM PREPARED FOR USE WITH THE IBM ELASTIC FRAME    STRS0020
+C              ANALYSIS PROGRAM, FRAN                                   STRS0030
+C         THE MAINLINE PROGRAM CALLS 11 SUBROUTINES.                    STRS0040
+C              4 FAP SUBROUTINES - READ A, READ B, PACK, MOVE           STRS0050
+C              7 FORTRAN II SUBROUTINES - ALLOW, ANSCAL, ANSCTL, PRINT, STRS0060
+C              SHEAR, STRCAL, UPDTUC                                    STRS0070
+C                                                                       STRS0080
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FXA      STRS0090
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  STRS0100
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,STRS0110
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPSTRS0120
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   STRS0130
+      COMMON ELOR1,ELOR2,IDEN1,IDEN2,IDEN3,SECMO1,SECMO2,ELORKP         STRS0140
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)STRS0150
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               STRS0160
+      DIMENSION WF(6,70),PIPE(3,70),BOX(3,30)                           STRS0170
+      DIMENSION NWI(31)                                                 STRS0180
+      DIMENSION IND(4),XKIND(4)                                         STRS0190
+      DIMENSION FX(3),FMX(3),FAX(3),FAMX(3)                             STRS0200
+      DIMENSION IDENA(70,3),IDENB(70,3),IDENC(70,3)                     STRS0210
+      DIMENSION JOINT(700)                                              STRS0220
+      DIMENSION PRIM(200,5),KODE(200),INTER(31),IXIT(31)                STRS0230
+      DIMENSION R(3,3),X(700),Y(700),Z(700),CLOAD(3,51),ALLOAD(6,51)    STRS0240
+      DIMENSION RLD(6),RLDR(6)                                          STRS0250
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              STRS0260
+    3 FORMAT (2A4,A6,17X,F7.0,7X,4F6.0,F3.0)                            STRS0270
+    4 FORMAT(39H0SECTION CALLED FOR NOT IN TABLE-MEMBER,2I6)            STRS0280
+   82 FORMAT(28H MISSING MEMBER CARD, MEMBER,2I6/)                      STRS0290
+  500 FORMAT(44H1JOINT COORDINATES NOT FOUND IN TABLE, JOINT,I5)        STRS0300
+  602 FORMAT(6X,I4,6F6.0)                                               STRS0310
+  610 FORMAT(4I4)                                                       STRS0320
+ 3340 FORMAT(2I2,3X,31I1)                                               STRS0330
+ 7748 FORMAT(1H1)                                                       STRS0340
+ 7751 FORMAT(53H MISSING REACTION RECORD OR EXTRA MEMBER CARD, MEMBER,2ISTRS0350
+     16/)                                                               STRS0360
+ 7773 FORMAT(47H AXIAL STRESS EXCEEDS CRITICAL BUCKLING STRESS./41H THE STRS0370
+     1ABOVE RESULTS MAY NOT BE MEANINGFUL.)                             STRS0380
+ 9998 FORMAT(5X,5HERROR,2X,I4)                                          STRS0390
+C                                                                       STRS0400
+C         READ CONTROL CARD NO. 1                                       STRS0410
+C                                                                       STRS0420
+      READ INPUT TAPE 5,610,NJNT,NWF,NBOX,NPIPE                         STRS0430
+C                                                                       STRS0440
+C         READ CONTROL CARD NO. 2                                       STRS0450
+C                                                                       STRS0460
+      READ INPUT TAPE 5,3340,KPARAM,NLDS,(NWI(MT),MT=1,NLDS)            STRS0470
+C                                                                       STRS0480
+C         READ TABLE OF WIDE FLANGE GEOMETRIC PROPERTIES                STRS0490
+C                                                                       STRS0500
+      DO 1200 I=1,NWF                                                   STRS0510
+ 1200 READ INPUT TAPE 5,3,IDENA(I,1),IDENB(I,1),IDENC(I,1),WF(1,I),WF(2,STRS0520
+     1I),WF(3,I),WF(4,I),WF(5,I),WF(6,I)                                STRS0530
+C                                                                       STRS0540
+C         READ TABLE OF PIPE GEOMETRIC PROPERTIES                       STRS0550
+C                                                                       STRS0560
+      DO 1201 I=1,NPIPE                                                 STRS0570
+ 1201 READ INPUT TAPE 5,3,IDENA(I,2),IDENB(I,2),IDENC(I,2),PIPE(1,I),PIPSTRS0580
+     1E(2,I),PIPE(3,I)                                                  STRS0590
+C                                                                       STRS0600
+C         READ TABLE OF BOX GEOMETRIC PROPERTIES                        STRS0610
+C                                                                       STRS0620
+      DO 1202 I=1,NBOX                                                  STRS0630
+ 1202 READ INPUT TAPE 5,3,IDENA(I,3),IDENB(I,3),IDENC(I,3),BOX(1,I),BOX(STRS0640
+     12,I),BOX(3,I)                                                     STRS0650
+C                                                                       STRS0660
+C         READ JOINT COORDINATES - XF,YF,ZF FEET AND XI,YI,ZI INCHES    STRS0670
+C                                                                       STRS0680
+      DO 601 I=1,NJNT                                                   STRS0690
+      READ INPUT TAPE 5,602,JOINT(I),XF,YF,ZF,XI,YI,ZI                  STRS0700
+      X(I)=XF+XI/12.                                                    STRS0710
+      Y(I)=YF+YI/12.                                                    STRS0720
+      Z(I)=ZF+ZI/12.                                                    STRS0730
+  601 CONTINUE                                                          STRS0740
+      KP1=KPARAM+1                                                      STRS0750
+      PARAM=FLOATF(KPARAM)                                              STRS0760
+      LL=521                                                            STRS0770
+      NRTEST=0                                                          STRS0780
+      NCKSTP=0                                                          STRS0790
+  603 WIND=1.                                                           STRS0800
+ 3352 JKL=1                                                             STRS0810
+C                                                                       STRS0820
+C     MEMBER DATA READ FROM TAPE UNIT B1                                STRS0830
+C                                                                       STRS0840
+      CALL READB(BB,600)                                                STRS0850
+ 3353 J1STOR=NXA(JKL)                                                   STRS0860
+      J2STOR=NXA(JKL+1)                                                 STRS0870
+      THETA=BB(JKL+2)/57.2958                                           STRS0880
+      MC1=NXA(JKL+3)                                                    STRS0890
+      NFY=NXA(JKL+4)                                                    STRS0900
+      LLCD=NXA(JKL+5)                                                   STRS0910
+      LENXTR=NXA(JKL+6)*12                                              STRS0920
+      AREA=BB(JKL+7)                                                    STRS0930
+      TZZ=BB(JKL+8)                                                     STRS0940
+      TYY=BB(JKL+9)                                                     STRS0950
+      TXX=BB(JKL+10)                                                    STRS0960
+      E=BB(JKL+11)*1000000.                                             STRS0970
+      G=BB(JKL+12)*1000000.                                             STRS0980
+      KONDL=NXA(JKL+13)                                                 STRS0990
+      KONDR=NXA(JKL+14)                                                 STRS1000
+      JKL=JKL+15                                                        STRS1010
+      DO 795 KX=1,6                                                     STRS1020
+      COMUC(KX)=0.                                                      STRS1030
+      IUC(KX)=0                                                         STRS1040
+      DO 795 KZ=1,10                                                    STRS1050
+  795 ANS(KZ,KX)=0.                                                     STRS1060
+      MATCH=1                                                           STRS1070
+      NLDC=1                                                            STRS1080
+      IF(J1STOR-20000)3400,3401,3401                                    STRS1090
+ 3401 CALL EXIT                                                         STRS1100
+ 3400 CALL PACK (KONDL,KONDR,KOND)                                      STRS1110
+      IF (LENXTR) 1700,1700,1701                                        STRS1120
+ 1701 IF(1-LLCD) 1702,1702,1703                                         STRS1130
+ 1702 EXTRA1=LENXTR                                                     STRS1140
+      EXTRA2=0.                                                         STRS1150
+      GO TO 1704                                                        STRS1160
+ 1700 EXTRA1=0.                                                         STRS1170
+      EXTRA2=0.                                                         STRS1180
+      GO TO 1704                                                        STRS1190
+ 1703 EXTRA1=0.                                                         STRS1200
+      EXTRA2=LENXTR                                                     STRS1210
+ 1704 IF (NFY) 1211,1211,1210                                           STRS1220
+ 1211 NFY=36                                                            STRS1230
+ 1210 FY=1000.*FLOATF(NFY)                                              STRS1240
+C                                                                       STRS1250
+C         IF I-YY IS GREATER THAN I-ZZ, ALL PROPERTIES ASSOCIATED WITH  STRS1260
+C         THESE AXES ARE REVERSED. THE Y-AXIS IS ALWAYS THE MINOR AXIS  STRS1270
+C         OF INERTIA.                                                   STRS1280
+C                                                                       STRS1290
+      IF(TZZ-TYY)1400,1401,1401                                         STRS1300
+ 1401 NB=2                                                              STRS1310
+      NC=3                                                              STRS1320
+      NE=5                                                              STRS1330
+      NF=6                                                              STRS1340
+      AXISK=1.                                                          STRS1350
+      RG1=(TZZ/AREA)**.5                                                STRS1360
+      RG2=(TYY/AREA)**.5                                                STRS1370
+      GO TO 1502                                                        STRS1380
+ 1400 NB=3                                                              STRS1390
+      NC=2                                                              STRS1400
+      NE=6                                                              STRS1410
+      NF=5                                                              STRS1420
+      AXISK=-1.                                                         STRS1430
+      RG1=(TYY/AREA)**.5                                                STRS1440
+      RG2=(TZZ/AREA)**.5                                                STRS1450
+      TEMP=EXTRA1                                                       STRS1460
+      EXTRA1=EXTRA2                                                     STRS1470
+      EXTRA2=TEMP                                                       STRS1480
+      TTEMP=TYY                                                         STRS1490
+      TYY=TZZ                                                           STRS1500
+      TZZ=TTEMP                                                         STRS1510
+      KTEMP=KOND(5)                                                     STRS1520
+      KOND(5)=KOND(6)                                                   STRS1530
+      KOND(6)=KTEMP                                                     STRS1540
+      KTEMP=KOND(11)                                                    STRS1550
+      KOND(11)=KOND(12)                                                 STRS1560
+      KOND(12)=KTEMP                                                    STRS1570
+C                                                                       STRS1580
+C         LOOK UP MEMBER JOINT COORDINATES IN JOINT COORDINATE TABLE    STRS1590
+C                                                                       STRS1600
+ 1502 DO 501 I=1,NJNT                                                   STRS1610
+      IF(J1STOR-JOINT(I))501,502,501                                    STRS1620
+  501 CONTINUE                                                          STRS1630
+      PRINT 500,J1STOR                                                  STRS1640
+      WRITE OUTPUT TAPE 6,500,J1STOR                                    STRS1650
+      IF(601-JKL)3352,3352,3353                                         STRS1660
+  502 XI=X(I)                                                           STRS1670
+      YI=Y(I)                                                           STRS1680
+      ZI=Z(I)                                                           STRS1690
+      DO 503 I=1,NJNT                                                   STRS1700
+      IF(J2STOR-JOINT(I))503,504,503                                    STRS1710
+  503 CONTINUE                                                          STRS1720
+      PRINT 500,J2STOR                                                  STRS1730
+      WRITE OUTPUT TAPE 6,500,J2STOR                                    STRS1740
+      IF(601-JKL)3352,3352,3353                                         STRS1750
+  504 DIST=((X(I)-XI)**2+(Y(I)-YI)**2+(Z(I)-ZI)**2)**.5                 STRS1760
+      XL=(X(I)-XI)/DIST                                                 STRS1770
+      XM=(Y(I)-YI)/DIST                                                 STRS1780
+      XN=(Z(I)-ZI)/DIST                                                 STRS1790
+      IF(ABSF(X(I)-XI)-.1E-2)505,505,506                                STRS1800
+  505 IF(ABSF(Y(I)-YI)-.1E-2)507,507,506                                STRS1810
+C                                                                       STRS1820
+C         CALCULATE ELEMENTS OF ROTATION MATRIX                         STRS1830
+C                                                                       STRS1840
+  507 R(1,1)=0.                                                         STRS1850
+      R(1,2)=0.                                                         STRS1860
+      R(1,3)=1.                                                         STRS1870
+      R(2,1)=COSF(THETA)                                                STRS1880
+      R(2,2)=SINF(THETA)                                                STRS1890
+      R(2,3)=0.                                                         STRS1900
+      R(3,1)=-SINF(THETA)                                               STRS1910
+      R(3,2)=COSF(THETA)                                                STRS1920
+      R(3,3)=0.                                                         STRS1930
+      GO TO 508                                                         STRS1940
+  506 R(1,1)=XL                                                         STRS1950
+      R(1,2)=XM                                                         STRS1960
+      R(1,3)=XN                                                         STRS1970
+      R(2,1)=-(XM*COSF(THETA)+XL*XN*SINF(THETA))/(XL**2+XM**2)**.5      STRS1980
+      R(2,2)=(XL*COSF(THETA)-XM*XN*SINF(THETA))/(XL**2+XM**2)**.5       STRS1990
+      R(2,3)=(XL**2+XM**2)**.5*SINF(THETA)                              STRS2000
+      R(3,1)=(XM*SINF(THETA)-XL*XN*COSF(THETA))/(XL**2+XM**2)**.5       STRS2010
+      R(3,2)=-(XL*SINF(THETA)+XM*XN*COSF(THETA))/(XL**2+XM**2)**.5      STRS2020
+      R(3,3)=(XL**2+XM**2)**.5*COSF(THETA)                              STRS2030
+ 508  CONTINUE                                                          STRS2040
+ 8000 DO 1000 I=1,31                                                    STRS2050
+      INTER(I)=0                                                        STRS2060
+ 1000 IXIT(I)=0                                                         STRS2070
+C                                                                       STRS2080
+C     TEST FOR TYPE OF MEMBER                                           STRS2090
+C     HERE BEGINS A SEARCH ROUTINE FOR THE GEOMETRICAL PROPERTIES OF    STRS2100
+C     THE MEMBER UNDER CONSIDERATION.                                   STRS2110
+C                                                                       STRS2120
+      DO 1203 INDEX=1,NWF                                               STRS2130
+      IF(TYY-WF(1,INDEX))1203,1204,1203                                 STRS2140
+ 1203 CONTINUE                                                          STRS2150
+      DO 1207 INDEX=1,NPIPE                                             STRS2160
+      IF(TYY-PIPE(1,INDEX))1207,1208,1207                               STRS2170
+ 1207 CONTINUE                                                          STRS2180
+      DO 1205 INDEX=1,NBOX                                              STRS2190
+      IF(TYY-BOX(1,INDEX))1205,1206,1205                                STRS2200
+ 1205 CONTINUE                                                          STRS2210
+C                                                                       STRS2220
+C         IF THE CORRECT PROPERTIES ARE NOT FOUND (NO MATCHING I-YY),THESTRS2230
+C         REMAINING MEMBERS ARE CHECKED AGAINST ENTRIES IN THE TABLE    STRS2240
+C         (NCKSTP=1)                                                    STRS2250
+C                                                                       STRS2260
+      WRITE OUTPUT TAPE 6,4,J1STOR,J2STOR                               STRS2270
+      NCKSTP=1                                                          STRS2280
+      GO TO 3397                                                        STRS2290
+ 1204 IF (NCKSTP) 802,802,3397                                          STRS2300
+C                                                                       STRS2310
+C         CALCULATE CONSTANTS DEPENDENT ONLY ON GEOMETRY AND PROPERTIES STRS2320
+C         OF THE MATERIAL                                               STRS2330
+C                                                                       STRS2340
+  802 NCODE=1                                                           STRS2350
+      B=WF(2,INDEX)                                                     STRS2360
+      T=WF(3,INDEX)                                                     STRS2370
+      D=WF(4,INDEX)                                                     STRS2380
+      W=WF(5,INDEX)                                                     STRS2390
+      RFT=WF(6,INDEX)                                                   STRS2400
+      SECMO1=2.*TZZ/D                                                   STRS2410
+      SECMO2=2.*TYY/B                                                   STRS2420
+      SQRTEG=((E/G)**.5)/2.                                             STRS2430
+      H=D-T                                                             STRS2440
+      ALFA=.094+.07*RFT/T                                               STRS2450
+      DIAC=((T+RFT)**2+W*(RFT+W/4.))/(2.*RFT+T)                         STRS2460
+      XK=.6667*B*T**3+.3333*(D-2.*T)*W**3+2.*ALFA*DIAC**4-.42016*T**4   STRS2470
+      A=SQRTEG*H*(TYY/XK)**.5                                           STRS2480
+      XLOVA=DIST/A*12.                                                  STRS2490
+      HTEMP=EXPF(XLOVA)                                                 STRS2500
+      HTAN=(HTEMP-1.)/(HTEMP+1.)                                        STRS2510
+      HTAN1=(HTAN-1.)/2.                                                STRS2520
+      HTAN2=(HTAN+1.)/2.                                                STRS2530
+      ZA=(W+.3*RFT)/XK                                                  STRS2540
+      XN=(DIAC+T)/(2.*XK)                                               STRS2550
+      GO TO1016                                                         STRS2560
+ 1208 IF (NCKSTP) 803,803,3397                                          STRS2570
+  803 NCODE=2                                                           STRS2580
+      RAD=PIPE(2,INDEX)/2.                                              STRS2590
+      T=PIPE(3,INDEX)                                                   STRS2600
+      SECMO1=TZZ/RAD                                                    STRS2610
+      SECMO2=TYY/RAD                                                    STRS2620
+      GO TO 1016                                                        STRS2630
+ 1206 IF (NCKSTP) 804,804,3397                                          STRS2640
+  804 NCODE=3                                                           STRS2650
+      B=BOX(2,INDEX)                                                    STRS2660
+      T=BOX(3,INDEX)                                                    STRS2670
+      SOMT2=(B-T)**2                                                    STRS2680
+      SECMO1=2.*TZZ/B                                                   STRS2690
+      SECMO2=2.*TYY/B                                                   STRS2700
+ 1016 MLCK=0                                                            STRS2710
+      IDEN1=IDENA(INDEX,NCODE)                                          STRS2720
+      IDEN2=IDENB(INDEX,NCODE)                                          STRS2730
+      IDEN3=IDENC(INDEX,NCODE)                                          STRS2740
+      XMAXP=0.                                                          STRS2750
+      XMAXM=0.                                                          STRS2760
+      MAXP=0                                                            STRS2770
+      MAXM=0                                                            STRS2780
+      K=0                                                               STRS2790
+      DO 1006 L=1,5                                                     STRS2800
+      DO 1006 M=1,200                                                   STRS2810
+ 1006 PRIM(M,L)=0.                                                      STRS2820
+      DO 1007 L=1,200                                                   STRS2830
+ 1007 KODE(L)=0                                                         STRS2840
+   78 IF(LL-521)3351,1017,1017                                          STRS2850
+ 1017 LL=1                                                              STRS2860
+C                                                                       STRS2870
+C     LOAD DATA READ FROM TAPE UNIT A4                                  STRS2880
+C                                                                       STRS2890
+      CALL READA(AA,520)                                                STRS2900
+ 3351 IF(NNN(LL+1)-J1STOR)77,7741,7072                                  STRS2910
+ 7741 IF(NNN(LL+2)-J2STOR)77,7743,7072                                  STRS2920
+   77 LL=LL+13                                                          STRS2930
+      GO TO 78                                                          STRS2940
+ 7743 IF(NNN(LL))7801,7801,1500                                         STRS2950
+ 1500 DTEMP=AA(LL+6)+AA(LL+8)                                           STRS2960
+      AA(LL+6)=DIST-DTEMP                                               STRS2970
+      AA(LL+9)=DIST-AA(LL+9)                                            STRS2980
+      NNN(LL)=0                                                         STRS2990
+ 7801 JTCODE=NNN(LL)                                                    STRS3000
+      JTNO1=NNN(LL+1)                                                   STRS3010
+      JTNO2=NNN(LL+2)                                                   STRS3020
+      NPRIM=NNN(LL+3)                                                   STRS3030
+      KX=AA(LL+4)                                                       STRS3040
+      KY=AA(LL+5)                                                       STRS3050
+      D1=AA(LL+6)                                                       STRS3060
+      P=AA(LL+7)                                                        STRS3070
+      D2=AA(LL+8)                                                       STRS3080
+      D3=AA(LL+9)                                                       STRS3090
+      APMOM=AA(LL+10)                                                   STRS3100
+C                                                                       STRS3110
+C         LOAD DATA WORDS (LL+11) AND (LL+12) ARE NOT UTILIZED          STRS3120
+C         BY THE STRESS PROGRAM. SEE LOAD SORT PREPARATION DOCUMENTATIONSTRS3130
+C         FOR FURTHER DESCRIPTION                                       STRS3140
+C                                                                       STRS3150
+      LL=LL+13                                                          STRS3160
+      MLCK=1                                                            STRS3170
+C                                                                       STRS3180
+C         LOADS STORED UNDER BASIC LOADING CONDITION NUMBER(NPRIM OR I) STRS3190
+C         INTER(I) IS THE FIRST LOAD OF THE LOADING CONDITION           STRS3200
+C         IXIT(I) IS THE LAST LOAD OF THE LOADING CONDITION             STRS3210
+C                                                                       STRS3220
+ 1001 I=NPRIM                                                           STRS3230
+ 1009 K=K+1                                                             STRS3240
+      IF(INTER(I)) 1010,1011,1010                                       STRS3250
+ 1011 INTER(I)=K                                                        STRS3260
+ 1010 IXIT(I)=K                                                         STRS3270
+      PRIM(K,1)=P*1000.                                                 STRS3280
+      PRIM(K,2)=D1*12.                                                  STRS3290
+      PRIM(K,3)=D2*12.                                                  STRS3300
+      PRIM(K,4)=D3*12.                                                  STRS3310
+      PRIM(K,5)=APMOM*1000.                                             STRS3320
+      IF(D2)60,61,60                                                    STRS3330
+   60 PRIM(K,1)=PRIM(K,1)/12.                                           STRS3340
+   61 IF(KX) 1012,1013,1012                                             STRS3350
+ 1013 IF(KY) 1014,1015,1014                                             STRS3360
+ 1015 KODE(K)=0                                                         STRS3370
+      IF(521-LL)1017,1017,3351                                          STRS3380
+ 1012 KODE(K)=-1                                                        STRS3390
+      IF(521-LL)1017,1017,3351                                          STRS3400
+ 1014 KODE(K)=1                                                         STRS3410
+      IF(521-LL)1017,1017,3351                                          STRS3420
+ 7072 IF(NMTST)7071,7071,7073                                           STRS3430
+ 7073 NMTST=0                                                           STRS3440
+      GO TO 7074                                                        STRS3450
+ 7071 DIST=DIST*12.                                                     STRS3460
+      XINC1=DIST/PARAM                                                  STRS3470
+ 7074 DO 7770 LLC=1,NLDS                                                STRS3480
+C                                                                       STRS3490
+C         DO LOOP INDEX IS NUMBER OF COMBINED LOADING CONDITIONS        STRS3500
+C                                                                       STRS3510
+      DO7070KX=1,3                                                      STRS3520
+      DO 7070 KY=1,KP1                                                  STRS3530
+ 7070 CLOAD(KX,KY)=0.                                                   STRS3540
+      DO 1503 KX=1,6                                                    STRS3550
+      DO 1503 KY=1,KP1                                                  STRS3560
+ 1503 ALLOAD(KX,KY)=0.                                                  STRS3570
+      IF(NRTEST)3407,3407,3408                                          STRS3580
+ 3408 NRTEST=0                                                          STRS3590
+      GO TO 3420                                                        STRS3600
+C                                                                       STRS3610
+C         READ REACTION RECORDS FOR EACH COMBINED LOADING CONDITION     STRS3620
+C                                                                       STRS3630
+ 3407 READ TAPE 9,III,JJJ,LC,(IND(LK),LK=1,4),(XKIND(LK),LK=1,4),(RLD(LKSTRS3640
+     1),LK=1,6),(RLDR(LK),LK=1,6)                                       STRS3650
+      CALL MOVE(III)                                                    STRS3660
+      CALL MOVE(LC)                                                     STRS3670
+      CALL MOVE(JJJ)                                                    STRS3680
+      DO 6750 LK=1,4                                                    STRS3690
+ 6750 CALL MOVE(IND(LK))                                                STRS3700
+ 7747 IF(III-20000)3420,3401,3401                                       STRS3710
+ 3420 IF(III-J1STOR)81,3404,3403                                        STRS3720
+ 3404 IF(JJJ-J2STOR)81,3406,3403                                        STRS3730
+   81 NPATH=1                                                           STRS3740
+      GO TO 84                                                          STRS3750
+ 3403 NRTEST=2                                                          STRS3760
+      IF(NLDC-NLDS) 3397,3397,7750                                      STRS3770
+ 7750 NPATH=2                                                           STRS3780
+   84 IF(NLDC-1)7749,7749,85                                            STRS3790
+ 7749 WRITE OUTPUT TAPE 6,7748                                          STRS3800
+   85 GO TO(83,7752),NPATH                                              STRS3810
+   83 WRITE OUTPUT TAPE 6,82,III,JJJ                                    STRS3820
+      NMTST=1                                                           STRS3830
+      GO TO 7770                                                        STRS3840
+ 7752 WRITE OUTPUT TAPE 6,7751,J1STOR,J2STOR                            STRS3850
+      GO TO 3397                                                        STRS3860
+ 3406 NLDC=NLDC+1                                                       STRS3870
+      IF(NWI(LC)) 7746,7746,1621                                        STRS3880
+ 1621 WIND=1.33                                                         STRS3890
+      GO TO 350                                                         STRS3900
+ 7746 WIND =1.                                                          STRS3910
+ 350  IF(MLCK)1999,2002,1999                                            STRS3920
+C                                                                       STRS3930
+C         BUILD LOAD DIAGRAM                                            STRS3940
+C                                                                       STRS3950
+ 1999 DO 2000 K1=1,4                                                    STRS3960
+C                                                                       STRS3970
+C         DO LOOP INDEX IS THE NUMBER OF BASIC LOADING CONDITIONS IN THESTRS3980
+C         COMBINED LOADING CONDITION                                    STRS3990
+C                                                                       STRS4000
+      KX=IND(K1)                                                        STRS4010
+      CFACT=XKIND(K1)                                                   STRS4020
+      IF(KX)2001,2002,2001                                              STRS4030
+ 2001 KIN=INTER(KX)                                                     STRS4040
+      KOUT=IXIT(KX)                                                     STRS4050
+      IF(KOUT)9999,2000,1622                                            STRS4060
+ 1622 DO 2003 K2=KIN,KOUT                                               STRS4070
+C                                                                       STRS4080
+C         DO LOOP INDEX IS EACH LOAD RECORD (K2) IN THE BASIC LOADING   STRS4090
+C         CONDITION                                                     STRS4100
+C              KIN=FIRST LOAD NUMBER, KOUT=LAST LOAD NUMBER ASSIGNED    STRS4110
+C              WHEN LOADS ARE READ AND LOAD TABLE BUILT(SAME AS INTER,  STRS4120
+C              IXIT)                                                    STRS4130
+C                                                                       STRS4140
+C         ASSIGN KTYPE,ACCORDING TO TYPE OF INFORMATION ON LOAD CARD    STRS4150
+C              KTYPE=1  UNIFORM LOAD ONLY                               STRS4160
+C              KTYPE=2  CONCENTRATED LOAD ONLY                          STRS4170
+C              KTYPE=3  APPLIED MOMENT ONLY                             STRS4180
+C              KTYPE=4  UNIFORM LOAD + APPLIED MOMENT                   STRS4190
+C              KTYPE=5  CONCENTRATED LOAD + APPLIED MOMENT              STRS4200
+C                                                                       STRS4210
+      IF(PRIM(K2,1))2004,2005,2004                                      STRS4220
+ 2005  KERROR=2005                                                      STRS4230
+      IF(PRIM(K2,5))2006,9999,2006                                      STRS4240
+ 2006 KTYPE=3                                                           STRS4250
+      GO TO 2007                                                        STRS4260
+ 2004 IF(PRIM(K2,3))2008,2009,2008                                      STRS4270
+ 2009 KTYPE=2                                                           STRS4280
+      IF(PRIM(K2,5))2010,2007,2010                                      STRS4290
+ 2010 KTYPE=5                                                           STRS4300
+      GO TO 2007                                                        STRS4310
+ 2008 KTYPE=1                                                           STRS4320
+      IF(PRIM(K2,5))2011,2007,2011                                      STRS4330
+ 2011 KTYPE=4                                                           STRS4340
+ 2007 DO 2112 I=1,3                                                     STRS4350
+      FX(I)=0.                                                          STRS4360
+      FMX(I)=0.                                                         STRS4370
+      FAX(I)=0.                                                         STRS4380
+ 2112 FAMX(I)=0.                                                        STRS4390
+      GO TO (2012,2012,2017,2017,2017),KTYPE                            STRS4400
+C                                                                       STRS4410
+C         LOADS AND/OR MOMENTS ARE MULTIPLIED BY CFACT,AS SPECIFIED IN  STRS4420
+C              THE SUMMATION AND SEARCHING PROGRAM, AND BY R, TO PRODUCESTRS4430
+C              A ROTATION INTO THE MEMBER COORDINATE SYSTEM             STRS4440
+C                                                                       STRS4450
+ 2017 I=KODE(K2)+2                                                      STRS4460
+      FMX(I)=PRIM(K2,5)*CFACT                                           STRS4470
+      IF(KTYPE-4) 2024,2012,2012                                        STRS4480
+ 2012 IF(KODE(K2)) 2016,2117,2018                                       STRS4490
+ 2016 FX(1)=PRIM(K2,1)*CFACT                                            STRS4500
+      GO TO 2024                                                        STRS4510
+ 2117 FX(3)=PRIM(K2,1)*CFACT                                            STRS4520
+      GO TO 2024                                                        STRS4530
+ 2018 FX(2)=PRIM(K2,1)*CFACT                                            STRS4540
+ 2024 IF(KTYPE-3) 2027,2025,2025                                        STRS4550
+ 2025 DO 2019 I=1,3                                                     STRS4560
+      DO 2019 J=1,3                                                     STRS4570
+ 2019 FAMX(I)=FAMX(I)+R(I,J)*FMX(J)                                     STRS4580
+      IF(KTYPE-3) 2028,2028,2027                                        STRS4590
+ 2027 DO 2023 I=1,3                                                     STRS4600
+      DO 2023 J=1,3                                                     STRS4610
+ 2023 FAX(I)=FAX(I)+R(I,J)*FX(J)                                        STRS4620
+ 2028 GO TO (2031,2032,2033,2033,2033),KTYPE                            STRS4630
+C                                                                       STRS4640
+C         LOADS ARE REPLACED BY THEIR EQUIVALENT CONCENTRATED LOADS AT  STRS4650
+C              THE ENDS OF THE MEMBERS                                  STRS4660
+C         MOMENTS ARE PLACED AT THE FIRST END OF THE LOADED INCREMENT   STRS4670
+C                                                                       STRS4680
+ 2033 LOC1=PRIM(K2,4)*PARAM/DIST+1.001                                  STRS4690
+      IF(LOC1-KP1) 2602,2602,2601                                       STRS4700
+ 2601 LOC1=KP1                                                          STRS4710
+ 2602 DO 2133 I=4,6                                                     STRS4720
+ 2133 ALLOAD(I,LOC1)=ALLOAD(I,LOC1)+FAMX(I-3)                           STRS4730
+      IF(KTYPE-4)2003,2031,2032                                         STRS4740
+ 2031 LOC1=PRIM(K2,2)*PARAM/DIST+1.001                                  STRS4750
+      IF(LOC1-KP1) 2604,2604,2603                                       STRS4760
+ 2603 LOC1=KP1                                                          STRS4770
+      GO TO 2800                                                        STRS4780
+ 2604 IF(PRIM(K2,2)) 2800,2800,2799                                     STRS4790
+ 2799 EXD=PRIM(K2,2)-XINC1*FLOATF(LOC1-1)                               STRS4800
+      EXC1=.5-EXD/XINC1                                                 STRS4810
+      FACT2=.5-EXC1/2.                                                  STRS4820
+      FACT1=1.-FACT2                                                    STRS4830
+      DO 2810 I=1,3                                                     STRS4840
+      CLOAD(I,LOC1)=CLOAD(I,LOC1)+FAX(I)*FACT1*EXC1*XINC1               STRS4850
+ 2810 CLOAD(I,LOC1+1)=CLOAD(I,LOC1+1)+FAX(I)*FACT2*EXC1*XINC1           STRS4860
+      LOC1=LOC1+1                                                       STRS4870
+ 2800 LOC2=PARAM*(PRIM(K2,2)+PRIM(K2,3))/DIST+1.02                      STRS4880
+      IF(LOC2-KP1) 2820,2727,2801                                       STRS4890
+ 2801 LOC2=KP1                                                          STRS4900
+      GO TO 2727                                                        STRS4910
+ 2820 EXD=PRIM(K2,2)+PRIM(K2,3)-XINC1*FLOATF(LOC2-1)                    STRS4920
+      EXC1=EXD/XINC1-.5                                                 STRS4930
+      FACT2=.5+EXC1/2.                                                  STRS4940
+      FACT1=1.-FACT2                                                    STRS4950
+      DO 2830 I=1,3                                                     STRS4960
+      CLOAD(I,LOC2)=CLOAD(I,LOC2)+FAX(I)*FACT1*EXC1*XINC1               STRS4970
+ 2830 CLOAD(I,LOC2+1)=CLOAD(I,LOC2+1)+FAX(I)*FACT2*EXC1*XINC1           STRS4980
+ 2727 DO 2036 J=LOC1,LOC2                                               STRS4990
+      DO 2036 I=1,3                                                     STRS5000
+ 2036 ALLOAD(I,J)=ALLOAD(I,J)+FAX(I)*XINC1                              STRS5010
+      GO TO 2003                                                        STRS5020
+ 2032 LOC1=PRIM(K2,2)*PARAM/DIST+1.001                                  STRS5030
+      IF(LOC1-KP1) 2432,2232,2605                                       STRS5040
+ 2432 FACT2=PRIM(K2,2)*PARAM/DIST+1.-FLOATF(LOC1)                       STRS5050
+      FACT1=1.-FACT2                                                    STRS5060
+      DO 2433 I=1,3                                                     STRS5070
+      CLOAD(I,LOC1)=CLOAD(I,LOC1)+FAX(I)*FACT1                          STRS5080
+ 2433 CLOAD(I,LOC1+1)=CLOAD(I,LOC1+1)+FAX(I)*FACT2                      STRS5090
+      GO TO 2003                                                        STRS5100
+ 2605 LOC1=KP1                                                          STRS5110
+ 2232 DO 2132 I=1,3                                                     STRS5120
+ 2132 CLOAD(I,LOC1)=CLOAD(I,LOC1)+FAX(I)                                STRS5130
+ 2003 CONTINUE                                                          STRS5140
+ 2000 CONTINUE                                                          STRS5150
+ 2002 CALL ALLOW                                                        STRS5160
+C                                                                       STRS5170
+C     BUILD SHEAR AND MOMENT DIAGRAM                                    STRS5180
+C         DO LOOP INDICIES ARE THE NUMBER OF LOADING DIAGRAMS AND THE   STRS5190
+C         NUMBER OF POINTS ALONG MEMBER AT WHICH CALCULATIONS ARE MADE  STRS5200
+C                                                                       STRS5210
+      DO 6000 N3=1,6                                                    STRS5220
+      DO 6000 N4=1,KP1                                                  STRS5230
+ 6000 DIA(N3,N4)=0.                                                     STRS5240
+      DIA(1,1)=-(RLD(1)+CLOAD(1,1))                                     STRS5250
+      DIA(2,1)=RLD(NB)+CLOAD(NB,1)                                      STRS5260
+      DIA(3,1)=RLD(NC)+CLOAD(NC,1)                                      STRS5270
+      DIA(4,1)=RLD(4)+ALLOAD(4,1)                                       STRS5280
+      DIA(5,1)=RLD(NE)+ALLOAD(NE,1)                                     STRS5290
+      DIA(6,1)=RLD(NF)+ALLOAD(NF,1)                                     STRS5300
+      DO 6001 N3=2,KP1                                                  STRS5310
+      SHRX=DIA(1,N3-1)-ALLOAD(1,N3-1)/2.                                STRS5320
+      SHRY=DIA(2,N3-1)+ALLOAD(NB,N3-1)/2.                               STRS5330
+      SHRZ=DIA(3,N3-1)+ALLOAD(NC,N3-1)/2.                               STRS5340
+      XMOM=DIA(4,N3-1)                                                  STRS5350
+      YMOM=DIA(5,N3-1)                                                  STRS5360
+      ZMOM=DIA(6,N3-1)                                                  STRS5370
+      DIA(1,N3)=SHRX-ALLOAD(1,N3)/2.-CLOAD(1,N3)                        STRS5380
+      DIA(4,N3)=XMOM+ALLOAD(4,N3)                                       STRS5390
+      DIA(2,N3)=SHRY+ALLOAD(NB,N3)/2.                                   STRS5400
+      DIA(6,N3)=ZMOM-SHRY*XINC1*AXISK+ALLOAD(NF,N3)                     STRS5410
+      DIA(2,N3)=DIA(2,N3)+CLOAD(NB,N3)                                  STRS5420
+      DIA(3,N3)=SHRZ+ALLOAD(NC,N3)/2.                                   STRS5430
+      DIA(5,N3)=YMOM+SHRZ*XINC1*AXISK+ALLOAD(NE,N3)                     STRS5440
+ 6001 DIA(3,N3)=DIA(3,N3)+CLOAD(NC,N3)                                  STRS5450
+      DIA(1,KP1)=DIA(1,KP1)+CLOAD(1,KP1)                                STRS5460
+      DIA(2,KP1)=DIA(2,KP1)-CLOAD(NB,KP1)                               STRS5470
+      DIA(3,KP1)=DIA(3,KP1)-CLOAD(NC,KP1)                               STRS5480
+      DIA(4,KP1)=DIA(4,KP1)-ALLOAD(4,KP1)                               STRS5490
+      DIA(5,KP1)=DIA(5,KP1)-ALLOAD(NE,KP1)                              STRS5500
+      DIA(6,KP1)=DIA(6,KP1)-ALLOAD(NF,KP1)                              STRS5510
+      CALL ANSCTL                                                       STRS5520
+ 7770 CONTINUE                                                          STRS5530
+      IF(NMTST) 7771,7771,78                                            STRS5540
+ 7771 CALL PRINT                                                        STRS5550
+      IF(U(10)-1.) 3397,7772,3397                                       STRS5560
+ 7772 WRITE OUTPUT TAPE 6,7773                                          STRS5570
+      U(10)=0.                                                          STRS5580
+ 3397 IF(601-JKL)3352,3352,3353                                         STRS5590
+ 9999 PRINT 9998,KERROR                                                 STRS5600
+      CALL EXIT                                                         STRS5610
+      END                                                               STRS5620
+       ENTRY   READA                                                    REDA0010
+ READA SXA     EXIT,1                                                   REDA0020
+       SXA     EXIT+1,2                                                 REDA0030
+       CLA     1,4                                                      REDA0040
+       ALS     18                                                       REDA0050
+       SUB*    2,4                                                      REDA0060
+       ARS     18                                                       REDA0070
+       ADD     =1                                                       REDA0080
+       STA     COMM                                                     REDA0090
+       CLA*    2,4                                                      REDA0100
+       STD     COMM                                                     REDA0110
+       ARS     18                                                       REDA0120
+       STA     TEMP                                                     REDA0130
+       ADD     COMM                                                     REDA0140
+       STA     A                                                        REDA0150
+       CLA     TEMP                                                     REDA0160
+       ARS     1                                                        REDA0170
+       PAX     ,1                                                       REDA0180
+       ADD     COMM                                                     REDA0190
+       STA     B                                                        REDA0200
+       AXT     10,2                                                     REDA0210
+       RTBA    4                                                        REDA0220
+       RCHA    COMM                                                     REDA0230
+       TCOA    *                                                        REDA0240
+       TRCA    *+2                                                      REDA0250
+       TRA     *+6                                                      REDA0260
+       BSRA    4                                                        REDA0270
+       TIX     *-6,2,1                                                  REDA0280
+       HPR     1,3                                                      REDA0290
+       RTBA    4                                                        REDA0300
+       RCHA    COMM                                                     REDA0310
+       AXT     1,2                                                      REDA0320
+       TCOA    *                                                        REDA0330
+       CLA*    B                                                        REDA0340
+       LDQ*    A                                                        REDA0350
+       STQ*    B                                                        REDA0360
+       STO*    A                                                        REDA0370
+       TXI     *+1,2,1                                                  REDA0380
+       TIX     *-5,1,1                                                  REDA0390
+ EXIT  AXT     **,1                                                     REDA0400
+       AXT     **,2                                                     REDA0410
+       TRA     3,4                                                      REDA0420
+ COMM  IOCD    **,,**                                                   REDA0430
+ A     PZE     **,1                                                     REDA0440
+ B     PZE     **,2                                                     REDA0450
+ TEMP  PZE                                                              REDA0460
+       END                                                              REDA0470
+       ENTRY   READB                                                    REDB0010
+ READB SXA     EXIT,1                                                   REDB0020
+       SXA     EXIT+1,2                                                 REDB0030
+       CLA     1,4                                                      REDB0040
+       ALS     18                                                       REDB0050
+       SUB*    2,4                                                      REDB0060
+       ARS     18                                                       REDB0070
+       ADD     =1                                                       REDB0080
+       STA     COMM                                                     REDB0090
+       CLA*    2,4                                                      REDB0100
+       STD     COMM                                                     REDB0110
+       ARS     18                                                       REDB0120
+       STA     TEMP                                                     REDB0130
+       ADD     COMM                                                     REDB0140
+       STA     A                                                        REDB0150
+       CLA     TEMP                                                     REDB0160
+       ARS     1                                                        REDB0170
+       PAX     ,1                                                       REDB0180
+       ADD     COMM                                                     REDB0190
+       STA     B                                                        REDB0200
+       AXT     10,2                                                     REDB0210
+       RTBB    1                                                        REDB0220
+       RCHB    COMM                                                     REDB0230
+       TCOB    *                                                        REDB0240
+       TRCB    *+2                                                      REDB0250
+       TRA     *+6                                                      REDB0260
+       BSRB    1                                                        REDB0270
+       TIX     *-6,2,1                                                  REDB0280
+       HPR     1,3                                                      REDB0290
+       RTBB    1                                                        REDB0300
+       RCHB    COMM                                                     REDB0310
+       AXT     1,2                                                      REDB0320
+       TCOB    *                                                        REDB0330
+       CLA*    B                                                        REDB0340
+       LDQ*    A                                                        REDB0350
+       STQ*    B                                                        REDB0360
+       STO*    A                                                        REDB0370
+       TXI     *+1,2,1                                                  REDB0380
+       TIX     *-5,1,1                                                  REDB0390
+ EXIT  AXT     **,1                                                     REDB0400
+       AXT     **,2                                                     REDB0410
+       TRA     3,4                                                      REDB0420
+ COMM  IOCD    **,,**                                                   REDB0430
+ A     PZE     **,1                                                     REDB0440
+ B     PZE     **,2                                                     REDB0450
+ TEMP  PZE                                                              REDB0460
+       END                                                              REDB0470
+       ENTRY   PACK                                                     PACK0010
+ PACK  SXA     EXIT,1                                                   PACK0020
+       SXA     EXIT+1,2                                                 PACK0030
+       CLA     3,4                                                      PACK0040
+       STA     C                                                        PACK0050
+       AXT     0,1                                                      PACK0060
+       AXT     6,2                                                      PACK0070
+       LDQ*    1,4                                                      PACK0080
+       ZAC                                                              PACK0090
+       LGL     6                                                        PACK0100
+       ALS     18                                                       PACK0110
+       STO*    C                                                        PACK0120
+       TXI     *+1,1,1                                                  PACK0130
+       TIX     *-5,2,1                                                  PACK0140
+       AXT     6,2                                                      PACK0150
+       LDQ*    2,4                                                      PACK0160
+       ZAC                                                              PACK0170
+       LGL     6                                                        PACK0180
+       ALS     18                                                       PACK0190
+       STO*    C                                                        PACK0200
+       TXI     *+1,1,1                                                  PACK0210
+       TIX     *-5,2,1                                                  PACK0220
+ EXIT  AXT     0,1                                                      PACK0230
+       AXT     0,2                                                      PACK0240
+       TRA     4,4                                                      PACK0250
+ C     PZE     0,1                                                      PACK0260
+       END                                                              PACK0270
+       ENTRY   MOVE                                                     MOVE0010
+ MOVE  CLA*    1,4                                                      MOVE0020
+       ANA     =O000000077777                                           MOVE0030
+       ALS     18                                                       MOVE0040
+       STO*    1,4                                                      MOVE0050
+       TRA     2,4                                                      MOVE0060
+       END                                                              MOVE0070
+CALLOW   ROUTINE TO CALCULATE ALLOWABLE STRESSES FOR A MEMBER           ALOW0010
+      SUBROUTINE ALLOW                                                  ALOW0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)ALOW0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               ALOW0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      ALOW0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  ALOW0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,ALOW0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPALOW0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,    C1C               ALOW0090
+      COMMON ELOR1,ELOR2,IDEN1,IDEN2,IDEN3,SECMO1,SECMO2,ELORKP         ALOW0100
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              ALOW0110
+C                                                                       ALOW0120
+C     CALCULATE ALLOWABLE AXIAL STRESS                                  ALOW0130
+C                                                                       ALOW0140
+      CC=(19.732*E/FY)**.5                                              ALOW0150
+      ELOR1=(DIST+EXTRA1)/RG1                                           ALOW0160
+      ELOR2=(DIST+EXTRA2)/RG2                                           ALOW0170
+      IF(ELOR1-ELOR2)580,580,581                                        ALOW0180
+  580 ELORKP=ELOR2                                                      ALOW0190
+      GO TO500                                                          ALOW0200
+  581 ELORKP=ELOR1                                                      ALOW0210
+  500 IF(NCODE-2)501,502,501                                            ALOW0220
+  502 WU=1.8*SQRTF(E/FY)                                                ALOW0230
+      V=(2.*RAD-T)/T                                                    ALOW0240
+      IF(V-WU)501,501,503                                               ALOW0250
+  503 C1C=9.*SQRTF(V)                                                   ALOW0260
+      IF (C1C-ELORKP)501,501,504                                        ALOW0270
+  504 ELORKP=C1C                                                        ALOW0280
+  501 IF(CC-ELORKP)510,520,520                                          ALOW0290
+  510 AFA=1.49E8/ELORKP**2                                              ALOW0300
+      GO TO530                                                          ALOW0310
+  520 FAC=ELORKP/(2.*CC)                                                ALOW0320
+      FS=1.667+.75*FAC-FAC**3                                           ALOW0330
+      AFA=(1.-2.*FAC**2)*FY/FS                                          ALOW0340
+  530 AFA=WIND*AFA                                                      ALOW0350
+      IF(MC1-1)540,531,540                                              ALOW0360
+  531 IF(ELORKP-120.)540,540,541                                        ALOW0370
+  541 AFA=AFA/(1.6-ELORKP/200.)                                         ALOW0380
+C                                                                       ALOW0390
+C     CALCULATE ALLOWABLE MAJOR AXIS BENDING STRESS                     ALOW0400
+C                                                                       ALOW0410
+  540 AFB1=.6*FY                                                        ALOW0420
+      IF(NCODE-2)542,564,564                                            ALOW0430
+  542 AFB2=12.E6 *B*T/((DIST+EXTRA2)*D)                                 ALOW0440
+      AFB3=(1.-((DIST+EXTRA2)/(RG2*CC))**2/2.)*.6*FY                    ALOW0450
+      IF(AFB2-AFB3) 560,561,561                                         ALOW0460
+  560 IF(AFB3-AFB1)563,564,564                                          ALOW0470
+  561 IF(AFB2-AFB1)562,564,564                                          ALOW0480
+  562 AFB1=AFB2*WIND                                                    ALOW0490
+      GO TO 4005                                                        ALOW0500
+  564 AFB1=AFB1*WIND                                                    ALOW0510
+      GO TO 4005                                                        ALOW0520
+  563 AFB1=AFB3*WIND                                                    ALOW0530
+C                                                                       ALOW0540
+C     CALCULATE THE COEFFICIENT C-SUB-M ABOUT BOTH AXIS                 ALOW0550
+C                                                                       ALOW0560
+ 4005 IF(EXTRA1)585,585,572                                             ALOW0570
+  585 IF(KOND(12))565,565,566                                           ALOW0580
+  565 IF(KOND(6))572,572,566                                            ALOW0590
+  572 CM1=.85                                                           ALOW0600
+      GO TO4004                                                         ALOW0610
+  566 CM1=1.                                                            ALOW0620
+ 4004 IF(EXTRA2)4000,4000,4001                                          ALOW0630
+ 4000 IF(KOND(11)) 4002,4002,4003                                       ALOW0640
+ 4002 IF(KOND(5)) 4001,4001,4003                                        ALOW0650
+ 4001 CM2=.85                                                           ALOW0660
+      GO TO573                                                          ALOW0670
+ 4003 CM2=1.                                                            ALOW0680
+C                                                                       ALOW0690
+C     CALCULATE REMAINING ALLOWABLES AND CONSTANTS                      ALOW0700
+C                                                                       ALOW0710
+  573  FV=.4*FY*WIND                                                    ALOW0720
+      FE1=(RG1/(DIST+EXTRA1))**2*1.49E8*WIND                            ALOW0730
+      FE2=(RG2/(DIST+EXTRA2))**2*1.49E8*WIND                            ALOW0740
+      AFT=.6*FY*WIND                                                    ALOW0750
+      RETURN                                                            ALOW0760
+      END                                                               ALOW0770
+CANSCAL   DIRECT STRESS UNITY CHECK CALCULATING AND UPDATING ROUTINE    ACAL0010
+      SUBROUTINE ANSCAL(IEND,LMNO,N)                                    ACAL0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)ACAL0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               ACAL0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      ACAL0050
+     1,CM1,CM2,AFB2,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  ACAL0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,ACAL0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPACAL0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   ACAL0090
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              ACAL0100
+      IF(STRS1)11,20,20                                                 ACAL0110
+   20 AFB1=AFT                                                          ACAL0120
+      GO TO 10                                                          ACAL0130
+   11 AFB1=AFB2                                                         ACAL0140
+   10 UNI1=FAX/AFT                                                      ACAL0150
+      UNI2=STRS1/AFB1                                                   ACAL0160
+      UNI3=ASTRS1/AFT                                                   ACAL0170
+      IF(NCODE-2)29,21,29                                               ACAL0180
+C                                                                       ACAL0190
+C     FACTOR TO REDUCE PIPE BENDING STRESS                              ACAL0200
+C                                                                       ACAL0210
+   21 RDCL=SQRTF(U(6)**2+    U(5)**2)                                   ACAL0220
+      UNI3=UNI3/RDCL*ABSF(U(6))                                         ACAL0230
+      UNI2=UNI2/RDCL*ABSF(U(5))                                         ACAL0240
+   29 IF(FAX)30,30,40                                                   ACAL0250
+   30 UNI4=FAX/AFA                                                      ACAL0260
+      IF(ABSF(UNI4)-.15)50,50,60                                        ACAL0270
+   50 UC1=UNI4+UNI2+UNI3                                                ACAL0280
+      UNI1=UNI4                                                         ACAL0290
+      GO TO 90                                                          ACAL0300
+C                                                                       ACAL0310
+C     BUCKLING CHECK                                                    ACAL0320
+C                                                                       ACAL0330
+   60 BFAF1=1.-ABSF(FAX)/FE1                                            ACAL0340
+      BFAF2=1.-ABSF(FAX)/FE2                                            ACAL0350
+      IF(BFAF1)83,83,81                                                 ACAL0360
+   81 IF(BFAF2)83,83,82                                                 ACAL0370
+   83 U(10)=1.                                                          ACAL0380
+   82 UNI5=CM1/AFB1*STRS1/BFAF1                                         ACAL0390
+      UNI6=CM2/BFAF2*ASTRS1/AFT                                         ACAL0400
+      IF(NCODE-2)69,61,69                                               ACAL0410
+   61 UNI5=UNI5/RDCL*ABSF(U(5))                                         ACAL0420
+      UNI6=UNI6/RDCL*ABSF(U(6))                                         ACAL0430
+   69 UC1=UNI4+UNI5+UNI6                                                ACAL0440
+C                                                                       ACAL0450
+C     COMPARISON OF TWO UNITY CHECK EXPRESSIONS IF AT END               ACAL0460
+C                                                                       ACAL0470
+      IF(IEND-2)70,67,70                                                ACAL0480
+   67 IF(N-1)70,70,68                                                   ACAL0490
+   68 IF(KP1-N)85,70,70                                                 ACAL0500
+   70 UC2=UNI1+UNI2+UNI3                                                ACAL0510
+      IF(ABSF(UC2)-ABSF(UC1)) 85,85,80                                  ACAL0520
+   80 UC1=UC2                                                           ACAL0530
+      GO TO 90                                                          ACAL0540
+   85 UNI1=UNI4                                                         ACAL0550
+      UNI2=UNI5                                                         ACAL0560
+      UNI3=UNI6                                                         ACAL0570
+      GO TO 90                                                          ACAL0580
+   40 UC1=UNI1+UNI2+UNI3                                                ACAL0590
+C                                                                       ACAL0600
+C     COMPARISON AND UPDATING                                           ACAL0610
+C                                                                       ACAL0620
+   90 ACTOR=UC1                                                         ACAL0630
+      UC1=ABSF(UC1)                                                     ACAL0640
+      IF(UC1-COMPUC)105,105,110                                         ACAL0650
+  110 COMPUC=UC1                                                        ACAL0660
+  105 IF(MATCH+LMNO-2) 140,140,100                                      ACAL0670
+  100 IF(UC1-ANS(1,IEND)) 150,150,140                                   ACAL0680
+  140 ANS(1,IEND)=UC1                                                   ACAL0690
+      DO 141 I=1,6                                                      ACAL0700
+  141 ANS(I+1,IEND)=U(I)                                                ACAL0710
+      ANS(8,IEND)=    (UNI1)*ACTOR/UC1                                  ACAL0720
+      ANS(9,IEND)=    (UNI2)*ACTOR/UC1                                  ACAL0730
+      ANS(10,IEND)=    (UNI3)*ACTOR/UC1                                 ACAL0740
+  150 RETURN                                                            ACAL0750
+      END                                                               ACAL0760
+CANSCTL  ANSWER CONTROL ROUTINE FOR UNITY CHECK                         ACTL0010
+      SUBROUTINE ANSCTL                                                 ACTL0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)ACTL0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               ACTL0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      ACTL0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  ACTL0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,ACTL0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPACTL0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   ACTL0090
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              ACTL0100
+      COMPUC=0.                                                         ACTL0110
+C                                                                       ACTL0120
+C     CALCULATIONS AT EACH END OF MEMBER.  IEND=1, FIRST JOINT - IEND=3,ACTL0130
+C         SECOND JOINT                                                  ACTL0140
+C                                                                       ACTL0150
+      N=1                                                               ACTL0160
+      IEND=1                                                            ACTL0170
+ 9    CALL STRCAL(N)                                                    ACTL0180
+      CALL SHEAR(IEND)                                                  ACTL0190
+      GO TO (10,11,11),NCODE                                            ACTL0200
+ 10   L=4                                                               ACTL0210
+      GO TO 12                                                          ACTL0220
+ 11   L=1                                                               ACTL0230
+ 12   DO 15 LMNO=1,L                                                    ACTL0240
+      GO TO (13,14,14),NCODE                                            ACTL0250
+C                                                                       ACTL0260
+C     FOR WIDE FLANGE, ASSIGN SIGNS AT EACH CORNER                      ACTL0270
+C                                                                       ACTL0280
+ 13   STRS1=FTORS*(-1.)**LMNO+BEND1*(-1.)**(LMNO/3)                     ACTL0290
+      ASTRS1= BEND2*(-1.)**(LMNO/2)                                     ACTL0300
+      GO TO 15                                                          ACTL0310
+C                                                                       ACTL0320
+C     FOR PIPE AND BOX, ALL STRESSES HAVE THE SIGN OF THE AXIAL LOAD    ACTL0330
+C                                                                       ACTL0340
+ 14   STRS1=ABSF(BEND1)*FAX/ABSF(FAX)                                   ACTL0350
+      ASTRS1=ABSF(BEND2)*FAX/ABSF(FAX)                                  ACTL0360
+ 15   CALL ANSCAL(IEND,LMNO,N)                                          ACTL0370
+      IF(IEND-2) 17,17,18                                               ACTL0380
+ 17   IEND=3                                                            ACTL0390
+      N=KP1                                                             ACTL0400
+      GO TO 9                                                           ACTL0410
+C                                                                       ACTL0420
+C     CALCULATIONS AT EACH POINT ALONG MEMBER                           ACTL0430
+C                                                                       ACTL0440
+ 18   DO 30 N=1,KP1                                                     ACTL0450
+      CALL STRCAL(N)                                                    ACTL0460
+      CALL SHEAR(2)                                                     ACTL0470
+      GO TO (19,20,20),NCODE                                            ACTL0480
+ 19   L=4                                                               ACTL0490
+      GO TO 21                                                          ACTL0500
+ 20   L=1                                                               ACTL0510
+ 21   DO 29 LMNO=1,L                                                    ACTL0520
+      GO TO (22,23,23),NCODE                                            ACTL0530
+ 22   STRS1=FTORS*(-1.)**LMNO+BEND1*(-1.)**(LMNO/3)                     ACTL0540
+      ASTRS1= BEND2*(-1.)**(LMNO/2)                                     ACTL0550
+      GO TO 24                                                          ACTL0560
+ 23   STRS1=ABSF(BEND1)*FAX/ABSF(FAX)                                   ACTL0570
+      ASTRS1=ABSF(BEND2)*FAX/ABSF(FAX)                                  ACTL0580
+ 24   CALL ANSCAL(2,LMNO,N)                                             ACTL0590
+ 29   MATCH=MATCH+1                                                     ACTL0600
+ 30   CONTINUE                                                          ACTL0610
+      CALL UPDTUC                                                       ACTL0620
+      RETURN                                                            ACTL0630
+      END                                                               ACTL0640
+CPRINT  SUBROUTINE FOR PRINTING RESULTS                                 PRNT0010
+      SUBROUTINE PRINT                                                  PRNT0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)PRNT0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               PRNT0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      PRNT0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  PRNT0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,PRNT0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPPRNT0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   PRNT0090
+      COMMON ELOR1,ELOR2,IDEN1,IDEN2,IDEN3,SECMO1,SECMO2,ELORKP         PRNT0100
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              PRNT0110
+ 10   FORMAT(1H1,34X,12HM E M B E R ,2I6,3X,15HL E N G T H   =,F8.2)    PRNT0120
+ 11   FORMAT(1H0,26X,69HM A X I M U M   C O M B I N E D   S T R E S S   PRNT0130
+     1U N I T Y   C H E C K)                                            PRNT0140
+ 14   FORMAT(1H0,5X,11HMEMBER TYPE,6X,5HRG-YY,6X,8H(L/RG)YY,6X,5HRG-ZZ,6PRNT0150
+     1X,8H(L/RG)ZZ,6X,4HAREA,6X,4HS-YY,8X,4HS-ZZ/3X,2A4,A6,4X,F6.2,6X,F7PRNT0160
+     2.2,6X,F6.2,6X,F7.2,5X,F7.2,3X,F8.2,4X,F8.2/)                      PRNT0170
+ 15   FORMAT(1H0/5X,11HMEMBER TYPE,6X,5HRG-YY,6X,8H(L/RG)YY,6X,5HRG-ZZ,6PRNT0180
+     1X,8H(L/RG)ZZ,6X,4HAREA,6X,4HS-YY,8X,4HS-ZZ,5X,13HBUCKLING KL/R/3X,PRNT0190
+     22A4,A6,4X,F6.2,6X,F7.2,6X,F6.2,6X,F7.2,5X,F7.2,3X,F8.2,4X,F8.2,5X,PRNT0200
+     3F7.2/)                                                            PRNT0210
+ 19   FORMAT(1H0,58X,7HBENDING,6X,7HBENDING,9X,28HUNITY CHECK COMPONENT PRNT0220
+     1VALUES/6H UNITY,3X,8HDISTANCE,43X,5HABOUT,8X,5HABOUT/6H CHECK,5X,4PRNT0230
+     2HFROM,19X,5HAXIAL,4X,9HTORSIONAL,8X,5HMAJOR,8X,5HMINOR,8X,5HAXIAL,PRNT0240
+     38X,5HMAJOR,8X,5HMINOR/6H VALUE,3X,7HJOINT 15X,4HCASE,10X,4HLOAD,5XPRNT0250
+     4,6HMOMENT,11X,4HAXIS,9X,4HAXIS, 9X,4HLOAD,9X,4HAXIS,9X,4HAXIS//(1XPRNT0260
+     5,F5.2,F10.2,I8,F15.2,F12.2,F14.2,F13.2,3F13.3))                   PRNT0270
+ 29   FORMAT(1H0,49X,7HBENDING,6X,7HBENDING,9X,28HUNITY CHECK COMPONENT PRNT0280
+     1VALUES/7X,5HUNITY,3X,8HDISTANCE,28X,5HABOUT,8X,5HABOUT/7X,5HCHECK,PRNT0290
+     25X,4HFROM,19X,5HAXIAL, 6X,5HMAJOR,8X,5HMINOR,9X,5HAXIAL,8X,5HMAJORPRNT0300
+     3,8X,5HMINOR/7X,5HVALUE,3X,7HJOINT 15X,4HCASE,10X,4HLOAD,7X,4HAXIS,PRNT0310
+     49X,4HAXIS,10X,4HLOAD,9X,4HAXIS,9X,4HAXIS//(7X,F5.2,F10.2,I8,F15.2,PRNT0320
+     5F12.2,F13.2,3F13.3))                                              PRNT0330
+ 47   FORMAT(1H0/47X,25HMAXIMUM SHEAR UNITY CHECK//28X,5HUNITY,7X,8HDISTPRNT0340
+     1ANCE,12X,5HSHEAR,7X,5HSHEAR/28X,5HCHECK,9X,4HFROM,14X,5HMAJOR,7X,5PRNT0350
+     2HMINOR,7X,9HTORSIONAL/28X,5HVALUE,7X,7HJOINT 14X,4HCASE,6X,4HAXIS,PRNT0360
+     38X,4HAXIS,9X,6HMOMENT//(28X,F5.2,F14.2,I7,F11.2,F12.2,F16.2))     PRNT0370
+ 48   FORMAT(1H0/34X,51HCOMBINED STRESS UNITY CHECK VALUE FOR TOP SIX CAPRNT0380
+     1SES//3X,5HUNITY,15X,5HUNITY,15X,5HUNITY,15X,5HUNITY,15X,5HUNITY,15PRNT0390
+     2X,5HUNITY/3X,5HCHECK,15X,5HCHECK,15X,5HCHECK,15X,5HCHECK,15X,5HCHEPRNT0400
+     3CK,15X,5HCHECK/3X,5HVALUE,3X,4HCASE,8X,5HVALUE,3X,4HCASE,8X,5HVALUPRNT0410
+     4E,3X,4HCASE,8X,5HVALUE,3X,4HCASE,8X,5HVALUE,3X,4HCASE,8X,5HVALUE,3PRNT0420
+     5X,4HCASE//1X,F7.3,I6,5(F14.3,I6)///51X,18HMAXIMUM AXIAL LOAD//41X,PRNT0430
+     615HTENSION    CASE,6X,18HCOMPRESSION   CASE//(31X,2(F16.2,I8)))   PRNT0440
+ 49   FORMAT(1H0/47X,25HMAXIMUM SHEAR UNITY CHECK//3X,5HUNITY,7X,8HDISTAPRNT0450
+     1NCE,12X,5HSHEAR,23X,5HUNITY,7X,8HDISTANCE,12X,5HSHEAR/3X,5HCHECK,9PRNT0460
+     2X,4HFROM,14X,5HMAJOR,6X,9HTORSIONAL,8X,5HCHECK,9X,4HFROM,14X,5HMINPRNT0470
+     3OR,6X,9HTORSIONAL/3X,5HVALUE,7X,7HJOINT 14X,4HCASE,6X,4HAXIS,7X,6HPRNT0480
+     4MOMENT,10X,5HVALUE,7X,7HJOINT 14X,4HCASE,6X,4HAXIS,7X,6HMOMENT//(2PRNT0490
+     5(1X,F7.3,F14.2,I7,F12.2,F14.2,5X)))                               PRNT0500
+   97 FORMAT(1H0//////94H0UNITS OF FORCE ARE KIPS AND FOOT-KIPS, UNITS OPRNT0510
+     1F LENGTH ARE FEET, MEMBER PROPERTIES IN INCHES.)                  PRNT0520
+      DO 98 I=1,6                                                       PRNT0530
+      ANS(2,I)=ANS(2,I)/12.                                             PRNT0540
+      ANS(4,I)=ANS(4,I)/1000.                                           PRNT0550
+ 98   ANS(5,I)=ANS(5,I)/12000.                                          PRNT0560
+      DO 99 I=1,3                                                       PRNT0570
+      ANS(6,I)=ANS(6,I)/12000.                                          PRNT0580
+      ANS(7,I)=ANS(7,I)/12000.                                          PRNT0590
+      ANS(7,I+3)=ANS(7,I+3)/12.                                         PRNT0600
+      ANS(9,I+3)=ANS(9,I+3)/1000.                                       PRNT0610
+ 99   ANS(10,I+3)=ANS(10,I+3)/12000.                                    PRNT0620
+      DIST=DIST/12.                                                     PRNT0630
+      XMAXP=XMAXP/1000.                                                 PRNT0640
+      XMAXM=ABSF(XMAXM/1000.)                                           PRNT0650
+C                                                                       PRNT0660
+C     MEMBER AND LENGTH                                                 PRNT0670
+C                                                                       PRNT0680
+      WRITE OUTPUT TAPE 6,10,J1STOR,J2STOR,DIST                         PRNT0690
+C                                                                       PRNT0700
+C     GEOMETRIC PROPERTIES                                              PRNT0710
+C                                                                       PRNT0720
+      GO TO(16,17,16),NCODE                                             PRNT0730
+   17 WRITE OUTPUT TAPE 6,15,IDEN1,IDEN2,IDEN3,RG2,ELOR2,RG1,ELOR1,AREA,PRNT0740
+     1SECMO2,SECMO1,ELORKP                                              PRNT0750
+      GO TO 18                                                          PRNT0760
+   16 WRITE OUTPUT TAPE 6,14,IDEN1,IDEN2,IDEN3,RG2,ELOR2,RG1,ELOR1,AREA,PRNT0770
+     1SECMO2,SECMO1                                                     PRNT0780
+ 18   WRITE OUTPUT TAPE 6,11                                            PRNT0790
+C                                                                       PRNT0800
+C     COMBINED STRESS UNITY CHECK                                       PRNT0810
+C                                                                       PRNT0820
+      GO TO(20,30,30),NCODE                                             PRNT0830
+ 20   WRITE OUTPUT TAPE 6,19,((ANS(I,J),I=1,10),J=1,3)                  PRNT0840
+      GO TO 50                                                          PRNT0850
+ 30   WRITE OUTPUT TAPE 6,29,((ANS(I,J),I=1,4),(ANS(I,J),I=6,10),J=1,3) PRNT0860
+C                                                                       PRNT0870
+C     SHEAR STRESS UNITY CHECK                                          PRNT0880
+C                                                                       PRNT0890
+ 50   GO TO (60,70,60),NCODE                                            PRNT0900
+ 60   WRITE OUTPUT TAPE 6,49,((ANS(I,J),I=1,10),J=4,6)                  PRNT0910
+      GO TO 80                                                          PRNT0920
+ 70   WRITE OUTPUT TAPE 6,47,((ANS(I,J),I=1,4),(ANS(I,J),I=9,10),J=4,6) PRNT0930
+C                                                                       PRNT0940
+C     SIX TOP UNITY CHECKS                                              PRNT0950
+C     MAXIMUM AXIAL TENSION AND COMPRESSION                             PRNT0960
+C                                                                       PRNT0970
+ 80   WRITE OUTPUT TAPE 6,48,(COMUC(I),IUC(I),I=1,6),XMAXP,MAXP,XMAXM,  PRNT0980
+     1MAXM                                                              PRNT0990
+      WRITE OUTPUT TAPE 6,97                                            PRNT1000
+      RETURN                                                            PRNT1010
+      END                                                               PRNT1020
+CSHEAR  ROUTINE FOR SHEAR STRESS UNITY CHECK                            SHER0010
+      SUBROUTINE SHEAR(JEND)                                            SHER0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)SHER0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               SHER0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      SHER0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  SHER0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,SHER0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPSHER0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   SHER0090
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              SHER0100
+      IEND=JEND+3                                                       SHER0110
+      GO TO (10,50,10),NCODE                                            SHER0120
+ 10   SC1=     (SS1+STF+SQ)/FV                                          SHER0130
+      SC2=     (SS2+STW)/FV                                             SHER0140
+      IF(MATCH-1) 21,21,20                                              SHER0150
+ 20   IF(SC1-ANS(1,IEND)) 30,30,21                                      SHER0160
+ 21   ANS(1,IEND)=SC1                                                   SHER0170
+      ANS(2,IEND)=U(1)                                                  SHER0180
+      ANS(3,IEND)=U(2)                                                  SHER0190
+      ANS(4,IEND)=U(8)                                                  SHER0200
+      ANS(5,IEND)=U(4)                                                  SHER0210
+ 30   IF(MATCH-1) 32,32,31                                              SHER0220
+ 31   IF(SC2-ANS(6,IEND)) 40,40,32                                      SHER0230
+ 32   ANS(6,IEND)=SC2                                                   SHER0240
+      ANS(7,IEND)=U(1)                                                  SHER0250
+      ANS(8,IEND)=U(2)                                                  SHER0260
+      ANS(9,IEND)=U(7)                                                  SHER0270
+      ANS(10,IEND)=U(4)                                                 SHER0280
+ 40   RETURN                                                            SHER0290
+ 50   SC1=     (SS1+STF)/FV                                             SHER0300
+      IF(MATCH-1) 60,60,55                                              SHER0310
+ 55   IF(SC1-ANS(1,IEND)) 40,40,60                                      SHER0320
+ 60   ANS(1,IEND)=SC1                                                   SHER0330
+      ANS(2,IEND)=U(1)                                                  SHER0340
+      ANS(3,IEND)=U(2)                                                  SHER0350
+      ANS(4,IEND)=U(8)                                                  SHER0360
+      ANS(9,IEND)=U(7)                                                  SHER0370
+      ANS(10,IEND)=U(4)                                                 SHER0380
+      GO TO 40                                                          SHER0390
+      END                                                               SHER0400
+CSTRCAL   ROUTINE FOR CALCULATING STRESSES AT A SECTION                 SCAL0010
+      SUBROUTINE STRCAL(N)                                              SCAL0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)SCAL0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               SCAL0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      SCAL0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  SCAL0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,SCAL0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPSCAL0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   SCAL0090
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              SCAL0100
+      IU(2)=LC                                                          SCAL0110
+      U(5)=DIA(6,N)                                                     SCAL0120
+      U(6)=DIA(5,N)                                                     SCAL0130
+      U(4)=DIA(4,N)                                                     SCAL0140
+      U(3)=DIA(1,N)                                                     SCAL0150
+      U(7)=DIA(2,N)                                                     SCAL0160
+      U(8)=DIA(3,N)                                                     SCAL0170
+      U(1)=DIST*FLOATF(N-1)/FLOATF(KP1-1)                               SCAL0180
+C                                                                       SCAL0190
+C     UPDATING OF MAXIMUM AXIAL LOAD                                    SCAL0200
+C                                                                       SCAL0210
+      IF(U(3))5,9,6                                                     SCAL0220
+    5 IF(XMAXM-U(3))9,9,8                                               SCAL0230
+    6 IF(XMAXP-U(3))7,9,9                                               SCAL0240
+    7 XMAXP=U(3)                                                        SCAL0250
+      MAXP=LC                                                           SCAL0260
+      GO TO 9                                                           SCAL0270
+    8 XMAXM=U(3)                                                        SCAL0280
+      MAXM=LC                                                           SCAL0290
+    9 FAX=DIA(1,N)/AREA                                                 SCAL0300
+C                                                                       SCAL0310
+C     SEPARATE CALCULATIONS MADE FOR EACH MEMBER TYPE                   SCAL0320
+C     IF STRESS DOES NOT EXIST, IT IS EQUATED TO ZERO                   SCAL0330
+C                                                                       SCAL0340
+      IF(NCODE-2)10,120,130                                             SCAL0350
+   10 BEND1=D/2.*DIA(6,N)/TZZ                                           SCAL0360
+      BEND2=B/2.*DIA(5,N)/TYY                                           SCAL0370
+      SS1=ABSF(DIA(3,N)/(2.*B*T))                                       SCAL0380
+      SS2=ABSF(DIA(2,N)/(D*W))                                          SCAL0390
+      XMOM=DIA(4,N)                                                     SCAL0400
+      IF(KOND(4))40,20,40                                               SCAL0410
+   20 IF(KOND(10))40,30,40                                              SCAL0420
+C                                                                       SCAL0430
+C     TORSIONAL STRESS CALCULATIONS FOR WIDE FLANGE SECTIONS            SCAL0440
+C                                                                       SCAL0450
+   30 XIXA=U(1)/A                                                       SCAL0460
+      XIE=EXPF(XIXA)                                                    SCAL0470
+      XIER=EXPF(-XIXA)                                                  SCAL0480
+      XM=(XIE*HTAN1+XIER*HTAN2)*XMOM*A/H                                SCAL0490
+      V1=(XIE*HTAN1-XIER*HTAN2)*XMOM/H                                  SCAL0500
+      V2=H*V1+XMOM                                                      SCAL0510
+      FTORS=B*XM/TYY                                                    SCAL0520
+      SQ=ABSF(1.5*V1/(B*T))                                             SCAL0530
+      STW=ABSF(ZA*V2)                                                   SCAL0540
+      STF=ABSF(XN*V2)                                                   SCAL0550
+      GO TO 50                                                          SCAL0560
+   40 FTORS=0.                                                          SCAL0570
+      SQ=0.                                                             SCAL0580
+      STF=0.                                                            SCAL0590
+      STW=0.                                                            SCAL0600
+      GO TO 50                                                          SCAL0610
+  120 BEND1=RAD/TZZ*DIA(6,N)                                            SCAL0620
+      BEND2=RAD/TYY*DIA(5,N)                                            SCAL0630
+      SS1=SQRTF((DIA(3,N))**2+(DIA(2,N))**2)/AREA                       SCAL0640
+      STF=ABSF(RAD/1.5708*DIA(4,N)/(RAD**4-(RAD-T)**4))                 SCAL0650
+      SS2=0.                                                            SCAL0660
+      FTORS=0.                                                          SCAL0670
+      SQ=0.                                                             SCAL0680
+      STW=0.                                                            SCAL0690
+      GO TO 50                                                          SCAL0700
+  130 BEND1=DIA(6,N)/2.*B/TZZ                                           SCAL0710
+      BEND2=DIA(5,N)/2.*B/TYY                                           SCAL0720
+      SS1=ABSF(DIA(3,N)/(2.*B*T))                                       SCAL0730
+      SS2=ABSF(DIA(2,N)/(2.*B*T))                                       SCAL0740
+      STF=ABSF(DIA(4,N)/(2.*T*SOMT2))                                   SCAL0750
+      STW=STF                                                           SCAL0760
+      FTORS=0.                                                          SCAL0770
+      SQ=0.                                                             SCAL0780
+   50 RETURN                                                            SCAL0790
+      END                                                               SCAL0800
+CUPDTUC  SUBROUTINE TO UPDATE UNITY CHECK TABLE                         UDUC0010
+      SUBROUTINE UPDTUC                                                 UDUC0020
+      DIMENSION U(10),IU(10),BB(600),NXA(600),AA(600),NNN(600),ANS(10,6)UDUC0030
+     1,DIA(6,51),COMUC(6),IUC(6),KOND(12)                               UDUC0040
+      COMMON U,IU,BB,NXA,AA,NNN,ANS,DIA,COMUC,IUC,STRS1,ASTRS1,FAX      UDUC0050
+     1,CM1,CM2,AFB1,AFA,FE1,FE2,AFT,SS1,SS2,SQ,STF,STW,FV,NCODE,BEND1,  UDUC0060
+     3BEND2,FTORS,KOND,XINC1,TZZ,TYY,AREA,D,B,T,W,A,HTAN1,HTAN2,H,ZA,XN,UDUC0070
+     4LC,E,FY,DIST,EXTRA1,EXTRA2,RG1,RG2,WIND,MC1,MATCH,KP1,COMPUC,XMAXPUDUC0080
+     5,MAXP,XMAXM,MAXM,J1STOR,J2STOR,LC,RAD,SOMT2,C1C                   UDUC0090
+      EQUIVALENCE (U,IU),(AA,NNN),(BB,NXA)                              UDUC0100
+      LDC=LC                                                            UDUC0110
+C                                                                       UDUC0120
+C     EACH UNITY CHECK IS COMPARED WITH THE SIX STORED VALUES AND PLACEDUDUC0130
+C         IN THE TABLE, WITH ITS LOADING CONDITION, AT THE PROPER POINT UDUC0140
+C                                                                       UDUC0150
+      DO 11 I=1,6                                                       UDUC0160
+      IF(COMPUC-COMUC(I)) 11,11,9                                       UDUC0170
+ 9    DO 10 K=I,6                                                       UDUC0180
+      TEMP=COMUC(K)                                                     UDUC0190
+      COMUC(K)=COMPUC                                                   UDUC0200
+      COMPUC=TEMP                                                       UDUC0210
+      IT=IUC(K)                                                         UDUC0220
+      IUC(K)=LDC                                                        UDUC0230
+ 10   LDC=IT                                                            UDUC0240
+ 11   CONTINUE                                                          UDUC0250
+      RETURN                                                            UDUC0260
+      END                                                               UDUC0270
+ZONE     0                                                                      
+LOADCN   1                                                                      
+LOAD  03010303            3.    -2.                           STD   CONC1      1
+LOAD  03010303            6.    -2.                           STD   CONC1      1
+LOAD  03010303            9.    -2.                           STD   CONC1      1
+LOAD  03010303            12.   -2.                           STD   CONC1      1
+LOAD  03020304            3.    -2.                           STD   CONC1      1
+LOAD  03020304            6.    -2.                           STD   CONC1      1
+LOAD  03020304            9.    -2.                           STD   CONC1      1
+LOAD  03020304            12.   -2.                           STD   CONC1      1
+LOAD  03010302            10.   -10.                          STD   CONC1      1
+LOAD  03030304            10.   -10.                          STD   CONC1      1
+LOAD  02010202            5.    -18.75                        STD   CONC1      1
+LOAD  02010202            10.   -18.75                        STD   CONC1      1
+LOAD  02010202            15.   -18.75                        STD   CONC1      1
+LOAD  02030204            5.    -18.75                        STD   CONC1      1
+LOAD  02030204            10.   -18.75                        STD   CONC1      1
+LOAD  02030204            15.   -18.75                        STD   CONC1      1
+LOAD  02010203                  -1.28 15.   -1.28             STD   UNIF1      1
+LOAD  02020204                  -1.28 15.   -1.28             STD   UNIF1      1
+LOAD  02010202                  -.1   20.   -.1               STD   UNIF1      1
+LOAD  02030204                  -.1   20.   -.1               STD   UNIF1      1
+LOAD  02010101                  -3.                     180.  STD   CONC1      1
+LOAD  02020102                  -3.                     -180. STD   CONC1      1
+LOAD  02030103                  -3.                     180.  STD   CONC1      1
+LOAD  02040104                  -3.                     -180. STD   CONC1      1
+LOADCN   2                                                                      
+LOAD  02010202     1            5.                            STD   CONC2      1
+LOAD  02020201     1            5.                            STD   CONC2      1
+LOAD  02030204     1            5.                            STD   CONC2      1
+LOAD  02040203     1            5.                            STD   CONC2      1
+LOAD  03010302     1            2.5                           STD   CONC2      1
+LOAD  03020301     1            2.5                           STD   CONC2      1
+LOAD  03030304     1            3.                            STD   CONC2      1
+LOAD  03040303     1            3.                            STD   CONC2      1
+LOADCN   3                                                                      
+LOAD  02010203           1      7.                            STD   CONC3      1
+LOAD  02030201           1      8.                            STD   CONC3      1
+LOAD  02020204           1      7.                            STD   CONC3      1
+LOAD  02040202           1      8.                            STD   CONC3      1
+LOAD  03010303           1      3.5                           STD   CONC3      1
+LOAD  03030301           1      5.                            STD   CONC3      1
+LOAD  03020304           1      3.5                           STD   CONC3      1
+LOAD  03040302           1      5.                            STD   CONC3      1
+     IDENTIFICATION OF THE BASIC AND COMBINED LOADING CONDITIONS                
+                   APPEARING ON THE FOLLOWING PAGES                             
+LOAD CONDITION I = COMBINED LOADING CONDITION I                                 
+L J = BASIC LOADING CONDITION J                                                 
+K J = PORTION OF BASIC LOADING CONDITION J CONTRIBUTING TO COMBINED             
+     LOADING CONDITION I                                                        
+COMBINED LOADING CONDITION I CONSISTS OF (K1)(L1)+(K2)(L2)+(K3)(L3)             
+     +(K4)(L4)                                                                  
+BASIC LOADING CONDITION DESCRIPTION                                             
+     L1 = DEAD LOAD                                                             
+     L2 = WIND, WEST TO EAST                                                    
+     L3 = WIND, SOUTH TO NORTH                                                  
+COMBINED LOADING CONDITION DESCRIPTION                                          
+     LOAD CONDITION 1(DEAD LOAD) = (1.0)(L1)                                    
+     LOAD CONDITION 2(DEAD LOAD+WIND, WEST TO EAST) =                           
+          (1.0)(L1)+(1.0)(L2)                                                   
+     LOAD CONDITION 3(DEAD LOAD+WIND, SOUTH TO NORTH) =                         
+          (1.0)(L1)+(1.0)(L3)                                                   
+END                                                                             
+ 12                                                                             
+ 22                                                                             
+ 1 3                                                                            
+  1+001.000  1                                                                  
+  2+001.000  1+001.000  2                                                       
+  3+001.000  1+001.000  3                                                       
+999                                                                             
+MEMBER01010201            19.   286.  286.  430.  29.  12.       1             1
+MEMBER01010202      1     6.58  57.7  57.7  115.4 29.  12.     1 1   1 1       1
+MEMBER01020202            19.   286.  286.  430.  29.  12.       1             1
+MEMBER01030203            19.   286.  286.  430.  29.  12.       1             1
+MEMBER01040203      1     8.25  113.7 113.7 227.4 29.  12.     1 1   1 1       1
+MEMBER01040204            19.   286.  286.  430.  29.  12.       1             1
+MEMBER02010202            20.02 60.4  1478.32.62  29.  12.     111   111       1
+MEMBER02010203            11.48 44.9  209.7 2.3   29.  12.                     1
+MEMBER02010204      1     8.25  113.7 113.7 227.4 29.  12.     11    11        1
+MEMBER02010301            11.48 44.9  209.7 20.4  29.  12.                     1
+MEMBER02020204            11.48 44.9  209.7 2.3   29.  12.                     1
+MEMBER02020301      1     6.58  57.7  57.7  115.4 29.  12.     1 1   1 1       1
+MEMBER02020302            11.48 44.9  209.7 20.4  29.  12.                     1
+MEMBER02030204            20.02 60.4  1478.32.62  29.  12.     111   111       1
+MEMBER02030303            11.48 44.9  209.7 2.3   29.  12.                     1
+MEMBER02030304      1     8.25  113.7 113.7 227.4 29.  12.     1 1   1 1       1
+MEMBER02040304            11.48 44.9  209.7 2.3   29.  12.                     1
+MEMBER03010302            11.77 44.1  310.1 .97   29.  12.     111   111       1
+MEMBER03010303            6.19  9.7   106.3 .48   29.  12.                     1
+MEMBER03020303-17.221     8.25  113.7 113.7 227.4 29.  12.     11    11        1
+MEMBER03020304            6.19  9.7   106.3 .48   29.  12.                     1
+MEMBER03030304            11.77 44.1  310.1 .97   29.  12.     111   111       1
+  12   4   1   2                                                        CON CD 1
+32 3    11                                                              CON CD 2
+10 WF    21      6.19   106.3  9.7    .23    5.75  .340  9.9   .24   .32 WF  010
+10 WF    39      11.48  209.7  44.9   .98    7.99  .528  9.94  .318  .50 WF  020
+12 WF    40      11.77  310.1  44.1   .97    8.    .516  11.94 .294  .60 WF  030
+21 WF    68      20.02  1478.3 60.4   2.62   8.27  .685  21.13 .43   .54 WF  040
+8  PIPE  22.37   6.58   57.7   57.7   115.4  8.625 .25                  PIPE 010
+10 PIPE  28.     8.25   113.7  113.7  227.4  10.75 .25                  PIPE 020
+10 BOX   64.8    19.    286.   286.   430.   10.   .5                   BOX  010
+JOINT 0101                                                  1111 1              
+JOINT 010220.                                               1111 1              
+JOINT 0103      15.                                         1111 1              
+JOINT 010420.   15.                                         1111 1              
+JOINT 0201            12.                                                       
+JOINT 020220.         12.                                                       
+JOINT 0203      15.   12.                                                       
+JOINT 020420.   15.   12.                                                       
+JOINT 0301            21.                                                       
+JOINT 030220.         21.                                                       
+JOINT 0303      15.   27.                                                       
+JOINT 030420.   15.   27.                                                       

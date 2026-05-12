@@ -1,0 +1,1254 @@
+$*             THIS DECK CORRECT. 04/16/64                                      
+$IBFTC MAIN                                                             SUMT0001
+C  MAIN    RAC  NON-LINEAR PROGRAMMING ROUTINE                          SUMT0002
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0003
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0004
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0005
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0006
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0007
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0008
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0009
+      REAL LRJ                                                          SUMT0010
+  101 FORMAT(5E12.0,2I4)                                                SUMT0011
+C     PARAMETER CARD                                                    SUMT0012
+  102 FORMAT  (6E12.0)                                                  SUMT0013
+C     INITIAL  X VERCTOR CARD  FORMAT                                   SUMT0014
+  103 FORMAT  (10I7)                                                    SUMT0015
+C     OPTION CARD FORMAT                                                SUMT0016
+    5 READ(5,101) EPSI, RHOIN, THETA0, RATIO, TMMAX, M, N               SUMT0017
+      CALL SET(TMMAX)                                                   SUMT0018
+      READ(5,102) (X(I),I=1,N)                                          SUMT0019
+      NTCTR=0                                                           SUMT0020
+      NP1=N+1                                                           SUMT0021
+      NM1=N-1                                                           SUMT0022
+C SUBROUTINE READIN IS UNDER PROGRAMMER CONTROL                         SUMT0023
+      CALL READIN                                                       SUMT0024
+C OPTION CARD FOLLOWS PROGRAMMERS DATA                                  SUMT0025
+      READ(5,103) NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10              SUMT0026
+  104 FORMAT (37H1 NONLINEAR PROGRAMMING ROUTINE-RAC      )             SUMT0027
+      WRITE(6,104)                                                      SUMT0028
+  105 FORMAT(1H0,5X,2HN=I3,6X,2HM=I3//8X,10HMAX. TIME= 1PE14.7,4X, 2HR= SUMT0029
+     11PE14.7, 4X, 6HRATI0= E14.7,6X, 8HEPSIL0N=E14.7,4X,6HTHETA=E14.7) SUMT0030
+      WRITE(6,105) N,M, TMMAX,RHOIN,RATIO,EPSI,THETA0                   SUMT0031
+C IF NON-NEGS INCLUDED BY LETTING NT2=1 THEN ADD M+N TO GET N0. RESTRAINTUMT0032
+      MN=M                                                              SUMT0033
+      GO TO   (444,555), NT2                                            SUMT0034
+  444 MN=MN+N                                                           SUMT0035
+  555 CONTINUE                                                          SUMT0036
+  106 FORMAT  ( 18H0 OPTIONS SELECTED   )                               SUMT0037
+      WRITE(6,106)                                                      SUMT0038
+      WRITE(6,103) NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10             SUMT0039
+      CALL TIMEC                                                        SUMT0040
+      NPHASE = 2                                                        SUMT0041
+      CALL EVALU                                                        SUMT0042
+      P0=0.0                                                            SUMT0043
+      G=0.0                                                             SUMT0044
+      RSIGMA=0.0                                                        SUMT0045
+      CALL OUTPUT(2)                                                    SUMT0046
+      CALL  STORE                                                       SUMT0047
+      CALL FEAS                                                         SUMT0048
+C NPHASE=5 IS USED TO INDICATE NO FEASIBLE POINT EXIST                  SUMT0049
+   14 GO TO(15,15,15,15,5),NPHASE                                       SUMT0050
+   15 NPHASE=2                                                          SUMT0051
+      NTCTR=0                                                           SUMT0052
+      CALL BODY                                                         SUMT0053
+      GO TO  5                                                          SUMT0054
+      END                                                               SUMT0055
+$IBFTC BODY                                                             SUMT0056
+      SUBROUTINE BODY                                                   SUMT0057
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0058
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0059
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0060
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0061
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0062
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0063
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0064
+      REAL LRJ                                                          SUMT0065
+      NUMINI=0                                                          SUMT0066
+C     OPTION OF GETTING INITIAL RHO                                     SUMT0067
+      CALL RHOCOM                                                       SUMT0068
+    2 CALL PEVALU                                                       SUMT0069
+    3 IREP=0                                                            SUMT0070
+      ISME=1                                                            SUMT0071
+      CALL GRAD(1)                                                      SUMT0072
+      CALL SECORD(1)                                                    SUMT0073
+      GO TO 666                                                         SUMT0074
+    6 IF(NT8.EQ.1) GO TO 5                                              SUMT0075
+C  IF NT8 IS GREATER THAN ONE THEN REPEATED USE IS MADE OF THE A MATRIX.SUMT0076
+      IREP=IREP+1                                                       SUMT0077
+      IF(IREP.LT.NT8)  GO TO 34                                         SUMT0078
+   35 IREP=0                                                            SUMT0079
+    5 ISME=1                                                            SUMT0080
+      CALL SECORD(2)                                                    SUMT0081
+      GO TO 666                                                         SUMT0082
+   34 ISME=2                                                            SUMT0083
+  666 DO 10 I=1,N                                                       SUMT0084
+   10 DELX(I)=DELX0(I)                                                  SUMT0085
+      CALL TIME(XI)                                                     SUMT0086
+      CALL INVERS(ISME)                                                 SUMT0087
+      CALL TIME(YS)                                                     SUMT0088
+   15 CALL STORE                                                        SUMT0089
+      CALL TIME(ZO)                                                     SUMT0090
+      CALL  OPT                                                         SUMT0091
+      CALL TIME(WM)                                                     SUMT0092
+      CALL MAG                                                          SUMT0093
+      GO TO  (20,17),NT3                                                SUMT0094
+   17 WRITE(6,999) XI, YS, ZO, WM                                       SUMT0095
+  999 FORMAT(2H0  39HTHE TIME BEFORE THE CALL TO INVERSE WAS  F9.3,     SUMT0096
+     119H SECONDS, AFTER WAS  F9.3, 8H SECONDS   /   2X, 35HTHE TIME BEFSUMT0097
+     2ORE THE CALL TO OPT WAS  F9.3, 19H SECONDS, AFTER WAS  F9.3,      SUMT0098
+     3 8H SECONDS    )                                                  SUMT0099
+      CALL TIMEC                                                        SUMT0100
+      CALL OUTPUT(1)                                                    SUMT0101
+   20 GOTO  ( 95, 21,21),NPHASE                                         SUMT0102
+   21 CALL  CONVRG (N1)                                                 SUMT0103
+      GO TO (25, 6), N1                                                 SUMT0104
+C     MINIMUM  ACHIEVED                                                 SUMT0105
+   25 GO TO   (26,27),NT3                                               SUMT0106
+   26 CALL TIMEC                                                        SUMT0107
+      CALL OUTPUT(1)                                                    SUMT0108
+   27 NUMINI = NUMINI+1                                                 SUMT0109
+      GO TO   (300,28,28), NPHASE                                       SUMT0110
+   28 CALL ESTIM                                                        SUMT0111
+      GO TO   (400,200,40),NPHASE                                       SUMT0112
+   40 CALL  FINAL (N2)                                                  SUMT0113
+      GO TO (41,45),N2                                                  SUMT0114
+   41 RETURN                                                            SUMT0115
+   45 RHO =RHO/RATIO                                                    SUMT0116
+C A VECTOR IS LEFT IN DELX(I) BY ESTIM                                  SUMT0117
+      IF(NUMINI-2) 3, 46, 46                                            SUMT0118
+   46 GO TO (3, 47, 47),NT7                                             SUMT0119
+   47 CALL GRAD(2)                                                      SUMT0120
+      CALL OPT                                                          SUMT0121
+      CALL  PEVALU                                                      SUMT0122
+      GO TO (49, 48),NT3                                                SUMT0123
+   48 WRITE(6,481)                                                      SUMT0124
+  481 FORMAT(6X, 30HMOVED ON EXTRAPOLATION VECTOR    )                  SUMT0125
+      CALL OUTPUT(1)                                                    SUMT0126
+   49 GO TO 35                                                          SUMT0127
+  200 GO TO (205,40),NT10                                               SUMT0128
+  205 CONTINUE                                                          SUMT0129
+C THISIS UNCODED AT PRESENT                                             SUMT0130
+      GO TO 40                                                          SUMT0131
+C AFTER OPTIMUM MOVE GOES HERE IF IN FEASIBILITY PHASE                  SUMT0132
+  105 RETURN                                                            SUMT0133
+  121 GO TO(122, 21, 105),NSATIS                                        SUMT0134
+C TEST FOR NON DUAL FEASIBILITY                                         SUMT0135
+   95 IF (RJ(NVI)) 121,121,105                                          SUMT0136
+  400 GO TO   (401, 40, 40   ),NSATIS                                   SUMT0137
+  401 CALL STORE                                                        SUMT0138
+      IF(RJ(NVI)) 2, 2, 105                                             SUMT0139
+  122   CALL STORE                                                      SUMT0140
+          GO TO 2                                                       SUMT0141
+C FORTUITOUSLY SATISFIED CONSTRAINTS ACCEPTED                           SUMT0142
+  300 IF   (G)  28,28,105                                               SUMT0143
+      END                                                               SUMT0144
+$IBFTC CONVRG                                                           SUMT0145
+      SUBROUTINE  CONVRG (N1)                                           SUMT0146
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0147
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0148
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0149
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0150
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0151
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0152
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0153
+      REAL LRJ                                                          SUMT0154
+      COMMON /TSW/ NSWW                                                 SUMT0155
+C     LEAVES  A 1 IF  MIN HAS BEEN FOUND, 2 IF NOT                      SUMT0156
+C DOT PRODUCT OF  GRAD.AND INVERSE PRODUCT LEFT  (DURING OPT) AT DOTT   SUMT0157
+      N1=2                                                              SUMT0158
+      GO TO ( 5, 10 ,15),NT9                                            SUMT0159
+    5 IF(ABS(DOTT)-EPSI) 25, 25, 50                                     SUMT0160
+   10 IF(ABS(DOTT) -(P1-P0)/5.) 25, 25, 50                              SUMT0161
+   15 IF(ADELX.GT.EPSI) GO TO 50                                        SUMT0162
+   25 N1  =1                                                            SUMT0163
+   50 GO TO(55, 60) , NSWW                                              SUMT0164
+   55 RETURN                                                            SUMT0165
+   60 CALL EXIT                                                         SUMT0166
+      END                                                               SUMT0167
+$IBFTC ESTIM                                                            SUMT0168
+      SUBROUTINE  ESTIM                                                 SUMT0169
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0170
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0171
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0172
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0173
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0174
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0175
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0176
+      REAL LRJ                                                          SUMT0177
+      CALL STORE                                                        SUMT0178
+      Z9=SQRT(RATIO)                                                    SUMT0179
+      Z1 = (1./Z9 +1./RATIO)                                            SUMT0180
+      Z2 =  Z1 + 1./Z9**3                                               SUMT0181
+      Z3 = 1./Z9**3                                                     SUMT0182
+      Z4 =  RATIO  + Z9                                                 SUMT0183
+      Z5 =  Z9**3                                                       SUMT0184
+       Z6  =  1. /  ( (RATIO-1.  ) * ( Z9-1.  )  )                      SUMT0185
+      Z7 =   1./Z9                                                      SUMT0186
+      Z8=  1./ (Z9-1.)                                                  SUMT0187
+      IF(NUMINI-2)105 ,20,30                                            SUMT0188
+   30 WRITE(6,102)                                                      SUMT0189
+  102 FORMAT  (/26H0    2ND  ORDER ESTIMATES  )                         SUMT0190
+      P0  =  (PR2- Z4*PR1 +Z5*P1)*Z6                                    SUMT0191
+      G=(RATIO*G1-GR1)/(RATIO-1.)                                       SUMT0192
+      DO 35  I= 1,N                                                     SUMT0193
+   35 X(I) = (XR2(I)-Z4*XR1(I)+Z5*X1(I))*Z6                             SUMT0194
+      CALL EVALU                                                        SUMT0195
+      CALL OUTPUT(2)                                                    SUMT0196
+      CALL SPECFE                                                       SUMT0197
+      GO TO  ( 66, 20,20),NSATIS                                        SUMT0198
+   20 WRITE(6,101)                                                      SUMT0199
+  101 FORMAT  (/26H0    1ST  ORDER ESTIMATES  )                         SUMT0200
+      P0 =           (Z9*P1 -PR1)*Z8                                    SUMT0201
+      G=(RATIO*G1-GR1)/(RATIO-1.)                                       SUMT0202
+      DO25I=1,N                                                         SUMT0203
+   25 X(I) =            (Z9*X1(I)- XR1(I))*Z8                           SUMT0204
+      CALL  EVALU                                                       SUMT0205
+      CALL OUTPUT(2)                                                    SUMT0206
+      CALL SPECFE                                                       SUMT0207
+      GO TO  ( 66,105,105  ),NSATIS                                     SUMT0208
+  105 WRITE(6,103)                                                      SUMT0209
+  103 FORMAT  (/  25H0  LAGRANGE MULTIPLIERS    )                       SUMT0210
+      DO 40 J=1,MN                                                      SUMT0211
+   40 RJ(J) = RHO/RJ1(J)**2                                             SUMT0212
+      GO TO (44,46),NT2                                                 SUMT0213
+   44 DO 45 I=1,N                                                       SUMT0214
+   45 X(I)=RJ(I)                                                        SUMT0215
+   46 CALL OUTPUT (2)                                                   SUMT0216
+      CALL REJECT                                                       SUMT0217
+      CALL PEVALU                                                       SUMT0218
+      CALL GRAD(2)                                                      SUMT0219
+      IF(NUMINI-2) 63, 71, 50                                           SUMT0220
+   50 GO TO (63, 715, 60),NT7                                           SUMT0221
+C     SECOND  ORDER MOVE  FOR NEXT MINIMUM                              SUMT0222
+   60 DO  62  I=1,N                                                     SUMT0223
+   62 DELX(I) =  Z1*X1(I) -Z2*XR1(I) +Z3*XR2(I)                         SUMT0224
+   63 PR2=PR1                                                           SUMT0225
+      GR2=GR1                                                           SUMT0226
+      PR1=P1                                                            SUMT0227
+      GR1=G1                                                            SUMT0228
+      DO  65  I=1,N                                                     SUMT0229
+      XR2(I) =XR1(I)                                                    SUMT0230
+   65 XR1(I) =X1(I)                                                     SUMT0231
+   66 RETURN                                                            SUMT0232
+   71 GO TO(63, 715, 715),NT7                                           SUMT0233
+  715 DO  72  I=1,N                                                     SUMT0234
+   72 DELX(I) = (X1(I)-XR1(I))*Z7                                       SUMT0235
+      GO TO 63                                                          SUMT0236
+      END                                                               SUMT0237
+$IBFTC EVALU                                                            SUMT0238
+      SUBROUTINE EVALU                                                  SUMT0239
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0240
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0241
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0242
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0243
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0244
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0245
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0246
+      REAL LRJ                                                          SUMT0247
+C DIFFERENT   FOR  PHASE3                                               SUMT0248
+      GO  TO  (100,100, 300     ),NPHASE                                SUMT0249
+  100 GO  TO  (105,110),NT2                                             SUMT0250
+  105 DO 106  I=1,N                                                     SUMT0251
+  106 RJ(I)=X(I)                                                        SUMT0252
+      IPN=N                                                             SUMT0253
+      GO TO 111                                                         SUMT0254
+  110 IPN=0                                                             SUMT0255
+  111 DO  115  I=1,M                                                    SUMT0256
+      J=IPN+ I                                                          SUMT0257
+      CALL RESTNT  (I,RJ(J))                                            SUMT0258
+  115 CONTINUE                                                          SUMT0259
+      GO TO (120, 125), NPHASE                                          SUMT0260
+  120 F= -RJ(NVI)                                                       SUMT0261
+      GO TO 300                                                         SUMT0262
+  125 CALL RESTNT (0,F)                                                 SUMT0263
+  300 RETURN                                                            SUMT0264
+      END                                                               SUMT0265
+$IBFTC FEAS                                                             SUMT0267
+      SUBROUTINE FEAS                                                   SUMT0268
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0269
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0270
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0271
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0272
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0273
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0274
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0275
+      REAL LRJ                                                          SUMT0276
+      NPHASE =1                                                         SUMT0277
+      NSW=1                                                             SUMT0278
+      GO TO(10,15),NT2                                                  SUMT0279
+   10 NFIX=1                                                            SUMT0280
+      DO 12 I=1,N                                                       SUMT0281
+      IF(X(I)) 11,11, 12                                                SUMT0282
+   11 NFIX=2                                                            SUMT0283
+      X(I)=1.E-05                                                       SUMT0284
+   12 CONTINUE                                                          SUMT0285
+      GO TO(15,13),NFIX                                                 SUMT0286
+   13 NPHASE=2                                                          SUMT0287
+      CALL EVALU                                                        SUMT0288
+      NPHASE=1                                                          SUMT0289
+      WRITE(6,998)                                                      SUMT0290
+  998 FORMAT(1H0,2X,48HMADE VIOLATED NON-NEGATIVITIES SLIGHTLY POSITIVE)SUMT0291
+      CALL OUTPUT(2)                                                    SUMT0292
+   15 DO 17   I=1,MN                                                    SUMT0293
+      IF(RJ(I)) 25, 25, 17                                              SUMT0294
+   17 CONTINUE                                                          SUMT0295
+   18 GO TO (20, 19),NSW                                                SUMT0296
+   19 CALL TIMEC                                                        SUMT0297
+      WRITE (6,997)                                                     SUMT0298
+  997 FORMAT( 51H0*****THE FEASIBLE STARTING POINT TO BE USED IS ...   )SUMT0299
+      G=0.0                                                             SUMT0300
+      P0=0.0                                                            SUMT0301
+       CALL OUTPUT(2)                                                   SUMT0302
+   20 RETURN                                                            SUMT0303
+   25 NVI=I                                                             SUMT0304
+      F = -RJ(NVI)                                                      SUMT0305
+   26 CALL BODY                                                         SUMT0306
+      NSW=2                                                             SUMT0307
+      NVI=0                                                             SUMT0308
+      IF(F) 15, 15, 28                                                  SUMT0309
+   28 WRITE(6,999)                                                      SUMT0310
+  999 FORMAT( 3X, 89HTHIS PROBLEM POSSESSES NO FEASIBLE STARTING POINT, SUMT0311
+     1WILL LOOK FOR DATA FOR NEXT PROBLEM.    )                         SUMT0312
+C TO INDICATE TO MAIN TO START ON NEXT PROBLEM.                         SUMT0313
+      NPHASE=5                                                          SUMT0314
+      GO TO 20                                                          SUMT0315
+      END                                                               SUMT0316
+$IBFTC FINAL                                                            SUMT0317
+      SUBROUTINE FINAL  (N2)                                            SUMT0318
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0319
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0320
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0321
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0322
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0323
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0324
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0325
+      REAL LRJ                                                          SUMT0326
+C  FINAL  CONVERGENCE  CRITERION                                        SUMT0327
+C  1 LEFT IF CONVERGENCE MET   2 IF NOT                                 SUMT0328
+      GO TO  ( 5,15,20),NT5                                             SUMT0329
+    5 EPSIL= ABS(F/G - 1.)                                              SUMT0330
+          IF ( EPSIL - THETA0)  30,30,50                                SUMT0331
+   15 IF  (RSIGMA- THETA0)    30,30,50                                  SUMT0332
+   20 IF  (NUMINI-1)    30,22,22                                        SUMT0333
+   22 PEST = PR1 -(PR1-P0)/(1.-1./SQRT(RATIO))                          SUMT0334
+      EPSIL= ABS(PEST/G-1.)                                             SUMT0335
+      IF (EPSIL -THETA0)     30,50,50                                   SUMT0336
+   30 N2 =1                                                             SUMT0337
+      GO TO 100                                                         SUMT0338
+   50 N2 =2                                                             SUMT0339
+  100 RETURN                                                            SUMT0340
+      END                                                               SUMT0341
+$IBFTC GRAD                                                             SUMT0342
+      SUBROUTINE GRAD(IS)                                               SUMT0343
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0344
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0345
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0346
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0347
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0348
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0349
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0350
+      REAL LRJ                                                          SUMT0351
+C  IF  (IS=1) ACCUM. MATRIX OF 2ND PARTIALS  IF(IS=2) DONT              SUMT0352
+      GO TO  (100,1055), IS                                             SUMT0353
+  100 DO  105 I=1,N                                                     SUMT0354
+      DO  105 J=1,I                                                     SUMT0355
+  105 A(I,J) =0.                                                        SUMT0356
+ 1055 DO 106   I=1,N                                                    SUMT0357
+  106 DELX0(I)=0.                                                       SUMT0358
+C THIS SECTION WORKS CORRECTLY IN FEASIBILITY PHASE AS WELL AS NORMAL PHSUMT0359
+      IPN=0                                                             SUMT0360
+      GO TO  (110,120),NT2                                              SUMT0361
+  110 DO 115  I=1,N                                                     SUMT0362
+      IF  (X1(I))  115,115,112                                          SUMT0363
+  112 DELX0(I)= -RHO/X(I)**2                                            SUMT0364
+      GO TO (113,115),IS                                                SUMT0365
+  113 A(I,I)= -2.*DELX0(I)/X(I)                                         SUMT0366
+  115 CONTINUE                                                          SUMT0367
+      IPN=N                                                             SUMT0368
+  120 DO 130 J=1,M                                                      SUMT0369
+      K=IPN+J                                                           SUMT0370
+      IF(RJ1(K)) 130, 130, 122                                          SUMT0371
+  122 CALL  GRAD1(J)                                                    SUMT0372
+      TT=RHO/RJ(K)**2                                                   SUMT0373
+      DO 125  I=1,N                                                     SUMT0374
+      IF ( DEL(I)) 123,125,123                                          SUMT0375
+C IF DEL(I)=0 SKIP ALL THE FOLLOWING COMPUTATION INVOLVING * BY DEL(I)  SUMT0376
+  123 T=TT*DEL(I)                                                       SUMT0377
+      DELX0(I)=DELX0(I)-T                                               SUMT0378
+      GO TO (124,125),IS                                                SUMT0379
+  124 T = 2.* T / RJ(K)                                                 SUMT0380
+      DO 1245  JJ=1,I                                                   SUMT0381
+      IF  (DEL(JJ))  1244, 1245, 1244                                   SUMT0382
+ 1244    A(I,JJ)  =  A(I,JJ)  + T* DEL(JJ)                              SUMT0383
+ 1245 CONTINUE                                                          SUMT0384
+  125 CONTINUE                                                          SUMT0385
+  130 CONTINUE                                                          SUMT0386
+  131 GO TO(132,135),IS                                                 SUMT0387
+  132 DO 133 I=1,N                                                      SUMT0388
+  133 DIAG(I)=A(I,I)                                                    SUMT0389
+  135 GO TO (136, 137, 200), NPHASE                                     SUMT0390
+  136 NJ = NVI                                                          SUMT0391
+      GO TO (310, 315),NT2                                              SUMT0392
+  310 IF(NVI.GT.N) GO TO 314                                            SUMT0393
+  312 DO 313 I=1,N                                                      SUMT0394
+  313 DELX0(I)=-DELX0(I)                                                SUMT0395
+      DELX0(NVI)=DELX0(NVI) + 1.0                                       SUMT0396
+      GO TO 200                                                         SUMT0397
+  314 NJ= NVI - N                                                       SUMT0398
+  315 CALL GRAD1(NJ)                                                    SUMT0399
+      DO  1365  I=1,N                                                   SUMT0400
+ 1365 DELX0(I)= -DELX0(I) + DEL(I)                                      SUMT0401
+      GO TO 200                                                         SUMT0402
+  137 CALL GRAD1(0)                                                     SUMT0403
+      DO 139 I=1,N                                                      SUMT0404
+  139 DELX0(I)=-DELX0(I) -DEL(I)                                        SUMT0405
+C LEAVES THE NEG. GRAD OF P IN DELX0                                    SUMT0406
+  200 RETURN                                                            SUMT0407
+      END                                                               SUMT0408
+$IBFTC INVERS                CROUT METHOD                               SUMT0409
+      SUBROUTINE INVERS(NSME)                                           SUMT0410
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0411
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0412
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0413
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0414
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0415
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0416
+      REAL LRJ                                                          SUMT0417
+      EQUIVALENCE (B,DELX)                                              SUMT0418
+      DIMENSION B(100)                                                  SUMT0419
+C  GETTING THE PRODUCT INVERSE USING THE CROUT METHOD AND TAKING ADVAN- SUMT0420
+C  AGE OF THE SYMMETRY OF THE A MATRIX                                  SUMT0421
+C  IF A DIVISOR OF ZERO IS GENERATED, THEN DELX IS SET EQUAL TO DELX0   SUMT0422
+C  IF NSME=1 HAVE NEW A MATRIX  IF NSME=2  COMPUTE INVERSE PRODUCT USINGSUMT0423
+C  A AS LEFT FROM LAST TIME.                                            SUMT0424
+      GO TO (11,2), NSME                                                SUMT0425
+    2 GO TO(20, 2070), KSW                                              SUMT0426
+   11 KSW=1                                                             SUMT0427
+      IF(A(1,1) ) 66, 66, 150                                           SUMT0428
+  150 A(1,1)=1./A(1,1)                                                  SUMT0429
+  200 DO 1 I=2,N                                                        SUMT0430
+    1 A(1,I)=  A(1,I)*A(1,1)                                            SUMT0431
+      DO 50 J=2,N                                                       SUMT0432
+      JM1=J-1                                                           SUMT0433
+    4 T=0.                                                              SUMT0434
+      DO 5 I=1,JM1                                                      SUMT0435
+      IF(A(I,J)) 44,5 ,44                                               SUMT0436
+   44 T=T+A(J,I)*A(I,J)                                                 SUMT0437
+    5 CONTINUE                                                          SUMT0438
+      A(J,J)= A(J,J)-T                                                  SUMT0439
+      IF(A(J,J) ) 77, 77, 8                                             SUMT0440
+    8 A(J,J)= 1./A(J,J)                                                 SUMT0441
+      IF(J.EQ.N) GO TO 20                                               SUMT0442
+      JP1=J+1                                                           SUMT0443
+      DO 10 L =JP1,N                                                    SUMT0444
+      T=0.                                                              SUMT0445
+      DO 15 I=1,JM1                                                     SUMT0446
+      IF(A(I,J)) 14, 15, 14                                             SUMT0447
+   14 T=T+A(L ,I)*A(I,J)                                                SUMT0448
+   15 CONTINUE                                                          SUMT0449
+      A(L,J)=A(L,J)-T                                                   SUMT0450
+      A(J,L)= A(L,J)*A(J,J)                                             SUMT0451
+   10 CONTINUE                                                          SUMT0452
+   50 CONTINUE                                                          SUMT0453
+   20 B(1)=B(1)*A(1,1)                                                  SUMT0454
+      DO 55 J=2,N                                                       SUMT0455
+      T=0.                                                              SUMT0456
+      JM1=J-1                                                           SUMT0457
+      DO 25 I=1,JM1                                                     SUMT0458
+      IF(A(J,I)) 24, 25, 24                                             SUMT0459
+   24 T=T+A(J,I)*B(I)                                                   SUMT0460
+   25 CONTINUE                                                          SUMT0461
+      B(J)= (B(J)-T)*A(J,J)                                             SUMT0462
+   55 CONTINUE                                                          SUMT0463
+      DO 100 I=1,NM1                                                    SUMT0464
+      NMK=N-I                                                           SUMT0465
+      DO 75 J=1,I                                                       SUMT0466
+      L=NP1-J                                                           SUMT0467
+      IF(A(NMK,L)) 74, 75, 74                                           SUMT0468
+   74 B(NMK)=B(NMK)-A(NMK,L)*B(L)                                       SUMT0469
+   75 CONTINUE                                                          SUMT0470
+  100 CONTINUE                                                          SUMT0471
+ 2070 GO TO  (2072,2071),NT3                                            SUMT0472
+  102 FORMAT  (7E17.8)                                                  SUMT0473
+ 2071 WRITE(6,103)                                                      SUMT0474
+      WRITE(6,102) (DELX0(I),I=1,N)                                     SUMT0475
+      GO TO (2073, 2072), KSW                                           SUMT0476
+ 2073 WRITE(6,104)                                                      SUMT0477
+      WRITE(6,102) (DELX(I),I=1,N)                                      SUMT0478
+  103 FORMAT (1H0, 6X, 12HDEL P VECTOR)                                 SUMT0479
+  104 FORMAT(1H0, 6X, 24HSECOND ORDER MOVE VECTOR)                      SUMT0480
+ 2072 RETURN                                                            SUMT0481
+   66 J=1                                                               SUMT0482
+   77 WRITE(6,999) J, A(J,J)                                            SUMT0483
+  999 FORMAT(2H0  51HTHIS MIGHT NOT BE A CONVEX PROGRAMMING PROBLEM, THESUMT0484
+     1 I3,  16HTH DISCRIMINANT= 1PE15.7  )                              SUMT0485
+      KSW=2                                                             SUMT0486
+      DO 78 I=1,N                                                       SUMT0487
+   78 DELX(I)=DELX0(I)                                                  SUMT0488
+      GO TO 2070                                                        SUMT0489
+      END                                                               SUMT0490
+$IBFTC MAG                                                              SUMT0491
+      SUBROUTINE MAG                                                    SUMT0492
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0493
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0494
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0495
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0496
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0497
+      REAL LRJ                                                          SUMT0498
+      ADELX= 0.                                                         SUMT0499
+      DO  580  I=1,N                                                    SUMT0500
+  580 ADELX =ADELX+  DELX0(I)**2                                        SUMT0501
+      ADELX=SQRT(ADELX)                                                 SUMT0502
+      RETURN                                                            SUMT0503
+      END                                                               SUMT0504
+$IBFTC OPT                        FIBONACCI SEARCH                      SUMT0505
+      SUBROUTINE OPT                                                    SUMT0506
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0507
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0508
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0509
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0510
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0511
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0512
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0513
+      REAL LRJ                                                          SUMT0514
+      KSW=1                                                             SUMT0515
+       DOTT = 0.                                                        SUMT0516
+      DO    2027   J = 1,N                                              SUMT0517
+ 2027 DOTT = DOTT +   DELX(J) * DELX0(J)                                SUMT0518
+      IF (DOTT)   2065, 2065, 2070                                      SUMT0519
+ 2065  DO 2067  I= 1,N                                                  SUMT0520
+ 2067    DELX(I)  =  DELX0(I)                                           SUMT0521
+ 2070 CONTINUE                                                          SUMT0522
+      NTCTR = NTCTR+1                                                   SUMT0523
+      DO  10  I=1,N                                                     SUMT0524
+   10 X2(I) =X(I)                                                       SUMT0525
+      PX1= P0                                                           SUMT0526
+   11 N401=0                                                            SUMT0527
+   15 N401 =N401+1                                                      SUMT0528
+      DO  20  I=1,N                                                     SUMT0529
+   20 X(I)  = X2(I) + DELX(I)                                           SUMT0530
+      CALL  EVALU                                                       SUMT0531
+      CALL   SPECFE                                                     SUMT0532
+C 1 MEANS SATIS.OF CONSTRAINT NT.PREV. 2MEANS NOCHANGE 3MEANS VIOLATION SUMT0533
+C IF POINT IS NOT FEASIBLE GIVE IT AN ARBRITRARILY HIGH VALUE           SUMT0534
+      GO TO(472,25, 26),NSATIS                                          SUMT0535
+   26 PX2= 10.E35                                                       SUMT0536
+      P0=10.E35                                                         SUMT0537
+      GO TO 30                                                          SUMT0538
+   25 CALL PEVALU                                                       SUMT0539
+      PX2 = P0                                                          SUMT0540
+      IF   ( PX1- PX2)     30 , 30 , 40                                 SUMT0541
+   30 IF(N401 - 2) 35, 33, 33                                           SUMT0542
+   33 DO 34 I=1,N                                                       SUMT0543
+   34 X1(I)=X(I)                                                        SUMT0544
+      P1=PX2                                                            SUMT0545
+      GO TO 529                                                         SUMT0546
+C                                                                       SUMT0547
+C ONLY ONE  POINT  SO FAR COMPUTED                                      SUMT0548
+   35 DO  37   I=1,N                                                    SUMT0549
+   37 X3(I) = X2(I)                                                     SUMT0550
+      PREV3 =PX1                                                        SUMT0551
+      GO TO 430                                                         SUMT0552
+   40 DO  45  I=1,N                                                     SUMT0553
+      X3(I) =X2(I)                                                      SUMT0554
+      X2(I) =X (I)                                                      SUMT0555
+   45 DELX(I) = 1.61803399 * DELX(I)                                    SUMT0556
+      PREV3 =PX1                                                        SUMT0557
+      PX1   =PX2                                                        SUMT0558
+      GO TO 15                                                          SUMT0559
+C FIBONACCI   METHOD                                                    SUMT0560
+C B VECTOR  GOES TO X1(I)                                               SUMT0561
+  475 P0= 1.E36                                                         SUMT0562
+  430  DO 431 I= 1,N                                                    SUMT0563
+  431 X1(I)  = X(I)                                                     SUMT0564
+      P1=P0                                                             SUMT0565
+      DO 500I=1,N                                                       SUMT0566
+      X(I) = .38196601  * ( X1(I) -  X3(I))  + X3(I)                    SUMT0567
+  500 X2(I) = X(I)                                                      SUMT0568
+      CALL EVALU                                                        SUMT0569
+      CALL SPECFE                                                       SUMT0570
+      GO TO  ( 472, 505, 475) , NSATIS                                  SUMT0571
+  505 CALL PEVALU                                                       SUMT0572
+      PX1 =P0                                                           SUMT0573
+      DO  510   I=1,N                                                   SUMT0574
+  510 X(I)= 0.38196601 *(X1(I) -X2(I) ) + X2(I)                         SUMT0575
+      CALL EVALU                                                        SUMT0576
+      CALL SPECFE                                                       SUMT0577
+       GO TO  ( 472, 515, 475) , NSATIS                                 SUMT0578
+  515 CALL PEVALU                                                       SUMT0579
+      PX2 =P0                                                           SUMT0580
+      N401= 1                                                           SUMT0581
+  516 N401= N401 + 1                                                    SUMT0582
+ 5162 IF(N401 - 25 ) 5183, 518, 518                                     SUMT0583
+  518 KSW=2                                                             SUMT0584
+      IF(N401 - 40) 5181, 535, 535                                      SUMT0585
+ 5181 DO 5182 I=1,N                                                     SUMT0586
+      IF(ABS(X2(I)/X(I) - 1.0).GE. 1.E-7) GO TO 5183                    SUMT0587
+ 5182 CONTINUE                                                          SUMT0588
+      GO TO 535                                                         SUMT0589
+ 5183 IF(ABS(PX1/PX2 - 1.).LE. 1.E-7) GO TO 535                         SUMT0590
+      IF(PX1 - PX2) 520, 535, 525                                       SUMT0591
+C FROM LEFTORIGHT  X3(I)(PREV3)X2(I)(PX1)X(I)PX2 X1(I)P1                SUMT0592
+  520 DO 5205  I= 1,N                                                   SUMT0593
+ 5205 X1(I)  = X(I)                                                     SUMT0594
+C THROW AWAY RIGHT PART                                                 SUMT0595
+      P1=PX2                                                            SUMT0596
+  522 DO 523   I=1,N                                                    SUMT0597
+C POINTXP1 BECOMES XP2                                                  SUMT0598
+  523  X(I)  =  .38196601  * ( X1(I) - X3(I)   )  + X3(I)               SUMT0599
+C TEMPORARILY IN  X STORAGE                                             SUMT0600
+      CALL EVALU                                                        SUMT0601
+      CALL SPECFE                                                       SUMT0602
+      GO TO (472, 524, 475),NSATIS                                      SUMT0603
+  524  CALL PEVALU                                                      SUMT0604
+      PX2= PX1                                                          SUMT0605
+C SWITCH VECTORS TO PROPER POSITION                                     SUMT0606
+      PX1=P0                                                            SUMT0607
+      DO  5245   I=1,N                                                  SUMT0608
+      XX=X2(I)                                                          SUMT0609
+      X2(I)=X(I)                                                        SUMT0610
+ 5245 X(I) =XX                                                          SUMT0611
+      GO TO 516                                                         SUMT0612
+C LEFT SIDE  TOSSED  AWAY                                               SUMT0613
+  525 DO 526 I=1,N                                                      SUMT0614
+      X3(I)  =  X2(I)                                                   SUMT0615
+  526    X2(I)  = X(I)                                                  SUMT0616
+      PREV3 =   PX1                                                     SUMT0617
+      PX1=  PX2                                                         SUMT0618
+  529 DO530 I=1,N                                                       SUMT0619
+  530 X(I)= 0.38196601 *(X1(I) -X2(I) ) + X2(I)                         SUMT0620
+      CALL EVALU                                                        SUMT0621
+      CALL SPECFE                                                       SUMT0622
+       GO TO (472,531,475) , NSATIS                                     SUMT0623
+  531 CONTINUE                                                          SUMT0624
+      CALL PEVALU                                                       SUMT0625
+      PX2 =P0                                                           SUMT0626
+        GO TO 516                                                       SUMT0627
+C FIBONNACCI  POINTS HAVE EQUAL VALUE NOW COMPUTE MIDPOINT              SUMT0628
+  535 DO 536  I= 1,N                                                    SUMT0629
+      DELX0(I)=X(I)                                                     SUMT0630
+  536 X(I)=(DELX0(I) + X2(I) )*0.5                                      SUMT0631
+      PP1=PX2                                                           SUMT0632
+      CALL EVALU                                                        SUMT0633
+      CALL PEVALU                                                       SUMT0634
+      GO TO (5361, 537), KSW                                            SUMT0635
+ 5361 IF(ABS(P0/PX1 - 1.).GT. 1.E-7) GO TO 538                          SUMT0636
+C NOTE POSSIBLE ACCUM  SECOND PARTIALS HERE ALSO                        SUMT0637
+  537 CALL GRAD(2)                                                      SUMT0638
+      RETURN                                                            SUMT0639
+  538 DO 539 I=1,N                                                      SUMT0640
+  539 X(I)=DELX0(I)                                                     SUMT0641
+      GO TO 520                                                         SUMT0642
+  472 RETURN                                                            SUMT0643
+C NOT YET CODED FOR PHASE=3                                             SUMT0644
+      END                                                               SUMT0645
+$IBFTC OUTPUT                                                           SUMT0646
+      SUBROUTINE OUTPUT(K)                                              SUMT0647
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0648
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0649
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0650
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0651
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0652
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0653
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0654
+      REAL LRJ                                                          SUMT0655
+      GO TO(1,2),K                                                      SUMT0656
+    1 WRITE(6,1000)                                                     SUMT0657
+      WRITE(6,999)  NTCTR, DOTT, RHO, ADELX, NPHASE                     SUMT0658
+      IF(NPHASE.NE.1) GO TO 2                                           SUMT0659
+      NVII=NVI                                                          SUMT0660
+      GO TO (11,22), NT2                                                SUMT0661
+   11 NVII=NVI-N                                                        SUMT0662
+   22 WRITE(6,995) NVII                                                 SUMT0663
+    2 WRITE(6,998) F,P0, G, RSIGMA                                      SUMT0664
+      WRITE(6,997) (X(I),I=1,N)                                         SUMT0665
+      WRITE(6,994)                                                      SUMT0666
+      GO TO(3,4),NT2                                                    SUMT0667
+    3 WRITE(6,993)                                                      SUMT0668
+      WRITE(6,996) (RJ(I),I=NP1,MN)                                     SUMT0669
+      GO TO 100                                                         SUMT0670
+    4 WRITE(6,996) (RJ(I),I=1,MN)                                       SUMT0671
+ 1000 FORMAT(50H0*******************************************           )SUMT0672
+  999 FORMAT (     10X,6HPOINT=I4, 6X,6H DOTT=1PE15.7, 6X,4HRHO=E15.7,  SUMT0673
+     1 6X,10HMAGNITUDE= E15.7, 6X, 6HPHASE= I2 )                        SUMT0674
+  998 FORMAT(   10X, 2HF=1PE15.7,6X, 2HP=E15.7, 6X, 2HG=E15.7, 6X,      SUMT0675
+     1 7HRSIGMA=E15.7)                                                  SUMT0676
+  997 FORMAT(    6X,25HTHE CURRENT VALUE OF X IS/(    1P6E20.7))        SUMT0677
+  996 FORMAT(1P6E20.7)                                                  SUMT0678
+  995 FORMAT(1H+ 117X,6X,4HNVI=I3)                                      SUMT0679
+  994 FORMAT(6X,21HTHE CONSTRAINT VALUES   )                            SUMT0680
+  993 FORMAT(1H+,27X,34HNOT INCLUDING THE NON-NEGATIVITIES      )       SUMT0681
+  100 RETURN                                                            SUMT0682
+      END                                                               SUMT0683
+$IBFTC PEVALU                                                           SUMT0684
+      SUBROUTINE PEVALU                                                 SUMT0685
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0686
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0687
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0688
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0689
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0690
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0691
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0692
+      REAL LRJ                                                          SUMT0693
+      GO TO  (200, 100, 300  ),NPHASE                                   SUMT0694
+  100 RSIGMA=0.                                                         SUMT0695
+      DO 105 I=1,MN                                                     SUMT0696
+  105 RSIGMA=RSIGMA+  RHO/RJ(I)                                         SUMT0697
+  106 P0 = RSIGMA + F                                                   SUMT0698
+       G = F - RSIGMA                                                   SUMT0699
+  300 RETURN                                                            SUMT0700
+  200 RSIGMA =0.                                                        SUMT0701
+      DO 205   I=1,MN                                                   SUMT0702
+      IF  (RJ1(I))   205,205,204                                        SUMT0703
+  204 RSIGMA =RSIGMA + RHO/RJ(I)                                        SUMT0704
+  205 CONTINUE                                                          SUMT0705
+      GO TO 106                                                         SUMT0706
+      END                                                               SUMT0707
+$IBFTC REJECT                                                           SUMT0708
+      SUBROUTINE  REJECT                                                SUMT0709
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0710
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0711
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0712
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0713
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0714
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0715
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0716
+      REAL LRJ                                                          SUMT0717
+  505 DO 510  I=1,N                                                     SUMT0718
+  510 X(I) = X1(I)                                                      SUMT0719
+      DO 515  J=1,MN                                                    SUMT0720
+  515 RJ(J)= RJ1(J)                                                     SUMT0721
+      P0  = P1                                                          SUMT0722
+      RSIGMA =        RSIG1                                             SUMT0723
+      G      =G1                                                        SUMT0724
+      F = F1                                                            SUMT0725
+      RETURN                                                            SUMT0726
+      END                                                               SUMT0727
+$IBFTC REJCT1                                                           SUMT0728
+      SUBROUTINE  REJCT1                                                SUMT0729
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0730
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0731
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0732
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0733
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0734
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0735
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0736
+      REAL LRJ                                                          SUMT0737
+      DO  550  I=1,N                                                    SUMT0738
+  550 X(I) = X3(I)                                                      SUMT0739
+      DO 555  J=1,MN                                                    SUMT0740
+  555 RJ(J)=RJ3(J)                                                      SUMT0741
+      P0 = PREV3                                                        SUMT0742
+      G      =G3                                                        SUMT0743
+      RSIGMA =RSIG3                                                     SUMT0744
+      F  = F3                                                           SUMT0745
+      RETURN                                                            SUMT0746
+      END                                                               SUMT0747
+$IBFTC SPECFE                                                           SUMT0748
+      SUBROUTINE SPECFE                                                 SUMT0749
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0750
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0751
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0752
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0753
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0754
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0755
+      REAL LRJ                                                          SUMT0756
+C 3  IF NOT 'FEAS'    2 IF NO CHANGE IN VIOLS+SATIS.   1 SATIS  IORMORE SUMT0757
+      NSATIS =2                                                         SUMT0758
+      DO  20  J=1,MN                                                    SUMT0759
+      IF  (RJ1(J))  15,15,10                                            SUMT0760
+   10 IF  (RJ(J))   25,25,20                                            SUMT0761
+   15 IF  (RJ(J))   20,20,17                                            SUMT0762
+   17 NSATIS =1                                                         SUMT0763
+   20 CONTINUE                                                          SUMT0764
+      RETURN                                                            SUMT0765
+   25 NSATIS=3                                                          SUMT0766
+      RETURN                                                            SUMT0767
+      END                                                               SUMT0768
+$IBFTC RHOCOM                                                           SUMT0769
+      SUBROUTINE  RHOCOM                                                SUMT0770
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0771
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0772
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0773
+      COMMON/CRST/ DELX(100), DELX0(100), RHOIN,RATIO, EPSI, THETA0,    SUMT0774
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0775
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0776
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0777
+      REAL LRJ                                                          SUMT0778
+C     SUBROUTINE  TO COMPUTE INITIAL RHO VALUE                          SUMT0779
+C     CONTROLLED  BY  COL. 7  ON OPTION CARD                            SUMT0780
+      CALL STORE                                                        SUMT0781
+      GO TO  (9015,9004,8000,9050), NT1                                 SUMT0782
+ 8000 RHO=RHOIN                                                         SUMT0783
+ 9000 IF(RHO) 9001, 9001, 9002                                          SUMT0784
+ 9001 RHO=1.                                                            SUMT0785
+ 9002 RETURN                                                            SUMT0786
+ 9004 NPAR1=1                                                           SUMT0787
+ 9005 RHO = 1.                                                          SUMT0788
+C     2 MEANS  RHO WHICH  MINIMIZES GRADIENT  MAG.                      SUMT0789
+      CALL GRAD(2)                                                      SUMT0790
+      CALL GRAD1(0)                                                     SUMT0791
+C  TO GET -DEL F                                                        SUMT0792
+      DO  9007   I=1,N                                                  SUMT0793
+ 9007 PGRAD(I)= -DEL(I)                                                 SUMT0794
+      DO  9009 I=1,N                                                    SUMT0795
+      DELX0(I) =DELX0(I)- PGRAD(I)                                      SUMT0796
+C  THIS LEAVES DEL SIGMA IN DELX0                                       SUMT0797
+ 9009 CONTINUE                                                          SUMT0798
+      GOTO   (9019,9029), NPAR1                                         SUMT0799
+ 9019 DOT1 =0.                                                          SUMT0800
+      DOT2 =0.                                                          SUMT0801
+      DO  9010  I=1,N                                                   SUMT0802
+      DOT1 = DOT1+ DELX0(I)*  PGRAD(I)                                  SUMT0803
+ 9010 DOT2 = DOT2+ DELX0(I) **2                                         SUMT0804
+      RHO  =ABS (DOT1/DOT2)                                             SUMT0805
+      GO TO  9000                                                       SUMT0806
+C  3 MEANS COMPUTE RHO SO AS TO MINIMIZE DEL P(/DDP/1.)DEL P            SUMT0807
+ 9015 NPAR2=1                                                           SUMT0808
+ 9028 NPAR1=2                                                           SUMT0809
+C     USE  DF  AND DR  SUBROUTINE                                       SUMT0810
+      GO TO    9005                                                     SUMT0811
+ 9029 RHO =  1.                                                         SUMT0812
+C     ASSUME   SIGMA TERM IS CONSID. GRTER THAN  F TERM                 SUMT0813
+      CALL SECORD(2)                                                    SUMT0814
+      DO  9032  I=1,N                                                   SUMT0815
+ 9032 DELX(I)=PGRAD(I)                                                  SUMT0816
+      CALL INVERS(1)                                                    SUMT0817
+      DO  9034  I=1,N                                                   SUMT0818
+      X3(I)= DELX(I)                                                    SUMT0819
+ 9034 DELX(I)=DELX0(I)                                                  SUMT0820
+      CALL INVERS(2)                                                    SUMT0821
+      DO  9035  I=1,N                                                   SUMT0822
+ 9035 XR2(I)    =  DELX(I)                                              SUMT0823
+      GO TO  (9040,9060),  NPAR2                                        SUMT0824
+ 9040 DOT1 =0.                                                          SUMT0825
+      DOT2 =0.                                                          SUMT0826
+      DO  9043  I=1,N                                                   SUMT0827
+      DOT1= DOT1 + PGRAD(I)* X3(I)                                      SUMT0828
+ 9043 DOT2= DOT2 + DELX0(I)* XR2(I)                                     SUMT0829
+      RHO=SQRT(ABS(DOT1/DOT2))                                          SUMT0830
+      GO TO 9000                                                        SUMT0831
+ 9050 NPAR2 =2                                                          SUMT0832
+C     RHO MINIMIZES  2ND ORDER MOVE                                     SUMT0833
+      GO TO  9028                                                       SUMT0834
+C     USES  INTERNAL  SUB. TO COM  /DDP/-1 DF AND  /DDP/- DR            SUMT0835
+ 9060 DOT1=0.                                                           SUMT0836
+      DOT2=0                                                            SUMT0837
+      DO  9063  I=1,N                                                   SUMT0838
+      DOT1 = X3(I)**2 + DOT1                                            SUMT0839
+ 9063 DOT2 = X3(I)*  XR2(I) + DOT2                                      SUMT0840
+      RHO=ABS(DOT1/DOT2)                                                SUMT0841
+      GO TO  9000                                                       SUMT0842
+      END                                                               SUMT0843
+$IBFTC SECORD                                                           SUMT0844
+      SUBROUTINE SECORD(IS)                                             SUMT0845
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0846
+      COMMON /OPTNS/ NT1,NT2,NT3,NT4,NT5,NT6,NT7,NT8,NT9,NT10,NT11,NT12 SUMT0847
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0848
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0849
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0850
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0851
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0852
+      REAL LRJ                                                          SUMT0853
+      IPN=0                                                             SUMT0854
+      GO TO (96,99),NT2                                                 SUMT0855
+   96 IPN=N                                                             SUMT0856
+   99 GO TO  (100,105), IS                                              SUMT0857
+  100 DO 102  I=1,N                                                     SUMT0858
+      DO 102  J=I,N                                                     SUMT0859
+  102 A(I,J) =0.                                                        SUMT0860
+      GO TO 134                                                         SUMT0861
+  105 DO 106  I=1,N                                                     SUMT0862
+      DO 106  J=1,N                                                     SUMT0863
+  106 A(I,J)=0.                                                         SUMT0864
+CGRAD. TERM NOT PREV. COMPUTED                                          SUMT0865
+  111 GO TO  (112,115),NT2                                              SUMT0866
+  112 DO 114  I=1,N                                                     SUMT0867
+      IF (X1(I))  114,114,113                                           SUMT0868
+  113 A(I,I) = 2.*RHO/RJ(I)**3                                          SUMT0869
+  114 CONTINUE                                                          SUMT0870
+  115 DO 130  KK=1,M                                                    SUMT0871
+      K=IPN+KK                                                          SUMT0872
+      IF (RJ1(K)) 130,130,117                                           SUMT0873
+  117 CALL GRAD1(KK)                                                    SUMT0874
+      DO 125  I=1,N                                                     SUMT0875
+      IF (DEL(I)) 120,125,120                                           SUMT0876
+  120 T= (2.*RHO/RJ(K)**3)*DEL(I)                                       SUMT0877
+          DO 123  J=  1,I                                               SUMT0878
+           IF (DEL(J) )  122,123,122                                    SUMT0879
+  122 A(I,J) =A(I,J) +T*DEL(J)                                          SUMT0880
+  123     CONTINUE                                                      SUMT0881
+  125 CONTINUE                                                          SUMT0882
+  130 CONTINUE                                                          SUMT0883
+      DO 132  I=1,N                                                     SUMT0884
+      DIAG(I)= A(I,I)                                                   SUMT0885
+  132 A(I,I) =0.                                                        SUMT0886
+C  READY NOW FOR MATRIX OF 2ND PARTIALS OF RESTRAINTS                   SUMT0887
+  134   GO TO  ( 135 , 1000, 1010) , NT10                               SUMT0888
+C  BY PASS COMPUTING SECOND PARITIALS WHEN THEY ARE KNOWN TO BE ZERO    SUMT0889
+ 1000 GO TO  (1010, 165,165), NPHASE                                    SUMT0890
+ 1010 DO  1020   I=2,N                                                  SUMT0891
+      IM1 =I-1                                                          SUMT0892
+      DO 1020   J=1,IM1                                                 SUMT0893
+ 1020 A(J,I)  = A(I,J)                                                  SUMT0894
+      DO  1030  I=1,N                                                   SUMT0895
+ 1030 A(I,I) =DIAG(I)                                                   SUMT0896
+      GO TO 175                                                         SUMT0897
+  135 DO  150  KK =1,M                                                  SUMT0898
+      K=IPN+KK                                                          SUMT0899
+      IF (RJ1(K)) 150,150,137                                           SUMT0900
+  137 CALL MATRIX (KK)                                                  SUMT0901
+      T = - RHO / RJ(K)**2                                              SUMT0902
+      DO 145  I=2,N                                                     SUMT0903
+      IM1=I-1                                                           SUMT0904
+      DO 145 J=1,IM1                                                    SUMT0905
+      IF  (A(J,I)) 143,145,143                                          SUMT0906
+  143 A(I,J)=A(I,J) + T*A(J,I)                                          SUMT0907
+      A(J,I)=0.                                                         SUMT0908
+  145 CONTINUE                                                          SUMT0909
+      DO 151 I=1,N                                                      SUMT0910
+      IF( A(I,I) ) 147, 151, 147                                        SUMT0911
+  147 DIAG(I)  =DIAG(I) + T*A(I,I)                                      SUMT0912
+      A(I,I) =0.                                                        SUMT0913
+  151 CONTINUE                                                          SUMT0914
+  150 CONTINUE                                                          SUMT0915
+      GO TO  (155,165,165),NPHASE                                       SUMT0916
+C     FOR NPHASE=3 ADDITIONS WILL BE ADDED LATER                        SUMT0917
+  155   NJ = NVI                                                        SUMT0918
+      GO TO ( 156,1557) , NT2                                           SUMT0919
+  156  IF ( NVI-N)  175,175,1550                                        SUMT0920
+ 1550    NJ = NVI - N                                                   SUMT0921
+ 1557   CALL MATRIX(NJ)                                                 SUMT0922
+      DO 160  I=2,N                                                     SUMT0923
+      IM1=I-1                                                           SUMT0924
+      DO 160 J=1,IM1                                                    SUMT0925
+      IF(A(J,I))157, 160, 157                                           SUMT0926
+  157 A(I,J)=A(I,J) -A(J,I)                                             SUMT0927
+  160 A(J,I)=A(I,J)                                                     SUMT0928
+      DO 164 I=1,N                                                      SUMT0929
+      IF (A(I,I)) 162,163,162                                           SUMT0930
+  162 A(I,I)= DIAG(I)-A(I,I)                                            SUMT0931
+      GO TO 164                                                         SUMT0932
+  163 A(I,I)=DIAG(I)                                                    SUMT0933
+  164 CONTINUE                                                          SUMT0934
+      GO TO 175                                                         SUMT0935
+C  GET MATRIX OF 2ND PARTIALS OF OBJECTIVE FUNCTION                     SUMT0936
+  165 CALL MATRIX(0)                                                    SUMT0937
+      DO  170  I=2,N                                                    SUMT0938
+      IM1=I-1                                                           SUMT0939
+      DO 170 J=1,IM1                                                    SUMT0940
+      IF (A(J,I))  167,170,167                                          SUMT0941
+  167 A(I,J)=A(I,J)+A(J,I)                                              SUMT0942
+  170 A(J,I)=A(I,J)                                                     SUMT0943
+      DO  174 I=1,N                                                     SUMT0944
+      IF  (A(I,I))  172,173,172                                         SUMT0945
+  172 A(I,I)= DIAG(I) +A(I,I)                                           SUMT0946
+      GO TO 174                                                         SUMT0947
+  173 A(I,I) =DIAG(I)                                                   SUMT0948
+  174 CONTINUE                                                          SUMT0949
+  175 RETURN                                                            SUMT0950
+      END                                                               SUMT0951
+$IBFTC STORE                                                            SUMT0952
+      SUBROUTINE  STORE                                                 SUMT0953
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0954
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0955
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0956
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0957
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0958
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0959
+      REAL LRJ                                                          SUMT0960
+  605 DO610I=1,N                                                        SUMT0961
+  610 X1(I) = X(I)                                                      SUMT0962
+      DO 615  J=1,MN                                                    SUMT0963
+  615 RJ1(J) = RJ(J)                                                    SUMT0964
+        P1 = P0                                                         SUMT0965
+      F1 = F                                                            SUMT0966
+      G1     =G                                                         SUMT0967
+      RSIG1  =RSIGMA                                                    SUMT0968
+      RETURN                                                            SUMT0969
+      END                                                               SUMT0970
+$IBFTC S1TORE                                                           SUMT0971
+      SUBROUTINE  STORE1                                                SUMT0972
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT0973
+      COMMON /VALUE/ F,G,P0,RSIGMA, RJ(200), RHO                        SUMT0974
+      COMMON/CRST/ DELX(100), DELX0(100), RH0IN,RATIO, EPSI, THETA0,    SUMT0975
+     1NTCTR, NUMINI, X1(100), X2(100), X3(100), XR2(100), XR1(100), PR1,SUMT0976
+     2PR2, P1, F1, RJ1(200), DOTT, PGRAD(100), DIAG(100), RJ3(200),     SUMT0977
+     3PREV3, F3, ADELX, RSIG1, G1, G3, RSIG3,NVI,NPHASE,NSATIS,LRJ(200) SUMT0978
+      REAL LRJ                                                          SUMT0979
+      DO 655  I=1,N                                                     SUMT0980
+  655 X3(I) = X(I)                                                      SUMT0981
+      DO 660  J=1,MN                                                    SUMT0982
+  660 RJ3(J) = RJ(J)                                                    SUMT0983
+      PREV3  = P0                                                       SUMT0984
+      F3= F                                                             SUMT0985
+      RSIG3  =RSIGMA                                                    SUMT0986
+      G3     =G                                                         SUMT0987
+      RETURN                                                            SUMT0988
+      END                                                               SUMT0989
+$IBFTC TCIME                                                            SUMT0990
+      SUBROUTINE TIMEC                                                  SUMT0991
+      CALL TIME(X)                                                      SUMT0992
+      WRITE(6,666)  X                                                   SUMT0993
+  666 FORMAT( 6X, 5HTIME=F9.3,8H SECONDS)                               SUMT0994
+      RETURN                                                            SUMT0995
+      END                                                               SUMT0996
+$IBMAP TIME    LIST,REF  NLP TIMING ROUTINE                             SUMT0997
+       ENTRY   SET                                                      SUMT0998
+       ENTRY   TIME                                                     SUMT0999
+*                                                                       SUMT1000
+*  THE CALLING SEQUENCE IS                                              SUMT1001
+*    CALL SET(TMAX)                                                     SUMT1002
+*    WHERE TMAX IS THE ADRESS OF A FLOATING POINT NUMBER GIVING THE     SUMT1003
+*    MAXIMUM NUMBER OF SECONDS THE PROGRAM IS TO BE ALLOWED TO RUN      SUMT1004
+*    UNTIL TERMINATION OR ANOTHER CALL TO SET.                          SUMT1005
+SET    SAVE                                                             SUMT1006
+       CLA     =1                                                       SUMT1007
+       STO     TSW           TO SET SWITCH IN CONVERGE                  SUMT1008
+       CLA*    3,4           GET NUMBER OF SECONDS                      SUMT1009
+       UFA     CHAR                                                     SUMT1010
+       ANA     MASK          GET NUMBER OF SECONDS AS AN INTEGER        SUMT1011
+       STO     TMAX                                                     SUMT1012
+       LDQ*    3,4                                                      SUMT1013
+       FMP     =0.90              AFTER 90 PER-CENT OF THE TIME IS UP   SUMT1014
+*                                 NT3 IS SET TO 2 FOR FULL OUTPUT       SUMT1015
+       UFA     CHAR                                                     SUMT1016
+       ANA     MASK               GET 90 PER-CENT  AS INTEGER           SUMT1017
+       LRS     35                                                       SUMT1018
+       MPY     =60                                                      SUMT1019
+       LLS     35                                                       SUMT1020
+       STO     LIMIT                                                    SUMT1021
+       COM                                                              SUMT1022
+       STO     TIMER                                                    SUMT1023
+       CLA     5             UP DATE LOCATION S.SCLK BEFORE RESETING    SUMT1024
+       SUB     S.SCIS             THE CLOCK.  SEE PP. 17-18 OF THE      SUMT1025
+       ADD     S.SCLK             PROGRAMMER'S GUIDE                    SUMT1026
+       TSX     S.SCCR,4      GOING TO CHANGE A LOCATION IN MEMORY       SUMT1027
+       STO     S.SCLK             PROTECTED REGION.                     SUMT1028
+       CLA     TIMER                                                    SUMT1029
+       TSX     S.SCCR,4                                                 SUMT1030
+       STO     S.SCIS                                                   SUMT1031
+       TSX     S.SCCR,4                                                 SUMT1032
+       STO     5                  TO PUT IN THE TIMER CELL              SUMT1033
+       CAL     SEND               FIX SO CONTROL RETURNS TO THIS ROUTINESUMT1034
+       TSX     S.SCCR,4                IF CLOCK OVERFLOWS               SUMT1035
+       STO     7                                                        SUMT1036
+       RETURN  SET                                                      SUMT1037
+*                                                                       SUMT1038
+*  THE CALLING SEQUENCE IS                                              SUMT1039
+*    CALL TIME(X)                                                       SUMT1040
+*    THE ELAPSED TIME SINCE CALLING SET IS CONVERTED TO THE NUMBER      SUMT1041
+*    OF SECONDS IN FLOATING POINT FORM AND STORED IN LOCATION X.        SUMT1042
+TIME   SAVE                                                             SUMT1043
+       CLA     5                                                        SUMT1044
+       SUB     TIMER              GET ELAPSE TIME                       SUMT1045
+       LRS     35            PUT DIVIDEND IN MQ                         SUMT1046
+       DVP     =60                                                      SUMT1047
+       STQ     SEC                                                      SUMT1048
+       ORA     CHAR                                                     SUMT1049
+       FAD     CHAR               MADE REMAINDER FLOATING PT. NO.       SUMT1050
+       FDP     SIXTY                                                    SUMT1051
+       CLA     SEC                                                      SUMT1052
+       STQ     SEC                                                      SUMT1053
+       ORA     CHAR               MAKE NO. OF SECONDS FL. PT. NO.       SUMT1054
+       FAD     CHAR                                                     SUMT1055
+       FAD     SEC                                                      SUMT1056
+       STO*    3,4                                                      SUMT1057
+OUT    RETURN  TIME                                                     SUMT1058
+SEND   TRA     *+1                                                      SUMT1059
+*                       SET OUTPUT OPTION FOR ADDITIONAL OUTPUT         SUMT1060
+       STO     AC                 EXCEEDED 0.90*TMAX SET NT3=2          SUMT1061
+       STQ     MQ                                                       SUMT1062
+       CLA     =2                                                       SUMT1063
+       STO     OPTNS+2                                                  SUMT1064
+       CLA     LIMIT                                                    SUMT1065
+       ADD     S.SCLK                                                   SUMT1066
+       STO     S.SCLK                                                   SUMT1067
+       LDQ     TMAX                                                     SUMT1068
+       MPY     =60                                                      SUMT1069
+       LLS     35                                                       SUMT1070
+       SUB     LIMIT                                                    SUMT1071
+       STO     TMAX                                                     SUMT1072
+       COM                                                              SUMT1073
+       STO     S.SCIS                                                   SUMT1074
+       STO     5                                                        SUMT1075
+       CLA     TIMER                                                    SUMT1076
+       SUB     TMAX                                                     SUMT1077
+       STO     TIMER                                                    SUMT1078
+       CLA     GOB                                                      SUMT1079
+       STO     7                                                        SUMT1080
+       LDQ     MQ                                                       SUMT1081
+       CLA     AC                                                       SUMT1082
+       TRT*    6                                                        SUMT1083
+GOB    TRA     *+1                                                      SUMT1084
+*EXCEEDED THE MAXIMUM TIME ESTIMATE                                     SUMT1085
+       STO     AC                                                       SUMT1086
+       CAL     =2                                                       SUMT1087
+       STO     TSW           SET SWITCH IN CONVERGE TO CALL EXIT        SUMT1088
+       CLA     TIMER                                                    SUMT1089
+       SUB     =3600                                                    SUMT1090
+       STO     TIMER                                                    SUMT1091
+       CLA     TMAX                                                     SUMT1092
+       ADD     S.SCLK                                                   SUMT1093
+       STO     S.SCLK        UP DATING CLOCK IN IBNUC                   SUMT1094
+       CLA     =3600                                                    SUMT1095
+       COM                                                              SUMT1096
+       STO     5                                                        SUMT1097
+       STO     S.SCIS                                                   SUMT1098
+       CLA     GOC                                                      SUMT1099
+       STO     7                                                        SUMT1100
+       CLA     AC                                                       SUMT1101
+       TRT*    6                                                        SUMT1102
+GOC    TRA     *+1                                                      SUMT1103
+       STO     AC                                                       SUMT1104
+       CLA     =3600                                                    SUMT1105
+       ADD     S.SCLK                                                   SUMT1106
+       STO     S.SCLK                                                   SUMT1107
+       STZ     5             CLEAR CLOCK AND S.SCIS                     SUMT1108
+       STZ     S.SCIS                                                   SUMT1109
+       CAL     6             CHECK TO SEE IF WE HAD A PRE-INTERRUPT TRAPSUMT1110
+       ANA     =O777                                                    SUMT1111
+       SUB     =O33                                                     SUMT1112
+       TNZ     FIN                                                      SUMT1113
+       CLA     FIN           YES WE HAD A PRE-INTERRUPT MEMORY PROTECT  SUMT1114
+       STA     26                 TRAP, PROCESS IT AND THEN RETURN TO   SUMT1115
+       CLA     AC                                                       SUMT1116
+       TRT*    6                  CLOSE OUT THE JOB                     SUMT1117
+FIN    TRA     *+1                                                      SUMT1118
+       TRT     *+1           MAKE SURE TRAPS ARE NOT INHIBITED          SUMT1119
+       CALL    JOBOU(END)    WRITE COMMENT ON REASON FOR TERMINATION    SUMT1120
+       CALL    OCLOS              FINISH WRITING OUT THE BUFFERS        SUMT1121
+       TRA     S.JXIT        CALLING EXIT    JOB TERMINATED             SUMT1122
+       EXTERN  TSW                                                      SUMT1123
+AC     BSS     1                                                        SUMT1124
+MQ     BSS     1                                                        SUMT1125
+TMAX   BSS     1                                                        SUMT1126
+LIMIT  BSS     1                                                        SUMT1127
+END    PZE     1                                                        SUMT1128
+       PTW     SAY,,5                                                   SUMT1129
+SAY    BCI     5,TIME IS UP, CALLING EXIT.                              SUMT1130
+SEC    BSS     1                                                        SUMT1131
+TIMER  BSS     1                                                        SUMT1132
+SIXTY  DEC     60.                                                      SUMT1133
+CHAR   OCT     233000000000                                             SUMT1134
+MASK   OCT     000777777777                                             SUMT1135
+       EXTERN  OPTNS,OCLOS,JOBOU                                        SUMT1136
+       END     TIME                                                     SUMT1137
+$IBFTC G1RAD                 FOR SHELL DUAL                             SUMT1138
+      SUBROUTINE  GRAD1(IN)                                             SUMT1139
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT1140
+      COMMON   E, C, D,  AM, B                                          SUMT1141
+      DIMENSION  E(25),C(25,25),D(25),AM(50,25) ,B(25)                  SUMT1142
+C SHELL DUAL GRADIENT  COMPUTATION                                      SUMT1143
+      IF (IN)   5,5, 20                                                 SUMT1144
+    5 DO 7 IK=1,10                                                      SUMT1145
+    7 DEL(IK)= -B(IK)                                                   SUMT1146
+C   THE USE OF IK INSTEAD OF I IS TO AVOID COMPIER ERROR F4 MOD. 1 7040 SUMT1147
+      DO  10  I=11 ,15                                                  SUMT1148
+      DEL(I)  =  6.*D(I-10)*X(I)**2                                     SUMT1149
+      DO  10  J= 11 , 15                                                SUMT1150
+   10 DEL(I) = DEL(I)  + 2.*C( I-10 , J-10 )*  X(J)                     SUMT1151
+      GO  TO  50                                                        SUMT1152
+   20 J= IN +15                                                         SUMT1153
+      DO  25  I=1,10                                                    SUMT1154
+   25 DEL(I)  =  -AM ( I, J-15)                                         SUMT1155
+      DO  30  I= 1,5                                                    SUMT1156
+   30 DEL(I+10)  =  2.* C(I, J-15)                                      SUMT1157
+      DEL(J-5)   = DEL (J-5)  + 6.* D(J-15)*X(J-5)                      SUMT1158
+      GO  TO  50                                                        SUMT1159
+   50 RETURN                                                            SUMT1160
+      END                                                               SUMT1161
+$IBFTC MATRIX                FOR SHELL DUAL                             SUMT1162
+      SUBROUTINE MATRIX (IN)                                            SUMT1163
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT1164
+      COMMON   E, C, D,  AM, B                                          SUMT1165
+      DIMENSION  E(25),C(25,25),D(25),AM(50,25) ,B(25)                  SUMT1166
+C SHELL DUAL  MATRIX OF  SECOND PARTIALS                                SUMT1167
+      IF   (IN)   5 , 5,   25                                           SUMT1168
+    5 DO  10  I= 11,15                                                  SUMT1169
+      A(I , I)  =  12.* D(I-10) * X(I)                                  SUMT1170
+      DO  10  J= I , 15                                                 SUMT1171
+   10 A(I , J)  =  A(I , J)  +  2.*C(I-10 , J-10 )                      SUMT1172
+      GO TO  50                                                         SUMT1173
+   25 A ( IN+10, IN+10)  =  6.* D(IN)                                   SUMT1174
+      GO TO  50                                                         SUMT1175
+   50 RETURN                                                            SUMT1176
+      END                                                               SUMT1177
+$IBFTC RESTNT                FOR SHELL DUAL                             SUMT1178
+      SUBROUTINE   RESTNT (IN,VAL)                                      SUMT1179
+      COMMON/SHARE/ X(100), DEL(100), A(100,100),N,M, MN,NP1,NM1        SUMT1180
+      COMMON   E, C, D,  AM, B                                          SUMT1181
+C SHELL DUAL  CONSTRAINT EVALUATION                                     SUMT1182
+      DIMENSION  E(25),C(25,25),D(25),AM(50,25) ,B(25)                  SUMT1183
+      IF (IN)   5 , 5, 20                                               SUMT1184
+    5 VAL  =0.0                                                         SUMT1185
+      DO  10  I=1,10                                                    SUMT1186
+   10 VAL  =VAL - B(I)*X(I)                                             SUMT1187
+      DO  12  I=11,15                                                   SUMT1188
+      DO  12  J=11,15                                                   SUMT1189
+   12 VAL =VAL +  C(I-10, J-10)* X(I)*X(J)                              SUMT1190
+      DO  13  J=11,15                                                   SUMT1191
+   13 VAL =VAL + 2.*D(J-10)*X(J)**3                                     SUMT1192
+      GO  TO  50                                                        SUMT1193
+   20 J= IN +15                                                         SUMT1194
+      VAL  = -3.*D(J-15)* X(J-5)**2 -E(J-15)                            SUMT1195
+      DO  25   I=1,10                                                   SUMT1196
+   25 VAL  = AM(I, J-15) * X(I)  +VAL                                   SUMT1197
+      DO   30   I=1,5                                                   SUMT1198
+   30 VAL =VAL -2.*C( I ,J-15)* X(I+10)                                 SUMT1199
+      VAL  =-VAL                                                        SUMT1200
+      GO  TO  50                                                        SUMT1201
+   50 RETURN                                                            SUMT1202
+      END                                                               SUMT1203
+$IBFTC READIN                     FOR SHELL PROB.                       SUMT1204
+      SUBROUTINE READIN                                                 SUMT1205
+C A USER'S ROUTINE FOR USE IN RAC'S NLP PROGRAM FOR SOLVING SHELL PROB. SUMT1206
+      COMMON E, C, D, A, B                                              SUMT1207
+      DIMENSION E(25), C(25,25), D(25), A(50,25),B(25)                  SUMT1208
+      N=5                                                               SUMT1209
+      M=10                                                              SUMT1210
+      READ(5,100) NEWOLD                                                SUMT1211
+C  IF NEWOLD=1 READ IN DATA FOR NEW PROBLEM                             SUMT1212
+C  IF NEWOLD=2 ONLY READ IN NEW B VECTOR                                SUMT1213
+C  IF NEWOLD=3 USE SAME CONSTANTS AS USE IN PREVIOUS PROBLEM            SUMT1214
+      GO TO(10,20,30),NEWOLD                                            SUMT1215
+   10 READ(5,99)(E(I),I=1,N)                                            SUMT1216
+      READ(5,99) ((C(I,J),J=1,N),I=1,N)                                 SUMT1217
+      READ(5,99) (D(I),I=1,N)                                           SUMT1218
+      READ(5,99) ((A(I,J),J=1,N),I=1,M)                                 SUMT1219
+   20 READ(5,99) (B(I),I=1,M)                                           SUMT1220
+   30 RETURN                                                            SUMT1221
+  100 FORMAT(I5)                                                        SUMT1222
+   99 FORMAT(5F10.0)                                                    SUMT1223
+      END                                                               SUMT1224
+$ENTRY         MAIN                                                             
+       1.E-7          1.     1.E-  4          4.      180.00   5  15            
+      1.E-04      1.E-04      1.E-04      1.E-04      1.E-04      1.E-04        
+         60.      1.E-04      1.E-04      1.E-04      1.E-04      1.E-04        
+      1.E-04      1.E-04      1.E-04                                            
+    1                                                                           
+      -15.      -27.      -36.      -18.      -12.                              
+       30.      -20.      -10.       32.      -10.                              
+      -20.       39.       -6.      -31.       32.                              
+      -10.       -6.       10.       -6.      -10.                              
+       32.      -31.       -6.       39.      -20.                              
+      -10.       32.      -10.      -20.       30.                              
+        4.        8.       10.        6.        2.                              
+      -16.        2.         0        1.         0                              
+         0       -2.         0        .4        2.                              
+      -3.5         0        2.         0         0                              
+         0       -2.         0       -4.       -1.                              
+         0       -9.       -2.        1.      -2.8                              
+         2         0       -4.         0         0                              
+       -1.       -1.       -1.       -1.       -1.                              
+       -1.       -2.       -3.       -2.       -1.                              
+        1.        2.        3.        4.        5.                              
+        1.        1.        1.        1.        1.                              
+      -40.       -2.      -.25       -4.       -4.                              
+       -1.      -40.      -60.        5.        1.                              
+      3      1      1      1      1      1      1      1      1      1          
+       1.E-7          1.     1.E-  4          4.      180.00   5  15            
+    3                                                                           
+      3      1      1      1      1      1      1      1      1      1          
+$IBSYS                                                                    SYSBI$

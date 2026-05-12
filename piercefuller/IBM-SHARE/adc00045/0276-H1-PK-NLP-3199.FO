@@ -1,0 +1,360 @@
+CMGFN                                                                   MGFN 000
+C                                                                       MGFN 001
+C     THIS PROGRM IS A SUBROUTINE WHICH LOCATES THE MAXIMUM (OR THE     MGFN 002
+C     MINIMUM) OF A CONVEX (OR CONCAVE) FUNCTION                        MGFN 003
+C                                                                       MGFN 004
+      SUBROUTINE MGFN(MM,NN,A,B,X,FX,EPS,TOLX,TOLB,TOLFX,IFS,NIBR,KRETRNMGFN 005
+     1)                                                                 MGFN 006
+      DIMENSION A(20,40),B(20),X(40),C(40),U(60),S(40),D(40),G(20)      MGFN 007
+C                                                                       MGFN 008
+C                                                                       MGFN 009
+C                                                                       MGFN 010
+      M=MM                                                              MGFN 011
+      N=NN                                                              MGFN 012
+      NI=0                                                              MGFN 013
+      DIMENSION PT(3),EL(9)                                             MGFN 014
+      PT=10.                                                            MGFN 015
+      PT(2)=100.                                                        MGFN 016
+      PT(3)=1000.                                                       MGFN 017
+      DO 10 J=1,9                                                       MGFN 018
+   10 EL(J)=J                                                           MGFN 019
+C                                                                       MGFN 020
+C     TEST TO SEE IF THE USER HAS PROVIDED AN INITIAL FEASIBLE SOLUTION.MGFN 021
+C       IFS  LESS THAN OR EQUAL TO ZERO IMPLIES  NO.                    MGFN 022
+C       IFS GREATER THAN ZERO IMPLIES  YES.                             MGFN 023
+C                                                                       MGFN 024
+      IF (IFS)20,20,40                                                  MGFN 025
+   20 DO 25 J=1,N                                                       MGFN 026
+B  25 U(J)=377777777777                                                 MGFN 027
+      CALL BVSUB(M,N,A,B,C,U,X,EPS,0,KR)                                MGFN 028
+      GO TO (30,400),KR                                                 MGFN 029
+   30 IF (IFS)400,40,40                                                 MGFN 030
+C                                                                       MGFN 031
+   40 CALL COMFN(N,X,FX)                                                MGFN 032
+   50 NXZ=0                                                             MGFN 033
+      DO 100 J=1,N                                                      MGFN 034
+      IF (ABSF(X(J))-TOLX)60,60,70                                      MGFN 035
+   60 X(J)=0.                                                           MGFN 036
+      D(J)=0.                                                           MGFN 037
+      U(J)=1.                                                           MGFN 038
+      NXZ=NXZ+1                                                         MGFN 039
+      GO TO 100                                                         MGFN 040
+   70 IF (X(J))80,60,90                                                 MGFN 041
+   80 KR=3                                                              MGFN 042
+      GO TO 400                                                         MGFN 043
+   90 D(J)=-1.                                                          MGFN 044
+      U(J)=2.                                                           MGFN 045
+  100 CONTINUE                                                          MGFN 046
+C                                                                       MGFN 047
+      DO 150 I=1,M                                                      MGFN 048
+      SUM=0.                                                            MGFN 049
+      G(I)=0.                                                           MGFN 050
+      DO 120 J=1,N                                                      MGFN 051
+      IF (X(J))110,120,110                                              MGFN 052
+  110 SUM=SUM+A(I,J)*X(J)                                               MGFN 053
+      G(I)=G(I)+A(I,J)                                                  MGFN 054
+  120 CONTINUE                                                          MGFN 055
+      ERR=ABSF(SUM-B(I))                                                MGFN 056
+      IF (ERR-TOLB)150,150,130                                          MGFN 057
+  130 TEMP=ABSF(SUM)+ABSF(B(I))                                         MGFN 058
+      IF (ERR/TEMP-TOLB)150,150,140                                     MGFN 059
+  140 KR=4                                                              MGFN 060
+      GO TO 400                                                         MGFN 061
+  150 CONTINUE                                                          MGFN 062
+C                                                                       MGFN 063
+C     (X1,X2,....,XN) SATISFIES THE CONSTRAINTS                         MGFN 064
+C                                                                       MGFN 065
+C     COMPUTE THE PARTIAL DERIVATIVES OF F(X1,...,XN)                   MGFN 066
+C                                                                       MGFN 067
+      CALL PDSUB(N,X,C)                                                 MGFN 068
+      DO 160 J=1,N                                                      MGFN 069
+  160 C(J)=-C(J)                                                        MGFN 070
+      CALL BVSUB(M,N,A,G,C,U,S,EPS,1,KR)                                MGFN 071
+      GO TO (170,400),KR                                                MGFN 072
+  170 DO 180 J=1,N                                                      MGFN 073
+  180 D(J)=D(J)+S(J)                                                    MGFN 074
+      DO 190 J=1,N                                                      MGFN 075
+      IF (ABSF(D(J))-1.E-7)190,190,200                                  MGFN 076
+  190 CONTINUE                                                          MGFN 077
+      GO TO 400                                                         MGFN 078
+B 200 STARL=377777777777                                                MGFN 079
+      IF (NXZ-N)210,240,210                                             MGFN 080
+  210 DO 230 J=1,N                                                      MGFN 081
+      IF (D(J))220,230,230                                              MGFN 082
+  220 STARL=MIN1F(STARL,-X(J)/D(J))                                     MGFN 083
+  230 CONTINUE                                                          MGFN 084
+C                                                                       MGFN 085
+C     COMPUTE A NEW VECTOR... Y=X+STARL*D  WHERE  D  IS THE FEASIBLE    MGFN 086
+C     DIRECTION VECTOR. THEN COMPUTE  F(Y)  AND COMPARE WITH  F(X)      MGFN 087
+C                                                                       MGFN 088
+  240 DO 250 J=1,N                                                      MGFN 089
+  250 S(J)=X(J)+STARL*D(J)                                              MGFN 090
+      CALL COMFN(N,S,FNEW)                                              MGFN 091
+      IF (FNEW-FX)260,280,280                                           MGFN 092
+  260 DO 270 J=1,N                                                      MGFN 093
+  270 X(J)=S(J)                                                         MGFN 094
+      FX=FNEW                                                           MGFN 095
+      GO TO 380                                                         MGFN 096
+C                                                                       MGFN 097
+  280 FOLD=FX                                                           MGFN 098
+      FTEMP=FOLD                                                        MGFN 099
+      DO 360 I=1,3                                                      MGFN 100
+      SUM=STARL/PT(I)                                                   MGFN 101
+      DO 290 K=1,9                                                      MGFN 102
+  290 G(K)=EL(K)*SUM                                                    MGFN 103
+      DO 320 L=1,9                                                      MGFN 104
+      K=L                                                               MGFN 105
+      DO 300 J=1,N                                                      MGFN 106
+  300 S(J)=X(J)+G(L)*D(J)                                               MGFN 107
+      CALL COMFN(N,S,FNEW)                                              MGFN 108
+      IF (FNEW-FTEMP)310,340,340                                        MGFN 109
+  310 FTEMP=FNEW                                                        MGFN 110
+  320 CONTINUE                                                          MGFN 111
+      DO 330 J=1,N                                                      MGFN 112
+  330 X(J)=S(J)                                                         MGFN 113
+      GO TO 360                                                         MGFN 114
+  340 DO 350 J=1,N                                                      MGFN 115
+  350 X(J)=X(J)+G(K-1)*D(J)                                             MGFN 116
+  360 CONTINUE                                                          MGFN 117
+      FX=FTEMP                                                          MGFN 118
+      ERR=ABSF(FX-FOLD)                                                 MGFN 119
+      IF (ERR-TOLFX)400,400,370                                         MGFN 120
+  370 TEMP=ABSF(FX)+ABSF(FOLD)                                          MGFN 121
+      IF (ERR/TEMP-TOLFX) 400,400,380                                   MGFN 122
+  380 NI=NI+1                                                           MGFN 123
+      IF (NI-NIBR)50,390,390                                            MGFN 124
+  390 KR=5                                                              MGFN 125
+  400 KRETRN=KR                                                         MGFN 126
+      RETURN                                                            MGFN 127
+      END                                                               MGFN 128
+CBVSUB                                                                  BVSUB000
+C         THIS PROGRAM IS A SUBROUTINE WHICH MAXIMIZES A LINEAR         BVSUB001
+C     OBJECTIVE FUNCTION  F(X)=C(1)*X(1)+C(2)*X(2)+....+C(N)*X(N)       BVSUB002
+C     SUBJECT TO LINEAR CONSTRAINTS  AX=B. THE VARIABLES  X(1),...,X(N),BVSUB003
+C     ARE RESTRICTED BETWEEN  ZERO  AND ANY OTHER POSITIVE NUMBER.      BVSUB004
+C        TO MINIMIZE  F(X), MAXIMIZE ITS NEGATIVE, I.E., SET  C(J)=-C(J)BVSUB005
+C                                                                       BVSUB006
+C                                                                       BVSUB007
+      SUBROUTINE BVSUB(MM,NN,A,B,C,U,X,EPS,LL,KRETRN)                   BVSUB008
+      DIMENSION A(20,40),B(20),C(40),U(60),X(40),Y(20,60),F(20),PSI(60),BVSUB009
+     1Z(60),P(60),INA(20)                                               BVSUB010
+C                                                                       BVSUB011
+C                                                                       BVSUB012
+      N=NN                                                              BVSUB013
+      NV=N                                                              BVSUB014
+      M=MM                                                              BVSUB015
+      EPSLON=EPS                                                        BVSUB016
+B     PIN=377777777777                                                  BVSUB017
+      DO 10 I=1,M                                                       BVSUB018
+      L=N+I                                                             BVSUB019
+      U(L)=PIN                                                          BVSUB020
+      PSI(L)=-1.                                                        BVSUB021
+      Z(L)=0.                                                           BVSUB022
+      P(L)=0.                                                           BVSUB023
+      F(I)=B(I)                                                         BVSUB024
+   10 INA(I)=L                                                          BVSUB025
+      DO 20 J=1,N                                                       BVSUB026
+      PSI(J)=0.                                                         BVSUB027
+   20 P(J)=-1.                                                          BVSUB028
+      DO 30 I=1,M                                                       BVSUB029
+      DO 30 J=1,N                                                       BVSUB030
+   30 Y(I,J)=A(I,J)                                                     BVSUB031
+      DO 60 I=1,M                                                       BVSUB032
+      DO 60 K=1,M                                                       BVSUB033
+      L=N+K                                                             BVSUB034
+      IF (I-K)50,40,50                                                  BVSUB035
+   40 Y(I,L)=1.                                                         BVSUB036
+      GO TO 60                                                          BVSUB037
+   50 Y(I,L)=0.                                                         BVSUB038
+   60 CONTINUE                                                          BVSUB039
+      DO 90 I=1,M                                                       BVSUB040
+      IF (F(I))70,90,90                                                 BVSUB041
+   70 F(I)=-F(I)                                                        BVSUB042
+      DO 80 J=1,N                                                       BVSUB043
+   80 Y(I,J)=-Y(I,J)                                                    BVSUB044
+   90 CONTINUE                                                          BVSUB045
+      DO 95 J=1,N                                                       BVSUB046
+      Z(J)=0.                                                           BVSUB047
+      DO 95 I=1,M                                                       BVSUB048
+   95 Z(J)=Z(J)-Y(I,J)                                                  BVSUB049
+      KPHASE=1                                                          BVSUB050
+      N=N+M                                                             BVSUB051
+C                                                                       BVSUB052
+C     END OF INITIALIZING SECTION.                                      BVSUB053
+C     BEGIN PHASE 1 TO FIND A FEASIBLE SOLUTION                         BVSUB054
+C                                                                       BVSUB055
+  100 DO 120 I=1,N                                                      BVSUB056
+      K=I                                                               BVSUB057
+      IF (P(I))140,110,140                                              BVSUB058
+  110 IF (ABSF(Z(I))-EPSLON)120,120,130                                 BVSUB059
+  120 CONTINUE                                                          BVSUB060
+  130 KRETRN=2                                                          BVSUB061
+      GO TO 2000                                                        BVSUB062
+  140 IF (P(K)*Z(K))150,150,200                                         BVSUB063
+  150 K=K+1                                                             BVSUB064
+      IF (K-N)140,140,160                                               BVSUB065
+  160 KPHASE=KPHASE+1                                                   BVSUB066
+  170 GO TO (200,800,200,900),KPHASE                                    BVSUB067
+C                                                                       BVSUB068
+C     P(K)*Z(K) IS GREATER THAN ZERO. PROCEED TO COMPUTE  THR  AND  THS BVSUB069
+C                                                                       BVSUB070
+  200 J=1                                                               BVSUB071
+      L=1                                                               BVSUB072
+      DO 320 I=1,M                                                      BVSUB073
+      TEMP=P(K)*Y(I,K)                                                  BVSUB074
+      IF (TEMP)210,320,250                                              BVSUB075
+  210 GO TO(220,230),J                                                  BVSUB076
+  220 J=2                                                               BVSUB077
+      THR=-F(I)/TEMP                                                    BVSUB078
+      IR=I                                                              BVSUB079
+      GO TO 320                                                         BVSUB080
+  230 TEMP=-F(I)/TEMP                                                   BVSUB081
+      IF (TEMP-THR)240,320,320                                          BVSUB082
+  240 THR=TEMP                                                          BVSUB083
+      IR=I                                                              BVSUB084
+      GO TO 320                                                         BVSUB085
+  250 IE=INA(I)                                                         BVSUB086
+      D=PIN-U(IE)                                                       BVSUB087
+      GO TO (260,280),L                                                 BVSUB088
+  260 L=2                                                               BVSUB089
+      IS=I                                                              BVSUB090
+      IF (D)310,310,270                                                 BVSUB091
+  270 THS=(U(IE)-F(I))/TEMP                                             BVSUB092
+      GO TO 320                                                         BVSUB093
+  280 IF (D)320,320,290                                                 BVSUB094
+  290 TEMP=(U(IE)-F(I))/TEMP                                            BVSUB095
+      IF (TEMP-THS)300,320,320                                          BVSUB096
+  300 THS=TEMP                                                          BVSUB097
+      IS=I                                                              BVSUB098
+      GO TO 320                                                         BVSUB099
+  310 THS=PIN                                                           BVSUB100
+  320 CONTINUE                                                          BVSUB101
+      GO TO (330,340),J                                                 BVSUB102
+  330 THR=PIN                                                           BVSUB103
+      GO TO 360                                                         BVSUB104
+  340 GO TO (350,360),L                                                 BVSUB105
+  350 THS=PIN                                                           BVSUB106
+C                                                                       BVSUB107
+C                                                                       BVSUB108
+  360 TEMP=MIN1F(U(K),THR,THS)                                          BVSUB109
+      IF (U(K)-TEMP)400,370,400                                         BVSUB110
+  370 TEMP=P(K)*U(K)                                                    BVSUB111
+      DO 390 I=1,M                                                      BVSUB112
+      F(I)=F(I)+TEMP*Y(I,K)                                             BVSUB113
+      IF (F(I)-5.E-8)380,380,390                                        BVSUB114
+  380 F(I)=0.                                                           BVSUB115
+  390 CONTINUE                                                          BVSUB116
+      P(K)=-P(K)                                                        BVSUB117
+      GO TO 100                                                         BVSUB118
+C                                                                       BVSUB119
+  400 IF (THR-TEMP)420,410,420                                          BVSUB120
+  410 IE=INA(IR)                                                        BVSUB121
+      P(IE)=-1.                                                         BVSUB122
+      THETA=THR                                                         BVSUB123
+      GO TO 430                                                         BVSUB124
+C                                                                       BVSUB125
+  420 IR=IS                                                             BVSUB126
+      IE=INA(IR)                                                        BVSUB127
+      P(IE)=1.                                                          BVSUB128
+      THETA=THS                                                         BVSUB129
+C                                                                       BVSUB130
+  430 INA(IR)=K                                                         BVSUB131
+      TEMP=Y(IR,K)                                                      BVSUB132
+      DO 450 J=1,N                                                      BVSUB133
+      Y(IR,J)=Y(IR,J)/TEMP                                              BVSUB134
+      IF (ABSF(Y(IR,J))-EPSLON)440,440,450                              BVSUB135
+  440 Y(IR,J)=0.                                                        BVSUB136
+  450 CONTINUE                                                          BVSUB137
+      DO 500 I=1,M                                                      BVSUB138
+      IF (IR-I)460,500,460                                              BVSUB139
+  460 DO 490 J=1,N                                                      BVSUB140
+      IF (K-J)470,490,470                                               BVSUB141
+  470 Y(I,J)=Y(I,J)-Y(IR,J)*Y(I,K)                                      BVSUB142
+      IF (ABSF(Y(I,J))-EPSLON)480,480,490                               BVSUB143
+  480 Y(I,J)=0.                                                         BVSUB144
+  490 CONTINUE                                                          BVSUB145
+  500 CONTINUE                                                          BVSUB146
+C                                                                       BVSUB147
+      TEMP=P(K)*THETA                                                   BVSUB148
+      F(IR)=0.5*(P(K)+1.)*U(K)-TEMP                                     BVSUB149
+      IF (ABSF(F(IR))-5.E-8)510,510,520                                 BVSUB150
+  510 F(IR)=0.                                                          BVSUB151
+  520 DO 550 I=1,M                                                      BVSUB152
+      IF (I-IR)530,550,530                                              BVSUB153
+  530 F(I)=F(I)+TEMP*Y(I,K)                                             BVSUB154
+      Y(I,K)=0.                                                         BVSUB155
+      IF (ABSF(F(I))-5.E-8)540,540,550                                  BVSUB156
+  540 F(I)=0.                                                           BVSUB157
+  550 CONTINUE                                                          BVSUB158
+      P(K)=0.                                                           BVSUB159
+C                                                                       BVSUB160
+C     COMPUTE THE NEW  Z(J), J=1,2,...,N                                BVSUB161
+C                                                                       BVSUB162
+  600 DO 750 J=1,N                                                      BVSUB163
+      THETA=0.                                                          BVSUB164
+      TEMP=0.                                                           BVSUB165
+      IF (ABSF(PSI(J))-PIN)610,620,620                                  BVSUB166
+  610 THETA=-PSI(J)                                                     BVSUB167
+      GO TO 650                                                         BVSUB168
+  620 IF (PSI(J))630,610,640                                            BVSUB169
+  630 TEMP=1.                                                           BVSUB170
+      GO TO 650                                                         BVSUB171
+  640 TEMP=-1.                                                          BVSUB172
+  650 DO 700 I=1,M                                                      BVSUB173
+      L=INA(I)                                                          BVSUB174
+      IF (ABSF(PSI(L))-PIN)660,670,670                                  BVSUB175
+  660 THETA=THETA+PSI(L)*Y(I,J)                                         BVSUB176
+      GO TO 700                                                         BVSUB177
+  670 IF (PSI(L))680,700,690                                            BVSUB178
+  680 TEMP=TEMP-Y(I,J)                                                  BVSUB179
+      GO TO 700                                                         BVSUB180
+  690 TEMP=TEMP+Y(I,J)                                                  BVSUB181
+  700 CONTINUE                                                          BVSUB182
+      IF (ABSF(TEMP)-EPSLON)710,710,740                                 BVSUB183
+  710 IF (ABSF(THETA)-EPSLON)720,720,730                                BVSUB184
+  720 Z(J)=0.                                                           BVSUB185
+      GO TO 750                                                         BVSUB186
+  730 Z(J)=THETA                                                        BVSUB187
+      GO TO 750                                                         BVSUB188
+  740 Z(J)=TEMP                                                         BVSUB189
+  750 CONTINUE                                                          BVSUB190
+      GO TO 100                                                         BVSUB191
+C                                                                       BVSUB192
+C                                                                       BVSUB193
+C     PHASE 2. IF ONLY A FEASIBLE SOLUTION IS REQUIRED, PHASE 2         BVSUB194
+C     IS SKIPPED. CONTROL TRANSFERS TO PHASE 3.                         BVSUB195
+C     LL EQUAL TO 0 MEANS ONLY FEASIBLE SOLUTION IS REQUIRED            BVSUB196
+C     LL DIFFERENT FROM 0 MEANS OPTIMAL SOLUTION IS REQUIRED            BVSUB197
+C                                                                       BVSUB198
+C                                                                       BVSUB199
+  800 IF (LL)810,900,810                                                BVSUB200
+  810 DO 820 J=1,NV                                                     BVSUB201
+  820 PSI(J)=C(J)                                                       BVSUB202
+      DO 830 I=1,M                                                      BVSUB203
+      L=NV+I                                                            BVSUB204
+  830 PSI(L)=-PIN                                                       BVSUB205
+      DO 840 I=1,M                                                      BVSUB206
+      IF (INA(I)-NV)840,840,850                                         BVSUB207
+  840 CONTINUE                                                          BVSUB208
+      N=NV                                                              BVSUB209
+  850 KPHASE=3                                                          BVSUB210
+      GO TO 600                                                         BVSUB211
+C                                                                       BVSUB212
+C                                                                       BVSUB213
+C     PHASE 3. HERE THE COMPONENTS OF THE VECTOR  X  ARE COMPUTED       BVSUB214
+C                                                                       BVSUB215
+C                                                                       BVSUB216
+  900 DO 960 K=1,NV                                                     BVSUB217
+      IF (P(K))910,920,950                                              BVSUB218
+  910 X(K)=0.                                                           BVSUB219
+      GO TO 960                                                         BVSUB220
+  920 DO 940 I=1,M                                                      BVSUB221
+      IF (INA(I)-K)940,930,940                                          BVSUB222
+  930 X(K)=F(I)                                                         BVSUB223
+      GO TO 960                                                         BVSUB224
+  940 CONTINUE                                                          BVSUB225
+  950 X(K)=U(K)                                                         BVSUB226
+  960 CONTINUE                                                          BVSUB227
+      KRETRN=1                                                          BVSUB228
+ 2000 RETURN                                                            BVSUB229
+      END                                                               BVSUB230

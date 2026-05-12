@@ -1,0 +1,488 @@
+      SUBROUTINE EIG5(A,M,N,RR,RI,STARTR,STARTI,PRINT)                  EIG50010
+C THE NXN REAL MATRIX A IS REDUCED TO HESSENBERG FORM BY HESS. M EIGEN- EIG50020
+C VALUES RR(J)+I*RI(J) ARE FOUND BY LAGUERRE'S METHOD USING THE HESSEN- EIG50030
+C BERG FORM TO EVALUATE THE CHARACTERISTIC POLYNOMIAL AND DERIVATIVES.  EIG50040
+C IF PRINT=0. THERE WILL BE NO PRINT OUT.                               EIG50050
+C SEE LAG FOR THE MEANING OF STARTR AND STARTI.                         EIG50060
+      DIMENSION A(100,100),RR(100),RI(100),GAMMA(100)                   EIG50070
+      CALL TRACE(A,N,PRINT)                                             EIG50080
+      CALL HESS(A,N,SIZE,PRINT)                                         EIG50090
+      CALL TRACE(A,N,PRINT)                                             EIG50100
+      DO 10 I=2,N                                                       EIG50110
+   10 GAMMA(I-1)=A(I-1,I)                                               EIG50120
+      GAMMA(N)=0.                                                       EIG50130
+C IS MATRIX REDUCED. DISPENSE WITH LAG FOR 1X1 AND 2X2 MATRICES.        EIG50140
+      NU=0                                                              EIG50150
+      NV=0                                                              EIG50160
+   15 IF(NV-N)20,75,75                                                  EIG50170
+   20 NV=NV+1                                                           EIG50180
+      NU=NV                                                             EIG50190
+   25 IF(GAMMA(NV)) 30,35,30                                            EIG50200
+   30 NV=NV+1                                                           EIG50210
+      GO TO 25                                                          EIG50220
+   35 IF(NV-NU-1)60,46,40                                               EIG50230
+   40 MM=XMIN0F(NV,M)                                                   EIG50240
+      GAMMA(NV)=-1.0                                                    EIG50250
+C     FIND THE TRACES OF THE SUBMATRIX AND ITS SQUARE                   EIG50260
+      NU1=NU+1                                                          EIG50270
+   41 SPUR1=A(NU,NU)                                                    EIG50280
+      SPUR2=SPUR1**2                                                    EIG50290
+      DO 42 J=NU1,NV                                                    EIG50300
+      T=A(J,J)                                                          EIG50310
+      SPUR1=SPUR1+T                                                     EIG50320
+   42 SPUR2=SPUR2+T**2+2.*A(J-1,J)*A(J,J-1)                             EIG50330
+   45 CALL LAG(A,GAMMA,RR,RI,NU,NV,MM,STARTR,STARTI,SPUR1,SPUR2,PRINT,  EIG50340
+     1SIZE)                                                             EIG50350
+      GO TO 15                                                          EIG50360
+   46 S=.5*(A(NU,NU)+A(NV,NV))                                          EIG50370
+      DIS=(.5*(A(NU,NU)-A(NV,NV)))**2+A(NU,NV)*A(NV,NU)                 EIG50380
+      T=SQRTF(ABSF(DIS))                                                EIG50390
+      IF(DIS)50,55,55                                                   EIG50400
+   50 RR(NU)=S                                                          EIG50410
+      RI(NU)=T                                                          EIG50420
+      RR(NV)=S                                                          EIG50430
+      RI(NV)=-T                                                         EIG50440
+      GO TO 65                                                          EIG50450
+   55 RR(NU)=S+SIGNF(T,S)                                               EIG50460
+      RI(NU)=0.                                                         EIG50470
+      RR(NV)=(S**2-DIS)/RR(NU)                                          EIG50480
+      RI(NV)=0.                                                         EIG50490
+      GO TO 65                                                          EIG50500
+   60 RR(NU)=A(NU,NU)                                                   EIG50510
+      RI(NU)=0.                                                         EIG50520
+   65 IF(PRINT)70,15,70                                                 EIG50530
+   70 WRITE OUTPUT TAPE 6,1,(RR(J),RI(J),J=NU,NV)                       EIG50540
+      GO TO 15                                                          EIG50550
+   75 S=0.                                                              EIG50560
+      DO 80 J=1,M                                                       EIG50570
+   80 S=S+RR(J)                                                         EIG50580
+      IF (PRINT) 85,90,85                                               EIG50590
+   85 WRITE OUTPUT TAPE 6,2,S                                           EIG50600
+   90 RETURN                                                            EIG50610
+    1 FORMAT(11H0EIGENVALUE,12X,2E20.8)                                 EIG50620
+    2 FORMAT(/,36X,20HSUM OF EIGENVALUES =E16.8)                        EIG50630
+      END                                                               EIG50640
+*      LIST 8                                                           EIG50650
+      SUBROUTINE HESS(A,N,SB,PRINT)                                     EIG50660
+C     REDUCTION OF THE FULL NXN MATRIX A TO LOWER HESSENBERG FORM BY    EIG50670
+C     ELEMENTARY SIMILARITY TRANSFORMATIONS WITH INTERCHANGES. SB WILL  EIG50680
+C     BECOME THE ABSOLUTE VALUE OF THE GREATEST ELEMENT OF A.           EIG50690
+      DIMENSION A(100,100)                                              EIG50700
+      SB=ABSF(A(N,N))                                                   EIG50710
+      N1=N-1                                                            EIG50720
+      N2=N-2                                                            EIG50730
+    8 DO 29 J=1,N1                                                      EIG50740
+      SA=0.                                                             EIG50750
+      DO 9 K=1,J                                                        EIG50760
+    9 SA=MAX1F(SA,ABSF(A(J,K)))                                         EIG50770
+      J1=J+1                                                            EIG50780
+      J2=J+2                                                            EIG50790
+      S=ABSF(A(J,J1))                                                   EIG50800
+      L=J1                                                              EIG50810
+      NJ1=N-J1                                                          EIG50820
+      IF (NJ1) 10,10,11                                                 EIG50830
+   10 SB=MAX1F(S,SA,ABSF(A(N,N-1)),SB)                                  EIG50840
+      IF(S-1.E-8*SA) 20,20,23                                           EIG50850
+C     FIND THE PIVOT IN ROW J                                           EIG50860
+   11 DO 13 K=J2,N                                                      EIG50870
+      T=ABSF(A(J,K))                                                    EIG50880
+      IF(T-S)13,13,12                                                   EIG50890
+   12 L=K                                                               EIG50900
+      S=T                                                               EIG50910
+   13 CONTINUE                                                          EIG50920
+      IF(L-J1)14,18,14                                                  EIG50930
+C     INTERCHANGE ROWS AND COLUMNS J+1 AND L                            EIG50940
+   14 DO 15 K=1,N                                                       EIG50950
+      T=A(K,J+1)                                                        EIG50960
+      A(K,J+1)=A(K,L)                                                   EIG50970
+   15 A(K,L)=T                                                          EIG50980
+   16 DO 17 K=1,N                                                       EIG50990
+      T=A(J+1,K)                                                        EIG51000
+      A(J+1,K)=A(L,K)                                                   EIG51010
+   17 A(L,K)=T                                                          EIG51020
+   18 SB=MAX1F(S,SA,ABSF(A(N,J)),SB)                                    EIG51030
+C     SEE IF MATRIX IS REDUCED,THEN FIND MULTIPLIERS AND UPDATE ROW J+1 EIG51040
+      IF(S-1.E-8*SA)20,20,21                                            EIG51050
+   20 A(J,J+1)=0.                                                       EIG51060
+      NJ1=0                                                             EIG51070
+      GO TO 23                                                          EIG51080
+  21        IF (NJ1) 23,23,215                                          EIG51090
+  215 T=A(J,J1)                                                         EIG51100
+      DO 22 K=J2,N                                                      EIG51110
+   22 A(J,K)=A(J,K)/T                                                   EIG51120
+   23 DO 29 I=1,N                                                       EIG51130
+      M=XMIN0F(J,I-2)                                                   EIG51140
+      S=0.                                                              EIG51150
+      IF(NJ1)26,26,24                                                   EIG51160
+   24 DO 25 K=J2,N                                                      EIG51170
+   25 S=S+A(K,I)*A(J,K)                                                 EIG51180
+   26 IF(M)29,29,27                                                     EIG51190
+   27 DO 28 K=1,M                                                       EIG51200
+   28 S=S-A(K,I)*A(J1,K+1)                                              EIG51210
+   29 A(J1,I)=A(J1,I)+S                                                 EIG51220
+      IF(PRINT)31,32,31                                                 EIG51230
+   31 WRITE OUTPUT TAPE 6,1,                                            EIG51240
+   32 RETURN                                                            EIG51250
+    1 FORMAT(1H0,48X,22HALMOST TRIANGULAR FORM)                         EIG51260
+      END                                                               EIG51270
+      SUBROUTINE TRACE(A,N,PRINT)                                       EIG51280
+      DIMENSION A(100,100)                                              EIG51290
+      IF(PRINT)10,30,10                                                 EIG51300
+   10 S=0.                                                              EIG51310
+      DO 20 J=1,N                                                       EIG51320
+   20 S=S+A(J,J)                                                        EIG51330
+      WRITE OUTPUT TAPE 6,1,S                                           EIG51340
+   30 RETURN                                                            EIG51350
+    1 FORMAT(1H0,48X,7HTRACE =E16.8)                                    EIG51360
+      END                                                               EIG51370
+*      LIST 8                                                           EIG51380
+      SUBROUTINE LAG(A,GA,RR,RI,NU,NV,MM,STR,STI,SP1,SP2,PR,SZ)         EIG51390
+C M EIGENVALUES RR(J)+I*RI(J) OF THE PRINCIPAL SUBMATRIX (NU,NU) THROUGHEIG51400
+C (NV,NV) OF A ARE FOUND BY LAGUERRE'S METHOD. THE SEARCH BEGINS AT STR+EIG51410
+C STI*I. HOWEVER IF STR IS GTR THAN 1.E35 THEN THE PROGRAM PROVIDES A   EIG51420
+C GUESS AT A ROOT OF MAXIMAL MODULUS.                                   EIG51430
+      DIMENSION A(100,100),GA(100),RR(100),RI(100),P(6,101),B(6)        EIG51440
+      CALL FPTEST(OVFL)                                                 EIG51450
+      IF(PR)3,4,3                                                       EIG51460
+    3 WRITE OUTPUT TAPE 6,2,                                            EIG51470
+    4 SLOW=0.                                                           EIG51480
+      NUQ=NU-1                                                          EIG51490
+      ITS=0                                                             EIG51500
+      EGSUM1=0.                                                         EIG51510
+      EGSUM2=0.                                                         EIG51520
+      CUP=.25*SZ                                                        EIG51530
+      CAP=1.E-16*SZ**2                                                  EIG51540
+      ZZ=CAP                                                            EIG51550
+      RNEW=2.                                                           EIG51560
+      DO 5 J=2,6                                                        EIG51570
+    5 P(J,NU)=0.                                                        EIG51580
+C                                                                       EIG51590
+C     STARTING VALUE,EITHER GIVEN OR THE ITERATE OF INFINITY            EIG51600
+C                                                                       EIG51610
+      IF(STR-1.E+35)6,7,7                                               EIG51620
+    6 X=STR                                                             EIG51630
+      Y=STI                                                             EIG51640
+      GO TO 14                                                          EIG51650
+    7 S1R=EGSUM1-SP1                                                    EIG51660
+      S2R=SP2-EGSUM2                                                    EIG51670
+      F1=NV-NUQ                                                         EIG51680
+      IF(ABSF(S1R)+ABSF(S2R)-1.E-8*ZZ)8,8,9                             EIG51690
+    8 X=CUP                                                             EIG51700
+      Y=0.                                                              EIG51710
+      GO TO 14                                                          EIG51720
+    9 DR=(F1-1.)*(F1*S2R-S1R**2)                                        EIG51730
+      ER=SQRTF(ABSF(DR))                                                EIG51740
+      IF(DR)10,11,11                                                    EIG51750
+   10 X=-S1R/F1                                                         EIG51760
+      Y=ER/F1                                                           EIG51770
+      GO TO 12                                                          EIG51780
+   11 X=-(S1R+SIGNF(ER,S1R))/F1                                         EIG51790
+      Y=0.                                                              EIG51800
+   12 IF(NUQ-NU+ITS)13,14,14                                            EIG51810
+   13 X=1.75*X                                                          EIG51820
+      Y=1.75*Y                                                          EIG51830
+C                                                                       EIG51840
+C     EVALUATE CHARACTERISTIC POLYNOMIAL AND DERIVATIVES                EIG51850
+C                                                                       EIG51860
+   14 M=6                                                               EIG51870
+      P(1,NU)=1.0                                                       EIG51880
+      IO=0                                                              EIG51890
+      IF(ABSF(Y)-1.E-5*ABSF(X))15,19,19                                 EIG51900
+   15 Y=0.                                                              EIG51910
+      M=3                                                               EIG51920
+      DO 18 J=4,6                                                       EIG51930
+   18 B(J)=0.                                                           EIG51940
+  19           DO 26 K=NU,NV                                            EIG51950
+          DO 26 L=1,M                                                   EIG51960
+      IS=XSIGNF(1,3-L)                                                  EIG51970
+      L1=L+3*IS                                                         EIG51980
+  20  R=-X*P(L,K)+Y*FLOATF(IS)*P(L1,K)-FLOATF(XMODF(L-1,3))*P(L-1,K)    EIG51990
+      DO 21 J=NU,K                                                      EIG52000
+   21 R=R+P(L,J)*A(K,J)                                                 EIG52010
+      P(L,K+1)=-R/GA(K)                                                 EIG52020
+            IF (OVFL) 22,26,22                                          EIG52030
+   22 OVFL=0.                                                           EIG52040
+      KP1=K+1                                                           EIG52050
+      IO=IO+1                                                           EIG52060
+          DO 24 I=NU,KP1                                                EIG52070
+          DO 24 J=1,M                                                   EIG52080
+   24 P(J,I)=P(J,I)*1.E-20                                              EIG52090
+      GO TO 20                                                          EIG52100
+  26  CONTINUE                                                          EIG52110
+   29 R=0.                                                              EIG52120
+      DO 30 J=1,M                                                       EIG52130
+      B(J)=P(J,NV+1)                                                    EIG52140
+   30 R=MAX1F(R,ABSF(B(J)))                                             EIG52150
+C                                                                       EIG52160
+C     SCALE DOWN IF NECESSARY                                           EIG52170
+C                                                                       EIG52180
+      IF (R-1.E+18) 33,33,31                                            EIG52190
+   31 DO 32 J=1,M                                                       EIG52200
+   32 B(J)=B(J)*1.E-22                                                  EIG52210
+   33 ITS=ITS+1                                                         EIG52220
+      ABZ2=X**2+Y**2                                                    EIG52230
+      ZZ=MAX1F(ABZ2,1.E-6*CAP)                                          EIG52240
+      G1=B(1)**2+B(4)**2                                                EIG52250
+      G2=B(2)**2+B(5)**2                                                EIG52260
+      G3=B(3)**2+B(6)**2                                                EIG52270
+      IF(PR)332,34,332                                                  EIG52280
+  332 WRITE OUTPUT TAPE 6,96,X,Y,G1,G2,G3,IO                            EIG52290
+C                                                                       EIG52300
+C     FIND THE CONTRIBUTIONS Q1,Q2 TO S1,S2 OF THE COMPUTED EIGENVALUES EIG52310
+C                                                                       EIG52320
+   34 Q1R=0.                                                            EIG52330
+      Q1I=0.                                                            EIG52340
+      Q2R=0.                                                            EIG52350
+      Q2I=0.                                                            EIG52360
+      VNEAR=0.                                                          EIG52370
+      IF(NUQ-NU)40,35,35                                                EIG52380
+   35 DO 38 J=NU,NUQ                                                    EIG52390
+      DR=RR(J)-X                                                        EIG52400
+      DI=RI(J)-Y                                                        EIG52410
+      D2=DR**2+DI**2                                                    EIG52420
+      IF(D2-1.E-14*ZZ)36,36,37                                          EIG52430
+   36 VNEAR=1.                                                          EIG52440
+      GO TO 41                                                          EIG52450
+   37 DR=DR/D2                                                          EIG52460
+      DI=-DI/D2                                                         EIG52470
+      Q1R=Q1R+DR                                                        EIG52480
+      Q1I=Q1I+DI                                                        EIG52490
+      Q2R=Q2R+DR**2-DI**2                                               EIG52500
+   38 Q2I=Q2I+2.*DR*DI                                                  EIG52510
+   40 IF(G1-G2*ZZ*1.E-14)41,41,42                                       EIG52520
+   41 MARK=1                                                            EIG52530
+      GO TO 73                                                          EIG52540
+C                                                                       EIG52550
+C     FIND S1 AND S2 THE LOGARITHMIC DERIVATIVES OF THE POLYNOMIAL      EIG52560
+C                                                                       EIG52570
+   42 IF(Y)44,43,44                                                     EIG52580
+   43 T1R=B(2)/B(1)                                                     EIG52590
+      T1I=0.                                                            EIG52600
+      T2R=B(3)/B(1)                                                     EIG52610
+      T2I=0.                                                            EIG52620
+      GO TO 45                                                          EIG52630
+   44 T1R=(B(2)*B(1)+B(5)*B(4))/G1                                      EIG52640
+      T1I=(B(5)*B(1)-B(2)*B(4))/G1                                      EIG52650
+      T2R=(B(3)*B(1)+B(6)*B(4))/G1                                      EIG52660
+      T2I=(B(6)*B(1)-B(3)*B(4))/G1                                      EIG52670
+   45 S1R=T1R+Q1R                                                       EIG52680
+      S1I=T1I+Q1I                                                       EIG52690
+      S2R=T1R**2-T1I**2-T2R-Q2R                                         EIG52700
+      S2I=2.*T1R*T1I-T2I-Q2I                                            EIG52710
+C                                                                       EIG52720
+C     FIND THE NEXT ITERATE USING LAGUERRE'S FORMULA                    EIG52730
+C                                                                       EIG52740
+      MARK=2                                                            EIG52750
+   46 G=NV-NUQ                                                          EIG52760
+   47 IF(G-2.)53,53,48                                                  EIG52770
+   48 IF(ITS-1)51,51,49                                                 EIG52780
+   49 IF(Y-ABSF(DELX)-ABSF(DELY))51,51,50                               EIG52790
+   50 S1I=S1I+.5/Y                                                      EIG52800
+      S2R=S2R+.25/Y**2                                                  EIG52810
+      G=G-1.                                                            EIG52820
+   51 IF(SLOW)53,53,52                                                  EIG52830
+   52 H=.5*(G-2.)                                                       EIG52840
+      GO TO 54                                                          EIG52850
+   53 H=G-1.                                                            EIG52860
+   54 DR=H*(G*S2R-S1R**2+S1I**2)                                        EIG52870
+      DI=H*(G*S2I-2.*S1R*S1I)                                           EIG52880
+      IF(DI)56,55,56                                                    EIG52890
+   55 T=SQRTF(ABSF(DR))                                                 EIG52900
+      S=MAX1F(0.,SIGNF(1.,DR))                                          EIG52910
+      ER=T*S                                                            EIG52920
+      EI=T*(1.-S)                                                       EIG52930
+      GO TO 57                                                          EIG52940
+   56 CALL CXSQRT(DR,DI,ER,EI)                                          EIG52950
+   57  IF(S1R*ER+S1I*EI)58,59,59                                        EIG52960
+   58 ER=-ER                                                            EIG52970
+      EI=-EI                                                            EIG52980
+   59 DR=S1R+ER                                                         EIG52990
+      DI=S1I+EI                                                         EIG53000
+      D2=DR**2+DI**2                                                    EIG53010
+      DELX=-G*DR/D2                                                     EIG53020
+      X=X+DELX                                                          EIG53030
+      DELY=G*DI/D2                                                      EIG53040
+      Y=Y+DELY                                                          EIG53050
+      DELNEW=DELX**2+DELY**2                                            EIG53060
+      ABZ2=X**2+Y**2                                                    EIG53070
+      ZZ=MAX1F(ABZ2,1.E-6*CAP)                                          EIG53080
+      IF(ITS-4)70,65,60                                                 EIG53090
+   60 IF(DELNEW-1.E-12*ZZ)70,70,61                                      EIG53100
+C                                                                       EIG53110
+C     TEST FOR A CYCLE                                                  EIG53120
+C                                                                       EIG53130
+   61 IF((OLDELX+DELX)**2+(OLDELY+DELY)**2-.11*DELOLD) 62,65,65         EIG53140
+   62 IF(SLOW)63,63,65                                                  EIG53150
+   63 IF(ONCE)64,64,65                                                  EIG53160
+   64 ONCE=1.                                                           EIG53170
+      DELOLD=SZ*FLOATF(NV-NU)                                           EIG53180
+      ROLD=SZ                                                           EIG53190
+      GO TO 7                                                           EIG53200
+C                                                                       EIG53210
+C     TEST FOR LINEAR CONVERGENCE                                       EIG53220
+C                                                                       EIG53230
+   65 RNEW=DELNEW/DELOLD                                                EIG53240
+      IF(RNEW-.6*ROLD)70,66,66                                          EIG53250
+   66 MARK=3                                                            EIG53260
+      IF(SLOW)67,67,69                                                  EIG53270
+   67 IF(G-3.)71,71,68                                                  EIG53280
+   68 X=X-DELX                                                          EIG53290
+      Y=Y-DELY                                                          EIG53300
+      SLOW=1.                                                           EIG53310
+      GO TO 47                                                          EIG53320
+   69 SLOW=0.                                                           EIG53330
+      GO TO 71                                                          EIG53340
+C                                                                       EIG53350
+C     TEST FOR AN EIGENVALUE                                            EIG53360
+C                                                                       EIG53370
+   70 IF(DELNEW-1.E-7*ZZ)73,73,71                                       EIG53380
+   71 ONCE=0.                                                           EIG53390
+   72 DELOLD=DELNEW                                                     EIG53400
+      ROLD=RNEW                                                         EIG53410
+      OLDELX=DELX                                                       EIG53420
+      OLDELY=DELY                                                       EIG53430
+      IF(ITS-15)14,14,77                                                EIG53440
+C                                                                       EIG53450
+C     DO WE HAVE A COMPLEX APPROACH TO A REAL ZERO                      EIG53460
+C                                                                       EIG53470
+   73 SLOW=0.                                                           EIG53480
+      IF(Y)74,77,74                                                     EIG53490
+   74 IF(G2*Y**2-G1)75,77,77                                            EIG53500
+   75 IF(ONCE)76,76,77                                                  EIG53510
+   76 ONCE=1.                                                           EIG53520
+      Y=0.                                                              EIG53530
+      GO TO 72                                                          EIG53540
+C                                                                       EIG53550
+C     ACCEPT X+I*Y AS AN EIGENVALUE                                     EIG53560
+C                                                                       EIG53570
+   77 NUQ=NUQ+1                                                         EIG53580
+      IF(ABZ2-1.E-12*CAP)78,79,79                                       EIG53590
+   78 X=0                                                               EIG53600
+      Y=0                                                               EIG53610
+   79 RR(NUQ)=X                                                         EIG53620
+      IF(ABSF(Y)-1.E-6*ABSF(X))80,80,81                                 EIG53630
+   80 Y=0                                                               EIG53640
+   81 IF(NUQ-NU)83,83,82                                                EIG53650
+   82 IF(RI(NUQ-1))83,83,84                                             EIG53660
+   83 Y=ABSF(Y)                                                         EIG53670
+      GO TO 85                                                          EIG53680
+  84  IF ((X-RR(NUQ-1))**2+(ABSF(Y)-RI(NUQ-1))**2-1.E-3*ZZ) 845,845,83  EIG53690
+  845 RR(NUQ-1)=X                                                       EIG53700
+      Y=-ABSF(Y)                                                        EIG53710
+      RI(NUQ-1)=-Y                                                      EIG53720
+   85 RI(NUQ)=Y                                                         EIG53730
+      IF(PR)86,87,86                                                    EIG53740
+   86 WRITE OUTPUT TAPE 6,1,RR(NUQ),RI(NUQ),ITS,MARK                    EIG53750
+   87 ITS=0                                                             EIG53760
+      RNEW=2.                                                           EIG53770
+      CAP=MAX1F(ABZ2,CAP)                                               EIG53780
+      EGSUM1=EGSUM1+X                                                   EIG53790
+      EGSUM2=EGSUM2+X**2-Y**2                                           EIG53800
+      IF(NUQ-MM) 88,95,95                                               EIG53810
+   88 IF (Y) 90,91,89                                                   EIG53820
+   89 Y=-Y                                                              EIG53830
+      GO TO 14                                                          EIG53840
+   90 RI(NUQ-1)=ABSF(Y)                                                 EIG53850
+C                                                                       EIG53860
+C     TAKE A NEWTON STEP FROM X+I*Y TO THE NEXT ROOT                    EIG53870
+C                                                                       EIG53880
+   91 ONCE=0.                                                           EIG53890
+      IF(NV-NUQ-3)7,7,92                                                EIG53900
+   92 IF(VNEAR) 925,925,7                                               EIG53910
+  925 IF((Q1R**2+Q1I**2)*ZZ-1.E+6)93,7,7                                EIG53920
+   93 DR=B(3)+2.*(B(2)*Q1R-B(5)*Q1I)                                    EIG53930
+      DI=B(6)+2.*(B(2)*Q1I+B(5)*Q1R)                                    EIG53940
+      D2=DR**2+DI**2                                                    EIG53950
+      IF(D2)7,7,94                                                      EIG53960
+   94 X=X-2.*(DR*B(2)+DI*B(5))/D2                                       EIG53970
+      Y=ABSF(Y-2.*(DR*B(5)-DI*B(2))/D2)                                 EIG53980
+      IF(X**2+Y**2-4.*CAP)14,14,7                                       EIG53990
+   95 CALL FPOLD                                                        EIG54000
+      RETURN                                                            EIG54010
+    1 FORMAT(11H0EIGENVALUE12X,2E20.8,12X,I3,17H ITERATIONS,TEST I1//)  EIG54020
+   96 FORMAT(8H0ITERATE20X,E15.8,5X,E15.8,8X,3E15.4,I4)                 EIG54030
+    2 FORMAT(1H050X,19HLAGUERRE ITERATIONS//31X,9HREAL PART10X,10HIMAG. EIG54040
+     1PART19X,4HP**2,10X,5HP'**2,10X,6HP''**2,3X,4HOVFL)                EIG54050
+      END                                                               EIG54060
+      SUBROUTINE CXSQRT(A,B,X,Y)                                        EIG54070
+      F=MAX1F(ABSF(A),ABSF(B))                                          EIG54080
+      F=F*SQRTF((A/F)**2+(B/F)**2)                                      EIG54090
+      IF(A)1,1,2                                                        EIG54100
+    1 Y=SQRTF((F-A)*.5)                                                 EIG54110
+      X=.5*B/Y                                                          EIG54120
+      IF(X)4,3,3                                                        EIG54130
+    4 X=-X                                                              EIG54140
+      Y=-Y                                                              EIG54150
+      GO TO 3                                                           EIG54160
+    2 X=SQRTF((F+A)*.5)                                                 EIG54170
+      Y=.5*B/X                                                          EIG54180
+    3 RETURN                                                            EIG54190
+      END                                                               EIG54200
+*      NO STANDARD ERROR                                                NUFPT010
+*     FAP                                                               NUFPT020
+*NU 7094 VERSION OF FPT      SEPT 17, 1963                      NUFPT030NUFPT030
+       PCC                                                              NUFPT040
+       COUNT   68                                                       NUFPT050
+       LBL     NUFPT,9                                                  NUFPT060
+       ENTRY   FPTEST                                                   NUFPT070
+       ENTRY   FPOLD                                                    NUFPT080
+       ENTRY   (FPT)                                                    NUFPT090
+FPTEST CLA     8                                                        NUFPT100
+       STO     NEW+1                   SAVE L(8)                        NUFPT110
+       STZ     OVFLOW                  CLEAR 77462                      NUFPT120
+       CLA     1,4                                                      NUFPT130
+       STA     NEW+2                   L(CONTENTS OF L(0))              NUFPT140
+       CLA     NEW                     L(TTR,(FPT))                     NUFPT150
+       STO     8                       MUST USE THIS (FPT)              NUFPT160
+       CLA     NEW+2                   L(STI,**)                        NUFPT170
+       STO     ERROR+1                 MODIFY(FPT) SO EXEM              NUFPT180
+       CLA     NEW+3                   DOES NOT ACT                     NUFPT190
+       STO     ERROR+2                                                  NUFPT200
+       TTR     2,4                                                      NUFPT210
+ (FPT) STI     IND           SAVE INDICATORS.                           NUFPT220
+       LDI     0             EXAMINE BITS 14-17 OF LOC ZERO             NUFPT230
+ DPQST LNT     40                                                       NUFPT240
+       TRA     *+3                                                      NUFPT250
+       LDI     DPFLG              DP ADDRESS ERROR.                     NUFPT260
+       TTR     $(EXE)                                                   NUFPT270
+       LFT     4             SKIP IF NON'OVERFLOW (BIT 15)              NUFPT280
+       TTR     ERROR         (IN FPT + 3) OVERFLOW AC OR MQ             NUFPT290
+ NOVER LFT     2             SKIP IF ACC NOT INVOLVED.              27NUNUFPT300
+       CLM                                                              NUFPT310
+       LNT     6             SKIP AND COMPLEMENT                        NUFPT320
+       COM                   ONCE ON ACC UNDRFLOW                       NUFPT330
+       COM                                                              NUFPT340
+       XCA                   GET MQ                                     NUFPT350
+       LFT     1             SKIP IF N= MQ NOT INVOLVED                 NUFPT360
+       CLM                                                              NUFPT370
+       LNT     5             COMPLEMEMT ONCE ON                         NUFPT380
+       COM                   MQ UNDERFLOW                               NUFPT390
+       COM                                                              NUFPT400
+       XCA                   RESTORE MQ AND ACC                         NUFPT410
+       LDI     IND           RESTORE INDICATORS.                        NUFPT420
+ EXIT  TTR*    0                                                        NUFPT430
+ ERROR STI     OVFLOW        77462                                      NUFPT440
+       LDI     *+2                                                      NUFPT450
+       TTR     $(EXE)                                                   NUFPT460
+       PZE     7,4,*+1                                                  NUFPT470
+       LDI     OVFLOW        RETURN FROM EXE IF NOT IN MONITOR MODE     NUFPT480
+       TTR     NOVER                                                27NUNUFPT490
+ NEW   TTR     (FPT)                   CONSTANT                         NUFPT500
+       TTR     (FPT)                   SAVE ORIGINAL L(8) HERE          NUFPT510
+       STI     **                      CONSTANT-STA OF VARIABLE HERE    NUFPT520
+       TTR     ERROR+4                 CONST                            NUFPT530
+       LDI     ERROR+3                 CONST                            NUFPT540
+       TTR     $(EXE)                                                   NUFPT550
+ FPOLD CLA     NEW+4                   RESTORE EXEM AFFECT              NUFPT560
+       STO     ERROR+1                                                  NUFPT570
+       CLA     NEW+5                                                    NUFPT580
+       STO     ERROR+2                                                  NUFPT590
+       CLA     NEW+1                   RESTORE L(8)                     NUFPT600
+ SET   STO     8                                                        NUFPT610
+       STZ     OVFLOW                  CLEAR 77462                      NUFPT620
+       TRA     1,4                                                      NUFPT630
+ DPFLG PZE     4,4,DPQST                                                NUFPT640
+       COMMON  -2                                                       NUFPT650
+ IND   COMMON  1                       77463                            NUFPT660
+OVFLOW COMMON  1                                                        NUFPT670
+       END                                                              NUFPT680

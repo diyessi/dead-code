@@ -1,0 +1,71 @@
+$IBMAP FPT                                                              FTL21720
+FPTLIM EQU     10                  FLOATING-POINT TRAP LIMIT            FTL21730
+*                                                                       FTL21740
+       ENTRY   SETFP.                                                   FTL21750
+       ENTRY   OVERF.                                                   FTL21760
+*                                                                       FTL21770
+*ENTRY FROM MAIN PROGRAM TO SET UP SPECIAL ENTRY FOR FLOATING-PT. TRAPS FTL21780
+*                                                                       FTL21790
+SETFP. TRA     **                                                       FTL21800
+       SXA     SETX,4              SAVE XR4                             FTL21810
+       CAL     FLPTRP              SETUP RETURN TO THIS ROUTINE         FTL21820
+       TSX     S.SCCR,4               IN CASE OF FLOATING-POINT TRAPS.  FTL21830
+       SLW     8                                                        FTL21840
+SETX   AXT     **,4                RESTORE XR4,                         FTL21850
+       TRA     SETFP.                 AND RETURN TO MAIN PROGRAM.       FTL21860
+*                                                                       FTL21870
+*SPECIAL ENTRY FOR FLOATING-POINT TRAPS OCCURRING IN FORTRAN PROGRAMS   FTL21880
+*                                                                       FTL21890
+FLPTRP TRA     *+1                                                      FTL21900
+       SXA     FPTX,4              SAVE XR4                             FTL21910
+FPTCNT AXT     FPTLIM+1,4         COUNT NO. OF FL. PT. TRAP OVERFLOWS CMFTL21920
+*   CHANGES HAVE BEEN MADE IN FPT SO UNDERFLOWS ARE NOT COUNTED.      CMFTL21930
+*   IF THE NO. OF OVERFLOWS AND DOUBLE PRECISION ERRORS EXCEEDS FPTLIMCMFTL21940
+*   EXECUTION IS TERMINATED.                                          CMFTL21941
+       STO     SAC                 SAVE AC                              FTL21950
+       STQ     SMQ                    AND MQ.                           FTL21960
+       CAL     0                   SAVE CONTENTS OF TRAP CELL           FTL21970
+       SLW     OVERF.                 FOR OVERFL ROUTINE.               FTL21980
+       ANA     =O000040000000      WAS THIS A DOUBLE PRECISION ERROR    FTL21990
+       TNZ     CNTTRP             ALSO COUNT DOUBLE PRECISION ERRORS  CMFTL22000
+       CAL     OVERF.                                                   FTL22010
+       ANA     =O000004000000      WAS TRAP CONDITION OVERFLOW          FTL22020
+       TZE     *+2                 NO                                   FTL22030
+       MSM     OVERF.              YES, SET OVERFLOW SWITCH ON.         FTL22040
+       CAL     OVERF.                                                   FTL22050
+       ANA     =O000002000000      WAS CONDITION IN AC                  FTL22060
+       TZE     ITSMQ               NO, ONLY IN MQ.                      FTL22070
+       MSP     ACMQSW              INITIALIZE BYPASS SWITCH             FTL22080
+       CAL     OVERF.                                                   FTL22090
+       ANA     =O000001000000      WAS CONDITION IN BOTH AC AND MQ      FTL22100
+       TNZ     *+2                 YES                                  FTL22110
+       MSM     ACMQSW              NO, SET BYPASS SWITCH ON.            FTL22120
+       ZAC                         UNDERFLOW, MAKE AC ALL ZEROS.        FTL22130
+       PLT     OVERF.                                                   FTL22140
+       COM                         OVERFLOW, MAKE AC ALL ONES.          FTL22150
+       PLT     SAC                 RESTORE AC SIGN                      FTL22160
+       CHS                                                              FTL22170
+       STO     SAC                 SAVE AC SETTING                      FTL22180
+ACMQSW BRN     PCKPMQ             TRANSFER IF CONDITION ONLY IN AC    CMFTL22190
+SETMQ  LLS     0                   RESTORE MQ SIGN                      FTL22200
+       STO     SMQ                 SAVE MQ SETTING                      FTL22210
+PCKPMQ LDQ     SMQ                PICKUP MQ                           CMFTL22220
+       PLT     OVERF.             DO NOT COUNT UNDERFLOWS             CMFTL22221
+CNTTRP TNX     FPTOUT,4,1       IF(NO. OVRFLWS.GE.FPTLIM)GO TO FPTOUT CMFTL22222
+       SXA     FPTCNT,4           REPLACE COUNTER                     CMFTL22223
+       CLA     SAC                PICKUP AC                           CMFTL22230
+FPTX   AXT     **,4                RESTORE XR4,                         FTL22240
+       TRT*    OVERF.                 AND RETURN TO TRAPPED LOCATION +1.FTL22250
+*                                                                       FTL22260
+ITSMQ  ZAC                         UNDERFLOW, MAKE AC ALL ZEROS.        FTL22270
+       PLT     OVERF.                                                   FTL22280
+       COM                         OVERFLOW, MAKE AC ALL ONES.          FTL22290
+       TRA     SETMQ                                                    FTL22300
+FPTOUT TRT     *+1                                                      FTL22310
+       TSL     FEXEM.              ERROR, TRAP LIMIT REACHED.           FTL22320
+       PZE     EXIT,,31            NO OPTIONAL RETURN                   FTL22330
+SAC    PZE     0                   AC STORAGE                           FTL22340
+SMQ    PZE     0                   MQ STORAGE                           FTL22350
+OVERF. PZE     0                   INDICATORS FROM LAST TRAP            FTL22360
+       EXTERN  FEXEM.,EXIT                                              FTL22370
+       END                                                              ZZZ99999

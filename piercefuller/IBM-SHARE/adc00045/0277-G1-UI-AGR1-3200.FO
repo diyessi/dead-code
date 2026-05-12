@@ -1,0 +1,314 @@
+CMAIN                                                                           
+C     PROGRAM TO COMPUTE THE SCALE RADIUS VS LENGTH AND THE WEIGHT VS           
+C     LENGTH RELATIONSHIP.                                                      
+C     DATA FOR THIS PROGRAM IS READ OFF A SEPARATE DATA TAPE WHICH IS           
+C     MOUNTED ON A5.  ALL DATA THEN SHOULD BE READ ONTO A SEPARATE TAPE         
+C     IN LOGICAL BLOCKS, FOR INSTANCE, BY YEARS.                                
+C     EACH BLOCK OF DATA MUST BE LABLED BY A CARD PRECEDING THE DATA            
+C     WITH AN INTEGER RIGHT ADJUSTED IN COL. 72.  THE INTEGER MUST              
+C     CORRESPOND TO THE POSITION OF EACH BLOCK OR BLOCK 3 WOULD BE              
+C     PRECEDED BY A CARD CONTAINING THE INTEGER 3.  THE BLOCK IS                
+C     TERMINATED BY A CARD FOLLOWING THE LAST DATA CARD CONTAING ZEROS          
+C     IN COLS. 1-5.                                                             
+C     THERE ARE TWO DATA CARDS THAT MUST BE SUPPLIED WITH THE OBJECT            
+C     DECK.  THE FIRST IS THE CARD WHICH CONTROLS THE BLOCK(S) OF DATA          
+C     USED AND THE SECOND IS A PARAMETER CONTROLLING THE FORK LENGTH .          
+C     FIRST DATA CARD-----------                                                
+C     DIVIDING THE CARD INTO FIELDS OF 3 AND NUMBERING THESE FROM 1-24          
+C     THE YEAR(S) IS PLACED ON THIS CARD WITH THE FIELD NO. CORRESPOND-         
+C     ING TO THE BLOCK NO. ON TAPE.   THIS SHOULD BE THE FIRST DATA CARD        
+C     SECOND DATA CARD----------                                                
+C     THIS CONTAINS A FIELD OF 3 NUMERIC CHARACTER FOLLOWED BY A PERIOD.        
+C     THIS PERTAINS TO WHAT IS CALLED PARAM IN THE TEST OF THE ABS VALUE        
+C     THE OUTPUT HEADINGS OF THE LAKE NAMES ARE SUPPLIED IN SUBROUTINE          
+C     TYPE.                                                                     
+C DEFINE FUNCTIONS                                                              
+      DVAF(A, B, C) = SQRTF((A -((B**2)/C))/(C - 1.))                           
+     0DIMENSION DWGT(8,40),DLWGT(8,40),DWGT2(8,40),DLWGT2(8,40),Z(8,40),        
+     1AVWGT(8,40),AVSDWT(8,40),DWSLP(8,40),DRWSLP(8,40),DWA(8,40),              
+     2DTWX(8,40),W(40),NYEAR(24)                                                
+      DIMENSION EXPSPN(40), SLOPE(8), ERRSLP(8), A(40), XNTRCP(8)               
+     0DIMENSION AVFTM(8,40), STDFTM(8, 40), TAVFTM(40), TSTDFT(40),             
+     1TAVWGT(40), STDWGT(40), ERRWGT(40), WEIGHT(40), SPAN(40),                 
+     2ACTUAL(40)                                                                
+      DIMENSION ANN(9)                                                          
+      DIMENSION WT(40)                                                          
+     0DIMENSION XT(8, 40), XNT(40), CAP(8, 40), WHAM(40), PAC(40),              
+     1CAP2(8, 40), WHAM2(40), PAC2(40)                                          
+      PRINT 999                                                                 
+  999 FORMAT(36H MOUNT DATA TAPE ON A5 AND HIT START////)                       
+      PAUSE                                                                     
+      READ INPUT TAPE 5,1010,(NYEAR(NFILE),NFILE=1,24)                          
+ 1010 FORMAT(24I3)                                                              
+      READ INPUT TAPE 5,19,PARAM                                                
+   19 FORMAT(F3.0)                                                              
+      DO 1000 NFILE=1,24                                                        
+      IF(NYEAR(NFILE))1,1000,1                                                  
+    1 WRITE OUTPUT TAPE 6,1020,NYEAR(NFILE)                                     
+ 1020 FORMAT(1H1,42X,32H COMPUTATION USING DATA FOR YEAR,I3)                    
+      DO 10 K = 1, 40                                                           
+      DO 9 J = 1, 8                                                             
+      DWGT(J,K) = 0.0                                                           
+      DLWGT(J,K)=0.0                                                            
+      DWGT2(J,K) =0.0                                                           
+      DLWGT2(J,K)=0.0                                                           
+      Z(J,K)=0.0                                                                
+      XT(J, K) = 0.0                                                            
+      CAP(J, K) = 0.0                                                           
+    9 CAP2(J, K) = 0.0                                                          
+      XNT(K) = 0.0                                                              
+      WHAM(K) = 0.0                                                             
+      PAC(K) = 0.0                                                              
+      WHAM2(K) = 0.0                                                            
+      PAC2(K) = 0.0                                                             
+   10 WT(K) = 0.0                                                               
+ 1002 READ INPUT TAPE 9,1030,NBLOCK                                             
+ 1030 FORMAT(70X,I2)                                                            
+      IF(NFILE-NBLOCK)1002,20,1002                                              
+C READ DATA                                                                     
+   20 READ INPUT TAPE 9,21,I,JR,MN,JA,MX,WGT,ETE,(ANN(N),N=1,8),FTM,ATM,        
+     1JGE,LAK                                                                   
+   21 FORMAT(I5,2I1,I2,I1,12F3.0,I1,I2)                                         
+      IF(I)34,40,34                                                             
+   34 K = XINTF(ETE/5.) - 15                                                    
+      IF(ABSF(FTM-1.257*(ETE-PARAM))-100.)22,22,25                              
+   22 IF(ETE - 80.) 27, 23, 23                                                  
+   23 IF(ETE - 280.) 24, 24, 27                                                 
+   24 CAP(LAK, K) = CAP(LAK, K) + FTM                                           
+      CAP2(LAK, K) = CAP2(LAK, K) + FTM**2                                      
+      XT(LAK, K) = XT(LAK, K) + 1.                                              
+      PAC(K) = PAC(K) + FTM                                                     
+      PAC2(K) = PAC2(K) + FTM**2                                                
+      XNT(K) = XNT(K) + 1.                                                      
+      GO TO 29                                                                  
+   25 WRITE OUTPUT TAPE 6, 26, I                                                
+   26 FORMAT(1H , I5, 43H LENGTH VS SCALE RADIUS DOES NOT CORRESPOND)           
+      GO TO 20                                                                  
+   27 WRITE OUTPUT TAPE 6, 28, I                                                
+   28 FORMAT (1H , I5,21H ERROR IN FORK LENGTH)                                 
+C TEST FOR WEIGT RANGE AND SUM ALL WEIGHTS IN K                                 
+      GO TO 20                                                                  
+   29 IF(WGT -10.) 32, 30,30                                                    
+   30 IF(WGT - 400.) 31, 31, 32                                                 
+   31 WHAM(K) = WHAM(K) + WGT                                                   
+      WHAM2(K) = WHAM2(K) + WGT**2                                              
+      WT(K) = WT(K) + 1.                                                        
+      DWGT(LAK,K) = DWGT(LAK,K) + WGT                                           
+      DWGT2(LAK,K) = DWGT2(LAK,K) + WGT**2                                      
+      Z(LAK, K) = Z(LAK, K)+ 1.                                                 
+      GO TO 20                                                                  
+   32 WRITE OUTPUT TAPE 6, 33, I                                                
+   33 FORMAT(1H , I5, 24H  ERROR INVOLVING WEIGHT)                              
+      GO TO 20                                                                  
+   40 DO 52 K = 1, 40                                                           
+      DO 43 J = 1, 8                                                            
+      IF(XT(J, K) - 1.) 42,42,41                                                
+   41 AVFTM(J, K) = CAP(J, K)/(XT(J, K))                                        
+      STDFTM(J, K) = DVAF(CAP2(J,K),CAP(J,K),XT(J,K))                           
+      GO TO 43                                                                  
+   42 AVFTM(J, K) = CAP(J, K)                                                   
+      STDFTM(J, K) = 0                                                          
+   43 CONTINUE                                                                  
+      IF(XNT(K) - 1.) 46,46,45                                                  
+   45 TAVFTM(K) = PAC(K)/(XNT(K))                                               
+      TSTDFT(K) = DVAF(PAC2(K), PAC(K), XNT(K))                                 
+      GO TO 394                                                                 
+   46 TAVFTM(K) = PAC(K)                                                        
+      TSTDFT(K) = 0                                                             
+  394 DO 399 J = 1, 8                                                           
+      IF(Z(J,K) - 1.) 398, 398, 397                                             
+  397 AVWGT(J,K) = DWGT(J, K)/Z(J,K)                                            
+      AVSDWT(J,K) = DVAF(DWGT2(J,K), DWGT(J,K),Z(J,K))                          
+      DLWGT(J,K) = LOG10F(AVWGT(J,K))                                           
+      DLWGT2(J,K) = (Z(J,K)/DWGT(J,K))*AVSDWT(J,K)                              
+      GO TO 399                                                                 
+  398 AVWGT(J, K) = DWGT(J, K)                                                  
+      AVSDWT(J,K) = 0                                                           
+      DLWGT2(J,K)=0                                                             
+      IF(DWGT(J,K)) 395,396,395                                                 
+  396 DLWGT(J,K) =0                                                             
+      GO TO 399                                                                 
+  395 DLWGT(J,K) = LOG10F(AVWGT(J,K))                                           
+  399 CONTINUE                                                                  
+   47 IF(WT(K) - 1.) 49, 49, 48                                                 
+   48 TAVWGT(K) = WHAM(K)/(WT(K))                                               
+      STDWGT(K) = DVAF(WHAM2(K), WHAM(K), WT(K))                                
+      WEIGHT(K) = LOG10F(TAVWGT(K))                                             
+      ERRWGT(K)= (WT(K)/WHAM(K))*STDWGT(K)                                      
+      GO TO 52                                                                  
+   49 TAVWGT(K) = WHAM(K)                                                       
+      STDWGT(K) = 0                                                             
+      ERRWGT(K) = 0                                                             
+      IF(WHAM(K)) 51, 50, 51                                                    
+   50 WEIGHT(K) = 0                                                             
+      GO TO 52                                                                  
+   51 WEIGHT(K) = LOG10F(TAVWGT(K))                                             
+   52 CONTINUE                                                                  
+      DO 60 K = 1, 40                                                           
+      PSK = K*5                                                                 
+      SPAN(K) = 77. + PSK                                                       
+      EXPSPN(K) = LOG10F(SPAN(K))                                               
+   60 CONTINUE                                                                  
+      WRITE OUTPUT TAPE 6,72                                                    
+   72 FORMAT(1H1,7X,7H SUM XY,14X,8H SUM X*X,13X,8H SUM Y*Y,13X,6H SUM Y        
+     1,14X,6H SUM X)                                                            
+      WRITE OUTPUT TAPE 6,70                                                    
+   70 FORMAT(1H0,37X,23H LENGTH VS SCALE RADIUS///)                             
+      DO 65 J=1, 8                                                              
+      DO 64 K = 1, 40                                                           
+   64 W(K) = AVFTM(J,K)                                                         
+      CALL COMPUT(W, SPAN, ZA, ZB, ZC, ZD)                                      
+      SLOPE(J) = ZA                                                             
+      ERRSLP(J) = ZB                                                            
+      A(J) = ZC                                                                 
+   65 XNTRCP(J) = ZD                                                            
+      CALL COMPUT(TAVFTM, SPAN, ZA, ZB, ZC, ZD)                                 
+      TSLP = ZA                                                                 
+      RTSLP = ZB                                                                
+      TA = ZC                                                                   
+      TXNTRP = ZD                                                               
+      WRITE OUTPUT TAPE 6,71                                                    
+   71 FORMAT(1H0//////,36X,25H LOG LENGTH VS LOG WEIGHT///)                     
+      DO 333 J = 1, 8                                                           
+      DO 334 K= 1, 40                                                           
+  334 W(K) = DLWGT(J, K)                                                        
+      CALL COMPUT(W, EXPSPN, ZA, ZB, ZC, ZD)                                    
+      DWSLP(J)=ZA                                                               
+      DRWSLP(J)=ZB                                                              
+      DWA(J)=ZC                                                                 
+      DTWX(J)=ZD                                                                
+  333 CONTINUE                                                                  
+      CALL COMPUT(WEIGHT, EXPSPN, ZA, ZB, ZC, ZD)                               
+      WSLP = ZA                                                                 
+      RWSLP = ZB                                                                
+      WA = ZC                                                                   
+      TWX = ZD                                                                  
+C PRINT RESULTS                                                                 
+      DO 150 J = 1, 8                                                           
+      WRITE OUTPUT TAPE 6, 120                                                  
+  120 FORMAT (31H1 FORK LENGTH VS SCALE DIAMETER///)                            
+      CALL TYPE(J)                                                              
+      WRITE OUTPUT TAPE 6, 121                                                  
+  121 FORMAT(7X, 5HSCALE, 9X, 4HFORK)                                           
+      WRITE OUTPUT TAPE 6, 122                                                  
+  122 FORMAT(5X, 8HDIAMETER, 6X, 6HLENGTH, 8H   CHECK, 8H  NUMBER//)            
+      DO 130 K = 1, 40                                                          
+      IF(ABSF(AVFTM(J,K)-1.257*(SPAN(K)-PARAM))-3.*STDFTM(J,K))124,124,1        
+     126                                                                        
+  1240WRITE OUTPUT TAPE 6, 125, AVFTM(J, K), STDFTM(J, K), SPAN(K),             
+     1XT(J, K)                                                                  
+  125 FORMAT(1H ,F8.4, 2H R, F6.3, F10.0, 8H     AOK, F8.0)                     
+      GO TO 130                                                                 
+  1260WRITE OUTPUT TAPE 6, 127, AVFTM(J, K), STDFTM(J, K), SPAN(K),             
+     1XT(J, K)                                                                  
+  127 FORMAT(1H ,F8.4, 2H R, F6.3, F10.0, 8H     NIX, F8.0)                     
+  130 CONTINUE                                                                  
+      WRITE OUTPUT TAPE 6, 131, A(J), SLOPE(J)                                  
+  131 FORMAT(16H  SCALE RADIUS =, F9.4, 2H +, F9.4, 12H FISH LENGTH)            
+      WRITE OUTPUT TAPE 6, 132, ERRSLP(J)                                       
+  132 FORMAT(18H  ERROR OF SLOPE =, F9.4)                                       
+  150 WRITE OUTPUT TAPE 6, 151, XNTRCP(J)                                       
+  151 FORMAT(15H  X-INTERCEPT =, F9.4)                                          
+      WRITE OUTPUT TAPE 6, 120                                                  
+      WRITE OUTPUT TAPE 6, 155                                                  
+  155 FORMAT(29H  TOTAL OF ALL LAKES TOGETHER)                                  
+      WRITE OUTPUT TAPE 6, 121                                                  
+      WRITE OUTPUT TAPE 6, 122                                                  
+      DO 158 K = 1, 40                                                          
+      IF(ABSF(TAVFTM(K)-1.257*(SPAN(K)-PARAM))-3.*TSTDFT(K))156,156,157         
+  156 WRITE OUTPUT TAPE 6, 125, TAVFTM(K), TSTDFT(K), SPAN(K), XNT(K)           
+      GO TO 158                                                                 
+  157 WRITE OUTPUT TAPE 6, 127, TAVFTM(K), TSTDFT(K), SPAN(K), XNT(K)           
+  158 CONTINUE                                                                  
+      WRITE OUTPUT TAPE 6, 131, TA, TSLP                                        
+      WRITE OUTPUT TAPE 6, 132, RTSLP                                           
+      WRITE OUTPUT TAPE 6, 151, TXNTRP                                          
+      DO 555 J = 1, 8                                                           
+      WRITE OUTPUT TAPE 6, 170                                                  
+  170 FORMAT (23H1 FORK LENGTH VS WEIGHT)                                       
+      CALL TYPE(J)                                                              
+      DO 555 K = 1, 40                                                          
+  555 WRITE OUTPUT TAPE 6, 171, AVWGT(J,K),AVSDWT(J,K),SPAN(K),Z(J,K)           
+      WRITE OUTPUT TAPE 6, 170                                                  
+      WRITE OUTPUT TAPE 6, 155                                                  
+      DO 180 K =1, 40                                                           
+  180 WRITE OUTPUT TAPE 6, 171, TAVWGT(K), STDWGT(K), SPAN(K), WT(K)            
+  171 FORMAT(1H , F8.3, 9H  ERROR =, F6.3, F10.0, F8.0)                         
+      DO 554 J= 1, 8                                                            
+      WRITE OUTPUT TAPE 6, 888                                                  
+  888 FORMAT(32H1 LOG OF WEIGHT VS LOG OF LENGTH///)                            
+      CALL TYPE(J)                                                              
+      DO 550 K=1, 40                                                            
+  550 WRITE OUTPUT TAPE 6, 669, DLWGT(J,K),DLWGT2(J,K),EXPSPN(K),Z(J,K)         
+      WRITE OUTPUT TAPE 6, 185, DWA(J), DWSLP(J)                                
+      WRITE OUTPUT TAPE 6, 132, DRWSLP(J)                                       
+  554 WRITE OUTPUT TAPE 6, 151, DTWX(J)                                         
+      WRITE OUTPUT TAPE 6, 888                                                  
+      WRITE OUTPUT TAPE 6, 155                                                  
+      DO 200 K =1, 40                                                           
+  200 WRITE OUTPUT TAPE 6, 669, WEIGHT(K), ERRWGT(K), EXPSPN(K), WT(K)          
+      WRITE OUTPUT TAPE 6, 185, WA, WSLP                                        
+  669 FORMAT(1H , F9.7, 9H  ERROR =, F9.7, F9.6, F8.0)                          
+  185 FORMAT(15H  LOG(WEIGHT) =, F12.7,2H +, F9.7, 15H X  LOG(LENGTH))          
+      WRITE OUTPUT TAPE 6, 132, RWSLP                                           
+      WRITE OUTPUT TAPE 6, 151, TWX                                             
+ 1000 CONTINUE                                                                  
+      PRINT 998                                                                 
+  998 FORMAT(45H DISMOUNT DATA TAPE (A5) AND RETURN WITH DECK////)              
+      CALL EXIT                                                                 
+      END                                                                       
+      SUBROUTINE COMPUT(T, AA, ZA, ZB, ZC, ZD)                                  
+      DIMENSION T(40), AA(40)                                                   
+      BTWN = 0                                                                  
+      WHO = 0                                                                   
+      ZIP = 0                                                                   
+      OB = 0                                                                    
+      WEW = 0                                                                   
+      DB = 0                                                                    
+      DO 860 K = 1, 40                                                          
+      IF(T(K)) 860,860,861                                                      
+  861 WEW = WEW + 1.                                                            
+      BTWN = T(K)*AA(K) + BTWN                                                  
+      WHO = AA(K)**2 + WHO                                                      
+      ZIP = T(K)**2 + ZIP                                                       
+      OB = T(K) + OB                                                            
+      DB = AA(K) + DB                                                           
+  860 CONTINUE                                                                  
+  670 WRITE OUTPUT TAPE 6, 671, BTWN, WHO, ZIP, OB, DB                          
+  671 FORMAT(1H0,5F20.5)                                                        
+      SUMX2=WHO-((DB**2)/WEW)                                                   
+      SUMY2=ZIP-((OB**2)/WEW)                                                   
+      SUMXY=BTWN-((DB*OB)/WEW)                                                  
+      ZA=SUMXY/SUMX2                                                            
+      ZB=SQRTF((SUMY2-((SUMXY**2)/SUMX2))/((WEW-2.)*SUMX2))                     
+      ZC=(OB*WHO-DB*BTWN)/(WEW*SUMX2)                                           
+      ZD = -ZC/ZA                                                               
+      RETURN                                                                    
+      END                                                                       
+      SUBROUTINE TYPE(J)                                                        
+      GO TO(90, 92, 94, 96, 98, 100, 102, 104), J                               
+   90 WRITE OUTPUT TAPE 6, 91                                                   
+   91 FORMAT(14H  LAKE CROOKED//)                                               
+      GO TO 106                                                                 
+   92 WRITE OUTPUT TAPE 6, 93                                                   
+   93 FORMAT(11H  LAKE HIGH//)                                                  
+      GO TO 106                                                                 
+   94 WRITE OUTPUT TAPE 6, 95                                                   
+   95 FORMAT(13H  LAKE PRETTY//)                                                
+      GO TO 106                                                                 
+   96 WRITE OUTPUT TAPE 6, 97                                                   
+   97 FORMAT(14H  LAKE MAX-KEE//)                                               
+      GO TO 106                                                                 
+   98 WRITE OUTPUT TAPE 6, 99                                                   
+   99 FORMAT(13H  SYLVAN LAKE//)                                                
+      GO TO 106                                                                 
+  100 WRITE OUTPUT TAPE 6, 101                                                  
+  101 FORMAT(12H  LAKE SPEAR//)                                                 
+      GO TO 106                                                                 
+  102 WRITE OUTPUT TAPE 6, 103                                                  
+  103 FORMAT(11H  LAKE CARR//)                                                  
+      GO TO 106                                                                 
+  104 WRITE OUTPUT TAPE 6, 105                                                  
+  105 FORMAT(15H  LAKE RIDINGER//)                                              
+  106 RETURN                                                                    
+      END                                                                       

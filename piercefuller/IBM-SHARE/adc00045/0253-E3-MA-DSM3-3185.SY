@@ -1,0 +1,280 @@
+*      DECK DSM3(CURVE SMOOTHING ROUTINE)                               DSM30001
+*     CALL CURSM(A,M,B,N,L)                                             DSM30002
+*     THIS CALL WILL GENERATE THE FOLLOWING MAP CALLING SEQUENCE        DSM30003
+*      TSX     CURSM,4                                                  DSM30004
+*      TXI     *+NOA+2,,NOA  NOA=NUMBER OF ARGUMENTS (NORMAL RETURN)    DSM30005
+*      LDIR    LINKAGE DIRECTOR                                         DSM30006
+*      PZE     A (CURVE)                                                DSM30007
+*      PZE     M (PTS)                                                  DSM30008
+*      PZE     B (REPRO)                                                DSM30009
+*      PZE     N (DELTA)                                                DSM30010
+*      PZE     L (ERROR)                                                DSM30011
+       ENTRY   CURSM                                                    DSM30012
+ CURSM TXL     *+1,0,**      DECREMENT FOR ERROR CODE                   DSM30013
+       SXA     1S,1          SAVE IR1                                   DSM30014
+       SXA     2S,2          SAVE IR2                                   DSM30015
+       SXA     4S,4          SAVE IR4                                   DSM30016
+       STZ     TEST                                                     DSM30017
+       CAL     7,4           ERROR CODE LOCATION                        DSM30018
+       STA     2S+2                                                     DSM30019
+       STZ*    7,4                                                      DSM30020
+       CAL*    4,4           NUMBER OF POINTS IN GIVEN CURVE            DSM30021
+       PAX     0,2                                                      DSM30022
+       AXT     1,1                                                      DSM30023
+       SXD     CURSM,1                                                  DSM30024
+       TXL     ERRJ,2,8      TRANSFER IF CURVE IS TOO SMALL             DSM30025
+       CAL     3,4           GIVEN CURVE                                DSM30026
+       AXT     2,1                                                      DSM30027
+       SXD     CURSM,1                                                  DSM30028
+       PAC     0,1           LOCATE THE CURVE                           DSM30029
+ LP1   CLA     0,1           GET NEXT X VALUE                           DSM30030
+       CAS     6,1           COMPARE WITH THIRD X DOWN THE LINE         DSM30031
+       TRA     ERRJ          ENFORCE THE RESTRICTION THAT EVERY         DSM30032
+       TRA     ERRJ          THIRD X MUST BE IN ASCENDING ORDER         DSM30033
+       TXI     *+1,2,-1      SUBTRACT 1 FROM NUMBER OF POINTS           DSM30034
+       TXL     OK1,2,3       TRANSFER IF ONLY 3 POINTS LEFT             DSM30035
+       TXI     LP1,1,-2      MOVE TO NEXT PAIR OF X,S                   DSM30036
+ OK1   TXI     *+1,1,-6      LOCATE LAST INDEPENDENT                    DSM30037
+       SXA     LOCL,1        SAVE IT                                    DSM30038
+       CLA     0,1                                                      DSM30039
+       STO     LAST          SAVE VALUE OF LAST INDEPENDENT             DSM30040
+       CAL     5,4           LOCATION TO REPRODUCE                      DSM30041
+       PAC     0,2           LOCATE IT FOR EVENTUAL USE                 DSM30042
+       SXA     AXT,2                                                    DSM30043
+       CAL*    6,4           REFERENCE TO DELTA TO USE                  DSM30044
+       PAC     0,2                                                      DSM30045
+       TXH     NPTS,2,-1-MAX TRANSFER IF NUMBER OF POINTS GIVEN         DSM30046
+       CAL     0,2           THE DECREMENT INDICATED LOCATION OF DELTA  DSM30047
+       STO     DT            THIS IS THE DELTA TO USE                   DSM30048
+ J1    CLS     DT                                                       DSM30049
+       AXT     3,1                                                      DSM30050
+       SXD     CURSM,1                                                  DSM30051
+       TZE     ERRJ          DELTA BETTER NOT BE ZERO                   DSM30052
+       ACL     HALF          DELTA DIVIDED BY TWO                       DSM30053
+       FAD     LAST          SUBTRACT FROM LAST                         DSM30054
+       STO     LAST          FOR ROUND OFF ERROR EFFECTS                DSM30055
+       AXT     LP4,1         SET FOR NORMAL LOOPING                     DSM30056
+       SXA     TXI,1                                                    DSM30057
+       CAL     3,4           GIVEN CURVE                                DSM30058
+       PAC     0,1           LOCATE IT                                  DSM30059
+       CAL     -2,1          SAVE SECOND WORD BEFORE BEGINNING          DSM30060
+       SLW     CLOB1         OF CURVE                                   DSM30061
+ LOCL  AXT     **,2          A)-LAST INDEPENDENT                        DSM30062
+       CAL     2,2           SAVE FIRST WORD AFTER END                  DSM30063
+       SLW     CLOB2         OF CURVE                                   DSM30064
+       CAL     MINF                                                     DSM30065
+       SLW     -2,1          DUMMY FIRST INDEPENDENT                    DSM30066
+       STO     2,2           DUMMY LAST INDEPENDENT                     DSM30067
+       TXI     *+1,1,6       LOCATE DUMMY STARTING PARABOLA             DSM30068
+       SXA     LOCP,1                                                   DSM30069
+       CLA     6,1           FIRST INDEPENDENT                          DSM30070
+       TXI     IN,1,-6       JUMP IN AND RESET CURVE LOCATION           DSM30071
+ LP4   FAD     DT            INCREASE INDEPENDENT                       DSM30072
+       SXA     AXT,4         SAVE LOCATION OF NEXT POINT                DSM30073
+       SUB     LAST          WILL THIS BE THE LAST POINT                DSM30074
+       TMI     ADDB          TRANSFER IF NOT                            DSM30075
+       AXT     FIN,1         THIS IS THE LAST POINT TO SMOOTH           DSM30076
+       SXA     TXI,1         SET FOR ROUTINE EXIT                       DSM30077
+ ADDB  ADD     LAST          RESTORE ORIGINAL VALUE OF INDEPENDENT      DSM30078
+ WHERE AXT     **,1          A) -LAST POINT IN CURVE                    DSM30079
+ IN    STO     TIME          NEXT INDEPENDENT                           DSM30080
+       CAS     0,1           COMPARE WITH POINT IN CURVE                DSM30081
+       TXI     *-1,1,-2      GO TO NEXT POINT IN CURVE                  DSM30082
+       TRA     *+1                                                      DSM30083
+       FSB     -2,1                                                     DSM30084
+       STO     M1            DISTANCE TO PREVIOUS POINT                 DSM30085
+       CLA     0,1                                                      DSM30086
+       FSB     TIME          DISTANCE TO NEXT POINT                     DSM30087
+       CAS     M1            WHICH ONE IS GREATER                       DSM30088
+       TXI     *+2,1,2       THE PREVIOUS POINT IS CLOSER               DSM30089
+       TRA     *+1                                                      DSM30090
+       SXA     WHERE,1       IR1 NOW INDICATE THE CLOSEST POINT         DSM30091
+       LXA     WHERE,2       LOCATE CLOSEST POINT                       DSM30092
+       LXA     WHERE,4                                                  DSM30093
+       CLA     TIME          PRESENT INDEPENDENT                        DSM30094
+       FSB     -2,4          PREVIOUS LOWER POINT                       DSM30095
+       STO     M1            DISTANCE TO PREVIOUS LOWER                 DSM30096
+       CLA     2,2           NEXT HIGHER POINT                          DSM30097
+       FSB     TIME                                                     DSM30098
+       STO     M2            DISTANCE TO NEXT HIGHER                    DSM30099
+       AXT     8,1           LOOP SETUP                                 DSM30100
+ AGAIN CLA     M2            DISTANCE TO NEXT HIGHER                    DSM30101
+       CAS     M1            DISTANCE TO PREVIOUS LOWER                 DSM30102
+       TXI     LOWIN,4,2     INCLUDE ANOTHER LOW POINT                  DSM30103
+       TRA     *+1                                                      DSM30104
+       CLA     4,2           INCLUDE ANOTHER HIGH POINT                 DSM30105
+       FSB     TIME          I TRIED SUB. IT DOESNT WORK                DSM30106
+       STO     M2            DISTANCE TO NEXT HIGHER                    DSM30107
+       TXI     JN2,2,-2      INCLUDE                                    DSM30108
+ LOWIN CLA     TIME                                                     DSM30109
+       FSB     -2,4                                                     DSM30110
+       STO     M1            DISTANCE TO PREVIOUS LOWER                 DSM30111
+ JN2   TIX     AGAIN,1,1     INCLUDE NINE POINTS ALTOGETHER             DSM30112
+ LOCP  AXC     **,2          LOCATION OF PRESENT PARABALA               DSM30113
+       SXA     LOCP,4        UPDATE                                     DSM30114
+       SXD     *+1,2                                                    DSM30115
+       TXI     *+1,4,**      SUBTRACT PRESENT FROM DESIRED              DSM30116
+       TXL     AVG,4,0       TRANSFER IF THEY ARE THE SAME              DSM30117
+       LXA     LOCP,1        LOCATE DESIRED PARABALA                    DSM30118
+       LXA     LOCP,2                                                   DSM30119
+       TXI     *+1,2,-4                                                 DSM30120
+       SXD     TXL,2         PULL OUT AFTER 1 2 OR 3 PASSES             DSM30121
+       AXT     3,2           SETUP                                      DSM30122
+       TXH     S1,4,-3       TRANSFER IF ONE PARABALA NEEDED            DSM30123
+       TXH     S2,4,-5       TRANSFER IF TWO PARABALAS NEEDED           DSM30124
+       AXT     0,2           COMPUTE THREE SETS OF COEFFICIENTS         DSM30125
+ BACK  CLA     6,1           X2                                         DSM30126
+       FSB     0,1           X1                                         DSM30127
+       STO     M1            X2-X1                                      DSM30128
+       CLA     12,1          X3                                         DSM30129
+       FSB     0,1           X1                                         DSM30130
+       STO     M2            X3-X1                                      DSM30131
+       CLA     12,1          X3                                         DSM30132
+       FSB     6,1           X2                                         DSM30133
+       STO     M3            X3-X2                                      DSM30134
+       CLA     1,1           Y1                                         DSM30135
+       FDP     M1                                                       DSM30136
+       XCA                                                              DSM30137
+       FDP     M2                                                       DSM30138
+       STQ     COEFA,2       L=Y1/(X2-X1)(X3-X1)                        DSM30139
+       CLS     7,1           -Y2                                        DSM30140
+       FDP     M1                                                       DSM30141
+       XCA                                                              DSM30142
+       FDP     M3                                                       DSM30143
+       STQ     COEFB,2       M=-Y2/(X2-X1)(X3-X2)                       DSM30144
+       CLA     13,1          Y3                                         DSM30145
+       FDP     M2                                                       DSM30146
+       XCA                                                              DSM30147
+       FDP     M3                                                       DSM30148
+       STQ     COEFC,2       N=Y3/(X3-X1)(X3-X2)                        DSM30149
+ TXL   TXL     AVG,1,**      TRANSFER IF NECESSARY PARABALAS COMPLETED  DSM30150
+       TXI     *+1,1,-2      SET FOR NEXT THREE POINTS                  DSM30151
+       TXI     BACK,2,-3     INCREMENT COEFFICIENT LOCATIONS            DSM30152
+ S1    CAL     COEFA+6,2     ROTATE TWO SETS OF                         DSM30153
+       SLW     COEFA+3,2     THREE COEFFICIENTS                         DSM30154
+       CAL     COEFA+9,2                                                DSM30155
+       SLW     COEFA+6,2                                                DSM30156
+       TIX     S1,2,1                                                   DSM30157
+       AXT     -6,2          SET LOCATION OF NEXT COEFFICIENTS          DSM30158
+       TXI     BACK,1,-4     THIS CAUSES ONE PASS TO BE MADE            DSM30159
+ S2    CAL     COEFA+9,2     ROTATE ONE SET OF                          DSM30160
+       SLW     COEFA+3,2     THREE COEFFICIENTS                         DSM30161
+       TIX     S2,2,1                                                   DSM30162
+       AXT     -3,2          SET LOCATION OF NEXT COEFFICIENTS          DSM30163
+       TXI     BACK,1,-2     THIS CAUSES TWO PASSES TO BE MADE          DSM30164
+ AVG   STZ     CCA                                                      DSM30165
+       AXT     9,2                                                      DSM30166
+       LXA     LOCP,1                                                   DSM30167
+ XLP2  CLA     TIME                                                     DSM30168
+       FSB     6,1                                                      DSM30169
+       STO     M1                                                       DSM30170
+       CLA     TIME                                                     DSM30171
+       FSB     12,1                                                     DSM30172
+       STO     M2                                                       DSM30173
+       CLA     TIME                                                     DSM30174
+       FSB     0,1                                                      DSM30175
+       STO     M3                                                       DSM30176
+       LDQ     M1                                                       DSM30177
+       FMP     M2                                                       DSM30178
+       XCA                                                              DSM30179
+       FMP     COEFA+9,2                                                DSM30180
+       FAD     CCA                                                      DSM30181
+       STO     CCA                                                      DSM30182
+       LDQ     M3                                                       DSM30183
+       FMP     M2                                                       DSM30184
+       XCA                                                              DSM30185
+       FMP     COEFB+9,2                                                DSM30186
+       FAD     CCA                                                      DSM30187
+       STO     CCA                                                      DSM30188
+       LDQ     M3                                                       DSM30189
+       FMP     M1                                                       DSM30190
+       XCA                                                              DSM30191
+       FMP     COEFC+9,2                                                DSM30192
+       FAD     CCA                                                      DSM30193
+       STO     CCA                                                      DSM30194
+       TXI     *+1,1,-2                                                 DSM30195
+       TIX     XLP2,2,3                                                 DSM30196
+       FDP     E3            DIVIDE BY THREE                            DSM30197
+ AXT   AXT     **,4          LOCATE NEXT POINT                          DSM30198
+       STQ     1,4           SMOOTHED DEPENDENT                         DSM30199
+       CLA     TIME                                                     DSM30200
+       NZT     TEST                                                     DSM30201
+       TRA     ONCE                                                     DSM30202
+       STO     0,4           ASSOCIATED INDEPENDENT                     DSM30203
+ TXI   TXI     **,4,-2       A) LP4                                     DSM30204
+ ONCE  STO     TEMP                                                     DSM30205
+       STL     TEST                                                     DSM30206
+       TRA     TXI                                                      DSM30207
+ NPTS  PAX     0,2           THE DECREMENT INDICATED NUMBER OF POINTS   DSM30208
+       AXT     4,1                                                      DSM30209
+       SXD     CURSM,1                                                  DSM30210
+       TXL     ERRJ,2,1      TRANSFER IF REDICULOUS                     DSM30211
+       TXI     *+1,2,-1      SUBTRACT ONE                               DSM30212
+       PXA     0,2                                                      DSM30213
+       STT     3,4           ZERO THE TAG                               DSM30214
+       ACL     EXP           ATTACH EXPONENT                            DSM30215
+       FAD     ZERO          NORMALIZE                                  DSM30216
+       STO     M1            NUMBER OF POINTS - 1                       DSM30217
+       CLA     LAST          LAST INDEPENDENT                           DSM30218
+       FSB*    3,4           FIRST INDEPENDENT                          DSM30219
+       FDP     M1                                                       DSM30220
+       STQ     DT            THIS IS THE DELTA TO USE                   DSM30221
+       TRA     J1                                                       DSM30222
+ FIN   LXA     LOCL,2        LOCATION OF LAST POINT IN GIVEN CURVE      DSM30223
+       LXA     4S,4                                                     DSM30224
+       CAL     5,4                                                      DSM30225
+       PAC     ,4                                                       DSM30226
+       CLA     TEMP                                                     DSM30227
+       STO     0,4                                                      DSM30228
+       SXD     SIMPL,4                                                  DSM30229
+       LAC     LOCL,1                                                   DSM30230
+       TXI     *+1,1,2                                                  DSM30231
+ SIMPL TXI     *+1,1,**                                                 DSM30232
+       TXL     4S,1,0                                                   DSM30233
+       CAL     CLOB2         RESTORE FIRST WORD AFTER END OF CURVE      DSM30234
+       SLW     2,2                                                      DSM30235
+ 4S    AXT     **,4          RESTORE IR4                                DSM30236
+       CAL     3,4           GIVEN CURVE                                DSM30237
+       LXA     AXT,2                                                    DSM30238
+       SXD     SOMPL,2                                                  DSM30239
+       PAX     ,1                                                       DSM30240
+       TXI     *+1,1,-2                                                 DSM30241
+ SOMPL TXI     *+1,1,**                                                 DSM30242
+       TXL     SKIP,1,1                                                 DSM30243
+       PAC     0,1           LOCATE GIVEN CURVE                         DSM30244
+       CAL     CLOB1         RESTORE SECOND WORD BEFORE                 DSM30245
+       SLW     -2,1          BEGINNING OF CURVE                         DSM30246
+ SKIP  SXD     CURSM,0                                                  DSM30247
+ 2S    AXT     **,2          RESTORE IR2                                DSM30248
+       LXD     CURSM,1                                                  DSM30249
+       SXA     **,1                                                     DSM30250
+ 1S    AXT     **,1          RESTORE IR1                                DSM30251
+       TRA     1,4           RETURN                                     DSM30252
+ MAX   EQU     5000          MAXIMUM NUMBER OF POINTS TO REPRODUCE      DSM30253
+ LAST  BSS     1             LAST INDEPENDENT IN GIVEN CURVE            DSM30254
+ DT    BSS     1             DELTA TO USE                               DSM30255
+ CLOB1 BSS     1             SAVE SECOND WORD BEFORE BEGINNING OF CURVE DSM30256
+ CLOB2 BSS     1             SAVE FIRST WORD AFTER END OF CURVE         DSM30257
+ TIME  BSS     1             INDEPENDENT VALUE OF REPRODUCED CURVE      DSM30258
+ M1    BSS     1             TEMPORARY STORAGE                          DSM30259
+ M2    BSS     1             TEMPORARY STORAGE                          DSM30260
+ M3    BSS     1             TEMPORARY STORAGE                          DSM30261
+ M4    BSS     1             TEMPORARY STORAGE                          DSM30262
+ M5    BSS     1             TEMPORARY STORAGE                          DSM30263
+ COEFA BSS     1             THIS STARTS A BLOCK OF NINE WORDS          DSM30264
+ COEFB BSS     1             IN WHICH TO DEVELOP THREE SETS OF          DSM30265
+ COEFC BSS     7             THREE COEFFICIENTS                         DSM30266
+ CCC   BSS     1             SUMMATION OF COEFFICIENTS, ZEROETH POWER   DSM30267
+ CCB   BSS     1             SUMMATION OF COEFFICIENTS, FIRST POWER     DSM30268
+ CCA   BSS     1             SUMMATION OF COEFFICIENTS, SECOND POWER    DSM30269
+ MINF  OCT     777777777777  MINUS INFINITY                             DSM30270
+ PINF  OCT     377777777777  PLUS INFINITY                              DSM30271
+ HALF  OCT     776777777777  TO FIND HALF A FLOATING POINT NUMBER       DSM30272
+ EXP   OCT     233000000000  EXPONENT FOR INTEGER CONVERSION            DSM30273
+ ZERO  OCT     0                                                        DSM30274
+ TEST  BSS     1                                                        DSM30275
+ TEMP  BSS     1                                                        DSM30276
+ E3    DEC     3.                                                       DSM30277
+ ERRJ  LXA     4S,4          MUST BE PHYSICALLY NEXT TO LAST WORD       DSM30278
+       TRA     2S            SET FOR ERROR RETURN                       DSM30279
+       END                                                              DSM30280

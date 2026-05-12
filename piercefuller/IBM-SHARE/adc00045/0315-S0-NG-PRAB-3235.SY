@@ -1,0 +1,611 @@
+AAAAA          JOB  PRAB - PRINT CAPR ABSTRACTS - NOV 18, 1964             PRAB 
+AAAAB          CTL  431                                                    PRAB 
+AA001*                                                                     PRAB 
+AA002*  PROGRAMMERS - CARL KURTZ AND DONNA MONTGOMERY                      PRAB 
+AA003*                                                                     PRAB 
+AA004*  PURPOSE OF THIS PROGRAM IS TO CREATE THE CAPR                      PRAB 
+AA005*    ABSTRACT OF EDPM PROGRAMS                                        PRAB 
+AA006*                                                                     PRAB 
+AA007*  INPUT IS MAC-CAPR MASTER FILE                                      PRAB 
+AA008*                                                                     PRAB 
+AA009*  OUTPUT IS THE CAPR ABSTRACT CATAL0G OF EDPM PROGRAMS PREPARED      PRAB 
+AA010*    ON-LINE, OR VIA AN OFF-LINE REPORT TAPE, OR BOTH.                PRAB 
+AA011*    THE REPORT TAPE DOES NOT HAVE TAPE HEADER OR TRAILER LABELS.     PRAB 
+AA013*    IT MAY BE PRINTED WITH ANY STANDARD UTILITY PRINT PROGRAM        PRAB 
+AA014*    WHICH WILL ACCEPT 720 PRINT CONTROLS.                            PRAB 
+AA015*                                                                     PRAB 
+AA016*  TAPE UNIT ASSIGNMENTS                                              PRAB 
+AA017*    UNIT 2 - MAC-CAPR MASTER FILE-UPDATED                            PRAB 
+AA018*    UNIT 3 - PRINT TAPE, CAPR ABSTRACT OF EDPM PROGRAMS              PRAB 
+AA019*                                                                     PRAB 
+AA020*  DATE CONTROL CARD SHOULD FOLLOW OBJECT DECK                        PRAB 
+AA021*    COLUMNS 6-17 ARE CALENDAR DATE-FORMAT-JAN 15, 1964               PRAB 
+AA022*    COLUMN 23 IS RUN TYPE, B FOR BASIC, S FOR                        PRAB 
+AA023*       SUPPLEMENTAL                                                  PRAB 
+AA024*    COLUMNS 24-28 ARE 5-DIGIT DATE IN FORMAT -YYDDD-                 PRAB 
+AA025*       WHERE YY IS LAST 2 DIGITS OF YEAR AND DDD                     PRAB 
+AA026*       IS DAY OF YEAR. THIS DATE IS USED TO DETERMINE                PRAB 
+AA027*       WHETHER AN ENTRY WILL BE PROCESSED ON SUPPLEMENTAL RUNS       PRAB 
+AA028*                                                                     PRAB 
+AA03A*  SENSE SWITCHES                                                     PRAB 
+AA03B*    IO AND A ON                                                      PRAB 
+AA03C*    B ON FOR ON-LINE PRINT                                           PRAB 
+AA03D*    C ON TO PREPARE PRINT TAPE.                                      PRAB 
+AA03E*    ALL OTHERS OFF                                                   PRAB 
+AA032*                                                                     PRAB 
+AA033*  HALT LISTING AND ACTION TO BE TAKEN                                PRAB 
+AA034*    A-ADDR      REASON FOR HALT AND ACTION NECESSARY                 PRAB 
+AA035*                                                                     PRAB 
+AA036*     520      OUT OF SEQUENCE ON MAC FILE-ABANDON JOB                PRAB 
+AA037*     521      TAPE ERROR READING MAC FILE-PRESS START                PRAB 
+AA038*                TO TRY 10 MORE TIMES                                 PRAB 
+AA039*     525      TAPE ERROR READING HEADER OR TRAILER ON                PRAB 
+AA04A*                MAC FILE-PRESS START TO TRY AGAIN                    PRAB 
+AA04D*     529      END OF REEL ON MAC FILE-MOUNT NEXT                     PRAB 
+AA04E*                INPUT, PRESS START                                   PRAB 
+AA04H*     530      TAPE ERROR WRITING ON PRINT TAPE-PRESS                 PRAB 
+AA04I*                START TO TRY 10 MORE TIMES                           PRAB 
+AA04L*     531      END OF REEL ON PRINT TAPE-MOUNT SCRATCH,               PRAB 
+AA04M*                PRESS START                                          PRAB 
+AA04P*     600      SENSE SWITCHES B AND C ARE BOTH OFF. ONE OF THESE      PRAB 
+AA04Q*               SWITCHES SHOULD BE ON TO PRODUCE SOME KIND OF         PRAB 
+AA04R*               OUTPUT.                                               PRAB 
+AA04S*               CORRECT SWITCH SETTING AND PRESS START.               PRAB 
+AA04U*     601      INVALID INSTALLMENT CODE IN MAC RECORD-                PRAB 
+AA04V*                ABANDON JOB                                          PRAB 
+AA04W*     606      WRONG LENGTH RECORD ON MAC-ABANDON JOB                 PRAB 
+AA04X*     607      IMPROPER CONTROL CARD. COULD BE MISSING REPORT DATE,   PRAB 
+AA04Y*               TYPE OF RUN NOT SPECIFIED B OR S, NO DATE SUPPLIED    PRAB 
+AA04Z*               FOR SUPPLEMENTAL RUN.                                 PRAB 
+AA05A*                CORRECT CONTROL CARD, PLACE IT IN THE READ FEED      PRAB 
+AA05B*                AND PRESS START.                                     PRAB 
+AA05C*     621      FIRST RECORD ON MAC REEL IS NOT A                      PRAB 
+AA05D*                HEADER LABEL-MOUNT CORRECT TAPE-PRESS START.         PRAB 
+AA05G*     622      HEADER LABEL ON MAC HAS IMPROPER IDENTITY              PRAB 
+AA05H*                MOUNT CORRECT TAPE PRESS START.                      PRAB 
+AA05L*     623      HEADER LABEL ON MAC HAS INCORRECT REEL SEQUENCE        PRAB 
+AA05M*                NUMBER-MOUNT CORRECT TAPE-PRESS START.               PRAB 
+AA05R*     624      EOR-EOF INDICATOR ON MAC TRAILER IS                    PRAB 
+AA05S*                INVALID-ABANDON JOB                                  PRAB 
+AA05V*     625      BLOCK COUNT ON MAC TRAILER IS OUT OF                   PRAB 
+AA05W*                BALANCE-RESTART JOB                                  PRAB 
+AA06A*     692      PROGRAM OR MACHINE ERROR-TAKE DIAGNOSTIC ACTION AND    PRAB 
+AA06C*                ABANDON JOB.                                         PRAB 
+AA06K*     999      END OF JOB                                             PRAB 
+01009          ORG  333                                                    PRAB 
+01010          DCW  '⯒'       AREA DEFINING GMWM TO PROTECT CORE IN THE    PRAB 
+01011*                        EVENT A LONG RECORD IS READ BY THE HEADER    PRAB 
+01012*                        AND TRAILER CHECKING ROUTINES.  THE PRINT    PRAB 
+01013*                        AREA IS USED BY THESE ROUTINES AS THE        PRAB 
+01014*                        INPUT AREA.                                  PRAB 
+01020*******************************************************************   PRAB 
+01030*     MASTER FILE DEFINITION                                     FN   PRAB 
+01040*******************************************************************   PRAB 
+01050MASTER    DA   1X402                                                  PRAB 
+01060MCTL           1,6                 SHARE RECORD CONTROL WORD          PRAB 
+01070MSIC           7,9                 SUBMITTERS INSTALLATION CODE       PRAB 
+01080MID            14        10-14     PROGRAM IDENTIFICATION             PRAB 
+01090MDRF           15                                                     PRAB 
+01100MDATE          23        19-23     DATE ENTRY ADDED OR CHANGED        PRAB 
+01110MINACT         24                  INACTIVE FLAG                      PRAB 
+01120MPAGE          25,30               PAGE NUMBER                        PRAB 
+01130MSDA           31,39               ACCESSION NUMBER               1   PRAB 
+01140MSDASF         38,39                                                  PRAB 
+01150MNAME          40,56               SUBMITTERS NAME                4   PRAB 
+01160MAFFIL         57,68               SUBMITTERS AFFILIATION         5   PRAB 
+01170MAUTH          69,85               AUTHOR                         6   PRAB 
+01180MYRCMP         86,87               YEAR COMPLETED                 7   PRAB 
+01190MFIELD         88,102              FIELD OF APPLICATION           9   PRAB 
+01200MPSUBJ         106,108             PRIMARY SUBJECT CODE          10   PRAB 
+01210MSSUBJ         109,120             SECONDARY SUBJECT CODES       11   PRAB 
+01220MSSUB1         109,111                                                PRAB 
+01230MSSUB2         112,114                                                PRAB 
+01240MSSUB3         115,117                                                PRAB 
+01250MSSUB4         118,120                                                PRAB 
+02010MPLANG         121,127             PRINCIPAL SOURCE LANGUAGE     12   PRAB 
+02020MSLANG         128,134             SECONDARY SOURCE LANGUAGE     13   PRAB 
+02030MROUT          135,136             TYPE OF ROUTINE               14   PRAB 
+02040MMACH          137,143             MACHINE                       15   PRAB 
+02050MMONIT         144,150             MONITOR OR OPERATING SYSTEM   16   PRAB 
+02060MREQ           151,162             SPECIAL MACHINE REQUIREMENTS  17   PRAB 
+02070MNONLB         163,178             NON-LIBRARY ROUTINES          18   PRAB 
+02080MDOC1          182,186             DOCUMENTATION AVAILABLE       19   PRAB 
+02090MDOC2          187,191                                           19   PRAB 
+02100MDOC3          194,198                                           19   PRAB 
+02110MMAT1          199,226             MATERIAL AVAILABLE            20   PRAB 
+02120MMAT2          227,254                                           21   PRAB 
+02130MTITLE         255,311             TITLE                          8   PRAB 
+02140MSERCH         315,377             SEARCH KEYS                   22   PRAB 
+02150MMISC          378,401                                                PRAB 
+02160MABCT          402,402                                                PRAB 
+02170MGM       DCW  =1                                                     PRAB 
+02171          DCW  '⯒'       MAC INPUT AREA DEFINING GMWM.                PRAB 
+02179*******************************************************************   PRAB 
+02180*     CONSTANTS AND WORK AREAS                                        PRAB 
+02190*******************************************************************   PRAB 
+02200PAGE      DCW  '0001'                                                 PRAB 
+02220SUP       DCW  'SUPP'                                                 PRAB 
+02230CAPRAB    DCW  'CAPR - ABSTRACTS OF EDPM PROGRAMS'                    PRAB 
+02240SINGLE    DCW  =1                                                     PRAB 
+02250LCTR      DCW  =3        BODY LINE PER PAGE COUNTER.                  PRAB 
+02251LINPA     DCW  '036'     NUMBER OF BODY LINES PER PAGE DESIRED.       PRAB 
+02252LINCK     DCW  '027'     MAXIMUM LINE COUNTER CONTENT WHICH WILL      PRAB 
+02253*                        ALLOW ALL THE INFORMATION EXCEPT THE         PRAB 
+02254*                        ABSTRACT PORTION OF A PROGRAM PACKAGE        PRAB 
+02255*                        TO PRINT ON THE REMAINDER OF THE PAGE.       PRAB 
+03030TSW       DC   =1        TRAILER LABEL SWITCH                         PRAB 
+03031HSW       DC   =1        HEADER LABEL SWITCH                          PRAB 
+03040BLANKS    DA   1X65                                                   PRAB 
+0305099        DCW  =3                                                     PRAB 
+03060X3        EQU  99                                                     PRAB 
+03070OMRC      DCW  =6        MASTER INPUT RECORD COUNT.                   PRAB 
+03080OMEC      DCW  =6        MASTER INPUT ENTRY COUNT.                    PRAB 
+03082PREC      DCW  =6        NUMBER OF ENTRIES PRINTED COUNTER.           PRAB 
+03083NPEC      DCW  =6        NUMBER OF ENTRIES NOT PRINTED COUNTER.       PRAB 
+03084ABCTR     DCW  '0'       COUNT OF ABSTRACT LINES WHICH HAVE BEEN      PRAB 
+03085*                        PROCESSED FROM A PHYSICAL ABSTRACT INPUT     PRAB 
+03086*                        RECORD FROM THE MASTER FILE.                 PRAB 
+03090TR2CNT    DCW  =5        TAPE 2 BLOCK COUNT                           PRAB 
+03100NINES     DCW  '99999999'                                             PRAB 
+03110HDR       DCW  '1HDR '                                                PRAB 
+03120*******************************************************************   PRAB 
+03130*     HOUSEKEEPING                                                    PRAB 
+03140*******************************************************************   PRAB 
+03150START     RWD  2                   REWIND INPUT TAPE                  PRAB 
+03152          BSS  RWD3,C              SS C ON IF PRINT TAPE OUTPUT.      PRAB 
+03154          BSS  RDCONT,B            SS B ON IF ON-LINE PRINT.          PRAB 
+03156H600      NOP  600                 SHOULD PRODUCE EITHER PRINT TAPE   PRAB 
+03158          H                        OR ON-LINE OR BOTH.                PRAB 
+03160          B    START                                                  PRAB 
+03162RWD3      RWD  3                                                      PRAB 
+03164RDCONT    R                                                           PRAB 
+03170          MLC  17,CALDAT=12                                           PRAB 
+03180          MLC  23,RUNTYP=1                                            PRAB 
+03190          MLC  28,JULDAT=5                                            PRAB 
+0320F          BCE  RDC1,RUNTYP,B       BR IF BASIC RUN SPECIFIED.         PRAB 
+0320H          C    BLANKS+4,JULDAT     SUPPLEMENTAL RUN MUST HAVE         PRAB 
+0320J          BE   H607                JULDAT                             PRAB 
+0320L          BCE  RDC1,RUNTYP,S       IF NOT BASIC MUST BE SUPPL.        PRAB 
+0320NH607      NOP  607                 IMPROPER CONTROL CARD HALT.        PRAB 
+0320O          H                                                           PRAB 
+0320P          B    START                                                  PRAB 
+0320SRDC1      C    BLANKS+11,CALDAT                                       PRAB 
+0320T          BE   H607                                                   PRAB 
+03200          SW   HSW                 READ AND                           PRAB 
+03210          B    RDLAB2              CHECK HEADER LABEL                 PRAB 
+03230          B    CRTITL              REPORT TITLE LINE                  PRAB 
+03237*******************************************************************   PRAB 
+03238*   MAIN ROUTINE                                                      PRAB 
+03239*******************************************************************   PRAB 
+03240GMC       B    RDMAC                                                  PRAB 
+03250          BCE  CKDAT,MCTL-4,1                                         PRAB 
+04010H601      NOP  601               INVALID INSTALLMENT CODE             PRAB 
+04020          H                                                           PRAB 
+04030          B    H601                                                   PRAB 
+04040CKDAT     BCE  PROC,RUNTYP,B      TEST FOR BASIC RUN                  PRAB 
+04050          C    MDATE,JULDAT       IF NOT, IS DATE EQUAL OR            PRAB 
+04060          BH   LOP                     HIGH TO CONTROL DATE           PRAB 
+04070          B    PROC               IF SO, PROCESS- OTHERWISE           PRAB 
+04072LOP       A    +1,NPEC            ADD 1 TO ENTRIES NOT PRINTED CTR.   PRAB 
+04080LOPM      B    RDMAC             AND SKIP TO NEXT ENTRY               PRAB 
+04090          BCE  LOPM,MCTL-4,2                                          PRAB 
+04100          BCE  GMC,MCTL-4,3                                           PRAB 
+04110          B    H601                                                   PRAB 
+04120*                                                                     PRAB 
+04130PROC      C    LINCK,LCTR     TEST IF THERE IS ROOM ON PAGE           PRAB 
+04140          BH   CRTITL                FOR HEADER INSTALLMENT           PRAB 
+04150          B    HDINST             WRITE HEADER LINES                  PRAB 
+04160          B    GAB                GET ABSTRACT RECORD                 PRAB 
+04170          SW   FSW                 SET 1ST LINE SWITCH                PRAB 
+04180CKCTR     C    LINPA,LCTR     HAS END OF PAGE BEEN REACHED            PRAB 
+04190          BH   CONTIN                                                 PRAB 
+04200          B    PAB                PRINT ABSTRACT LINE                 PRAB 
+04210          A    +62,X3                                                 PRAB 
+04220          C    MABCT,ABCTR    ALL ABSTRACT LINES FROM RECORD USED     PRAB 
+04230          BE   GAB            YES-GET ANOTHER RECORD                  PRAB 
+04240          B    CKCTR                                                  PRAB 
+0425R*******************************************************************   PRAB 
+0425S* CONTINUE ABSTRACT ON NEXT PAGE SUB ROUTINE                          PRAB 
+0425T*******************************************************************   PRAB 
+04250CONTIN    SBR  CONEXT+3                                               PRAB 
+05010          B    CRTITL                                                 PRAB 
+05020          MLCWA'⯒',181                                                PRAB 
+05030          MLC  '(CONT.)',171                                          PRAB 
+05040          MRCM 100,200             PROGRAM ID AND TITLE               PRAB 
+05050          BSS  ONLINE,B                                               PRAB 
+05060          BSS  WRTAB,C                                                PRAB 
+05070CONEXT    B    *                                                      PRAB 
+05080*******************************************************************   PRAB 
+0509S* READ ABSTRACT PORTION OF MASTER SUB ROUTINE                         PRAB 
+05090*******************************************************************   PRAB 
+05100GAB       SBR  GABEXT+3            ROUTINE TO READ ABSTRACT           PRAB 
+05110          B    RDMAC                  PORTION OF MASTER               PRAB 
+05112          MLC  '0',ABCTR      CLEAR ABSTRACT LINE CTR                 PRAB 
+05120          SBR  X3,MDRF                                                PRAB 
+05130          BCE  GABEXT,MCTL-4,2        TEST FOR VALID INSTALLMENT      PRAB 
+05140          BCE  GABEXT,MCTL-4,3        CODE                            PRAB 
+05150          BCE  CKDAT,MCTL-4,1                                         PRAB 
+05160          B    H601                                                   PRAB 
+05170GABEXT    B    *                                                      PRAB 
+05180*                                                                     PRAB 
+05190*******************************************************************   PRAB 
+05200*     PRINT HEADER INSTALLMENT                                        PRAB 
+05210*******************************************************************   PRAB 
+05220HDINST    SBR  HDEXIT+3                                               PRAB 
+05240          A    +15,LCTR                                               PRAB 
+05250          B    PRHD                                                   PRAB 
+06010          B    PRNT1                                                  PRAB 
+06020          B    PRNT2                                                  PRAB 
+06030          B    PRNT3                                                  PRAB 
+06040          B    PRNT4                                                  PRAB 
+06050          B    PRNT5                                                  PRAB 
+06060          B    PRNT6                                                  PRAB 
+06070          B    PRNT7                                                  PRAB 
+06080          B    PRNT8                                                  PRAB 
+06090          B    PKEY                                                   PRAB 
+06092          A    +1,PREC            ADD 1 TO ENTRIES PRINTED CTR.       PRAB 
+06100HDEXIT    B    *                                                      PRAB 
+06110*******************************************************************   PRAB 
+06120* PRINT ON-LINE                                                       PRAB 
+06130*******************************************************************   PRAB 
+06140ONLINE    SBR  OLEXIT+3                                               PRAB 
+06150          BCE  SK1,200,1                                              PRAB 
+06160          BCE  SKJ,200,0                                              PRAB 
+06170          BCE  SKK,200,-                                              PRAB 
+06180BLKMK     MLC  ' ',281                                                PRAB 
+06190          W                                                           PRAB 
+06200          MLCWA'⯒',281                                                PRAB 
+06210OLEXIT    B    *                                                      PRAB 
+06220SK1       CC   1                                                      PRAB 
+06230          B    BLKMK                                                  PRAB 
+06240SKJ       CC   J                                                      PRAB 
+06250          B    BLKMK                                                  PRAB 
+07010SKK       CC   K                                                      PRAB 
+07020          B    BLKMK                                                  PRAB 
+07030*******************************************************************   PRAB 
+07040*     READ MAC FILE                                                   PRAB 
+07050*******************************************************************   PRAB 
+07060RDMAC     SBR  RMEXIT+3                                               PRAB 
+07070RDM       MLC  BLANKS,MGM          BLANK GMS FOR WL CHECK             PRAB 
+07080RT2       RT   2,MASTER            READ MAC FILE                      PRAB 
+07090          BER  ERR2                TEST FOR READ ERROR                PRAB 
+07100          MLC  '0',ERRCNT                                             PRAB 
+07110          BEF  EOF2                TEST EOR                           PRAB 
+07120          BCE  SQCKM,MGM,⯒         TEST WRONG LENGTH RECORD           PRAB 
+07130WLMAC     NOP  606                 WRONG LENGTH RECORD ON MAC         PRAB 
+07140          H                                                           PRAB 
+07150          B    WLMAC                                                  PRAB 
+07160*                                                                     PRAB 
+07170SQCKM     C    MID,MPREV=8         CHECK SEQUENCE OF MAC FILE         PRAB 
+07180          BH   OSMAC                                                  PRAB 
+07190          MLC  MID,MPREV                                              PRAB 
+07200          A    +1,OMRC             ADD TO OLD MASTER RECORD COUNT     PRAB 
+07210          A    +1,TR2CNT           ADD TO TRAILER BLOCK COUNT         PRAB 
+07220          B    AME,MCTL-4,1                                           PRAB 
+07230RMEXIT    B    *                                                      PRAB 
+07240*                                                                     PRAB 
+07250AME       A    +1,OMEC                                                PRAB 
+08010          B    RMEXIT                                                 PRAB 
+08020OSMAC     NOP  520                 MAC OUT OF SEQUENCE HALT           PRAB 
+08030          H                                                           PRAB 
+08040          B    OSMAC                                                  PRAB 
+08050*                                                                     PRAB 
+08060ERR2      BSP  2                   MAC TAPE ERROR ROUTINE             PRAB 
+08070          A    +1,ERRCNT                                              PRAB 
+08080          BCE  TPERR2,ERRCNT,9                                        PRAB 
+08090          B    RDM                                                    PRAB 
+08100TPERR2    NOP  521                                                    PRAB 
+08110          H                                                           PRAB 
+08120          B    RDM                                                    PRAB 
+08130*                                                                     PRAB 
+08140EOF2      SW   TSW                                                    PRAB 
+08150          B    RDLAB2                                                 PRAB 
+08180          SW   HSW                                                    PRAB 
+08190          B    RDLAB2                                                 PRAB 
+08200          B    RDM                                                    PRAB 
+08208*******************************************************************   PRAB 
+08210*     READ MAC HEADER AND TRAILER LABELS                              PRAB 
+08220*******************************************************************   PRAB 
+08230RDLAB2    SBR  RL2EXT+3                                               PRAB 
+08240RTL2      RT   2,201                                                  PRAB 
+08250          BER  RTRY2                                                  PRAB 
+09010          BW   CKMH,HSW                                               PRAB 
+09020          BW   CKMT,TSW                                               PRAB 
+09030H692      NOP  692                 PROGRAM OR MACHINE ERROR           PRAB 
+09040          H                                                           PRAB 
+09050          B    H692                                                   PRAB 
+09060RTRY2     BSP  2                                                      PRAB 
+09070          NOP  525                 TAPE ERROR READING HEADER OR       PRAB 
+09080          H                           TRAILER                         PRAB 
+09090          B    RTL2                                                   PRAB 
+09100CKMH      C    205,HDR                                                PRAB 
+09110          BE   CKMID                                                  PRAB 
+09120          MLC  '1',H620+3                                             PRAB 
+09140          B    NGHD2                                                  PRAB 
+09150CKMID     C    223,'MAC'                                              PRAB 
+09160          BE   CKMRS                                                  PRAB 
+09161          MLC  '2',H620+3                                             PRAB 
+09170NGHD2     RWU  2                                                      PRAB 
+09172H620      NOP  620                 HALT 621, 622 OR 623.              PRAB 
+09180          H                                                           PRAB 
+09190          B    RTL2                                                   PRAB 
+09200CKMRS     C    219,MREELS          CHECK REEL SEQUENCE                PRAB 
+09204          BE   HD2OK                                                  PRAB 
+09210          MLC  '3',H620+3                                             PRAB 
+09214          B    NGHD2                                                  PRAB 
+09220HD2OK     A    +1,MREELS                                              PRAB 
+09230          CW   HSW                                                    PRAB 
+09240          B    RL2EXT                                                 PRAB 
+09250CKMT      C    210,TR2CNT                                             PRAB 
+10010          BE   CKEOR2                                                 PRAB 
+10020TR2OB     NOP  625                 BLOCK COUNT OB ON TRAILER          PRAB 
+10030          H                                                           PRAB 
+10040          B    TR2OB                                                  PRAB 
+10050CKEOR2    BCE  MEOR,204,R                                             PRAB 
+10060          BCE  ENDJOB,204,F                                           PRAB 
+10070NGTR2     NOP  624                 EOR-EOF INDICATOR INVALID          PRAB 
+10080          H                                                           PRAB 
+10090          B    NGTR2                                                  PRAB 
+10100MEOR      RWU  2                                                      PRAB 
+10110          NOP  529                 END OF REEL HALT-MOUNT NEXT        PRAB 
+10120          H                           IP REEL, PRESS START            PRAB 
+10130          MLC  BLANKS+4,TR2CNT     BLANK TRAILER BLOCK COUNT          PRAB 
+10160TOT2      CW   TSW                                                    PRAB 
+10170RL2EXT    B    *                                                      PRAB 
+10180*                                                                     PRAB 
+10190MREELS    DCW  '001'                                                  PRAB 
+10198*******************************************************************   PRAB 
+10200*     CREATE TITLE LINE                                               PRAB 
+10210*******************************************************************   PRAB 
+10220CRTITL    SBR  CREXIT+3                                               PRAB 
+10230          CS   290                                                    PRAB 
+10240          MLC  CALDAT,212                                             PRAB 
+10250          BCE  MVCAPR,RUNTYP,B                                        PRAB 
+11010          MLC  SUP,217                                                PRAB 
+11020MVCAPR    MLC  CAPRAB,253                                             PRAB 
+11030          MLC  'PAGE',262                                             PRAB 
+11049          MCS  PAGE,267                                               PRAB 
+11050          MLC  '.00',270                                              PRAB 
+11060          MLC  '1',200                                                PRAB 
+11070          BSS  ONLINE,B                                               PRAB 
+11080          BSS  WRTAB,C                                                PRAB 
+11090          A    +1,PAGE                                                PRAB 
+11100          SBR  LCTR,0                                                 PRAB 
+11110          SW   FSW                                                    PRAB 
+11120CREXIT    B    *                                                      PRAB 
+11130*******************************************************************   PRAB 
+11140*     PRINT ENTRY HEADING LINE                                        PRAB 
+11150*******************************************************************   PRAB 
+11160PRHD      SBR  PHEXIT+3                                               PRAB 
+11170          CS   290                                                    PRAB 
+11180          MLC  '-',200                                                PRAB 
+11190          MLC  MID,208                                                PRAB 
+11200          MLC  MTITLE,268                                             PRAB 
+11210CHON      BSS  ONLINE,B                                               PRAB 
+11220          BSS  WRTAB,C                                                PRAB 
+11230          MRCM 200,100             SAVE FOR CONTINUE ROUTINE.         PRAB 
+11240PHEXIT    B    *                                                      PRAB 
+11250*******************************************************************   PRAB 
+12010*     PRINT LINE 1 OF HEADER INSTALLMENT                              PRAB 
+12020*******************************************************************   PRAB 
+12030PRNT1     SBR  P1EXIT+3                                               PRAB 
+12040          CS   290                                                    PRAB 
+12050          MLC  'FIELD-',213                                           PRAB 
+12060          MLC  MFIELD,229                                             PRAB 
+12070          MLC  'SUBJ. CODES',242                                      PRAB 
+12080          MLC  MPSUBJ,246                                             PRAB 
+12090          MLC  MSSUB1,250                                             PRAB 
+12100          MLC  MSSUB2,254                                             PRAB 
+12110          MLC  MSSUB3,258                                             PRAB 
+12120          MLC  MSSUB4,262                                             PRAB 
+12130          MLC  '0',200                                                PRAB 
+12140          BSS  ONLINE,B                                               PRAB 
+12150          BSS  WRTAB,C                                                PRAB 
+12160P1EXIT    B    *                                                      PRAB 
+12170*******************************************************************   PRAB 
+12180*     PRINT LINE 2 OF HEADER INSTALLMENT                              PRAB 
+12190*******************************************************************   PRAB 
+12200PRNT2     SBR  P2EXIT+3                                               PRAB 
+12210          CS   290                                                    PRAB 
+12220          MLC  'FOR',210                                              PRAB 
+12230          MLC  MMACH,218                                              PRAB 
+12240          MLC  'IN',222                                               PRAB 
+12250          MLC  MPLANG,230                                             PRAB 
+13010          C    MSLANG,BLANKS+6                                        PRAB 
+13020          BE   CKYR                                                   PRAB 
+13030          MLC  'AND',234                                              PRAB 
+13040          MLC  MSLANG,242                                             PRAB 
+13050CKYR      C    MYRCMP,BLANKS+1                                        PRAB 
+13060          BE   MS2                                                    PRAB 
+13070          C    MYRCMP,'PR'                                            PRAB 
+13080          BE   DOPR                                                   PRAB 
+13090          C    MYRCMP,'CH'                                            PRAB 
+13100          BE   DOCH                                                   PRAB 
+13110          MLC  'COMPLETED 19',256                                     PRAB 
+13120          MLC  MYRCMP,258                                             PRAB 
+13130MS2       MLC  SINGLE,200                                             PRAB 
+13140          BSS  ONLINE,B                                               PRAB 
+13150          BSS  WRTAB,C                                                PRAB 
+13160P2EXIT    B    *                                                      PRAB 
+13170*                                                                     PRAB 
+13180DOPR      MLC  'IN PREPARATION',265                                   PRAB 
+13190          MLC  'STATUS-',251                                          PRAB 
+13200          B    MS2                                                    PRAB 
+13210DOCH      MLC  'STATUS-',251                                          PRAB 
+13220          MLC  'IN CHECKOUT',262                                      PRAB 
+13230          B    MS2                                                    PRAB 
+13240*******************************************************************   PRAB 
+13250*     PRINT LINE 3 OF HEADER INSTALLMENT                              PRAB 
+14010*******************************************************************   PRAB 
+14020PRNT3     SBR  P3EXIT+3                                               PRAB 
+14030          CS   290                                                    PRAB 
+14040          MLC  'BY',209                                               PRAB 
+14050          MLC  MNAME,227                                              PRAB 
+14060          C    MAUTH,BLANKS+16                                        PRAB 
+14070          BE   MTYPER                                                 PRAB 
+14080          MLC  'AND',231                                              PRAB 
+14090          MLC  MAUTH,249                                              PRAB 
+14100MTYPER    MLC  'TYPE ROUTINE',264                                     PRAB 
+14110          MLC  MROUT,267                                              PRAB 
+14120          MLC  SINGLE,200                                             PRAB 
+14130          BSS  ONLINE,B                                               PRAB 
+14140          BSS  WRTAB,C                                                PRAB 
+14150P3EXIT    B    *                                                      PRAB 
+14160*******************************************************************   PRAB 
+14170*     PRINT LINE 4 OF HEADER INSTALLMENT                              PRAB 
+14180*******************************************************************   PRAB 
+14190PRNT4     SBR  P4EXIT+3                                               PRAB 
+14200          CS   290                                                    PRAB 
+14210          MLC  'MONITOR',214                                          PRAB 
+14220          MLC  MMONIT,222                                             PRAB 
+14230          MLC  'SPEC. MACHINE REQUIREMENTS',251                       PRAB 
+14240          MLC  MREQ,264                                               PRAB 
+14250MS4       MLC  SINGLE,200                                             PRAB 
+15010          BSS  ONLINE,B                                               PRAB 
+15020          BSS  WRTAB,C                                                PRAB 
+15030P4EXIT    B    *                                                      PRAB 
+15040*******************************************************************   PRAB 
+15050*     PRINT LINE 5 OF HEADER INSTALLMENT                              PRAB 
+15060*******************************************************************   PRAB 
+15070PRNT5     SBR  P5EXIT+3                                               PRAB 
+15080          CS   290                                                    PRAB 
+15090          MLC  'SUBROUTINES REQUIRED',227                             PRAB 
+15100          MLC  MNONLB,244                                             PRAB 
+15110          MLC  SINGLE,200                                             PRAB 
+15120          BSS  ONLINE,B                                               PRAB 
+15130          BSS  WRTAB,C                                                PRAB 
+15140P5EXIT    B    *                                                      PRAB 
+15150*******************************************************************   PRAB 
+15160*     PRINT LINE 6 OF HEADER INSTALLMENT                              PRAB 
+15170*******************************************************************   PRAB 
+15180PRNT6     SBR  P6EXIT+3                                               PRAB 
+15190          CS   290                                                    PRAB 
+15200          MLC  'AVAILABLE DOCUMENTS',226                              PRAB 
+15210          C    MDOC1,'     '                                          PRAB 
+15220          BE   *+8                                                    PRAB 
+15230          MLC  'PGS.',237                                             PRAB 
+15240          C    MDOC2,'     '                                          PRAB 
+15250          BE   *+8                                                    PRAB 
+16010          MLC  'PGS.',248                                             PRAB 
+16020          C    MDOC3,'     '                                          PRAB 
+16030          BE   *+8                                                    PRAB 
+16040          MLC  'PGS.',259                                             PRAB 
+16050          MLC  MDOC1,232                                              PRAB 
+16060          MLC  MDOC2,243                                              PRAB 
+16070          MLC  MDOC3,254                                              PRAB 
+16080          MLC  SINGLE,200                                             PRAB 
+16090          BSS  ONLINE,B                                               PRAB 
+16100          BSS  WRTAB,C                                                PRAB 
+16110P6EXIT    B    *                                                      PRAB 
+16120*******************************************************************   PRAB 
+16130*     PRINT LINE 7 OF HEADER INSTALLMENT                              PRAB 
+16140*******************************************************************   PRAB 
+16150PRNT7     SBR  P7EXIT+3                                               PRAB 
+16160          CS   290                                                    PRAB 
+16170          MLC  'AVAILABLE MATERIALS',226                              PRAB 
+16180          MLC  MMAT1,255                                              PRAB 
+16190          MLC  'ACCESSION',268                                        PRAB 
+16200          MLC  SINGLE,200                                             PRAB 
+16210          BSS  ONLINE,B                                               PRAB 
+16220          BSS  WRTAB,C                                                PRAB 
+16230P7EXIT    B    *                                                      PRAB 
+16240*******************************************************************   PRAB 
+16250*     PRINT LINE 8 OF HEADER INSTALLMENT                              PRAB 
+17010*******************************************************************   PRAB 
+17020PRNT8     SBR  P8EXIT+3                                               PRAB 
+17030          CS   290                                                    PRAB 
+17040          MLC  MMAT2,255                                              PRAB 
+17050          MLC  'NO.',262                                              PRAB 
+17060          MLC  MSDASF,273                                             PRAB 
+17070          MLC  MSDA-2,270                                             PRAB 
+17080          MLC  SINGLE,200                                             PRAB 
+17090          BSS  ONLINE,B                                               PRAB 
+17100          BSS  WRTAB,C                                                PRAB 
+17110P8EXIT    B    *                                                      PRAB 
+17120*******************************************************************   PRAB 
+17130*     PRINT SEARCH KEY LINE                                           PRAB 
+17140*******************************************************************   PRAB 
+17150PKEY      SBR  KYEXIT+3                                               PRAB 
+17160          CS   290                                                    PRAB 
+17170          MLC  'KEYS',206                                             PRAB 
+17180          MLC  MSERCH,270                                             PRAB 
+17190          MLC  '0',200                                                PRAB 
+17200          BSS  ONLINE,B                                               PRAB 
+17210          BSS  WRTAB,C                                                PRAB 
+17220KYEXIT    B    *                                                      PRAB 
+17230*******************************************************************   PRAB 
+17240*     PRINT ABSTRACT LINE                                             PRAB 
+17250*******************************************************************   PRAB 
+18010PAB       SBR  PABEXT+3                                               PRAB 
+18020          CS   290                                                    PRAB 
+18030          MLC  '⧧',61+X3                                              PRAB 
+18040          MRCM 0+X3,208                                               PRAB 
+18050          MLC  '  '                                                   PRAB 
+18080          BW   USEJ,FSW=1          BRANCH IF 1ST LINE SWITCH ON.      PRAB 
+18090          MLC  SINGLE,200                                             PRAB 
+18100CKOL      BSS  ONLINE,B                                               PRAB 
+18110          BSS  WRTAB,C                                                PRAB 
+18120          A    +1,LCTR                                                PRAB 
+18121          A    +1,ABCTR            ADD 1 TO ABSTRACT COUNTER.         PRAB 
+18130PABEXT    B    *                                                      PRAB 
+18140USEJ      MLC  '0',200                                                PRAB 
+18150          CW   FSW                                                    PRAB 
+18160          B    CKOL                                                   PRAB 
+18170*                                                                     PRAB 
+18180*******************************************************************   PRAB 
+18190*     WRITE CATALOG PRINT TAPE                                        PRAB 
+18200*******************************************************************   PRAB 
+18210WRTAB     SBR  WABEXT+3                                               PRAB 
+18220          MLCWA'⯒',281                                                PRAB 
+18230WT3       WT   3,200                                                  PRAB 
+18240          BER  ERR3                                                   PRAB 
+18250          MLC  '0',ERRCNT                                             PRAB 
+19010          BEF  EOF3                                                   PRAB 
+19020WABEXT    B    *                                                      PRAB 
+19030ERR3      BSP  3                                                      PRAB 
+19040          A    +1,ERRCNT=1                                            PRAB 
+19050          BCE  H530,ERRCNT,9                                          PRAB 
+19060          B    WT3                                                    PRAB 
+19070H530      NOP  530                                                    PRAB 
+19080          H                                                           PRAB 
+19090          B    WT3                                                    PRAB 
+19100EOF3      WTM  3                                                      PRAB 
+19110          RWU  3                                                      PRAB 
+19120          NOP  531                                                    PRAB 
+19130          H                                                           PRAB 
+19140          B    WABEXT                                                 PRAB 
+19150*******************************************************************   PRAB 
+19160*     END OF JOB                                                      PRAB 
+19170*******************************************************************   PRAB 
+19180ENDJOB    RWU  2                                                      PRAB 
+19182          B    CRTITL                                                 PRAB 
+19186          BSS  EJ3,C                                                  PRAB 
+19188EJ        CS   290                                                    PRAB 
+19190          MLC  '-',200                                                PRAB 
+19192          MLC  'MASTER FILE INPUT',225                                PRAB 
+19194          MCS  OMEC,232                                               PRAB 
+19196          MLC  'ENTRIES',240                                          PRAB 
+19198          MCS  OMRC,248                                               PRAB 
+19200          MLC  'RECORDS',256                                          PRAB 
+19202          B    ONLINE                                                 PRAB 
+19204          CS   290                                                    PRAB 
+19206          MLC  '0',200                                                PRAB 
+19208          MCS  PREC,213                                               PRAB 
+19210          MLC  'ENTRIES PRINTED',229                                  PRAB 
+19212          MCS  NPEC,237                                               PRAB 
+19214          MLC  'ENTRIES NOT PRINTED',257                              PRAB 
+19216          B    ONLINE                                                 PRAB 
+19218          CS   290                                                    PRAB 
+19220          MLC  '0',200                                                PRAB 
+19226          BCE  EJ2,RUNTYP,B                                           PRAB 
+19228          MLC  'SUPPLEMENTAL RUN - DATE',231                          PRAB 
+19230          MLC  JULDAT,237                                             PRAB 
+19232EJ2       B    ONLINE                                                 PRAB 
+19234H999      NOP  999                                                    PRAB 
+19236          H                                                           PRAB 
+19238          B    H999                                                   PRAB 
+19244EJ3       WTM  3                                                      PRAB 
+19245          RWU  3                                                      PRAB 
+19246          B    EJ                                                     PRAB 
+19247*******************************************************************   PRAB 
+20010          END  START                                                  PRAB 

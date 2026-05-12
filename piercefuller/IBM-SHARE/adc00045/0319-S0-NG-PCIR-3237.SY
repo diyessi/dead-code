@@ -1,0 +1,585 @@
+0101           JOB  PCIR - PRINT CAPR INDEX REPORTS - NOV 18, 1964         PCIR 
+0102           CTL  431                                                    PCIR 
+0103 *******************************************************************   PCIR 
+0104 *  PROGRAMMERS - DON MILLER AND DONNA MONTGOMERY                      PCIR 
+0105 *                                                                     PCIR 
+0106 *******************************************************************   PCIR 
+0107 * THE DETAIL INPUT FOR BOTH REPORTS IS READ FROM TAPE 1.              PCIR 
+0108 * THE SUBJECT CODE DESCRIPTION CARD TABLE INPUT IS PLACED DIRECTLY    PCIR 
+0109 *BEHIND THE CONTROL CARD.                                             PCIR 
+0110 *******************************************************************   PCIR 
+0111 * THIS PROGRAM PREPARES TWO PRINTED REPORTS- ON LINE                  PCIR 
+0112 *     1. CAPR - KEYWORD INDEX                                         PCIR 
+0113 *     2. CAPR - SUBJECT CODE INDEX                                    PCIR 
+0114 *******************************************************************   PCIR 
+0115 *SENSE SWITCHES-                                                      PCIR 
+0116 *     IO - ALWAYS ON                                                  PCIR 
+0117 *     A  - ALWAYS ON                                                  PCIR 
+0118 *     B  - NOT USED                                                   PCIR 
+0119 *     C  - NOT USED                                                   PCIR 
+0120 *     D  - NOT USED                                                   PCIR 
+0121 *     E  - USED WITH READ HEADER LABEL HALTS 566, 567 AND 568.        PCIR 
+0121B*          ON - TO CONTINUE PROCESSING THE FIRST DATA RECORD ON       PCIR 
+0121C*               THE REEL.                                             PCIR 
+0121D*          OFF - TO RETURN TO READ AND CHECK THE HEADER LABEL.        PCIR 
+0122 *     F  - USED WITH HALT 522- READ TRAILER ERROR CONDITION.          PCIR 
+0123 *          SEE HALT 522.                                              PCIR 
+0124 *     G  - TURNED ON TO BRANCH AROUND READ TRAILER LABEL              PCIR 
+0125 *          ERRORS AT HALTS 525, 526, AND 527.                         PCIR 
+0126 *                                                                     PCIR 
+0127 *******************************************************************   PCIR 
+0128 * HALTS AND ACTION                                                    PCIR 
+0129 *******************************************************************   PCIR 
+0130 *                                                                     PCIR 
+0131 *     HALT PROG.  CAUSE AND+OR                                        PCIR 
+0132 *     NO.  LABEL  ACTION TO TAKE                                      PCIR 
+0133 *     ---- -----  --------------                                      PCIR 
+0134 *     511  I14J7  TAPE 1 INPUT END OF REEL.  MOUNT NEXT INPUT REEL    PCIR 
+0135 *                 AND PRESS START                                     PCIR 
+0136 *     522  I19    CAUSED BY READ ERROR CONDITION WHEN READING         PCIR 
+0137 *                 TRAILER LABEL.                                      PCIR 
+0137B*                 NOTE - IF THE SORTED INDEX RECORDS FILE WAS         PCIR 
+0137C*                 SORTED ON A 1401 USING THE SORT 01 PROGRAM,         PCIR 
+0137D*                 THIS FILE WILL NOT HAVE TRAILER LABELS, HENCE       PCIR 
+0137E*                 THIS HALT IS APT TO OCCUR.                          PCIR 
+0137K*                  3 ACTIONS PROVIDED -                               PCIR 
+0138 *                   1. SENSE SW F ON, PRESS START TO TRY TO READ      PCIR 
+0139 *                      TRAILER NINE MORE TIMES.                       PCIR 
+0140 *                   2. SENSE SW F OFF AND G ON, PRESS START TO GO     PCIR 
+0141 *                      TO END OF JOB ROUTINE IF IT IS LAST REEL       PCIR 
+0142 *                      OF INPUT.                                      PCIR 
+0143 *                   3. SENSE SW F AND G OFF, PRESS START TO GO TO     PCIR 
+0144 *                      END OF REEL ROUTINE IF IT IS NOT THE LAST      PCIR 
+0145 *                      REEL OF INPUT.                                 PCIR 
+0146 *     525  I25    NO TRAILER LABEL - THAT IS THE REEL WAS ENDED       PCIR 
+0147 *                 BY 2 SUCCESSIVE TAPE MARKS.                         PCIR 
+0148 *                 2 ACTIONS AVAILABLE-                                PCIR 
+0149 *                   1. SENSE SW G ON, PRESS START TO GO TO END OF     PCIR 
+0150 *                      JOB IF IT IS LAST REEL OF INPUT.               PCIR 
+0151 *                   2. SENSE SW G OFF, PRESS START TO GO TO END OF    PCIR 
+0152 *                      REEL ROUTINE IF IT IS NOT LAST REEL OF INPUT   PCIR 
+0153 *     526  I26    IMPROPER TRAILER LABEL, DID NOT HAVE 1EO IN 1ST     PCIR 
+0154 *                 3 POSITIONS.                                        PCIR 
+0154B*                 NOTE - IF THE SORTED INDEX RECORDS FILE WAS         PCIR 
+0154C*                 SORTED ON A 1401 USING THE SORT 01 PROGRAM,         PCIR 
+0154D*                 THIS FILE WILL NOT HAVE TRAILER LABELS, HENCE       PCIR 
+0154E*                 THIS HALT IS APT TO OCCUR.                          PCIR 
+0155 *                 2 ACTIONS AVAILABLE-                                PCIR 
+0156 *                   1. SENSE SW G ON, PRESS START TO GO TO END OF     PCIR 
+0157 *                      JOB IF IT IS LAST REEL OF INPUT.               PCIR 
+0158 *                   2. SENSE SW G OFF, PRESS START TO GO TO END OF    PCIR 
+0159 *                      REEL ROUTINE IF IT IS NOT LAST REEL OF INPUT   PCIR 
+0160 *     527  I27    TRAILER LABEL AND PROGRAM BLOCK COUNT DO NOT        PCIR 
+0161 *                 AGREE.                                              PCIR 
+0162 *                 2 ACTIONS AVAILABLE-                                PCIR 
+0163 *                   1. SENSE SW G ON, PRESS START TO GO TO END OF     PCIR 
+0164 *                      JOB IF IT IS LAST REEL OF INPUT.               PCIR 
+0165 *                   2. SENSE SW G OFF, PRESS START TO GO TO END OF    PCIR 
+0166 *                      REEL ROUTINE IF IT IS NOT LAST REEL OF INPUT   PCIR 
+0167 *     531  I11    WRONG LENGTH RECORD LOCKED HALT.  TAKE CORE DUMP,   PCIR 
+0168 *                 BACKSPACE TAPE 2 RECORDS AND TAKE TAPE DUMP OF      PCIR 
+0169 *                 A FEW RECORDS. ABANDON JOB.                         PCIR 
+0169B*     566  H12    THE FIRST RECORD ON THE SIR INPUT TAPE IS NOT A     PCIR 
+0169C*                 HEADER LABEL - DOES NOT HAVE 1HDR IN THE FIRST      PCIR 
+0169D*                 FOUR POSITIONS. TAKE ANY OF THESE 3 ACTIONS-        PCIR 
+0169E*                1. IF THIS CONDITION IS EXPECTED, THAT IS THE SORT   PCIR 
+0169F*                 USED FOR THE SCIR PROCESSING DROPS THE MIR HEADER   PCIR 
+0169G*                 LABEL PROVIDED BY PDAP AND DOES NOT REPLACE IT      PCIR 
+0169H*                 WITH AN SIR HEADER LABEL, THEN SET SENSE SWITCH     PCIR 
+0169I*                 E ON AND PRESS START. THE PROGRAM WILL BACKSPACE    PCIR 
+0169J*                 THE TAPE EXPECTING THE FIRST RECORD TO BE A DATA    PCIR 
+0169K*                 RECORD AND CONTINUE PROCESSING.                     PCIR 
+0169L*                2. IF A HEADER LABEL IS EXPECTED, AN IMPROPER REEL   PCIR 
+0169M*                 HAS BEEN MOUNTED. IF PROPER REEL CAN BE LOCATED,    PCIR 
+0169N*                 MOUNT IT, SET SENSE SWITCH E OFF AND PRESS START.   PCIR 
+0169O*                 THE PROGRAM WILL RETURN TO READ THE HEADER LABEL.   PCIR 
+0169S*                3. ANY OTHER CONDITION NOT COVERED BY PARAGRAPHS     PCIR 
+0169T*                 1 AND 2 ABOVE, TAKE DIAGNOSTIC ACTION AND           PCIR 
+0169U*                 ABANDON JOB.                                        PCIR 
+0170A*     567  H13    THE HEADER LABEL ON THE SORTED INDEX RECORDS TAPE   PCIR 
+0170B*                 DOES NOT HAVE SIR AS THE HEADER LABEL ID.           PCIR 
+0170C*                  NOTE THAT THIS CONDITION MAY EXIST IF THE          PCIR 
+0170D*                  SORTED INDEX RECORDS FILE WAS SORTED ON A 1401     PCIR 
+0170E*                  USING THE SORT 01 PROGRAM WHICH DID NOT INCLUDE    PCIR 
+0170F*                  AN OUTPUT HEADER LABEL CARD WITH THE CONTROL       PCIR 
+0170G*                  CARD.                                              PCIR 
+0170K*                     3 ACTIONS PROVIDED -                            PCIR 
+0170L*                  1. IF THIS CONDITION IS EXPECTED, SET SENSE        PCIR 
+0170M*                   SWITCH E ON AND PRESS START TO CONTINUE           PCIR 
+0170N*                   PROCESSING WITH THE NEXT TAPE RECORD.             PCIR 
+0170O*                  2. IF THIS CONDITION IS NOT EXPECTED AN IMPROPER   PCIR 
+0170P*                   REEL HAS BEEN MOUNTED. MOUNT THE PROPER REEL,     PCIR 
+0170Q*                   SET SENSE SWITCH E OFF AND PRESS START. THE       PCIR 
+0170R*                   PROGRAM WILL RETURN TO READ THE HEADER LABEL.     PCIR 
+0170S*                3. ANY OTHER CONDITION NOT COVERED BY PARAGRAPHS     PCIR 
+0170T*                 1 AND 2 ABOVE, TAKE DIAGNOSTIC ACTION AND           PCIR 
+0170U*                 ABANDON JOB.                                        PCIR 
+0171A*     568  H14    THE HEADER LABEL ON THE SORTED INDEX RECORDS TAPE   PCIR 
+0171B*                 DOES HAVE SIR AS AN ID, BUT HAS AN IMPROPER REEL    PCIR 
+0171C*                 SEQUENCE NUMBER.                                    PCIR 
+0171D*                NOTE THAT THIS CONDITION MAY EXIST IF THIS IS        PCIR 
+0171E*                THE SECOND THRU FINAL REEL PRODUCED BY A 1401        PCIR 
+0171F*                PROCESSING USING THE SORT 01 PROGRAM.                PCIR 
+0171J*                     3 ACTIONS PROVIDED -                            PCIR 
+0171K*                  1. IF THIS CONDITION IS EXPECTED, SET SENSE        PCIR 
+0171L*                   SWITCH E ON AND PRESS START TO CONTINUE           PCIR 
+0171M*                   PROCESSING WITH THE NEXT TAPE RECORD.             PCIR 
+0171N*                  2. IF THIS CONDITION IS NOT EXPECTED AN IMPROPER   PCIR 
+0171O*                   REEL HAS BEEN MOUNTED. MOUNT THE PROPER REEL,     PCIR 
+0171P*                   SET SENSE SWITCH E OFF AND PRESS START. THE       PCIR 
+0171Q*                   PROGRAM WILL RETURN TO READ THE HEADER LABEL.     PCIR 
+0171S*                3. ANY OTHER CONDITION NOT COVERED BY PARAGRAPHS     PCIR 
+0171T*                 1 AND 2 ABOVE, TAKE DIAGNOSTIC ACTION AND           PCIR 
+0171U*                 ABANDON JOB.                                        PCIR 
+0172 *     571  I08    READ ERROR CONDITION ON TAPE 1. THE PROGRAM HAS     PCIR 
+0173 *                 TRIED 9 TIMES TO READ THE RECORD BUT THE ERROR      PCIR 
+0174 *                 PERSISTS.  PRESS START TO TRY 9 MORE TIMES OR       PCIR 
+0175 *                 TAKE DIAGNOSTIC ACTION AND ABANDON JOB.             PCIR 
+0176 *     578  H06    READ ERROR ENCOUNTERED WHEN READING HEADER LABEL    PCIR 
+0176B*                 ON SIR FILE, TAPE 1.  THE PROGRAM HAS TRIED 9       PCIR 
+0176C*                 TIMES TO READ THE LABEL.                            PCIR 
+0176D*                   CHECK FOR PROPER TAPE.                            PCIR 
+0176E*                   PRESS START TO TRY 9 MORE TIMES.                  PCIR 
+0179G*     579  H15    A TAPE MARK WAS THE FIRST RECORD READ ON THE SIR    PCIR 
+0179H*                 INPUT TAPE. MOUNT CORRECT REEL AND PRESS START      PCIR 
+0179I*                 TO CONTINUE PROCESSING.                             PCIR 
+0180 *     608  B18    SUBJECT CODE DESCRIPTION TABLE CARDS OUT OF         PCIR 
+0181 *                 SEQUENCE. RESEQUENCE TABLE CARDS AND RESTART JOB.   PCIR 
+0182 *     609  B33    INPUT ON TAPE 1 OUT OF SEQUENCE.  TAKE DIAGNOSTIC   PCIR 
+0183 *                 ACTION AND ABANDON JOB.                             PCIR 
+0184 *     800  A03    IMPROPER CONTROL CARD REPORT DATE. RUN CARDS OUT    PCIR 
+0185 *                 WITH NON PROCESS RUN-OUT READ KEY. CORRECT          PCIR 
+0186 *                 CONTROL CARD AND PLACE CONTROL CARD FOLLOWED BY     PCIR 
+0187 *                 THE SUBJECT CODE DESCRIPTION TABLE IN THE READ      PCIR 
+0188 *                 HOPPER AND PRESS START.                             PCIR 
+0189 *     801  B04    TYPE RECORD UNKNOWN LOCKED HALT. TAKE DIAGNOSTIC    PCIR 
+0190 *                 ACTION AND ABANDON JOB.                             PCIR 
+0191 *     999  I22    END OF JOB.                                         PCIR 
+0192 *                                                                     PCIR 
+0193 *******************************************************************   PCIR 
+0194 *   CONTROL CARD -INPUT VIA CARD READER                               PCIR 
+0195 *******************************************************************   PCIR 
+0196           EQU  17  6-17, REPORT TITLE DATE                            PCIR 
+0197 *******************************************************************   PCIR 
+0198 * SUBJECT CODE DESCRIPTIONS - INPUT VIA CARD READER                   PCIR 
+0199 *******************************************************************   PCIR 
+0200           EQU  3    1-3, SUBJECT CODE                                 PCIR 
+0201           EQU  72  4-72, SUBJECT CODE DESCRIPTION                     PCIR 
+0202 *******************************************************************   PCIR 
+0203 * REPORT TITLE AREA - THE AREA IS USED FOR BOTH REPORTS-              PCIR 
+0204 * MODIFIED BETWEEN REPORTS.                                           PCIR 
+0205 *******************************************************************   PCIR 
+0206 TITLE     EQU  *+1                                                    PCIR 
+0207 RPTNO     DCW  'KW      '                                             PCIR 
+0208           DC   =6                                                     PCIR 
+0209 DATE      DCW  =12                DATE OF RUN                         PCIR 
+0210           DC   =8                                                     PCIR 
+0211 TNM       DC   'CAPR - KEYWORD PERMUTED INDEX'                        PCIR 
+0212           DC   =7                                                     PCIR 
+0213           DC   'PAGE'                                                 PCIR 
+0214           DCW  '⯒'  GM                                                PCIR 
+0215 PGCT      DCW  '    '                                                 PCIR 
+0216           DC   '.00'                                                  PCIR 
+0217 *******************************************************************   PCIR 
+0218 * KEYWORD INDEX DETAIL PRINT LINE                                     PCIR 
+0219 *******************************************************************   PCIR 
+0220 DET1      DA   1X83,G                                                 PCIR 
+0221 SERCH1         2,64      KEYWORDS                                     PCIR 
+0222 STC1           74,76     SUBMITTERS INSTALLATION CODE                 PCIR 
+0223 ID1            79,83     PROGRAM I.D.                                 PCIR 
+0224 *******************************************************************   PCIR 
+0225 * SUBJECT CODE  GROUP DESCRIPTION PRINT LINE                          PCIR 
+0226 *******************************************************************   PCIR 
+0227 SUBJ2     DA   1X76,G                                                 PCIR 
+0228 SUB2           2,4       SUBJECT CODE                                 PCIR 
+0229 SUBID2         7,75      SUBJECT CODE DESCRIPTION                     PCIR 
+0230 *******************************************************************   PCIR 
+0231 * SUBJECT CODE DETAIL PRINT LINE                                      PCIR 
+0232 *******************************************************************   PCIR 
+0233 DET2      DA   1X83,G                                                 PCIR 
+0234 STC2           11,13     SUBMITTERS INSTALLATION CODE                 PCIR 
+0235 ID2            16,20     PROGRAM I.D.                                 PCIR 
+0236 TITLE2         27,83     PROGRAM TITLE                                PCIR 
+0237 *******************************************************************   PCIR 
+0238 * DETAIL INPUT AREA FROM TAPE 1-                                      PCIR 
+0239 *******************************************************************   PCIR 
+0240 INPUT     DA   1X84,G,X1                                              PCIR 
+0241 CTL            1,6       SHARE CONTROL WORD - ALWAYS C00078           PCIR 
+0242                7         ALWAYS AN *.                                 PCIR 
+0243 TYPE           8,8       1 FOR KEYWORD.      2 FOR SUBJECT CODE.      PCIR 
+0244 INP11          11                           2-SUBJECT CODE            PCIR 
+0245 INP14          14                           2-INSTALLATION CODE       PCIR 
+0246 INP19          19                           2-PROGRAM I.D             PCIR 
+0247 INP76          76                           2-PROGRAM TITLE           PCIR 
+0248 INP71          71       1-SEARCH KEYS                                 PCIR 
+0249 INP74          74       1-INSTALLATION CODE                           PCIR 
+0250 INP79          79       1-PROGRAM I.D.                                PCIR 
+0251 INP84          84       1-RECORD MARK       2-RECORD MARK             PCIR 
+0252 GM        DCW  '⯒'  GM                                                PCIR 
+0253 *******************************************************************   PCIR 
+0254 * CONSTANTS, COUNTERS, ETC.                                           PCIR 
+0255 *******************************************************************   PCIR 
+0256 KWREC     DCW  =6        KEYWORD INPUT RECORD COUNT.                  PCIR 
+0257 SIREC     DCW  =6        SUBJECT CODE DETAIL INPUT RECORD COUNT.      PCIR 
+0258 RECNT     DCW  =6        TOTAL OF KEYWORD AND SUBJECT CODE DETAIL     PCIR 
+0259 *                        INPUT COUNT RECEIVED FROM SCIR.              PCIR 
+0260 SCDCT     DCW  =6        SUBJECT CODE DESCRIPTION TABLE CARD COUNT.   PCIR 
+0261 LINEPA    DCW  '40'      NUMBER OF BODY LINES PER PAGE DESIRED.       PCIR 
+0262 *                          COMPARED TO LINECT FOR PAGE EJECTION.      PCIR 
+0262A*                         IF THE CONSTANT FOR LINEPA IS CHANGED,      PCIR 
+0262B*                         THE CONSTANT FOR LINECT MUST BE CHANGED     PCIR 
+0262C*                         ACCORDINGLY IN ORDER TO FORCE THE TITLE     PCIR 
+0262D*                         LINE TO PRINT ON THE 1ST PAGE OF THE        PCIR 
+0262E*                         REPORT AND TO INSURE PROPER HANDLING        PCIR 
+0262F*                         OF THE 1ST PAGE.                            PCIR 
+0263 LINECT    DCW  '40'      NUMBER OF BODY LINES ALREADY USED FOR        PCIR 
+0263A*                          CURRENT PAGE.                              PCIR 
+0264 BLANKS    DA   1X40                                                   PCIR 
+0265 89        DCW  '000'                                                  PCIR 
+0266 X1        EQU  89                                                     PCIR 
+0267 XXXX      EQU  0                                                      PCIR 
+0268 *******************************************************************   PCIR 
+0269 * HOUSEKEEPING  ROUTINE                                               PCIR 
+0270 *******************************************************************   PCIR 
+0271 A01       R                       READ CONTROL CARD                   PCIR 
+0272           SS   1                                                      PCIR 
+0273           SW   1                                                      PCIR 
+0274           C    17,BLANKS+11        IS THERE A REPORT DATE             PCIR 
+0274C          BE   A03                                                    PCIR 
+0275           BCE  A04,1,              1ST COL. OF CONTROL CARD SHOULD    PCIR 
+0275C*                                  BE BLANK, AND THE 1ST COL. OF      PCIR 
+0275E*                                  THE SUBJ. CODE CARDS WILL NOT.     PCIR 
+0276 A03       NOP  800       NO DATE CARD HALT                            PCIR 
+0277           H                                                           PCIR 
+0278           B    A01                                                    PCIR 
+0279 A04       MLC  17,DATE     CONTROL CARD DATE TO REPORT TITLE AREA.    PCIR 
+0280           B    H01                CHECK HEADER LABEL ON INPUT         PCIR 
+0281           MLC  '      ',6    PREPARE CARD AREA FOR SUBJECT            PCIR 
+0282           SW   4              CODE DESCRIPTION TABLE.                 PCIR 
+0283           SBR  I99+3,B02  SET GET DETAIL INPUT RTE TO RETURN TO B02   PCIR 
+0284           B    I05       GET DETAIL INPUT.                            PCIR 
+0285 *******************************************************************   PCIR 
+0286 *    MAIN ROUTINE                                                     PCIR 
+0287 *******************************************************************   PCIR 
+0288 B01       B    I01                GET INPUT RECORD                    PCIR 
+0289 B02       BCE  B35,TYPE,1         KEYWORD RECORD                      PCIR 
+0290 B03       BCE  B05,TYPE,2    1ST TIME BR TO B05-ALL OTHER TIMES B14   PCIR 
+0291 B04       NOP  801                                                    PCIR 
+0292           H                  TYPE RECORD UNKNOWN HALT                 PCIR 
+0293           B    B04                                                    PCIR 
+0294 *******************************************************************   PCIR 
+0295 *  MAIN ROUTINE - SUBJECT CODE PROCESSING                             PCIR 
+0296 *******************************************************************   PCIR 
+0297 B05       SBR  B03+3,B14                                              PCIR 
+0298           BCE  B12,PGCT,   BR IF THERE WAS NO KEYWORD REPORT.         PCIR 
+0299 * WIND UP KEYWORD INDEX REPORT AND HOUSEKEEP FOR SUBJECT CODE INDEX   PCIR 
+0300           CC   1                  SKIP TO NEW PAGE                    PCIR 
+0301           MLC  'KEYWORD DETAIL INPUT RECORDS',236                     PCIR 
+0302           MCS  KWREC,207                                              PCIR 
+0303           W                       PRINT RECORD COUNT                  PCIR 
+0304           CS   299                CLEAR PRINT AREA                    PCIR 
+0305           MLC  LINEPA,LINECT   SET FOR NEW PAGE.                      PCIR 
+0306           MLC  '    ',PGCT                                            PCIR 
+0307 B12       MLC  'SI',RPTNO-6                                           PCIR 
+0308           MLC  'SUBJECT CODE INDEX    ',TNM                           PCIR 
+0309 * BUILD SUBJECT CODE DETAIL PRINT LINE.                               PCIR 
+0310 B14       MLC  INP14,STC2     INSTALLATION CODE                       PCIR 
+0311           MLC  INP19,ID2      PROGRAM I.D.                            PCIR 
+0312           MLC  INP76,TITLE2    PROGRAM  TITLE                         PCIR 
+0313 * HAS SUBJECT CODE CHANGED.                                           PCIR 
+0314 B15       C    INP11,SUB2                                             PCIR 
+0315           BE   B29                                                    PCIR 
+0316           BH   B33            INPUT OUT OF SEQUENCE                   PCIR 
+0317 * GET SUBJECT CODE DESCRIPTION FROM CARD TABLE                        PCIR 
+0318 B17       C    INP11,3   COMPARE IP SUBJ CODE TO TABLE CARD.          PCIR 
+0319 B17SW     BH   B32                TABLE CARD MISSING- THIS SWITCH     PCIR 
+0320 *                               SET TO AN UNCONDITIONAL BRANCH WHEN   PCIR 
+0321 *                               ALL TABLE CARDS HAVE BEEN READ.       PCIR 
+0322           BE   B23                TABLE CARD MATCHES                  PCIR 
+0323           BLC  B19       NO MORE TABLE CARDS.                         PCIR 
+0324           R                       READ TABLE CARD                     PCIR 
+0325           SS   1                                                      PCIR 
+0326           A    *-6,SCDCT   ADD 1 TO SUBJECT CODE DESCRIPTION TABLE    PCIR 
+0327 *                           CARD COUNT.                               PCIR 
+0328           C    SUB2,3                                                 PCIR 
+0329           BL   B18       TABLE OUT OF SEQUENCE                        PCIR 
+0330           B    B17                                                    PCIR 
+0331 * SUBJECT CODE DESCRIPTION TABLE OUT OF SEQUENCE - RESTART JOB.       PCIR 
+0332 B18       NOP  608                                                    PCIR 
+0333           H                                                           PCIR 
+0334           B    B18                                                    PCIR 
+0335 * NO MORE TABLE CARDS                                                 PCIR 
+0336 B19       SW   B17SW+4   SET B17SW TO AN UNCONDITIONAL BRANCH.        PCIR 
+0337           B    B32                                                    PCIR 
+0338 *BUILD SUBJECT CODE DESCRIPTION LINE FROM TABLE CARD.                 PCIR 
+0339 B23       MLC  INP11,SUB2     SUBJECT CODE AND DESCRIPTION            PCIR 
+0340           MLC  72,SUBID2       TO PRINT AREA.                         PCIR 
+0341 * SET PRINT ROUTINE TO PRINT SUBJECT CODE DESCRIPTION LINE.           PCIR 
+0342 B25       CC   J                                                      PCIR 
+0343           A    *-6,LINECT                                             PCIR 
+0344           MLC  +SUBJ2,P05+3                           NAME LINE       PCIR 
+0345           B    P01                PRINT LINE                          PCIR 
+0346 * SET PRINT ROUTINE TO PRINT SUBJECT CODE DETAIL LINE.                PCIR 
+0347 B29       MLC  +DET2,P05+3                                            PCIR 
+0348           B    P01                PRINT LINE                          PCIR 
+0349           A    *-6,RECNT      ADD 1 TO RECORD COUNT.                  PCIR 
+0350           A    *-6,SIREC   ADD 1 TO SUBJECT CODE DETAIL COUNT.        PCIR 
+0351           B    B01                                                    PCIR 
+0352 * BUILD PRINT LINE FOR MISSING DESCRIPTION TABLE CARD.                PCIR 
+0353 B32       MLC  INP11,SUB2                                             PCIR 
+0354           MLC  BLANKS+38,SUBID2                                       PCIR 
+0355           MLC  'SUBJECT CODE TITLE CARD MISSING',SUBID2-38            PCIR 
+0356           B    B25                                                    PCIR 
+0357 *  INPUT OUT OF SEQUENCE                                              PCIR 
+0358 B33       NOP  609                                                    PCIR 
+0359           H                                                           PCIR 
+0360           B    B33                                                    PCIR 
+0361 *******************************************************************   PCIR 
+0362 *  MAIN ROUTINE - KEYWORD PROCESSING                                  PCIR 
+0363 *******************************************************************   PCIR 
+0364 * BUILD KEYWORD INDEX PRINT LINE.                                     PCIR 
+0365 B35       MLC  INP71,SERCH1        SEARCH KEYS                        PCIR 
+0366           MLC  INP74,STC1          INSTALLATION CODE                  PCIR 
+0367           MLC  INP79,ID1           PROGRAM I.D.                       PCIR 
+0368 * SET PRINT ROUTINE TO PRINT KEYWORD INDEX LINE.                      PCIR 
+0369           MLC  +DET1,P05+3                                            PCIR 
+0370           B    P01                PRINT LINE                          PCIR 
+0371           A    *-6,RECNT      ADD 1 TO RECORD COUNT.                  PCIR 
+0372           A    *-6,KWREC   ADD 1 TO KEYWORD INPUT COUNT.              PCIR 
+0373           B    B01                                                    PCIR 
+0374 *******************************************************************   PCIR 
+0375 * READ HEADER LABEL                                                   PCIR 
+0376 *******************************************************************   PCIR 
+0377 H01       SBR  H99+3                                                  PCIR 
+0378 H02       RWD  1                                                      PCIR 
+0379 H02J      RT   1,INPUT                                                PCIR 
+0380           SBR  *+4                                                    PCIR 
+0381           MLZS 0                   DECREMENT TO GM POS.               PCIR 
+0382           MLC  ' '                 BLANK OUT I.R.G GM.                PCIR 
+0382B          MLCWA'⯒',GM    GMWM TO INPUT AREA DEFINING POINTS.          PCIR 
+0382C          MLCWA'⯒'                                                    PCIR 
+0382G          BEF  H15                                                    PCIR 
+0383           BER  H02J1                                                  PCIR 
+0385           C    INPUT+3,'1HDR'      IS IT A HEADER-                    PCIR 
+0386           BU   H12                 NO                                 PCIR 
+0387           C    INPUT+22,'SIR'      SIR SHOULD BE REEL I.D.            PCIR 
+0387C          BU   H13                                                    PCIR 
+0388           C    INPUT+18,H02CT      CHECK REEL SEQ. NUMBER             PCIR 
+0388C          BU   H14                                                    PCIR 
+0389 H02JC     A    '1',H02CT           OK-ADD 1 TO REEL COUNT.            PCIR 
+0390 H02J3     S    H02K4               CLEAR ERROR COUNTER.               PCIR 
+0391 H99       B    XXXX                EXIT.                              PCIR 
+0392 *******************************************************************   PCIR 
+0393 *   ERROR CONDITION   -  HEADER LABEL                                 PCIR 
+0394 H02J1     A    *-6,H02K4           ADD 1 TO ERROR COUNTER.            PCIR 
+0395           BCE  H02J2,H02K4,I       BR IF 9TH RETRY.                   PCIR 
+0396           B    H02                 TRY AGAIN.                         PCIR 
+0397 H02J2     S    H02K4               CLEAR ERROR COUNTER.               PCIR 
+0399 H06       NOP  578                                                    PCIR 
+0400           H                                                           PCIR 
+0401           B    H02                                                    PCIR 
+0402 *                                                                     PCIR 
+0403 H02K4     DCW  +0                  ERROR COUNTER.                     PCIR 
+0404 H02CT     DCW  '001'         REEL COUNT                               PCIR 
+0405 *******************************************************************   PCIR 
+0406 * INCORRECT REEL OR NO HEADER LABEL.                                  PCIR 
+0407 H12       NOP  566                NO HEADER LABEL HALT                PCIR 
+0407B          H                                                           PCIR 
+0407C          BSP  1                                                      PCIR 
+0407D          B    H14S                                                   PCIR 
+0408B*******************************************************************   PCIR 
+0408CH13       NOP  567            SIR NOT I.D. ON HEADER LABEL            PCIR 
+0408D          H                                                           PCIR 
+0408E          B    H14S                                                   PCIR 
+0409A*******************************************************************   PCIR 
+0409BH14       NOP  568       INCORRECT REEL SEQUENCE NUMBER HALT.         PCIR 
+0409C          H                                                           PCIR 
+0409DH14S      BSS  H02JC,E   BRANCH TO IGNORE CONDITION AND CONTINUE  -   PCIR 
+0409E          B    H02       OR - MOUNT PROPER REEL AND CONTINUE.         PCIR 
+0409I*******************************************************************   PCIR 
+0409J* A TAPE MARK IS THE 1ST RECORD ON THE SIR FILE - MOUNT PROPER        PCIR 
+0409K* REEL AND PRESS START.                                               PCIR 
+0409LH15       NOP  579                                                    PCIR 
+0409M          H                                                           PCIR 
+0409N          B    H02                                                    PCIR 
+0410 *******************************************************************   PCIR 
+0411 * READ INPUT                                                          PCIR 
+0412 *******************************************************************   PCIR 
+0413 I01       SBR  I99+3              SET UP EXIT                         PCIR 
+0414           A    +84,X1             ADD REC LENGTH                      PCIR 
+0415           BCE  I05,INPUT,⯒        AREA EMPTY- D MODIFIER IS GM.       PCIR 
+0416 I99       B    XXXX               EXIT                                PCIR 
+0417 I05       S    X1+1               CLEAR INDEX REGISTER 1              PCIR 
+0418 I06       S    I06R           CLEAR ERROR COUNTER                     PCIR 
+0419 I06A      MLCWA'⯒',GM       GMWM TO INPUT AREA DEFINING POINT.        PCIR 
+0420           MLC  ' '            BLANK TO I.R.G. GM POS.                 PCIR 
+0421           SBR  I06N+7,I08     SET TRY AGAIN RTE FOR READ ERROR.       PCIR 
+0422           RT   1,INPUT                                                PCIR 
+0423 I06K      SBR  I06L+3         STORE LOC. OF I.R.G. GM PLUS 1.         PCIR 
+0424           BEF  I06Q                                                   PCIR 
+0425 * CHECK FOR AND DROP NOISE RECORDS                                    PCIR 
+0426           BCE  I06N,INPUT+12,⯒     D MODIFIER IS A GROUP MARK.        PCIR 
+0427           BCE                                                         PCIR 
+0428           BCE                                                         PCIR 
+0429           BCE                                                         PCIR 
+0430           BCE                                                         PCIR 
+0431           BCE                                                         PCIR 
+0432           BCE                                                         PCIR 
+0433           BCE                                                         PCIR 
+0434           BCE                                                         PCIR 
+0435           BCE                                                         PCIR 
+0436           BCE                                                         PCIR 
+0437           BCE                                                         PCIR 
+0438           BCE                                                         PCIR 
+0439           BER  I06J                                                   PCIR 
+0440 * CHECK FOR WRONG LENGTH RECORD                                       PCIR 
+0441           SBR  I06N+7,I11     MODIFY TRY AGAIN RTE FOR WRONG LENGTH   PCIR 
+0442           SBR  I06M,GM        ADDRESS OF AREA DEFINING GM THE SAME    PCIR 
+0443           C    I06L+3,I06M    AS INTER RCD GAP GM PLUS 1.             PCIR 
+0444           BU   I06J           NO- WRONG LENGTH                        PCIR 
+0445           B    I07            YES-OK                                  PCIR 
+0446 * TRY AGAIN ROUTINE FOR READ ERROR AND WRONG LENGTH RECORD.           PCIR 
+0447 I06J      BSP  1                   BACKSPACE TAPE.                    PCIR 
+0448           A    *-6,I06R            ADD 1 TO ERROR COUNTER.            PCIR 
+0449 *                                                                     PCIR 
+0450 I06N      B    I06O                BRANCH TO REMOVE GM SUB ROUTINE.   PCIR 
+0451 I06NSW    BCE  XXXX,I06R,I        BRANCH IF NINTH TRY TO I08 OR I11   PCIR 
+0452           B    I06A                TRY AGAIN.                         PCIR 
+0453 * REMOVE GROUP MARK SUB ROUTINE                                       PCIR 
+0454 I06O      SBR  I06L+11             STORE RETURN ADDRESS.              PCIR 
+0455 I06L      MLZS XXXX                DECREMENT B REG TO GM POS.         PCIR 
+0456           MLC  ' '                 BLANK OUT GM.                      PCIR 
+0457           B    XXXX                EXIT.                              PCIR 
+0458 * END OF REEL                                                         PCIR 
+0459 I06Q      B    I06O                REMOVE GM ROUTINE.                 PCIR 
+0460           B    I14                                                    PCIR 
+0461 *                                                                     PCIR 
+0462 I06M      DCW  =3             ADDRESS OF INPUT AREA DEFINING GM.      PCIR 
+0463 I06R      DCW  +0             ERROR COUNTER.                          PCIR 
+0464 *                                                                     PCIR 
+0465 I07       BCE  I14,INPUT,9                                            PCIR 
+0466           A    *-6,BKCT=5     ADD 1 TO BLOCK COUNT.                   PCIR 
+0467           B    I99                                                    PCIR 
+0468 I08       NOP  571            READ ERROR HALT.                        PCIR 
+0469           H                                                           PCIR 
+0470           B    I06                                                    PCIR 
+0471 I11       NOP  531            WRONG LENGTH RECORD HALT.               PCIR 
+0472           H                                                           PCIR 
+0473           B    I11                                                    PCIR 
+0474 *******************************************************************   PCIR 
+0475 * READ TRAILER LABEL                                                  PCIR 
+0476 *******************************************************************   PCIR 
+0477 I14       RT   1,INPUT                                                PCIR 
+0478 I14J      SBR  *+4                                                    PCIR 
+0479           MLZS 0              DECREMENT B REG TO GM POS.              PCIR 
+0480           MLC  ' '            BLANK OUT I.R.G. GM.                    PCIR 
+0480B          MLCWA'⯒',GM    GMWM TO INPUT AREA DEFINING POINTS.          PCIR 
+0480C          MLCWA'⯒'                                                    PCIR 
+0481           BER  I14J1                                                  PCIR 
+0482           BEF  I25                                                    PCIR 
+0483           C    INPUT+2,'1EO'  IS IT A TRAILER-                        PCIR 
+0484           BU   I26            NO                                      PCIR 
+0484Z          CW   INPUT+7                                                PCIR 
+0485 I14JA     C    INPUT+9,BKCT   BLOCK COUNT EQUAL TRAILER BLOCK COUNT   PCIR 
+0485B          SW   INPUT+7                                                PCIR 
+0486           BU   I27            NO                                      PCIR 
+0487           BCE  I22,INPUT+3,F       BR IF LAST REEL.                   PCIR 
+0488           B    I14J3          OK                                      PCIR 
+0489 * READ TRAILER ERROR ROUTINE                                          PCIR 
+0490 I14J1     A    *-6,I14K3           ADD 1 TO ERROR COUNTER.            PCIR 
+0491           BSP  1                                                      PCIR 
+0492           BCE  I14J2,I14K3,I       BR IF 9TH RETRY.                   PCIR 
+0493           B    I14                                                    PCIR 
+0494 I14J2     S    I14K3               CLEAR ERROR COUNTER.               PCIR 
+0495 I19       NOP  522                                                    PCIR 
+0496           H                                                           PCIR 
+0497 * OPERATOR MAY SET SENSE SWITCH F ON TO TRY TO READ THE TRAILER       PCIR 
+0498 *AGAIN  - OR -  SET SENSE SWITCH G ON IF IT IS THE LAST REEL TO GO    PCIR 
+0499 *TO END OF JOB - OR - SET BOTH F AND G OFF TO CONTINUE PROCESSING     PCIR 
+0500 *IF THERE IS ANOTHER INPUT REEL.                                      PCIR 
+0501           BSS  I14,F                                                  PCIR 
+0502           BSS  I22,G                                                  PCIR 
+0503 * NORMAL END OF REEL                                                  PCIR 
+0504 I14J3     RWU  1                                                      PCIR 
+0505           S    I14K3               CLEAR ERROR COUNTER.               PCIR 
+0506 I14J7     S    BKCT                CLEAR BLOCK COUNT                  PCIR 
+0507           MLZS '0',BKCT                                               PCIR 
+0508           NOP  511                 MOUNT NEXT INPUT REEL.             PCIR 
+0509           H                                                           PCIR 
+0510           B    H01                 CHECK HEADER LABEL.                PCIR 
+0511           B    I05                 GET INPUT RECORD.                  PCIR 
+0512 I14K3     DCW  +0                  ERROR COUNTER                      PCIR 
+0513 ****************                                                      PCIR 
+0514 * END OF JOB                                                          PCIR 
+0515 ****************                                                      PCIR 
+0516 I22       RWU  1                                                      PCIR 
+0517           CC   1                                                      PCIR 
+0518           MLC  'SUBJECT CODE DETAIL',284                              PCIR 
+0519           MCS  SIREC,264                                              PCIR 
+0520           MLC  'KEYWORD',251                                          PCIR 
+0521           MCS  KWREC,243                                              PCIR 
+0522           MLC  'DETAIL INPUT RECORDS',228                             PCIR 
+0523           MCS  RECNT,207                                              PCIR 
+0524           W                                                           PCIR 
+0525           CC   K                                                      PCIR 
+0526           CS   299                                                    PCIR 
+0527           MLC  'SUBJECT CODE DESCRIPTION CARD INPUT',244              PCIR 
+0528           MCS  SCDCT,207                                              PCIR 
+0529           W                                                           PCIR 
+0530           CC   1                                                      PCIR 
+0531           NOP  999                 END OF JOB.                        PCIR 
+0532           H                                                           PCIR 
+0533           B    *-8                                                    PCIR 
+0533B*******************************************************************   PCIR 
+0534 * NO TRAILER LABEL-THAT IS TM FOLLOWED BY TM.                         PCIR 
+0535 I25       NOP  525                                                    PCIR 
+0536           H                                                           PCIR 
+0537 * OPERATOR MAY SET SENSE SWITCH G ON TO GO TO END OF JOB-             PCIR 
+0538 * OR SET IT OFF TO CONTINUE WITH NEXT INPUT TAPE.                     PCIR 
+0539           B    I27A                                                   PCIR 
+0540 *                                                                     PCIR 
+0541 * IMPROPER TRAILER LABEL                                              PCIR 
+0542 I26       NOP  526                                                    PCIR 
+0543           H                                                           PCIR 
+0544 * OPERATOR MAY SET SWITCH G ON TO GO TO END OF JOB-                   PCIR 
+0545 * OR SET IT OFF TO CONTINUE WITH NEXT INPUT REEL.                     PCIR 
+0546           B    I27A                                                   PCIR 
+0547 *                                                                     PCIR 
+0548 * TRAILER LABEL AND BLOCK COUNT NOT IN AGREEMENT                      PCIR 
+0549 I27       NOP  527                                                    PCIR 
+0550           H                                                           PCIR 
+0551 * OPERATOR MAY SET SENSE SWITCH G ON TO GO END OF JOB- LAST REEL-     PCIR 
+0552 * OR SET IT OFF TO CONTINUE PROCESSING WITH ANOTHER REEL OF INPUT.    PCIR 
+0553 I27A      BSS  I22,G                                                  PCIR 
+0554           B    I14J3                                                  PCIR 
+0555 *******************************************************************   PCIR 
+0556 * PRINT SUBROUTINE                                                    PCIR 
+0557 *******************************************************************   PCIR 
+0558 P01       SBR  P99+3              SET UP EXIT                         PCIR 
+0559 P02       A    *-6,LINECT         ADD ONE TO LINE COUNTER             PCIR 
+0560           C    LINECT,LINEPA      IS PAGE FINISHED                    PCIR 
+0561           BL   P10                YES, PRINT PAGE HEADING             PCIR 
+0562 P05       MRCM XXXX,201      NO-  MOVE RECORD TO PRINT AREA           PCIR 
+0563           W                       PRINT LINE                          PCIR 
+0564           CS   299                CLEAR PRINT AREA                    PCIR 
+0565 P99       B    XXXX               EXIT                                PCIR 
+0566 P10       MLC  '00',LINECT        CLEAR LINE COUNTER                  PCIR 
+0567           CC   1                  SKIP TO A NEW PAGE                  PCIR 
+0568           MRCM TITLE,201          MOVE HEADING TO PRINT LINE          PCIR 
+0569           A    *-6,PGCT           ADD ONE TO PAGE COUNT               PCIR 
+0570           MCS  PGCT+3,283         MOVE PAGE COUNT TO PRINT LINE       PCIR 
+0571           CC   T                  PRINT HEADING                       PCIR 
+0572           W                                                           PCIR 
+0573           CS   299                                                    PCIR 
+0574           BCE  P02,TYPE,1     BR IF PRINTING KEYWORD INDEX.           PCIR 
+0575 * REPEAT THE SUBJECT CODE DESCRIPTION ON THE NEW PAGE IF REQUIRED.    PCIR 
+0576           C    P99+3,+B29                                             PCIR 
+0577           BE   P02       BR IF NEXT SCHEDULED PRINT LINE IS           PCIR 
+0578 *                          DESCRIPTION.                               PCIR 
+0579 * REPEAT DESCRIPTION.                                                 PCIR 
+0580           A    *-6,LINECT                                             PCIR 
+0581           MRCM SUBJ2,201                                              PCIR 
+0582           W                                                           PCIR 
+0583           CS   299                                                    PCIR 
+0584           B    P02                                                    PCIR 
+0585           END  A01                                                    PCIR 

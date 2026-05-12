@@ -1,0 +1,152 @@
+*     FAP                                                                       
+       LBL     GAMA                                                     GAMA0000
+       COUNT   150                                                      GAMA0001
+*      U. OF CHICAGO VERSION OF GAMMA FUNCTION                          GAMA0002
+*           1. ARGUMENT MUST BE A NORMALIZED FLOAT POINT NUMBER         GAMA0003
+*           2. CALLING SEQUENCE   TSX $GAMMA,4  OR TSX $LGAMA,4         GAMA0004
+*           3. LGAMA ENTRY IS FOR OBTAINING LOG GAMMA.                  GAMA0005
+*           4. GAMMA ACCEPTS ARGUMENTS BETWEEN 2**(-127) AND 34.843.    GAMA0006
+*              LGAMA ACCEPTS POSITIVE ARG LESS THAN 1.54926*2**120      GAMA0007
+*              FOR ARGUMENT OUTSIDE THIS RANGE, (EXE) RETURN IS GIVEN   GAMA0008
+       SPACE                                                            GAMA0009
+       ENTRY   GAMMA                                                    GAMA0010
+       ENTRY   LGAMA                                                    GAMA0011
+       SPACE                                                            GAMA0012
+ GAMMA STL     FLAG          CELL FLAG TO DISTINGUISH GAMMA FROM LGAMA  GAMA0013
+       LDQ     LIM1                                                     GAMA0014
+       TRA     *+3                                                      GAMA0015
+ LGAMA STZ     FLAG          LOG GAMMA ENTRY                            GAMA0016
+       LDQ     LIM3                                                     GAMA0017
+       TLQ     ERROR           ARG TOO LARGE                            GAMA0018
+       SXA     SAVE4,4                                                  GAMA0019
+       SXA     SAVE1,1                                                  GAMA0020
+       LDQ     LIM2                                                     GAMA0021
+       TLQ     CONT                                                     GAMA0022
+       ZET     FLAG                                                     GAMA0023
+       TRA     ERROR           ARG TOO SMALL FOR GAMMA                  GAMA0024
+       TMI     ERROR           ZERO OR NEGATIVE ARG IS ILLEGAL FOR      GAMA0025
+       TZE     ERROR             LOGGAMMA                               GAMA0026
+       TSX     $LOG,4        FOR SMALL ARG, LOGGAMMA(X)=-LOG(X)         GAMA0027
+       CHS                                                              GAMA0028
+       TRA     SAVE4                                                    GAMA0029
+ CONT  STO     ARG           NOW ARGUMENT IS LEGAL FOR BOTH CIRCUIT     GAMA0030
+       LRS     9                                                        GAMA0031
+       PDX     ,1                                                       GAMA0032
+       CLA     ARG                                                      GAMA0033
+       TXH     SECT5,1,130   JUMP IF X IS AT LEAST 4.                   GAMA0034
+       TXH     SECT3,1,129   JUMP IF X IS BETWEEN 2. AND 4.             GAMA0035
+       TXH     SECT2,1,128   JUMP IF X IS BETWEEN 1. AND 2.             GAMA0036
+ SECT1 STO     FACTR         NOW X IS LESS THAN 1.                      GAMA0037
+       FSB     K1              =0.5                                     GAMA0038
+       TRA     SECT2+1                                                  GAMA0039
+ SECT3 FSB     ONE             =1.0                                     GAMA0040
+       STO     FACTR                                                    GAMA0041
+       LDQ     K2              =2.0                                     GAMA0042
+       TLQ     SECT4                                                    GAMA0043
+ SECT2 FSB     K3              =1.5   ARG HAD BEEN REDUCED TO (1.,2.)   GAMA0044
+       RQL     8             MOVE ORIGIN TO 1.5                         GAMA0045
+       LRS     27                                                       GAMA0046
+       PAC     ,4                                                       GAMA0047
+       ZAC                                                              GAMA0048
+       LLS     -97,4                                                    GAMA0049
+       STO     ARG             MODIFIED ARGUMENT IN B4                  GAMA0050
+       AXT     10,4                                                     GAMA0051
+       ZAC                                                              GAMA0052
+ LOOP1 ADD     COEF1+1,4     LOOP FOR A 5 TERM CONTINUED FRACTION       GAMA0053
+       ADD     ARG                                                      GAMA0054
+       STO     BUFF            GAMMA(1.5+Y)=A1/(B1+Y+A2/(B2+Y+A3/..     GAMA0055
+       CLA     COEF1+2,4                         ..+A5/(B5+Y)))))       GAMA0056
+       DVP     BUFF                                                     GAMA0057
+       XCA                                                              GAMA0058
+       TIX     LOOP1,4,2     ANSWER COMES OUT IN B1.   CONSTANT A1 WAS  GAMA0059
+       LRS     7               SO CHOSEN TO AVOID A BIT IN POSITION 1.  GAMA0060
+       ORA     CHAR            FLOAT GAMMA OF MODIFIED ARG              GAMA0061
+       RQL     28                                                       GAMA0062
+       FRN                                                              GAMA0063
+       TXH     *+4,1,128     DEPENDING ON THE SECTION INTO WHICH ARG    GAMA0064
+       FDP     FACTR           FELL, DIVIDE OR MULTIPLY WITH PROPER     GAMA0065
+       XCA                     FACTOR                                   GAMA0066
+       TRA     *+4                                                      GAMA0067
+       TXL     *+4,1,129                                                GAMA0068
+       XCA                                                              GAMA0069
+       FMP     FACTR                                                    GAMA0070
+       FRN                   NOW GAMMA IS READY                         GAMA0071
+       NZT     FLAG                                                     GAMA0072
+       TSX     $LOG,4        IF LOGGAMMA IS REQUESTED, CALL $LOG.       GAMA0073
+ SAVE1 AXT     **,1                                                     GAMA0074
+ SAVE4 AXT     **,4                                                     GAMA0075
+       TRA     1,4           RETURN TO MAIN PROGRAM                     GAMA0076
+       SPACE                                                            GAMA0077
+ SECT4 FSB     ONE           CASE WHEN ORIGINAL ARG WAS BETWEEN 3. AND  GAMA0078
+       STO     ARG             4.   ARG HAS ALREADY BEEN REDUCED BY 1.  GAMA0079
+       XCA                     FURTHER REDUCE IT BY 1., AND PROCEED TO  GAMA0080
+       FMP     FACTR           SECTION2                                 GAMA0081
+       FRN                                                              GAMA0082
+       STO     FACTR                                                    GAMA0083
+       CLA     ARG                                                      GAMA0084
+       TRA     SECT2                                                    GAMA0085
+       SPACE                                                            GAMA0086
+ SECT5 TSX     $LOG,4        CASE WHEN ARG IS GREATER THAN 4.   WE USE  GAMA0087
+       SUB     K4              STIRLINGS FORMULA.                       GAMA0088
+       STO     BUFF                                                     GAMA0089
+       ADD     K4              LOGGAMMA(X)=X(LOGX-1)-0.5*LOGX           GAMA0090
+       FSB     ONE                                   +0.5*LOG2PI+F      GAMA0091
+       XCA                                                              GAMA0092
+       FMP     ARG                                                      GAMA0093
+       FRN                                                              GAMA0094
+       STO     BUFF+1                                                   GAMA0095
+       ZAC                     WE NOW COMPUTE CORRECTIONAL TERMS F OF   GAMA0096
+       TXH     STIRG,1,140     ABOVE FORMULA.   IF ARG IS GREATER THAN  GAMA0097
+       LDQ     ARG             2**12, AVOID FLOAT POINT OVERFLOW BY     GAMA0098
+       FMP     ARG             TAKING F=0                               GAMA0099
+       STO     FACTR                                                    GAMA0100
+       AXT     3,4                                                      GAMA0101
+       CLA     COEF2,4         F=C1/X+C2/X**3+C3/X**5+C4/X**7           GAMA0102
+ LOOP2 FDP     FACTR                                                    GAMA0103
+       XCA                                                              GAMA0104
+       FAD     COEF2+1,4                                                GAMA0105
+       TIX     LOOP2,4,1                                                GAMA0106
+       FDP     ARG                                                      GAMA0107
+       XCA                                                              GAMA0108
+ STIRG FSB     BUFF                                                     GAMA0109
+       FRN                                                              GAMA0110
+       FAD     SL2PI           =(1/2)LOG(2PI)                           GAMA0111
+       FAD     BUFF+1                                                   GAMA0112
+       FRN                   LOG GAMMA READY                            GAMA0113
+       ZET     FLAG                                                     GAMA0114
+       TSX     $EXP,4        IF GAMMA IS REQUESTED, CALL $EXP           GAMA0115
+       TRA     SAVE1                                                    GAMA0116
+       SPACE                                                            GAMA0117
+ ERROR LDI     *+2                                                      GAMA0118
+       TRA*    $(EXE)                                                   GAMA0119
+       PZE     5,7,SAVE4+1                                              GAMA0120
+       SPACE   2                                                        GAMA0121
+ LIM1  OCT     206426574733        34.843                               GAMA0122
+ LIM2  OCT     2400000000                                               GAMA0123
+ LIM3  OCT     371614470000        1.54926*2**120                       GAMA0124
+ CHAR  OCT     200000000000                                             GAMA0125
+  ONE  OCT     201400000000        1.                                   GAMA0126
+  K1   OCT     200400000000        0.5                                  GAMA0127
+  K2   OCT     202400000000        2.                                   GAMA0128
+  K3   OCT     201600000000        1.5                                  GAMA0129
+  K4   OCT     1000000000          CHARACTERISTIC REDUCER               GAMA0130
+ SL2PI OCT     200726376162        (1/2)LOG(2PI)                        GAMA0131
+       OCT     026400372246        B5    CONTINUED FRACTION COEFFICIENTSGAMA0132
+       OCT     006062361531        A5      FOR THE RANGE (1.,2.)        GAMA0133
+       OCT     003200340365        B4                                   GAMA0134
+       OCT     -003515345172       A4                                   GAMA0135
+       OCT     201677777722        B3                                   GAMA0136
+       OCT     073222266666        A3                                   GAMA0137
+       OCT     -115244746515       B2                                   GAMA0138
+       OCT     041640747057        A2                                   GAMA0139
+       OCT     -273744427306       B1                                   GAMA0140
+ COEF1 OCT     -012041435213       A1                                   GAMA0141
+       OCT     -166451710112       C4 = -1/1760  STIRLINGS ASYMPTOTIC   GAMA0142
+       OCT     166640064007        C3 =  1/1260    EXPANSION COEFFICTS  GAMA0143
+       OCT     -170554055406       C2 = -1/360     MODIFIED             GAMA0144
+ COEF2 OCT     175525252525        C1 =  1/12                           GAMA0145
+ FLAG  PZE                                                              GAMA0146
+  ARG  BSS     1                                                        GAMA0147
+ FACTR BSS     1                                                        GAMA0148
+ BUFF  BSS     2                                                        GAMA0149
+       END                                                              GAMA0150

@@ -1,0 +1,715 @@
+01010          JOB  PDAP-PRINT DIRECTORY AND PERMUTE - NOV 18, 1964        PDAP 
+01020          CTL  431                                                    PDAP 
+01030*                                                                     PDAP 
+01040* PROGRAMMERS - CARL KURTZ AND DONNA MONTGOMERY                       PDAP 
+01050*                                                                     PDAP 
+01060*  PURPOSE OF THIS PROGRAM IS TO CREATE THE CAPR                      PDAP 
+01070*    DIRECTORY AND AN INDEX RECORD FILE                               PDAP 
+01080*                                                                     PDAP 
+01090*  INPUT IS MAC-CAPR MASTER FILE                                      PDAP 
+01100*                                                                     PDAP 
+01110* OUTPUTS ARE-                                                        PDAP 
+01120* 1. ON-LINE PRINTOUT OF CAPR DIRECTORY - OPTIONAL.                   PDAP 
+01130* 2. PRINT TAPE FOR OFF-LINE CAPR DIRECTORY - OPTIONAL.               PDAP 
+01140* 3. INDEX RECORD FILE - OPTIONAL.                                    PDAP 
+01150*                                                                     PDAP 
+01160*  TAPE UNIT ASSIGNMENTS                                              PDAP 
+01170*    UNIT 1 - CAPR DIRECTORY PRINT TAPE                               PDAP 
+01180*    UNIT 2 - MAC-CAPR MASTER FILE                                    PDAP 
+01190*    UNIT 3 - MIR-INDEX RECORD FILE                                   PDAP 
+01200*                                                                     PDAP 
+01210*  DATE CONTROL CARD SHOULD FOLLOW OBJECT DECK                        PDAP 
+01220*    COLUMNS 6-17 ARE CALENDAR DATE-FORMAT-JAN 15, 1964               PDAP 
+01222*    COLUMNS 18-22 FOR CREATE DATE FOR MIR HEADER LABEL.              PDAP 
+01230*    COLUMN 23 IS RUN TYPE, B FOR BASIC, S FOR                        PDAP 
+01240*       SUPPLEMENTAL                                                  PDAP 
+01250*    COLUMNS 24-28 ARE 5-DIGIT DATE IN FORMAT -YYDDD-                 PDAP 
+02010*       WHERE YY IS LAST 2 DIGITS OF YEAR AND DDD                     PDAP 
+02020*       IS DAY OF YEAR. THIS DATE IS USED TO DETERMINE                PDAP 
+02030*       WHETHER AN ENTRY WILL BE PROCESSED ON SUPPLEMENTAL RUNS.      PDAP 
+02031*       ENTRIES WITH ACTIVITY DATE EQUAL TO OR LATER THAN THIS        PDAP 
+02032*       DATE WILL BE PRINTED.                                         PDAP 
+02040*                                                                     PDAP 
+02050*  SENSE SWITCHES                                                     PDAP 
+02060*    IO AND A ON                                                      PDAP 
+02070*    B ON FOR ON-LINE PRINT.                                          PDAP 
+02072*    C ON FOR PRINT TAPE OUTPUT - TOD.                                PDAP 
+02074*    D ON TO PRODUCE INDEX RECORD OUTPUT - MIR.                       PDAP 
+02080*    ALL OTHERS OFF                                                   PDAP 
+02090*******************************************************************   PDAP 
+02100*  HALT LISTING AND ACTION TO BE TAKEN                                PDAP 
+02102*******************************************************************   PDAP 
+02110*    A-ADDR      REASON FOR HALT AND ACTION NECESSARY                 PDAP 
+02120*                                                                     PDAP 
+02130*     510      TAPE ERROR WRITING DIRECTORY-PRESS START               PDAP 
+02140*                TO TRY 10 MORE TIMES                                 PDAP 
+02150*     511      END OF REEL ON DIRECTOTY FILE-MOUNT                    PDAP 
+02160*                SCRATCH, PRESS START                                 PDAP 
+02170*     520      OUT OF SEQUENCE ON MAC FILE-ABANDON JOB                PDAP 
+02180*     521      TAPE ERROR READING MAC FILE-PRESS START                PDAP 
+02190*                TO TRY 10 MORE TIMES                                 PDAP 
+02200*     525      TAPE ERROR READING HEADER OR TRAILER ON                PDAP 
+02210*                MAC FILE-PRESS START TO TRY AGAIN                    PDAP 
+02220*     529      END OF REEL ON MAC FILE-MOUNT NEXT                     PDAP 
+02230*                INPUT, PRESS START                                   PDAP 
+02240*     530      TAPE ERROR WRITING ON INDEX TAPE-PRESS                 PDAP 
+02250*                START TO TRY 10 MORE TIMES                           PDAP 
+03010*     531      END OF REEL ON INDEX TAPE-MOUNT SCRATCH,               PDAP 
+03020*                PRESS START                                          PDAP 
+03030*     536      TAPE ERROR WRITING HEADER ON INDEX FILE- PRESS         PDAP 
+03040*                START TO TRY AGAIN                                   PDAP 
+03050*     537      TAPE ERROR WRITING TRAILER ON INDEX FILE-PRESS         PDAP 
+03060*                START TO TRY AGAIN                                   PDAP 
+03061*     600      CONTROL CARD ERROR - RUNOUT CARD WITH NON PROCESS      PDAP 
+03062*              RUN OUT READ KEY - CORRECT CARD AND PLACE IN HOPPER    PDAP 
+03063*              AND PRESS START.                                       PDAP 
+03064*                THE ERROR COULD BE-                                  PDAP 
+03065*                 1. BLANK REPORT DATE.                               PDAP 
+03066*                 2. IMPROPER RUN TYPE - NOT B OR S.                  PDAP 
+03067*                 3. IMPROPER SUPPLEMENT DATE FOR S RUN.              PDAP 
+03068*                 4. IMPROPER CREATE DATE FOR MIR OP HEADER LABEL.    PDAP 
+03070*     601      INVALID INSTALLMENT CODE IN MAC RECORD-                PDAP 
+03080*                ABANDON JOB                                          PDAP 
+03090*     606      WRONG LENGTH RECORD ON MAC-ABANDON JOB                 PDAP 
+03100*     621      FIRST RECORD ON MAC REEL NOT A HEADER LABEL - MOUNT    PDAP 
+03102*              CORRECT REEL AND PRESS START.                          PDAP 
+03104*     622      HEADER LABEL ON DRIVE 2 SHOWS THAT REEL IS NOT         PDAP 
+03122*              IDENTIFIED AS MAC - MOUNT CORRECT REEL AND             PDAP 
+03124*              PRESS START.                                           PDAP 
+03128*     623      IMPROPER REEL SEQUENCE ON MAC INPUT FILE - MOUNT       PDAP 
+03130*              CORRECT REEL AND PRESS START.                          PDAP 
+03140*     631      BLOCK COUNT ON MAC TRAILER IS OUT OF                   PDAP 
+03150*                BALANCE-RESTART JOB                                  PDAP 
+03160*     632      EOR-EOF INDICATOR ON MAC TRAILER IS                    PDAP 
+03170*                INVALID-ABANDON JOB                                  PDAP 
+03180*     692      PROGRAM OR MACHINE ERROR-RESTART JOB                   PDAP 
+03190*     999      END OF JOB                                             PDAP 
+03191*******************************************************************   PDAP 
+03192          ORG  333                                                    PDAP 
+03193          DCW  '⯒'       AREA DEFINING GMWM TO PROTECT CORE IN THE    PDAP 
+03194*                        EVENT A LONG RECORD IS READ BY THE HEADER    PDAP 
+03195*                        AND TRAILER CHECKING ROUTINE.   THE PRINT    PDAP 
+03196*                        AREA IS USED BY THIS ROUTINE AS THE          PDAP 
+03197*                        INPUT AREA.                                  PDAP 
+03200*******************************************************************   PDAP 
+03210*     MASTER FILE DEFINITION                                     FN   PDAP 
+03220*******************************************************************   PDAP 
+03230MASTER    DA   1X402                                                  PDAP 
+03240MCTL           1,6                 SHARE RECORD CONTROL WORD          PDAP 
+03250MSIC           7,9                 SUBMITTERS INSTALLATION CODE       PDAP 
+04010MID            14        10-14     PROGRAM IDENTIFICATION             PDAP 
+04020MDRF           15                                                     PDAP 
+04030MDATE          23        19-23     DATE ENTRY ADDED OR CHANGED        PDAP 
+04040MINACT         24                  INACTIVE FLAG                      PDAP 
+04050MPAGE          25,30               PAGE NUMBER                        PDAP 
+04060MSDA           31,39               ACCESSION NUMBER               1   PDAP 
+04070MSDASF         38,39                                                  PDAP 
+04080MNAME          40,56               SUBMITTERS NAME                4   PDAP 
+04090MAFFIL         57,68               SUBMITTERS AFFILIATION         5   PDAP 
+04100MAUTH          69,85               AUTHOR                         6   PDAP 
+04110MYRCMP         86,87               YEAR COMPLETED                 7   PDAP 
+04120MFIELD         88,102              FIELD OF APPLICATION           9   PDAP 
+04130MPSUBJ         106,108             PRIMARY SUBJECT CODE          10   PDAP 
+04140MSSUBJ         109,120             SECONDARY SUBJECT CODES       11   PDAP 
+04150MSSUB1         109,111                                                PDAP 
+04160MSSUB2         112,114                                                PDAP 
+04170MSSUB3         115,117                                                PDAP 
+04180MSSUB4         118,120                                                PDAP 
+04190MPLANG         121,127             PRINCIPAL SOURCE LANGUAGE     12   PDAP 
+04200MSLANG         128,134             SECONDARY SOURCE LANGUAGE     13   PDAP 
+04210MROUT          135,136             TYPE OF ROUTINE               14   PDAP 
+04220MMACH          137,143             MACHINE                       15   PDAP 
+04230MMONIT         144,150             MONITOR OR OPERATING SYSTEM   16   PDAP 
+04240MREQ           151,162             SPECIAL MACHINE REQUIREMENTS  17   PDAP 
+04250MNONLB         163,178             NON-LIBRARY ROUTINES          18   PDAP 
+05010MDOC1          182,186             DOCUMENTATION AVAILABLE       19   PDAP 
+05020MDOC2          187,191                                           19   PDAP 
+05030MDOC3          194,198                                           19   PDAP 
+05040MMAT1          199,226             MATERIAL AVAILABLE            20   PDAP 
+05050MMAT2          227,254                                           21   PDAP 
+05060MTITLE         255,311             TITLE                          8   PDAP 
+05070MSERCH         315,377             SEARCH KEYS                   22   PDAP 
+05080MMISC          378,402                                                PDAP 
+05090MCNT           402,402                                                PDAP 
+05100MGM       DCW  =1                                                     PDAP 
+05101          DCW  '⯒'       MAC INPUT AREA DEFINING GMWM.                PDAP 
+05108*******************************************************************   PDAP 
+05110*     SEARCH KEY WORK AREA                                            PDAP 
+05112*******************************************************************   PDAP 
+05120KWORK     DCW  'C'                                                    PDAP 
+05130KCTL      DC   '00078*1'                                              PDAP 
+05140KEYW      DCW  '*'                                                    PDAP 
+05150          DC   =30                                                    PDAP 
+05160KEND      DC   =32                                                    PDAP 
+05170KID       DC   =8                                                     PDAP 
+05180          DCW  '    ⧧'                                                PDAP 
+05190*******************************************************************   PDAP 
+05200*     TABLE OF ASTERISK ADDRESSES                                     PDAP 
+05202*******************************************************************   PDAP 
+05210          DA   15X3,X2                                                PDAP 
+05220TAB            1,3                                                    PDAP 
+05230*******************************************************************   PDAP 
+05240*     INDEX OUTPUT RECORD DEFINITION                                  PDAP 
+05242*******************************************************************   PDAP 
+05249          ORG  101                                                    PDAP 
+05250INDOUT    DA   1X83,G,⧧          SUBJECT CODE INDEX RECORDS           PDAP 
+06010ICTL           1,8               ARE BUILT IN OP AREA                 PDAP 
+06020ISUBJ          9,11              KEY WORD INDEX RECORDS               PDAP 
+06030IID            12,19             ARE CREATED IN A WORK AREA           PDAP 
+06031ITITLE         20,76             AND MOVED TO OP AREA                 PDAP 
+06033*******************************************************************   PDAP 
+06034*     CONSTANTS AND WORK AREAS                                        PDAP 
+06036*******************************************************************   PDAP 
+06041NINES     DCW  '99999999'                                             PDAP 
+06042HDR       DCW  '1HDR '                                                PDAP 
+06043          ORG                                                         PDAP 
+06050*******************************************************************   PDAP 
+06072LCTR      DCW  '07'      COUNTER-NUMBER OF ENTRIES ALREADY PRINTED    PDAP 
+06073*                         ON CURRENT PAGE.                            PDAP 
+06074LPAR      DCW  '07'      NUMBER OF ENTRIES PER PAGE DESIRED.          PDAP 
+06075*                         COMPARED TO LCTR TO DETERMINE END OF PAGE   PDAP 
+06076*                        NOTE - IF THE LPAR CONSTANT IS CHANGED TO    PDAP 
+06077*                         INCREASE OR DECREASE THE NUMBER OF          PDAP 
+06078*                         ENTRIES PRINTED PER PAGE, THE LCTR          PDAP 
+06079*                         CONSTANT SHOULD BE CHANGED TO THE SAME      PDAP 
+06080*                         VALUE TO ALLOW PROPER HANDLING OF THE       PDAP 
+06081*                         FIRST PAGE.                                 PDAP 
+06090PAGE      DCW  '0001'    PAGE COUNTER                                 PDAP 
+06100SUP       DCW  'SUPPLEMENT'                                           PDAP 
+06110SINGLE    DCW  =1                                                     PDAP 
+06150HSW       DC   =1        READ HEADER LABEL SWITCH                     PDAP 
+06160TSW       DC   =1        READ TRAILER LABEL SWITCH                    PDAP 
+06180BLANKS    DA   1X65                                                   PDAP 
+06210OMRC      DCW  =6             OLD MASTER RECORD COUNT.                PDAP 
+06220OMEC      DCW  =6             OLD MASTER ENTRY COUNT.                 PDAP 
+06224NPEC      DCW  =6             ENTRIES NOT PRINTED COUNT.              PDAP 
+06226PREC      DCW  =6             ENTRIES PRINTED COUNT.                  PDAP 
+06230TR2CNT    DCW  =5             TAPE 2 IP TRAILER BLOCK COUNT.          PDAP 
+06231TR3CNT    DCW  =5             TAPE 3 OP TRAILER BLOCK COUNT.          PDAP 
+06240MIRCT     DCW  =6             MIR OUTPUT RECORD COUNT.                PDAP 
+06250TODCT     DCW  =6             TOD OUTPUT RECORD COUNT.                PDAP 
+06260ERRCNT    DCW  =1                                                     PDAP 
+06270GM        DCW  '⯒'                                                    PDAP 
+06280EOJSW     DC   =1                                                     PDAP 
+07000*******************************************************************   PDAP 
+07005*  INDEX REGISTERS                                                *   PDAP 
+07010*******************************************************************   PDAP 
+0701799        DCW  =3        X3 IS USED BY THE CREATE KEYWORD AND SUBJ.   PDAP 
+07018X3        EQU  99        CODE INDEX RECORD ROUTINES.                  PDAP 
+0701994        DCW  =3        X2 IS USED BY THE CREATE KEYWORD INDEX       PDAP 
+07020X2        EQU  94        RECORD ROUTINE.                              PDAP 
+0702189        DCW  =3        X1 IS NOT USED.                              PDAP 
+07050X1        EQU  89                                                     PDAP 
+07100*                                                                     PDAP 
+07117*******************************************************************   PDAP 
+07118*  HOUSEKEEPING                                                       PDAP 
+07119*******************************************************************   PDAP 
+07120START     RWD  2              REWIND MASTER IP.                       PDAP 
+07125          SW   HSW            READ AND CHECK MASTER                   PDAP 
+07130          B    RDLAB2          HEADER LABEL.                          PDAP 
+07135          R                   READ CONTROL CARD                       PDAP 
+07140          MLC  17,CALDAT=12                                           PDAP 
+07145          MLC  23,RUNTYP=1                                            PDAP 
+07150          MLC  28,JULDAT=5                                            PDAP 
+07155          MLC  22,CREATE=5                                            PDAP 
+07157          C    CALDAT,BLANKS+11                                       PDAP 
+07159          BE   H600                                                   PDAP 
+0716B          BCE  STARTB,RUNTYP,B                                        PDAP 
+0716D          BCE  STARTA,RUNTYP,S                                        PDAP 
+0716FH600      NOP  600                                                    PDAP 
+0716H          H                                                           PDAP 
+0716J          B    START                                                  PDAP 
+0716LSTARTA    C    JULDAT,'00000'                                         PDAP 
+0716N          BH   H600                                                   PDAP 
+07160STARTB    BSS  RWDMIR,D                                               PDAP 
+07165START2    BSS  RWDTOD,C                                               PDAP 
+07170          B    GETMAC                                                 PDAP 
+07175*                                                                     PDAP 
+07180RWDMIR    RWD  3                                                      PDAP 
+07182          C    CREATE,'00000'                                         PDAP 
+07183          BH   H600                                                   PDAP 
+07185          B    WRHD3                                                  PDAP 
+07200          B    START2                                                 PDAP 
+07210RWDTOD    RWD  1                                                      PDAP 
+07217*******************************************************************   PDAP 
+07218*  MAIN ROUTINE                                                       PDAP 
+07219*******************************************************************   PDAP 
+07220GETMAC    B    RDMAC                                                  PDAP 
+07230          C    MID,MACCON=8        NEW ENTRY                          PDAP 
+07240          BU   CKCTL1                                                 PDAP 
+07250H601      NOP  601                                                    PDAP 
+08010          H                                                           PDAP 
+08020          B    H601                                                   PDAP 
+08030CKCTL1    BCE  CKDAT,MCTL-4,1                                         PDAP 
+08040          B    H601                                                   PDAP 
+08050CKDAT     BCE  MOVID,RUNTYP,B                                         PDAP 
+08060          C    MDATE,JULDAT   IF MASTER DATE IS LOWER THAN CONTROL    PDAP 
+08070          BH   LOP            DATE, DO NOT PRINT THE ENTRY.           PDAP 
+08080MOVID     MLC  MID,MACCON                                             PDAP 
+08090          BSS  DIRBR,B                                                PDAP 
+08092          BSS  DIRBR,C                                                PDAP 
+08100ISDON     BSS  PERM,D         IF SS D IS ON BRANCH TO PERMUTE KEY-    PDAP 
+08110          BSS  CRSUB,D        WORD AND CREATE SUBJ CODE SUBROUTINES   PDAP 
+08120LOPM      B    RDMAC                                                  PDAP 
+08140          BCE  LOPM,MCTL-4,2                                          PDAP 
+08142          BCE  GETMAC,MCTL-4,3                                        PDAP 
+08150          B    H601                                                   PDAP 
+08152DIRBR     B    WRDIR          BR TO WRITE DIRECTORY SUBR.             PDAP 
+08154          B    ISDON                                                  PDAP 
+08156LOP       A    +1,NPEC        ADD 1 TO NOT PRINTED ENTRY COUNT.       PDAP 
+08158          B    LOPM                                                   PDAP 
+08160*                                                                     PDAP 
+08170*******************************************************************   PDAP 
+08180*     WRITE DIRECTORY                                                 PDAP 
+08190*******************************************************************   PDAP 
+08200WRDIR     SBR  WDEXT+3                                                PDAP 
+08208          C    LCTR,LPAR           END OF PAGE                        PDAP 
+08210          BE   CRTITL              YES - PRINT TITLE                  PDAP 
+08220          B    PRHD                                                   PDAP 
+08230          B    PRNT1                                                  PDAP 
+08240          B    PRNT2                                                  PDAP 
+08250          B    PRNT3                                                  PDAP 
+08260          A    +1,PREC        ADD 1 TO ENTRIES PRINTED COUNT          PDAP 
+09010          A    +1,LCTR        ADD 1 TO ENTRIES PRINTED ON THIS PAGE   PDAP 
+09020WDEXT     B    *                                                      PDAP 
+09030*******************************************************************   PDAP 
+09040*     CREATE KEY WORD INDEX RECORDS                                   PDAP 
+09042*******************************************************************   PDAP 
+09050PERM      SBR  PRMEXT+3                                               PDAP 
+09060          MLC  BLANKS+61,KEND                                         PDAP 
+09070          SBR  X2,0              RESTORE X2 TO ZERO                   PDAP 
+09080          SBR  X3,MSERCH         RESTORE X3 TO LOW ORDER OF           PDAP 
+09090          C    0+X3,' '          SEARCH KEY FIELD                     PDAP 
+09100          BU   MOVRM                                                  PDAP 
+09110CMPBLK    C    0+X3,' '          SEARCH KEY FIELD SCANNED FOR         PDAP 
+09120          SAR  X3                  NON-BLANK AND ⧧ IS INSERTED        PDAP 
+09130          BU   MOVRM               TO RIGHT OF FIRST NON-BLANK        PDAP 
+09140          B    CMPBLK              DIGIT ENCOUNTERED                  PDAP 
+09150MOVRM     MLC  '⧧',2+X3                                               PDAP 
+09160CKEND     C    X3,+MSERCH-62     ADDRESSES OF ALL ASTERISKS           PDAP 
+09170          BE   EXPLOD              IN SEARCH KEY FIELD -              PDAP 
+09180          C    0+X3,'*'            EXCEPT THE HIGH ORDER ASTERISK -   PDAP 
+09190          SAR  X3                  ARE DETERMINED AND PLACED          PDAP 
+09200          BE   SAVAD               IN AN ADDRESS TABLE                PDAP 
+09210          B    CKEND                                                  PDAP 
+09220SAVAD     MLC  X3,TAB                                                 PDAP 
+09230          A    +1,TAB                                                 PDAP 
+09240          A    +3,X2                                                  PDAP 
+09250          B    CKEND                                                  PDAP 
+10010EXPLOD    C    MSERCH-62,'*'                                          PDAP 
+10020          BU   MOVMS                                                  PDAP 
+10030          SBR  MM+3,MSERCH-61                                         PDAP 
+10040          MLC  'N',BA                                                 PDAP 
+10050          MRCM MSERCH-62,KEYW                                         PDAP 
+10060          MLC  '  '                                                   PDAP 
+10070          B    PUTP                                                   PDAP 
+10080CKX2      C    X2,'00'                                                PDAP 
+10090          BE   PRMEXT                                                 PDAP 
+10100          S    +30,X2+1                                               PDAP 
+10110          MLC  TAB,X3                                                 PDAP 
+10120          MLC  '⧧',0+X3                                               PDAP 
+10130          MRCM 1+X3,KEYW+1                                            PDAP 
+10140          SBR  MM+6                                                   PDAP 
+10150          SBR  BA+6                                                   PDAP 
+10160BA        MLC  '  ',*                                                 PDAP 
+10170          MLC  '*',KEYW                                               PDAP 
+10180MM        MRCM MSERCH-61,*                                            PDAP 
+10190          MLC  '  '                                                   PDAP 
+10200          B    PUTP                                                   PDAP 
+10210          MLC  TAB,X3                                                 PDAP 
+10220          MLC  '*',0+X3                                               PDAP 
+10230          B    CKX2                                                   PDAP 
+10240PRMEXT    B    *                                                      PDAP 
+10250MOVMS     SBR  MM+3,MSERCH-62                                         PDAP 
+11010          MLC  'M',BA                                                 PDAP 
+11020          B    CKX2                                                   PDAP 
+11030*******************************************************************   PDAP 
+11040*     PUT OUT KEY WORD INDEX RECORD                                   PDAP 
+11042*******************************************************************   PDAP 
+11050PUTP      SBR  PPEXT+3                                                PDAP 
+11060          MLC  MID,KID           MOVE ID TO SEARCH KEY                PDAP 
+11070          SBR  X3,KEND             WORK AREA - REPLACE                PDAP 
+11080CKKEY     C    X3,+KEYW            ALL RECORD MARKS WITH              PDAP 
+11090          BE   MOVSK               ASTERISKS AND MOVE                 PDAP 
+11100          C    0+X3,'⧧'            RECORD TO INDEX OUTPUT             PDAP 
+11110          SAR  X3                  AREA                               PDAP 
+11120          BU   CKKEY                                                  PDAP 
+11130          MLC  '*',1+X3                                               PDAP 
+11140          B    CKKEY                                                  PDAP 
+11150MOVSK     MRCM KWORK,INDOUT                                           PDAP 
+11160          B    WRIND             GO TO WRITE INDEX RECORD             PDAP 
+11170PPEXT     B    *                                                      PDAP 
+11180*******************************************************************   PDAP 
+11190*     CREATE SUBJECT CODE INDEX RECORD                                PDAP 
+11200*******************************************************************   PDAP 
+11210CRSUB     SBR  CSEXT+3                                                PDAP 
+11220          SBR  X2,MPSUBJ         A RECORD CONTAINING THE              PDAP 
+11230MOVK      MLC  KCTL,ICTL         SUBJECT CODE AND PROGRAM             PDAP 
+11240          MLC  '2',ICTL          TITLE IS WRITTEN OUT FOR             PDAP 
+11250TSTBLK    C    0+X2,'   '        EACH NON-BLANK SUBJECT               PDAP 
+12010          BE   CKSUB4            CODE                                 PDAP 
+12020          MLC  0+X2,ISUBJ                                             PDAP 
+12030          MLC  MTITLE,ITITLE                                          PDAP 
+12040          MLC  MID,IID                                                PDAP 
+12050          MLC  '  ',ITITLE+2                                          PDAP 
+12060          B    WRIND                                                  PDAP 
+12070CKSUB4    C    X2,+MSSUB4                                             PDAP 
+12080          BE   CSEXT                                                  PDAP 
+12090          A    +3,X2                                                  PDAP 
+12100          B    MOVK                                                   PDAP 
+12110CSEXT     B    *                                                      PDAP 
+12120*******************************************************************   PDAP 
+12130*     WRITE INDEX RECORD                                              PDAP 
+12140*******************************************************************   PDAP 
+12150WRIND     SBR  WRIEXT+3                                               PDAP 
+12155          A    +1,MIRCT            ADD 1 TO OUTPUT RECORD COUNT.      PDAP 
+12160          A    +1,TR3CNT           ADD 1 TO TRAILER BLOCK COUNT.      PDAP 
+12170WR3       WT   3,INDOUT          WRITE INDEX BLOCK                    PDAP 
+12180          BER  ERR3              TEST TAPE ERROR                      PDAP 
+12190          MLC  '0',ERRCNT                                             PDAP 
+12200          BEF  EOF3              TEST END OF FILE                     PDAP 
+12210WRIEXT    B    *                                                      PDAP 
+12220ERR3      BSP  3                 TRY TO WRITE 9 TIMES                 PDAP 
+12230          A    +1,ERRCNT                                              PDAP 
+12240          BCE  H530,ERRCNT,9                                          PDAP 
+12250          B    WR3                                                    PDAP 
+13010H530      NOP  530               TAPE ERROR HALT                      PDAP 
+13020          H                                                           PDAP 
+13030          B    WR3                                                    PDAP 
+13050EOF3      B    WRTR3                                                  PDAP 
+13060          NOP  531               END OF FILE HALT, MOUNT              PDAP 
+13070          H                      SCRATCH - PRESS START                PDAP 
+13080          RWD  3                                                      PDAP 
+13090          B    WRHD3                                                  PDAP 
+13100          B    WRIEXT                                                 PDAP 
+13110*                                                                     PDAP 
+13120*******************************************************************   PDAP 
+13130*     PRINT DIRECTORY ON-LINE                                         PDAP 
+13140*******************************************************************   PDAP 
+13150ONLINE    SBR  OLEXIT+3                                               PDAP 
+13160          BCE  SK1,200,1                                              PDAP 
+13170          BCE  SKJ,200,0                                              PDAP 
+13180          BCE  SKK,200,-                                              PDAP 
+13190BLKMK     MLC  ' ',281                                                PDAP 
+13200          W                                                           PDAP 
+13210          MLCWA'⯒',281                                                PDAP 
+13220OLEXIT    B    *                                                      PDAP 
+13230SK1       CC   1                                                      PDAP 
+13240          B    BLKMK                                                  PDAP 
+13250SKJ       CC   J                                                      PDAP 
+14010          B    BLKMK                                                  PDAP 
+14020SKK       CC   K                                                      PDAP 
+14030          B    BLKMK                                                  PDAP 
+14040*******************************************************************   PDAP 
+14050*     READ MAC FILE                                                   PDAP 
+14060*******************************************************************   PDAP 
+14070RDMAC     SBR  RMEXIT+3                                               PDAP 
+14080RDM       MLC  BLANKS,MGM          BLANK GMS FOR WL CHECK             PDAP 
+14100RT2       RT   2,MASTER            READ MAC FILE                      PDAP 
+14110          BER  ERR2                TEST FOR READ ERROR                PDAP 
+14120          MLC  '0',ERRCNT                                             PDAP 
+14130          BEF  EOF2                TEST EOR                           PDAP 
+14140          BCE  SQCKM,MGM,⯒         TEST WRONG LENGTH RECORD           PDAP 
+14160WLMAC     NOP  606                 WRONG LENGTH RECORD ON MAC         PDAP 
+14170          H                                                           PDAP 
+14180          B    WLMAC                                                  PDAP 
+14190*                                                                     PDAP 
+14200SQCKM     C    MID,MPREV=8         CHECK SEQUENCE OF MAC FILE         PDAP 
+14210          BH   OSMAC                                                  PDAP 
+14220          MLC  MID,MPREV                                              PDAP 
+14230          A    +1,OMRC             ADD TO  IP MASTER RECORD COUNT     PDAP 
+14240          A    +1,TR2CNT           ADD TO TRAILER BLOCK COUNT         PDAP 
+14250          BCE  AME,MCTL-4,1                                           PDAP 
+15010RMEXIT    B    *                                                      PDAP 
+15020*                                                                     PDAP 
+15030AME       A    +1,OMEC                                                PDAP 
+15040          B    RMEXIT                                                 PDAP 
+15050OSMAC     NOP  520                 MAC OUT OF SEQUENCE HALT           PDAP 
+15060          H                                                           PDAP 
+15070          B    OSMAC                                                  PDAP 
+15080*                                                                     PDAP 
+15090ERR2      BSP  2                   MAC TAPE ERROR ROUTINE             PDAP 
+15100          A    +1,ERRCNT                                              PDAP 
+15110          BCE  TPERR2,ERRCNT,9                                        PDAP 
+15120          B    RDM                                                    PDAP 
+15130TPERR2    NOP  521                                                    PDAP 
+15140          H                                                           PDAP 
+15150          B    RDM                                                    PDAP 
+15160*                                                                     PDAP 
+15170EOF2      SW   TSW                                                    PDAP 
+15180          B    RDLAB2                                                 PDAP 
+15190          C    MACCON,NINES                                           PDAP 
+15200          BE   ENDJOB                                                 PDAP 
+15210          SW   HSW                                                    PDAP 
+15220          B    RDLAB2                                                 PDAP 
+15230          B    RDM                                                    PDAP 
+15239*******************************************************************   PDAP 
+15240*     READ MAC HEADER AND TRAILER LABELS                              PDAP 
+15250*******************************************************************   PDAP 
+16010RDLAB2    SBR  RL2EXT+3                                               PDAP 
+16020RTL2      RT   2,201                                                  PDAP 
+16030          BER  RTRY2                                                  PDAP 
+16040          BW   CKMH,HSW                                               PDAP 
+16050          BW   CKMT,TSW                                               PDAP 
+16060H692      NOP  692                 PROGRAM OR MACHINE ERROR           PDAP 
+16070          H                                                           PDAP 
+16080          B    H692                                                   PDAP 
+16090RTRY2     BSP  2                                                      PDAP 
+16100          NOP  525                 TAPE ERROR READING HEADER OR       PDAP 
+16110          H                           TRAILER                         PDAP 
+16120          B    RTL2                                                   PDAP 
+16130CKMH      C    205,HDR                                                PDAP 
+16140          BE   CKMID                                                  PDAP 
+16150NOHD2     NOP  621                 INVALID HEADER LABEL-DOES NOT      PDAP 
+16160          H                           START WITH-1 HDR-               PDAP 
+16170          B    RWDMAC                                                 PDAP 
+16180CKMID     C    223,'MAC'                                              PDAP 
+16190          BE   CKMRS                                                  PDAP 
+16200NGHD2     NOP  622                 WRONG IDENTITY OR REEL SEQUENCE    PDAP 
+16210          H                           ON HEADER                       PDAP 
+16220          B    RWDMAC                                                 PDAP 
+16230CKMRS     C    219,MREELS         CHECK REEL SEQUENCE                 PDAP 
+16240          BE   HDROK                                                  PDAP 
+16242          NOP  623                                                    PDAP 
+16244          H                                                           PDAP 
+16246RWDMAC    RWD  2                                                      PDAP 
+16248          B    RTL2                                                   PDAP 
+16250HDROK     A    +1,MREELS                                              PDAP 
+17010          CW   HSW                                                    PDAP 
+17020          B    RL2EXT                                                 PDAP 
+17030CKMT      C    210,TR2CNT                                             PDAP 
+17040          BE   CKEOR2                                                 PDAP 
+17050TR2OB     NOP  631                 BLOCK COUNT OB ON TRAILER          PDAP 
+17060          H                                                           PDAP 
+17070          B    TR2OB                                                  PDAP 
+17080CKEOR2    BCE  MEOR,204,R                                             PDAP 
+17090          BCE  MEOF,204,F                                             PDAP 
+17100NGTR2     NOP  632                 EOR-EOF INDICATOR INVALID          PDAP 
+17110          H                                                           PDAP 
+17120          B    NGTR2                                                  PDAP 
+17130MEOR      RWU  2                                                      PDAP 
+17140          NOP  529                 END OF REEL HALT-MOUNT NEXT        PDAP 
+17150          H                           IP REEL, PRESS START            PDAP 
+17160          MLC  BLANKS+4,TR2CNT     BLANK TRAILER BLOCK COUNT          PDAP 
+17170          B    TOT2                                                   PDAP 
+17180MEOF      RWU  2                                                      PDAP 
+17190          MLC  NINES,MACCON                                           PDAP 
+17200TOT2      CW   TSW                                                    PDAP 
+17210RL2EXT    B    *                                                      PDAP 
+17220*                                                                     PDAP 
+17230MREELS    DCW  '001'                                                  PDAP 
+17239*******************************************************************   PDAP 
+17240*     CREATE TITLE LINE                                               PDAP 
+17250*******************************************************************   PDAP 
+18010CRTITL    SBR  CREXIT+3                                               PDAP 
+18020          CS   280                                                    PDAP 
+18030          MLC  CALDAT,212                                             PDAP 
+18040          BCE  MVCAPR,RUNTYP,B                                        PDAP 
+18050          MLC  SUP,223                                                PDAP 
+18060MVCAPR    MLC  'CAPR - DIRECTORY',243                                 PDAP 
+18070          MLC  'PAGE',262                                             PDAP 
+18080          MCS  PAGE,267                                               PDAP 
+18090          MLC  '.00',270                                              PDAP 
+18100          MLC  '1',200                                                PDAP 
+18110          BSS  ONLINE,B                                               PDAP 
+18120          BSS  WRTOD,C                                                PDAP 
+18130          A    +1,PAGE                                                PDAP 
+18140          MLC  '00',LCTR                                              PDAP 
+18150          SW   FSW                                                    PDAP 
+18160CREXIT    B    *                                                      PDAP 
+18170*******************************************************************   PDAP 
+18180*     PRINT ENTRY HEADING LINE                                        PDAP 
+18190*******************************************************************   PDAP 
+18200PRHD      SBR  PHEXIT+3                                               PDAP 
+18210          CS   280                                                    PDAP 
+18220          MLC  '-',200                                                PDAP 
+18230          BW   MMID,FSW=1                                             PDAP 
+18240          MLC  '0',200                                                PDAP 
+18250MMID      MLC  MID,208                                                PDAP 
+19010          MLC  MTITLE,268                                             PDAP 
+19020CHON      BSS  ONLINE,B                                               PDAP 
+19030          BSS  WRTOD,C                                                PDAP 
+19040          CW   FSW                                                    PDAP 
+19050PHEXIT    B    *                                                      PDAP 
+19060*******************************************************************   PDAP 
+19070*     PRINT LINE 1 OF HEADER INSTALLMENT                              PDAP 
+19080*******************************************************************   PDAP 
+19090PRNT1     SBR  P1EXIT+3                                               PDAP 
+19100          CS   280                                                    PDAP 
+19110          MLC  'FIELD-',213                                           PDAP 
+19120          MLC  MFIELD,229                                             PDAP 
+19130          MLC  'SUBJ. CODES',242                                      PDAP 
+19140          MLC  MPSUBJ,246                                             PDAP 
+19150          MLC  MSSUB1,250                                             PDAP 
+19160          MLC  MSSUB2,254                                             PDAP 
+19170          MLC  MSSUB3,258                                             PDAP 
+19180          MLC  MSSUB4,262                                             PDAP 
+19190          MLC  SINGLE,200                                             PDAP 
+19200          BSS  ONLINE,B                                               PDAP 
+19210          BSS  WRTOD,C                                                PDAP 
+19220P1EXIT    B    *                                                      PDAP 
+19230*******************************************************************   PDAP 
+19240*     PRINT LINE 2 OF HEADER INSTALLMENT                              PDAP 
+19250*******************************************************************   PDAP 
+20010PRNT2     SBR  P2EXIT+3                                               PDAP 
+20020          CS   280                                                    PDAP 
+20030          MLC  'FOR',210                                              PDAP 
+20040          MLC  MMACH,218                                              PDAP 
+20050          MLC  'IN',222                                               PDAP 
+20060          MLC  MPLANG,230                                             PDAP 
+20070          C    MSLANG,BLANKS+6                                        PDAP 
+20080          BE   CKYR                                                   PDAP 
+20090          MLC  'AND',234                                              PDAP 
+20100          MLC  MSLANG,242                                             PDAP 
+20110CKYR      C    MYRCMP,BLANKS+1                                        PDAP 
+20120          BE   MS2                                                    PDAP 
+20130          C    MYRCMP,'PR'                                            PDAP 
+20140          BE   DOPR                                                   PDAP 
+20150          C    MYRCMP,'CH'                                            PDAP 
+20160          BE   DOCH                                                   PDAP 
+20170          MLC  'COMPLETED 19',256                                     PDAP 
+20180          MLC  MYRCMP,258                                             PDAP 
+20190MS2       MLC  SINGLE,200                                             PDAP 
+20200          BSS  ONLINE,B                                               PDAP 
+20210          BSS  WRTOD,C                                                PDAP 
+20220P2EXIT    B    *                                                      PDAP 
+20230*                                                                     PDAP 
+20240DOPR      MLC  'IN PREPARATION',265                                   PDAP 
+20250          MLC  'STATUS-',251                                          PDAP 
+21010          B    MS2                                                    PDAP 
+21020DOCH      MLC  'STATUS-',251                                          PDAP 
+21030          MLC  'IN CHECKOUT',262                                      PDAP 
+21040          B    MS2                                                    PDAP 
+21050*******************************************************************   PDAP 
+21060*     PRINT LINE 3 OF HEADER INSTALLMENT                              PDAP 
+21070*******************************************************************   PDAP 
+21080PRNT3     SBR  P3EXIT+3                                               PDAP 
+21090          CS   280                                                    PDAP 
+21100          MLC  'BY',209                                               PDAP 
+21110          MLC  MNAME,227                                              PDAP 
+21120          C    MAUTH,BLANKS+16                                        PDAP 
+21130          BE   MTYPER                                                 PDAP 
+21140          MLC  'AND',231                                              PDAP 
+21150          MLC  MAUTH,249                                              PDAP 
+21160MTYPER    MLC  'TYPE ROUTINE',264                                     PDAP 
+21170          MLC  MROUT,267                                              PDAP 
+21180          MLC  SINGLE,200                                             PDAP 
+21190          BSS  ONLINE,B                                               PDAP 
+21200          BSS  WRTOD,C                                                PDAP 
+21210P3EXIT    B    *                                                      PDAP 
+21220*******************************************************************   PDAP 
+21225*   WRITE HEADER LABEL ON INDEX FILE                                  PDAP 
+21230*******************************************************************   PDAP 
+21240WRHD3     SBR  WLEXIT+3                                               PDAP 
+21250          RWD  3                                                      PDAP 
+22010          CS   299                                                    PDAP 
+22020          MLCWAGM,281                                                 PDAP 
+22030          MLC  '-120',239          CONSTRUCT HEAD USING PRINT AREA    PDAP 
+22040          MLC  CREATE                                                 PDAP 
+22050          MLC  'MIR',223                                              PDAP 
+22060          MLC  OREELS,219                                             PDAP 
+22070          MLC  '-'                                                    PDAP 
+22080          MLC  HDR,205                                                PDAP 
+22090WRLAB3    WT   3,201                                                  PDAP 
+22100          BER  RTRY3                                                  PDAP 
+22110          A    +1,OREELS                                              PDAP 
+22120WLEXIT    B    *                                                      PDAP 
+22130RTRY3     BSP  3                                                      PDAP 
+22140          NOP  536               TAPE ERROR WRITING HEADER            PDAP 
+22150          H                                                           PDAP 
+22160          B    WRLAB3                                                 PDAP 
+22170OREELS    DCW  '001'                                                  PDAP 
+22180*******************************************************************   PDAP 
+22190*     WRITE TRAILER ON INDEX FILE                                     PDAP 
+22200*******************************************************************   PDAP 
+22210WRTR3     SBR  WMTEXT+3                                               PDAP 
+22220          WTM  3                   WRITE TAPE MARK                    PDAP 
+22230          CS   299                                                    PDAP 
+22240          MLC  '1EOF',204          BUILD TRAILER LABEL                PDAP 
+22250          BW   MOVCNT,EOJSW                                           PDAP 
+23010          MLC  'R',204                                                PDAP 
+23030MOVCNT    MLC  TR3CNT,210                                             PDAP 
+23060          MLCWAGM,281                                                 PDAP 
+23070WTR       WT   3,201               WRITE MIR TRAILER                  PDAP 
+23080          BER  RTRYT3                                                 PDAP 
+23090          WTM  3                                                      PDAP 
+23100          MLC  BLANKS+4,TR3CNT     BLANK BLOCK COUNT                  PDAP 
+23110WMTEXT    B    *                                                      PDAP 
+23130          NOP  537               TAPE ERROR WRITING TRAILER           PDAP 
+23140          H                           ON INDEX FILE                   PDAP 
+23120RTRYT3    BSP  3                                                      PDAP 
+23150          B    WTR                                                    PDAP 
+23160*******************************************************************   PDAP 
+23165*   WRITE DIRECTORY PRINT TAPE                                        PDAP 
+23170*******************************************************************   PDAP 
+23180WRTOD     SBR  WTDEXT+3                                               PDAP 
+23190WT1       WT   1,200                                                  PDAP 
+23200          BER  ERR1                                                   PDAP 
+23210          MLC  '0',ERRCNT                                             PDAP 
+23220          BEF  EOF1                                                   PDAP 
+23229          A    +1,TODCT                                               PDAP 
+23230WTDEXT    B    *                                                      PDAP 
+23240ERR1      BSP  1                                                      PDAP 
+23250          A    +1,ERRCNT                                              PDAP 
+24010          BCE  H510,ERRCNT,9                                          PDAP 
+24020          B    WT1                                                    PDAP 
+24030H510      NOP  510                                                    PDAP 
+24040          H                                                           PDAP 
+24050          B    WT1                                                    PDAP 
+24060EOF1      WTM  1                                                      PDAP 
+24070          RWU  1                                                      PDAP 
+24080          NOP  511                                                    PDAP 
+24090          H                                                           PDAP 
+24100          B    WTDEXT                                                 PDAP 
+24110*******************************************************************   PDAP 
+24120*     END OF JOB                                                      PDAP 
+24130*******************************************************************   PDAP 
+24140ENDJOB    B    CRTITL                                                 PDAP 
+25005          BSS  ENDMIR,D                                               PDAP 
+25010EJ2       BSS  ENDTOD,C                                               PDAP 
+25015ENDCTS    CS   299                                                    PDAP 
+25016          MLC  '0',200                                                PDAP 
+25020          MLC  'MASTER FILE INPUT',217                                PDAP 
+25025          MCS  OMEC,224                                               PDAP 
+25030          MLC  'ENTRIES',232                                          PDAP 
+25035          MCS  OMRC,240                                               PDAP 
+25040          MLC  'RECORDS',248                                          PDAP 
+25045          B    ONLINE                                                 PDAP 
+25046          CS   299                                                    PDAP 
+25050          MLC  '0',200                                                PDAP 
+25055          MCS  PREC,206                                               PDAP 
+25060          MLC  'ENTRIES PRINTED',222                                  PDAP 
+25065          MCS  NPEC,230                                               PDAP 
+25070          MLC  'ENTRIES NOT PRINTED',250                              PDAP 
+25072          B    ONLINE                                                 PDAP 
+25075          BCE  H999,RUNTYP,B                                          PDAP 
+25077          CS   299                                                    PDAP 
+25078          MLC  '0',200                                                PDAP 
+25080          MLC  'SUPPLEMENTAL RUN - DATE',223                          PDAP 
+25085          MLC  JULDAT,229                                             PDAP 
+25087          B    ONLINE                                                 PDAP 
+25090H999      NOP  999                                                    PDAP 
+25095          H                                                           PDAP 
+25100          B    H999                                                   PDAP 
+25105*  WIND UP INDEX RECORD OUTPUT TAPE                                   PDAP 
+25110ENDMIR    SW   EOJSW                                                  PDAP 
+25115          B    WRTR3                                                  PDAP 
+25200          RWU  3                                                      PDAP 
+25203          CS   299                                                    PDAP 
+25204          MLC  '0',200                                                PDAP 
+25205          MCS  MIRCT,206                                              PDAP 
+25210          MLC  'MIR OUTPUT RECORDS',225                               PDAP 
+25215          B    ONLINE                                                 PDAP 
+25225          B    EJ2                                                    PDAP 
+25230* WIND UP PRINT TAPE                                                  PDAP 
+25235ENDTOD    WTM  1                                                      PDAP 
+25240          RWU  1                                                      PDAP 
+25245          CS   299                                                    PDAP 
+25247          MLC  '0',200                                                PDAP 
+25250          MCS  TODCT,206                                              PDAP 
+25255          MLC  'TOD OUTPUT RECORDS',225                               PDAP 
+25260          B    ONLINE                                                 PDAP 
+25262          CS   299                                                    PDAP 
+25265          MLC  '0',200                                                PDAP 
+25270          B    ENDCTS                                                 PDAP 
+99990          END  START                                                  PDAP 
